@@ -20,4 +20,5 @@
  */
 
 #include <ell/util.h>
+#include <ell/queue.h>
 #include <ell/hashmap.h>
