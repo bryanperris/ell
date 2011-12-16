@@ -19,14 +19,20 @@
  *
  */
 
-#include <stdint.h>
+#ifndef __ELL_MAIN_H
+#define __ELL_MAIN_H
 
-#define LIB_EXPORT __attribute__ ((visibility("default")))
+#include <stdbool.h>
 
-typedef void (*watch_event_cb_t) (int fd, uint32_t events, void *user_data);
-typedef void (*watch_destroy_cb_t) (void *user_data);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
-				void *user_data, watch_destroy_cb_t destroy);
-int watch_modify(int fd, uint32_t events);
-int watch_remove(int fd);
+bool l_main_run(void);
+bool l_main_quit(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_MAIN_H */
