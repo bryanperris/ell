@@ -19,4 +19,5 @@
  *
  */
 
+#include <ell/util.h>
 #include <ell/hashmap.h>

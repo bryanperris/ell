@@ -52,7 +52,7 @@ struct l_hashmap {
 
 static unsigned int direct_hash_func(const void *p)
 {
-	return PTR_TO_UINT(p);
+	return L_PTR_TO_UINT(p);
 }
 
 static int direct_compare_func(const void *a, const void *b)
