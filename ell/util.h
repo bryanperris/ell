@@ -19,10 +19,23 @@
  *
  */
 
+#ifndef __ELL_UTIL_H
+#define __ELL_UTIL_H
+
 #include <inttypes.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define L_PTR_TO_UINT(p) ((unsigned int) ((uintptr_t) (p)))
 #define L_UINT_TO_PTR(u) ((void *) ((uintptr_t) (u)))
 
 #define L_PTR_TO_INT(p) ((int) ((intptr_t) (p)))
 #define L_INT_TO_PTR(u) ((void *) ((intptr_t) (u)))
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_UTIL_H */
