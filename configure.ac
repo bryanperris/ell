@@ -44,4 +44,4 @@ AC_ARG_ENABLE(pie, AC_HELP_STRING([--enable-pie],
 	fi
 ])
 
-AC_OUTPUT(Makefile)
+AC_OUTPUT(Makefile ell/ell.pc)

@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+ 
+Name: ELL
+Description: Embedded Linux library
+Version: @VERSION@
+Libs: -L${libdir} -lell
+Cflags: -I${includedir}
