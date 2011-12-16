@@ -21,6 +21,12 @@ pkgconfigdir = $(libdir)/pkgconfig
 
 pkgconfig_DATA = ell/ell.pc
 
+noinst_PROGRAMS = unit/test-hashmap
+
+unit_test_hashmap_LDADD = ell/libell-private.la
+
+TESTS = $(noinst_PROGRAMS)
+
 MAINTAINERCLEANFILES = Makefile.in \
 	aclocal.m4 configure config.h.in config.sub config.guess \
 	ltmain.sh depcomp compile missing install-sh mkinstalldirs
