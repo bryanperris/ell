@@ -19,7 +19,14 @@
  *
  */
 
+#ifndef __ELL_HASHMAP_H
+#define __ELL_HASHMAP_H
+
 #include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef void (*l_hashmap_foreach_func_t) (const void *key, void *value,
 							void *user_data);
@@ -41,3 +48,9 @@ void l_hashmap_foreach(struct l_hashmap *hashmap,
 
 unsigned int l_hashmap_size(struct l_hashmap *hashmap);
 bool l_hashmap_isempty(struct l_hashmap *l_hashmap);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_HASHMAP_H */
