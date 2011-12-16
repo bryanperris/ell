@@ -19,10 +19,4 @@
  *
  */
 
-#include <inttypes.h>
-
-#define PTR_TO_UINT(p) ((unsigned int) ((uintptr_t) (p)))
-#define UINT_TO_PTR(u) ((void *) ((uintptr_t) (u)))
-
-#define PTR_TO_INT(p) ((int) ((intptr_t) (p)))
-#define INT_TO_PTR(u) ((void *) ((intptr_t) (u)))
+#define LIB_EXPORT __attribute__ ((visibility("default")))

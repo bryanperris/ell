@@ -30,6 +30,7 @@
 
 #include "util.h"
 #include "hashmap.h"
+#include "private.h"
 
 #define NBUCKETS 127
 
