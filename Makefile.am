@@ -1,6 +1,8 @@
 
 AM_MAKEFLAGS = --no-print-directory
 
+pkginclude_HEADERS = ell/ell.h
+
 pkgconfigdir = $(libdir)/pkgconfig
 
 pkgconfig_DATA = ell/ell.pc
