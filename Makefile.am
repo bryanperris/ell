@@ -6,7 +6,8 @@ pkginclude_HEADERS = ell/ell.h ell/util.h \
 				ell/hashmap.h \
 				ell/main.h \
 				ell/signal.h \
-				ell/timeout.h
+				ell/timeout.h \
+				ell/io.h
 
 lib_LTLIBRARIES = ell/libell.la
 
@@ -15,7 +16,8 @@ ell_libell_la_SOURCES = $(include_HEADERS) ell/private.h \
 						ell/hashmap.c \
 						ell/main.c \
 						ell/signal.c \
-						ell/timeout.c
+						ell/timeout.c \
+						ell/io.c
 
 ell_libell_la_LDFLAGS = -version-info 0:0:0
 
