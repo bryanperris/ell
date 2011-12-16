@@ -44,4 +44,13 @@ AC_ARG_ENABLE(pie, AC_HELP_STRING([--enable-pie],
 	fi
 ])
 
+AC_CHECK_FUNC(signalfd, dummy=yes,
+			AC_MSG_ERROR(signalfd support is required))
+
+AC_CHECK_FUNC(timerfd_create, dummy=yes,
+			AC_MSG_ERROR(timerfd support is required))
+
+AC_CHECK_FUNC(epoll_create, dummy=yes,
+			AC_MSG_ERROR(epoll support is required))
+
 AC_OUTPUT(Makefile ell/ell.pc)
