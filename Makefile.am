@@ -23,7 +23,9 @@ pkgconfigdir = $(libdir)/pkgconfig
 
 pkgconfig_DATA = ell/ell.pc
 
-noinst_PROGRAMS = unit/test-hashmap
+noinst_PROGRAMS = unit/test-queue unit/test-hashmap
+
+unit_test_queue_LDADD = ell/libell-private.la
 
 unit_test_hashmap_LDADD = ell/libell-private.la
 
