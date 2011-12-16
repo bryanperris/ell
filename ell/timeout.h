@@ -19,9 +19,28 @@
  *
  */
 
-#include <ell/util.h>
-#include <ell/queue.h>
-#include <ell/hashmap.h>
-#include <ell/main.h>
-#include <ell/signal.h>
-#include <ell/timeout.h>
+#ifndef __ELL_TIMEOUT_H
+#define __ELL_TIMEOUT_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct l_timeout;
+
+typedef void (*l_timeout_notify_cb_t) (struct l_timeout *timeout,
+						void *user_data);
+typedef void (*l_timeout_destroy_cb_t) (void *user_data);
+
+struct l_timeout *l_timeout_create(unsigned int seconds,
+			l_timeout_notify_cb_t callback,
+			void *user_data, l_timeout_destroy_cb_t destroy);
+void l_timeout_modify(struct l_timeout *timeout,
+				unsigned int seconds);
+void l_timeout_remove(struct l_timeout *timeout);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_TIMEOUT_H */
