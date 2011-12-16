@@ -19,8 +19,29 @@
  *
  */
 
-#include <ell/util.h>
-#include <ell/queue.h>
-#include <ell/hashmap.h>
-#include <ell/main.h>
-#include <ell/signal.h>
+#ifndef __ELL_SIGNAL_H
+#define __ELL_SIGNAL_H
+
+#include <stdint.h>
+#include <signal.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct l_signal;
+
+typedef void (*l_signal_notify_cb_t) (struct l_signal *signal,
+					uint32_t signo, void *user_data);
+typedef void (*l_signal_destroy_cb_t) (void *user_data);
+
+struct l_signal *l_signal_create(const sigset_t *mask,
+			l_signal_notify_cb_t callback,
+			void *user_data, l_signal_destroy_cb_t destroy);
+void l_signal_remove(struct l_signal *signal);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_SIGNAL_H */

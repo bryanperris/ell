@@ -4,14 +4,16 @@ AM_MAKEFLAGS = --no-print-directory
 pkginclude_HEADERS = ell/ell.h ell/util.h \
 				ell/queue.h \
 				ell/hashmap.h \
-				ell/main.h
+				ell/main.h \
+				ell/signal.h
 
 lib_LTLIBRARIES = ell/libell.la
 
 ell_libell_la_SOURCES = $(include_HEADERS) ell/private.h \
 						ell/queue.c \
 						ell/hashmap.c \
-						ell/main.c
+						ell/main.c \
+						ell/signal.c
 
 ell_libell_la_LDFLAGS = -version-info 0:0:0
 
