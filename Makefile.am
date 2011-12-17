@@ -12,6 +12,7 @@ pkginclude_HEADERS = ell/ell.h ell/util.h \
 lib_LTLIBRARIES = ell/libell.la
 
 ell_libell_la_SOURCES = $(include_HEADERS) ell/private.h \
+						ell/util.c \
 						ell/queue.c \
 						ell/hashmap.c \
 						ell/main.c \

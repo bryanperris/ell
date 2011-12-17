@@ -22,6 +22,7 @@
 #ifndef __ELL_UTIL_H
 #define __ELL_UTIL_H
 
+#include <stdbool.h>
 #include <inttypes.h>
 
 #ifdef __cplusplus
@@ -33,6 +34,11 @@ extern "C" {
 
 #define L_PTR_TO_INT(p) ((int) ((intptr_t) (p)))
 #define L_INT_TO_PTR(u) ((void *) ((intptr_t) (u)))
+
+typedef void (*l_util_hexdump_func_t) (const char *str, void *user_data);
+
+void l_util_hexdump(bool in, const unsigned char *buf, size_t len,
+			l_util_hexdump_func_t function, void *user_data);
 
 #ifdef __cplusplus
 }
