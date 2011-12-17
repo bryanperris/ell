@@ -23,11 +23,6 @@
 #include <config.h>
 #endif
 
-#include <stdio.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "util.h"
 #include "hashmap.h"
 #include "private.h"
@@ -64,11 +59,8 @@ LIB_EXPORT struct l_hashmap *l_hashmap_new(void)
 {
 	struct l_hashmap *hashmap;
 
-	hashmap = malloc(sizeof(struct l_hashmap));
-	if (!hashmap)
-		return NULL;
+	hashmap = l_new(struct l_hashmap, 1);
 
-	memset(hashmap, 0, sizeof(struct l_hashmap));
 	hashmap->hash_func = direct_hash_func;
 	hashmap->compare_func = direct_compare_func;
 	hashmap->entries = 0;
@@ -94,7 +86,7 @@ LIB_EXPORT void l_hashmap_destroy(struct l_hashmap *hashmap,
 			destroy(head->key, head->value);
 	}
 
-	free(hashmap);
+	l_free(hashmap);
 }
 
 LIB_EXPORT bool l_hashmap_insert(struct l_hashmap *hashmap,
@@ -116,9 +108,7 @@ LIB_EXPORT bool l_hashmap_insert(struct l_hashmap *hashmap,
 		goto done;
 	}
 
-	entry = malloc(sizeof(struct entry));
-	if (!entry)
-		return false;
+	entry = l_new(struct entry, 1);
 
 	entry->key = key;
 	entry->value = value;
@@ -167,11 +157,11 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 				head->key = entry->key;
 				head->value = entry->value;
 				head->next = entry->next;
-				free(entry);
+				l_free(entry);
 			}
 		} else {
 			prev->next = entry->next;
-			free(entry);
+			l_free(entry);
 		}
 
 		hashmap->entries--;
