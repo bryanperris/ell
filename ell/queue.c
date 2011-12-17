@@ -23,9 +23,7 @@
 #include <config.h>
 #endif
 
-#include <stdlib.h>
-#include <string.h>
-
+#include "util.h"
 #include "queue.h"
 #include "private.h"
 
@@ -40,30 +38,12 @@ struct l_queue {
 	unsigned int entries;
 };
 
-static inline struct entry *alloc_entry(void *data)
-{
-	struct entry *entry;
-
-	entry = malloc(sizeof(struct entry));
-	if (!entry)
-		return NULL;
-
-	memset(entry, 0, sizeof(struct entry));
-	entry->data = data;
-	entry->next = NULL;
-
-	return entry;
-}
-
 LIB_EXPORT struct l_queue *l_queue_new(void)
 {
 	struct l_queue *queue;
 
-	queue = malloc(sizeof(struct l_queue));
-	if (!queue)
-		return NULL;
+	queue = l_new(struct l_queue, 1);
 
-	memset(queue, 0, sizeof(struct l_queue));
 	queue->head = NULL;
 	queue->tail = NULL;
 	queue->entries = 0;
@@ -89,10 +69,10 @@ LIB_EXPORT void l_queue_destroy(struct l_queue *queue,
 
 		entry = entry->next;
 
-		free(tmp);
+		l_free(tmp);
 	}
 
-	free(queue);
+	l_free(queue);
 }
 
 LIB_EXPORT bool l_queue_push_tail(struct l_queue *queue, void *data)
@@ -102,9 +82,10 @@ LIB_EXPORT bool l_queue_push_tail(struct l_queue *queue, void *data)
 	if (!queue)
 		return false;
 
-	entry = alloc_entry(data);
-	if (!entry)
-		return false;
+	entry = l_new(struct entry, 1);
+
+	entry->data = data;
+	entry->next = NULL;
 
 	if (queue->tail)
 		queue->tail->next = entry;
@@ -140,7 +121,7 @@ LIB_EXPORT void *l_queue_pop_head(struct l_queue *queue)
 
 	data = entry->data;
 
-	free(entry);
+	l_free(entry);
 
 	queue->entries--;
 
@@ -155,9 +136,10 @@ LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
 	if (!queue || !function)
 		return false;
 
-	entry = alloc_entry(data);
-	if (!entry)
-		return false;
+	entry = l_new(struct entry, 1);
+
+	entry->data = data;
+	entry->next = NULL;
 
 	if (!queue->head) {
 		queue->head = entry;
@@ -211,7 +193,7 @@ LIB_EXPORT bool l_queue_remove(struct l_queue *queue, void *data)
 		if (!entry->next)
 			queue->tail = prev;
 
-		free(entry);
+		l_free(entry);
 
 		return true;
 	}
@@ -255,7 +237,7 @@ LIB_EXPORT void l_queue_foreach_remove(struct l_queue *queue,
 
 			entry = entry->next;
 
-			free(tmp);
+			l_free(tmp);
 		} else {
 			prev = entry;
 			entry = entry->next;
