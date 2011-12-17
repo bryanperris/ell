@@ -25,11 +25,11 @@
 
 #include <errno.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/signalfd.h>
 
+#include "util.h"
 #include "signal.h"
 #include "private.h"
 
@@ -50,7 +50,7 @@ static void signal_destroy(void *user_data)
 	if (signal->destroy)
 		signal->destroy(signal->user_data);
 
-	free(signal);
+	l_free(signal);
 }
 
 static void signal_callback(int fd, uint32_t events, void *user_data)
@@ -73,23 +73,20 @@ LIB_EXPORT struct l_signal *l_signal_create(const sigset_t *mask,
 {
 	struct l_signal *signal;
 
-	signal = malloc(sizeof(struct l_signal));
-	if (!signal)
-		return NULL;
+	signal = l_new(struct l_signal, 1);
 
-	memset(signal, 0, sizeof(struct l_signal));
 	signal->callback = callback;
 	signal->destroy = destroy;
 	signal->user_data = user_data;
 
 	if (sigprocmask(SIG_BLOCK, mask, &signal->oldmask) < 0) {
-		free(signal);
+		l_free(signal);
 		return NULL;
 	}
 
 	signal->fd = signalfd(-1, mask, SFD_NONBLOCK | SFD_CLOEXEC);
 	if (signal->fd < 0) {
-		free(signal);
+		l_free(signal);
 		return NULL;
 	}
 
