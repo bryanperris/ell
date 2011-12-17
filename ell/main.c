@@ -26,8 +26,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/epoll.h>
 
 #include "util.h"
@@ -84,18 +82,15 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 	if (!create_epoll())
 		return -EIO;
 
-	data = malloc(sizeof(struct watch_data));
-	if (!data)
-		return -ENOMEM;
+	data = l_new(struct watch_data, 1);
 
-	memset(data, 0, sizeof(struct watch_data));
 	data->events = events;
 	data->callback = callback;
 	data->destroy = destroy;
 	data->user_data = user_data;
 
 	if (l_hashmap_insert(watch_list, L_INT_TO_PTR(fd), data) < 0) {
-		free(data);
+		l_free(data);
 		return -ENOMEM;
 	}
 
@@ -106,7 +101,7 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 	err = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev);
 	if (err < 0) {
 		l_hashmap_remove(watch_list, L_INT_TO_PTR(fd));
-		free(data);
+		l_free(data);
 		return err;
 	}
 
@@ -159,7 +154,7 @@ int watch_remove(int fd)
 	if (data->destroy)
 		data->destroy(data->user_data);
 
-	free(data);
+	l_free(data);
 
 	return err;
 }
