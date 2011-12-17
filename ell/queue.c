@@ -40,6 +40,21 @@ struct l_queue {
 	unsigned int entries;
 };
 
+static inline struct entry *alloc_entry(void *data)
+{
+	struct entry *entry;
+
+	entry = malloc(sizeof(struct entry));
+	if (!entry)
+		return NULL;
+
+	memset(entry, 0, sizeof(struct entry));
+	entry->data = data;
+	entry->next = NULL;
+
+	return entry;
+}
+
 LIB_EXPORT struct l_queue *l_queue_new(void)
 {
 	struct l_queue *queue;
@@ -87,13 +102,9 @@ LIB_EXPORT bool l_queue_push_tail(struct l_queue *queue, void *data)
 	if (!queue)
 		return false;
 
-	entry = malloc(sizeof(struct entry));
+	entry = alloc_entry(data);
 	if (!entry)
 		return false;
-
-	memset(entry, 0, sizeof(struct entry));
-	entry->data = data;
-	entry->next = NULL;
 
 	if (queue->tail)
 		queue->tail->next = entry;
@@ -144,13 +155,9 @@ LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
 	if (!queue || !function)
 		return false;
 
-	entry = malloc(sizeof(struct entry));
+	entry = alloc_entry(data);
 	if (!entry)
 		return false;
-
-	memset(entry, 0, sizeof(struct entry));
-	entry->data = data;
-	entry->next = NULL;
 
 	if (!queue->head) {
 		queue->head = entry;
