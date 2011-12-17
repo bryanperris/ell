@@ -32,7 +32,6 @@
 struct entry {
 	void *data;
 	struct entry *next;
-	struct entry *prev;
 };
 
 struct l_queue {
@@ -95,7 +94,6 @@ LIB_EXPORT bool l_queue_push_tail(struct l_queue *queue, void *data)
 	memset(entry, 0, sizeof(struct entry));
 	entry->data = data;
 	entry->next = NULL;
-	entry->prev = queue->tail;
 
 	if (queue->tail)
 		queue->tail->next = entry;
@@ -123,13 +121,11 @@ LIB_EXPORT void *l_queue_pop_head(struct l_queue *queue)
 
 	entry = queue->head;
 
-	if (queue->head->next) {
-		queue->head = queue->head->next;
-		queue->head->prev = NULL;
-	} else {
+	if (!queue->head->next) {
 		queue->head = NULL;
 		queue->tail = NULL;
-	}
+	} else
+		queue->head = queue->head->next;
 
 	data = entry->data;
 
@@ -142,24 +138,23 @@ LIB_EXPORT void *l_queue_pop_head(struct l_queue *queue)
 
 LIB_EXPORT bool l_queue_remove(struct l_queue *queue, void *data)
 {
-	struct entry *entry;
+	struct entry *entry, *prev;
 
 	if (!queue)
 		return false;
 
-	for (entry = queue->head; entry; entry = entry->next) {
+	for (entry = queue->head, prev = NULL; entry;
+					prev = entry, entry = entry->next) {
 		if (entry->data != data)
 			continue;
 
-		if (entry->prev)
-			entry->prev->next = entry->next;
+		if (prev)
+			prev->next = entry->next;
 		else
 			queue->head = entry->next;
 
-		if (entry->next)
-			entry->next->prev = entry->prev;
-		else
-			queue->tail = entry->prev;
+		if (!entry->next)
+			queue->tail = prev;
 
 		free(entry);
 
