@@ -25,11 +25,11 @@
 
 #include <errno.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
 
+#include "util.h"
 #include "timeout.h"
 #include "private.h"
 
@@ -49,7 +49,7 @@ static void timeout_destroy(void *user_data)
 	if (timeout->destroy)
 		timeout->destroy(timeout->user_data);
 
-	free(timeout);
+	l_free(timeout);
 }
 
 static void timeout_callback(int fd, uint32_t events, void *user_data)
@@ -72,11 +72,8 @@ LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
 {
 	struct l_timeout *timeout;
 
-	timeout = malloc(sizeof(struct l_timeout));
-	if (!timeout)
-		return NULL;
+	timeout = l_new(struct l_timeout, 1);
 
-	memset(timeout, 0, sizeof(struct l_timeout));
 	timeout->callback = callback;
 	timeout->destroy = destroy;
 	timeout->user_data = user_data;
@@ -84,7 +81,7 @@ LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
 	timeout->fd = timerfd_create(CLOCK_MONOTONIC,
 					TFD_NONBLOCK | TFD_CLOEXEC);
 	if (timeout->fd < 0) {
-		free(timeout);
+		l_free(timeout);
 		return NULL;
 	}
 
@@ -99,7 +96,7 @@ LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
 
 		if (timerfd_settime(timeout->fd, 0, &itimer, NULL) < 0) {
 			close(timeout->fd);
-			free(timeout);
+			l_free(timeout);
 			return NULL;
 		}
 	}
