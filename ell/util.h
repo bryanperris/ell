@@ -22,6 +22,7 @@
 #ifndef __ELL_UTIL_H
 #define __ELL_UTIL_H
 
+#include <string.h>
 #include <stdbool.h>
 #include <inttypes.h>
 
@@ -39,6 +40,9 @@ typedef void (*l_util_hexdump_func_t) (const char *str, void *user_data);
 
 void l_util_hexdump(bool in, const unsigned char *buf, size_t len,
 			l_util_hexdump_func_t function, void *user_data);
+
+void *l_malloc(size_t size);
+void l_free(void *ptr);
 
 #ifdef __cplusplus
 }

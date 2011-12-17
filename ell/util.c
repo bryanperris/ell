@@ -25,9 +25,37 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 #include "util.h"
 #include "private.h"
+
+#define STRINGIFY(val) STRINGIFY_ARG(val)
+#define STRINGIFY_ARG(contents) #contents
+
+#define STRLOC __FILE__ ":" STRINGIFY(__LINE__)
+
+LIB_EXPORT void *l_malloc(size_t size)
+{
+	if (likely(size)) {
+		void *ptr;
+
+		ptr = malloc(size);
+		if (ptr)
+			return ptr;
+
+		fprintf(stderr, "%s:%s(): failed to allocate %zd bytes\n",
+					STRLOC, __PRETTY_FUNCTION__, size);
+		abort();
+	}
+
+	return NULL;
+}
+
+LIB_EXPORT void l_free(void *ptr)
+{
+	free(ptr);
+}
 
 LIB_EXPORT void l_util_hexdump(bool in, const unsigned char *buf, size_t len,
 			l_util_hexdump_func_t function, void *user_data)
