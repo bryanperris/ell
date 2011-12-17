@@ -25,10 +25,9 @@
 
 #include <errno.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/epoll.h>
 
+#include "util.h"
 #include "io.h"
 #include "private.h"
 
@@ -74,7 +73,7 @@ static void io_cleanup(void *user_data)
 	if (io->close_on_destroy)
 		close(io->fd);
 
-	free(io);
+	l_free(io);
 }
 
 static void io_callback(int fd, uint32_t events, void *user_data)
@@ -109,11 +108,8 @@ LIB_EXPORT struct l_io *l_io_new(int fd)
 {
 	struct l_io *io;
 
-	io = malloc(sizeof(struct l_io));
-	if (!io)
-		return NULL;
+	io = l_new(struct l_io, 1);
 
-	memset(io, 0, sizeof(struct l_io));
 	io->fd = fd;
 	io->events = 0;
 	io->close_on_destroy = false;
