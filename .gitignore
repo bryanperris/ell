@@ -27,3 +27,4 @@ ell/ell.pc
 unit/test-queue
 unit/test-hashmap
 unit/test-main
+unit/test-io
