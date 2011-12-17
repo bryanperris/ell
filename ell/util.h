@@ -44,6 +44,16 @@ void l_util_hexdump(bool in, const unsigned char *buf, size_t len,
 void *l_malloc(size_t size);
 void l_free(void *ptr);
 
+#define l_new(type, count)			\
+	(type *) (__extension__ ({		\
+		size_t __n = (size_t) (count);	\
+		size_t __s = sizeof(type);	\
+		void *__p;			\
+		__p = l_malloc(__n * __s);	\
+		memset(__p, 0, __n * __s);	\
+		__p;				\
+	}))
+
 #ifdef __cplusplus
 }
 #endif
