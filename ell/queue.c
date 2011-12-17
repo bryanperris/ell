@@ -136,6 +136,54 @@ LIB_EXPORT void *l_queue_pop_head(struct l_queue *queue)
 	return data;
 }
 
+LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
+                        l_queue_compare_func_t function, void *user_data)
+{
+	struct entry *entry, *prev;
+
+	if (!queue || !function)
+		return false;
+
+	entry = malloc(sizeof(struct entry));
+	if (!entry)
+		return false;
+
+	memset(entry, 0, sizeof(struct entry));
+	entry->data = data;
+	entry->next = NULL;
+
+	if (!queue->head) {
+		queue->head = entry;
+		queue->tail = entry;
+		return true;
+	}
+
+	for (prev = queue->head; prev; prev = prev->next) {
+		int match = function(entry, prev, user_data);
+
+		if (match > 0) {
+			if (prev == queue->head) {
+				entry->next = queue->head;
+				queue->head = entry;
+				return true;
+			}
+
+			entry->next = prev->next;
+			prev->next = entry;
+
+			if (!entry->next)
+				queue->tail = entry;
+
+			return true;
+		}
+	}
+
+	queue->tail->next = entry;
+	queue->tail = entry;
+
+	return true;
+}
+
 LIB_EXPORT bool l_queue_remove(struct l_queue *queue, void *data)
 {
 	struct entry *entry, *prev;
