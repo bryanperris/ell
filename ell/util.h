@@ -54,6 +54,8 @@ void l_free(void *ptr);
 		__p;				\
 	}))
 
+char *l_strdup_printf(const char *format, ...);
+
 #ifdef __cplusplus
 }
 #endif

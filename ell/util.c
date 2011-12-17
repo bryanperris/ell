@@ -23,8 +23,10 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <ctype.h>
+#include <stdarg.h>
 #include <stdlib.h>
 
 #include "util.h"
@@ -55,6 +57,27 @@ LIB_EXPORT void *l_malloc(size_t size)
 LIB_EXPORT void l_free(void *ptr)
 {
 	free(ptr);
+}
+
+LIB_EXPORT char *l_strdup_printf(const char *format, ...)
+{
+	va_list args;
+	char *str;
+	int len;
+
+	va_start(args, format);
+	len = vasprintf(&str, format, args);
+	va_end(args);
+
+	if (len < 0) {
+		fprintf(stderr, "%s:%s(): failed to allocate string\n",
+					STRLOC, __PRETTY_FUNCTION__);
+		abort();
+
+		return NULL;
+	}
+
+	return str;
 }
 
 LIB_EXPORT void l_util_hexdump(bool in, const unsigned char *buf, size_t len,
