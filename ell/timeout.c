@@ -33,6 +33,18 @@
 #include "timeout.h"
 #include "private.h"
 
+/**
+ * SECTION:timeout
+ * @short_description: Timeout support
+ *
+ * Timeout support
+ */
+
+/**
+ * l_timeout:
+ *
+ * Opague object representing the timeout.
+ */
 struct l_timeout {
 	int fd;
 	l_timeout_notify_cb_t callback;
@@ -66,6 +78,20 @@ static void timeout_callback(int fd, uint32_t events, void *user_data)
 		timeout->callback(timeout, timeout->user_data);
 }
 
+/**
+ * l_timeout_create:
+ * @seconds: timeout in seconds
+ * @callback: timeout callback function
+ * @user_data: user data provided to timeout callback function
+ * @destroy: destroy function for user data
+ *
+ * Create new timeout callback handling.
+ *
+ * The timeout will on fire once. The timeout handling needs to be rearmed
+ * with l_timeout_modify() to trigger again.
+ *
+ * Returns: a new allocated #l_timeout object
+ **/
 LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
 			l_timeout_notify_cb_t callback,
 			void *user_data, l_timeout_destroy_cb_t destroy)
@@ -107,6 +133,13 @@ LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
 	return timeout;
 }
 
+/**
+ * l_timeout_modify:
+ * @timeout: timeout object
+ * @seconds: timeout in seconds
+ *
+ * Modify an existing @timeout and rearm it.
+ **/
 LIB_EXPORT void l_timeout_modify(struct l_timeout *timeout,
 					unsigned int seconds)
 {
@@ -117,6 +150,12 @@ LIB_EXPORT void l_timeout_modify(struct l_timeout *timeout,
 		return;
 }
 
+/**
+ * l_timeout_remove:
+ * @timeout: timeout object
+ *
+ * Remove timeout handling.
+ **/
 LIB_EXPORT void l_timeout_remove(struct l_timeout *timeout)
 {
 	if (!timeout)
