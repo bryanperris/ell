@@ -27,17 +27,39 @@
 #include "queue.h"
 #include "private.h"
 
+/**
+ * SECTION:queue
+ * @short_description: Queue support
+ *
+ * Queue support
+ */
+
 struct entry {
 	void *data;
 	struct entry *next;
 };
 
+/**
+ * l_queue:
+ *
+ * Opague object representing the queue.
+ */
 struct l_queue {
 	struct entry *head;
 	struct entry *tail;
 	unsigned int entries;
 };
 
+/**
+ * l_queue_new:
+ *
+ * Create a new queue.
+ *
+ * No error handling is needed since. In case of real memory allocation
+ * problems abort() will be called.
+ *
+ * Returns: a new allocated #l_queue object
+ **/
 LIB_EXPORT struct l_queue *l_queue_new(void)
 {
 	struct l_queue *queue;
@@ -51,6 +73,13 @@ LIB_EXPORT struct l_queue *l_queue_new(void)
 	return queue;
 }
 
+/**
+ * l_queue_destroy:
+ * @queue: queue object
+ * @destroy: destroy function
+ *
+ * Free queue and call @destory on all remaining entries.
+ **/
 LIB_EXPORT void l_queue_destroy(struct l_queue *queue,
 				l_queue_destroy_func_t destroy)
 {
@@ -75,6 +104,16 @@ LIB_EXPORT void l_queue_destroy(struct l_queue *queue,
 	l_free(queue);
 }
 
+/**
+ * l_queue_push_tail:
+ * @queue: queue object
+ * @data: pointer to data
+ *
+ * Adds @data pointer at the end of the queue.
+ *
+ * Returns: #true when data has been added and #false in case an invalid
+ *          @queue object has been provided
+ **/
 LIB_EXPORT bool l_queue_push_tail(struct l_queue *queue, void *data)
 {
 	struct entry *entry;
@@ -100,6 +139,14 @@ LIB_EXPORT bool l_queue_push_tail(struct l_queue *queue, void *data)
 	return true;
 }
 
+/**
+ * l_queue_pop_head:
+ * @queue: queue object
+ *
+ * Removes the first element of the queue an returns it.
+ *
+ * Returns: data pointer to first element or #NULL in case an empty queue
+ **/
 LIB_EXPORT void *l_queue_pop_head(struct l_queue *queue)
 {
 	struct entry *entry;
@@ -128,6 +175,18 @@ LIB_EXPORT void *l_queue_pop_head(struct l_queue *queue)
 	return data;
 }
 
+/**
+ * l_queue_insert:
+ * @queue: queue object
+ * @data: pointer to data
+ * @function: compare function
+ * @user_data: user data given to compare function
+ *
+ * Inserts @data pointer at a position in the queue determined by the
+ * compare @function.
+ *
+ * Returns: #true when data has been added and #false in case of failure
+ **/
 LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
                         l_queue_compare_func_t function, void *user_data)
 {
@@ -173,6 +232,16 @@ LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
 	return true;
 }
 
+/**
+ * l_queue_remove:
+ * @queue: queue object
+ * @data: pointer to data
+ *
+ * Remove given @data from the queue.
+ *
+ * Returns: #true when data has been removed and #false when data could not
+ *          be found or an invalid @queue object has been provided
+ **/
 LIB_EXPORT bool l_queue_remove(struct l_queue *queue, void *data)
 {
 	struct entry *entry, *prev;
@@ -201,6 +270,14 @@ LIB_EXPORT bool l_queue_remove(struct l_queue *queue, void *data)
 	return false;
 }
 
+/**
+ * l_queue_foreach:
+ * @queue: queue object
+ * @function: callback function
+ * @user_data: user data given to callback function
+ *
+ * Call @function for every given data in @queue.
+ **/
 LIB_EXPORT void l_queue_foreach(struct l_queue *queue,
 			l_queue_foreach_func_t function, void *user_data)
 {
@@ -213,6 +290,14 @@ LIB_EXPORT void l_queue_foreach(struct l_queue *queue,
 		function(entry->data, user_data);
 }
 
+/**
+ * l_queue_foreach_remove:
+ * @queue: queue object
+ * @function: callback function
+ * @user_data: user data given to callback function
+ *
+ * Remove all entries in the @queue where @function returns #true.
+ **/
 LIB_EXPORT void l_queue_foreach_remove(struct l_queue *queue,
                         l_queue_remove_func_t function, void *user_data)
 {
@@ -245,6 +330,12 @@ LIB_EXPORT void l_queue_foreach_remove(struct l_queue *queue,
 	}
 }
 
+/**
+ * l_queue_length:
+ * @queue: queue object
+ *
+ * Returns: entries of the queue
+ **/
 LIB_EXPORT unsigned int l_queue_length(struct l_queue *queue)
 {
 	if (!queue)
@@ -253,6 +344,12 @@ LIB_EXPORT unsigned int l_queue_length(struct l_queue *queue)
 	return queue->entries;
 }
 
+/**
+ * l_queue_isempty:
+ * @queue: queue object
+ *
+ * Returns: #true if @queue is empty and #false is not
+ **/
 LIB_EXPORT bool l_queue_isempty(struct l_queue *queue)
 {
 	if (!queue)
