@@ -28,3 +28,14 @@ unit/test-queue
 unit/test-hashmap
 unit/test-main
 unit/test-io
+
+doc/*.bak
+doc/*.stamp
+doc/*.sgml
+doc/ell.*
+doc/ell-*.xml
+doc/ell-*.txt
+doc/version.xml
+doc/xml
+doc/html
+doc/gtk-doc.make

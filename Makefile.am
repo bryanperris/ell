@@ -1,4 +1,6 @@
 
+SUBDIRS = . doc
+
 AM_MAKEFLAGS = --no-print-directory
 
 pkginclude_HEADERS = ell/ell.h ell/util.h \
@@ -44,6 +46,8 @@ unit_test_main_LDADD = ell/libell-private.la
 unit_test_io_LDADD = ell/libell-private.la
 
 TESTS = $(noinst_PROGRAMS)
+
+DISTCHECK_CONFIGURE_FLAGS = --disable-gtk-doc
 
 MAINTAINERCLEANFILES = Makefile.in \
 	aclocal.m4 configure config.h.in config.sub config.guess \
