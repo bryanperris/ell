@@ -32,11 +32,29 @@
 #include "util.h"
 #include "private.h"
 
+/**
+ * SECTION:util
+ * @short_description: Utility functions
+ *
+ * Utility functions
+ */
+
 #define STRINGIFY(val) STRINGIFY_ARG(val)
 #define STRINGIFY_ARG(contents) #contents
 
 #define STRLOC __FILE__ ":" STRINGIFY(__LINE__)
 
+/**
+ * l_malloc:
+ * @size: memory size to allocate
+ *
+ * If for any reason the memory allocation fails, then execution will be
+ * halted via abort().
+ *
+ * In case @size is 0 then #NULL will be returned.
+ *
+ * Returns: pointer to allocated memory
+ **/
 LIB_EXPORT void *l_malloc(size_t size)
 {
 	if (likely(size)) {
@@ -54,11 +72,23 @@ LIB_EXPORT void *l_malloc(size_t size)
 	return NULL;
 }
 
+/**
+ * l_free:
+ * @ptr: memory pointer
+ *
+ * Free the allocated memory area.
+ **/
 LIB_EXPORT void l_free(void *ptr)
 {
 	free(ptr);
 }
 
+/**
+ * l_strdup_printf:
+ * @format: string format
+ *
+ * Returns: a new allocated string
+ **/
 LIB_EXPORT char *l_strdup_printf(const char *format, ...)
 {
 	va_list args;

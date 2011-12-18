@@ -39,6 +39,13 @@ extern "C" {
 void *l_malloc(size_t size);
 void l_free(void *ptr);
 
+/**
+ * l_new:
+ * @type: type of structure
+ * @count: amount of structures
+ *
+ * Returns: pointer to allocated memory
+ **/
 #define l_new(type, count)			\
 	(type *) (__extension__ ({		\
 		size_t __n = (size_t) (count);	\
