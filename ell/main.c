@@ -33,6 +33,13 @@
 #include "hashmap.h"
 #include "private.h"
 
+/**
+ * SECTION:main
+ * @short_description: Main loop handling
+ *
+ * Main loop handling
+ */
+
 #define MAX_EPOLL_EVENTS 10
 
 static int epoll_fd;
@@ -166,6 +173,13 @@ static void watch_destroy(const void *key, void *value)
 	fprintf(stderr, "Dangling file descriptor %d found", fd);
 }
 
+/**
+ * l_main_run:
+ *
+ * Run the main loop
+ *
+ * Returns: #true after successful execution or #false in case of failure
+ **/
 LIB_EXPORT bool l_main_run(void)
 {
 	if (epoll_running)
@@ -215,6 +229,13 @@ LIB_EXPORT bool l_main_run(void)
 	return true;
 }
 
+/**
+ * l_main_quit:
+ *
+ * Teminate the running main loop
+ *
+ * Returns: #true when terminating the main loop or #false in case of failure
+ **/
 LIB_EXPORT bool l_main_quit(void)
 {
 	if (!epoll_running)
