@@ -33,6 +33,18 @@
 #include "signal.h"
 #include "private.h"
 
+/**
+ * SECTION:signal
+ * @short_description: Unix signal support
+ *
+ * Unix signal support
+ */
+
+/**
+ * l_signal:
+ *
+ * Opague object representing the signal.
+ */
 struct l_signal {
 	int fd;
 	sigset_t oldmask;
@@ -67,6 +79,20 @@ static void signal_callback(int fd, uint32_t events, void *user_data)
 		signal->callback(signal, si.ssi_signo, signal->user_data);
 }
 
+/**
+ * l_signal_create:
+ * @mask: set of signal mask
+ * @callback: signal callback function
+ * @user_data: user data provided to signal callback function
+ * @destroy: destroy function for user data
+ *
+ * Create new signal callback handling for a given set of signals.
+ *
+ * From now on every signal from the set is reported via @callback function
+ * indicating the Unix signal number that triggered it.
+ *
+ * Returns: a new allocated #l_signal object
+ **/
 LIB_EXPORT struct l_signal *l_signal_create(const sigset_t *mask,
 			l_signal_notify_cb_t callback,
 			void *user_data, l_signal_destroy_cb_t destroy)
@@ -96,6 +122,12 @@ LIB_EXPORT struct l_signal *l_signal_create(const sigset_t *mask,
 	return signal;
 }
 
+/**
+ * l_signal_remove:
+ * @signal: signal object
+ *
+ * Remove signal handling.
+ **/
 LIB_EXPORT void l_signal_remove(struct l_signal *signal)
 {
 	if (!signal)
