@@ -24,9 +24,9 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "util.h"
-#include "queue.h"
 #include "test.h"
 #include "private.h"
 
@@ -37,13 +37,15 @@
  * Unit test framework
  */
 
-struct entry {
+struct test {
 	const char *name;
 	l_test_func_t function;
 	const void *test_data;
+	struct test *next;
 };
 
-static struct l_queue *queue;
+static struct test *test_head;
+static struct test *test_tail;
 
 /**
  * l_test_init:
@@ -54,7 +56,8 @@ static struct l_queue *queue;
  **/
 LIB_EXPORT void l_test_init(int *argc, char ***argv)
 {
-	queue = l_queue_new();
+	test_head = NULL;
+	test_tail = NULL;
 }
 
 /**
@@ -66,19 +69,22 @@ LIB_EXPORT void l_test_init(int *argc, char ***argv)
  **/
 LIB_EXPORT int l_test_run(void)
 {
-	for (;;) {
-		struct entry *entry;
+	struct test *test = test_head;
 
-		entry = l_queue_pop_head(queue);
-		if (!entry)
-			break;
+	while (test) {
+		struct test *tmp = test;
 
-		printf("TEST: %s\n", entry->name);
+		printf("TEST: %s\n", test->name);
 
-		entry->function(entry->test_data);
+		test->function(test->test_data);
 
-		l_free(entry);
+		test = test->next;
+
+		free(tmp);
 	}
+
+	test_head = NULL;
+	test_tail = NULL;
 
 	return 0;
 }
@@ -94,17 +100,26 @@ LIB_EXPORT int l_test_run(void)
 LIB_EXPORT void l_test_add(const char *name, l_test_func_t function,
 						const void *test_data)
 {
-	struct entry *entry;
+	struct test *test;
 
 	if (!name || !function)
 		return;
 
-	entry = l_new(struct entry, 1);
+	test = malloc(sizeof(struct test));
+	if (!test)
+		return;
 
-	entry->name = name;
-	entry->function = function;
-	entry->test_data = test_data;
+	memset(test, 0, sizeof(struct test));
+	test->name = name;
+	test->function = function;
+	test->test_data = test_data;
+	test->next = NULL;
 
-	if (!l_queue_push_tail(queue, entry))
-		l_free(queue);
+	if (test_tail)
+		test_tail->next = test;
+
+	test_tail = test;
+
+	if (!test_head)
+		test_head = test;
 }
