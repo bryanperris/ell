@@ -23,6 +23,10 @@
 #include <config.h>
 #endif
 
+#include <stdio.h>
+
+#include "util.h"
+#include "queue.h"
 #include "test.h"
 #include "private.h"
 
@@ -33,6 +37,14 @@
  * Unit test framework
  */
 
+struct entry {
+	const char *name;
+	l_test_func_t function;
+	const void *test_data;
+};
+
+static struct l_queue *queue;
+
 /**
  * l_test_init:
  * @argc: pointer to @argc parameter of main() function
@@ -42,6 +54,7 @@
  **/
 LIB_EXPORT void l_test_init(int *argc, char ***argv)
 {
+	queue = l_queue_new();
 }
 
 /**
@@ -53,5 +66,45 @@ LIB_EXPORT void l_test_init(int *argc, char ***argv)
  **/
 LIB_EXPORT int l_test_run(void)
 {
+	for (;;) {
+		struct entry *entry;
+
+		entry = l_queue_pop_head(queue);
+		if (!entry)
+			break;
+
+		printf("TEST: %s\n", entry->name);
+
+		entry->function(entry->test_data);
+
+		l_free(entry);
+	}
+
 	return 0;
+}
+
+/**
+ * l_test_add:
+ * @name: test name
+ * @function: test function
+ * @test_data: test data
+ *
+ * Add new test.
+ **/
+LIB_EXPORT void l_test_add(const char *name, l_test_func_t function,
+						const void *test_data)
+{
+	struct entry *entry;
+
+	if (!name || !function)
+		return;
+
+	entry = l_new(struct entry, 1);
+
+	entry->name = name;
+	entry->function = function;
+	entry->test_data = test_data;
+
+	if (!l_queue_push_tail(queue, entry))
+		l_free(queue);
 }
