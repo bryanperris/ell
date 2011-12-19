@@ -47,7 +47,7 @@ void l_hashmap_foreach(struct l_hashmap *hashmap,
 			l_hashmap_foreach_func_t function, void *user_data);
 
 unsigned int l_hashmap_size(struct l_hashmap *hashmap);
-bool l_hashmap_isempty(struct l_hashmap *l_hashmap);
+bool l_hashmap_isempty(struct l_hashmap *hashmap);
 
 #ifdef __cplusplus
 }
