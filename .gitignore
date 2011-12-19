@@ -24,6 +24,7 @@ stamp-h1
 autom4te.cache
 
 ell/ell.pc
+unit/test-unit
 unit/test-queue
 unit/test-hashmap
 unit/test-main
