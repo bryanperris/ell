@@ -31,6 +31,18 @@
 #include "io.h"
 #include "private.h"
 
+/**
+ * SECTION:io
+ * @short_description: IO support
+ *
+ * IO support
+ */
+
+/**
+ * l_io:
+ *
+ * Opague object representing the IO.
+ */
 struct l_io {
 	int fd;
 	uint32_t events;
@@ -104,6 +116,14 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 	}
 }
 
+/**
+ * l_io_new:
+ * @fd: file descriptor
+ *
+ * Create new IO handling for a given file descriptor.
+ *
+ * Returns: a new allocated #l_io object
+ **/
 LIB_EXPORT struct l_io *l_io_new(int fd)
 {
 	struct l_io *io;
@@ -119,6 +139,12 @@ LIB_EXPORT struct l_io *l_io_new(int fd)
 	return io;
 }
 
+/**
+ * l_io_destroy:
+ * @io: IO object
+ *
+ * Free IO object and close file descriptor (if enabled).
+ **/
 LIB_EXPORT void l_io_destroy(struct l_io *io)
 {
 	if (!io)
@@ -127,6 +153,12 @@ LIB_EXPORT void l_io_destroy(struct l_io *io)
 	watch_remove(io->fd);
 }
 
+/**
+ * l_io_get_fd:
+ * @io: IO object
+ *
+ * Returns: file descriptor associated with @io
+ **/
 LIB_EXPORT int l_io_get_fd(struct l_io *io)
 {
 	if (!io)
@@ -135,6 +167,15 @@ LIB_EXPORT int l_io_get_fd(struct l_io *io)
 	return io->fd;
 }
 
+/**
+ * l_io_set_close_on_destroy:
+ * @io: IO object
+ * @do_close: setting for destroy handling
+ *
+ * Set the automatic closing of the file descriptor when destroying @io.
+ *
+ * Returns: #true on success and #false on failure
+ **/
 LIB_EXPORT bool l_io_set_close_on_destroy(struct l_io *io, bool do_close)
 {
 	if (!io)
@@ -145,6 +186,17 @@ LIB_EXPORT bool l_io_set_close_on_destroy(struct l_io *io, bool do_close)
 	return true;
 }
 
+/**
+ * l_io_set_read_handler:
+ * @io: IO object
+ * @callback: read handler callback function
+ * @user_data: user data provided to read handler callback function
+ * @destroy: destroy function for user data
+ *
+ * Set read function.
+ *
+ * Returns: #true on success and #false on failure
+ **/
 LIB_EXPORT bool l_io_set_read_handler(struct l_io *io, l_io_read_cb_t callback,
 				void *user_data, l_io_destroy_cb_t destroy)
 {
@@ -177,6 +229,17 @@ LIB_EXPORT bool l_io_set_read_handler(struct l_io *io, l_io_read_cb_t callback,
 	return true;
 }
 
+/**
+ * l_io_set_write_handler:
+ * @io: IO object
+ * @callback: write handler callback function
+ * @user_data: user data provided to write handler callback function
+ * @destroy: destroy function for user data
+ *
+ * Set write function.
+ *
+ * Returns: #true on success and #false on failure
+ **/
 LIB_EXPORT bool l_io_set_write_handler(struct l_io *io, l_io_write_cb_t callback,
 				void *user_data, l_io_destroy_cb_t destroy)
 {
@@ -213,6 +276,17 @@ LIB_EXPORT bool l_io_set_write_handler(struct l_io *io, l_io_write_cb_t callback
 	return true;
 }
 
+/**
+ * l_io_set_debug:
+ * @io: IO object
+ * @callback: debug callback function
+ * @user_data: user data provided to debug callback function
+ * @destroy: destroy function for user data
+ *
+ * Set debug function.
+ *
+ * Returns: #true on success and #false on failure
+ **/
 LIB_EXPORT bool l_io_set_debug(struct l_io *io, l_io_debug_cb_t callback,
 				void *user_data, l_io_destroy_cb_t destroy)
 {
