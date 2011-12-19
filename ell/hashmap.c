@@ -27,6 +27,13 @@
 #include "hashmap.h"
 #include "private.h"
 
+/**
+ * SECTION:hashmap
+ * @short_description: Hash table support
+ *
+ * Hash table support
+ */
+
 #define NBUCKETS 127
 
 typedef unsigned int (*hash_func_t) (const void *p);
@@ -38,6 +45,11 @@ struct entry {
 	struct entry *next;
 };
 
+/**
+ * l_hashmap:
+ *
+ * Opague object representing the hash table.
+ */
 struct l_hashmap {
 	hash_func_t hash_func;
 	compare_func_t compare_func;
@@ -55,6 +67,16 @@ static int direct_compare_func(const void *a, const void *b)
         return a < b ? -1 : (a > b ? 1 : 0);
 }
 
+/**
+ * l_hashmap_new:
+ *
+ * Create a new hash table.
+ *
+ * No error handling is needed since. In case of real memory allocation
+ * problems abort() will be called.
+ *
+ * Returns: a new allocated #l_hashmap object
+ **/
 LIB_EXPORT struct l_hashmap *l_hashmap_new(void)
 {
 	struct l_hashmap *hashmap;
@@ -68,6 +90,13 @@ LIB_EXPORT struct l_hashmap *l_hashmap_new(void)
 	return hashmap;
 }
 
+/**
+ * l_hashmap_destroy:
+ * @hashmap: hash table object
+ * @destroy: destroy function
+ *
+ * Free hash table and call @destory on all remaining entries.
+ **/
 LIB_EXPORT void l_hashmap_destroy(struct l_hashmap *hashmap,
 				l_hashmap_destroy_func_t destroy)
 {
@@ -89,6 +118,16 @@ LIB_EXPORT void l_hashmap_destroy(struct l_hashmap *hashmap,
 	l_free(hashmap);
 }
 
+/**
+ * l_hashmap_insert:
+ * @hashmap: hash table object
+ * @key: key pointer
+ * @value: value pointer
+ *
+ * Insert new @value entry with @key.
+ *
+ * Returns: #true when value has been added and #false in case of failure
+ **/
 LIB_EXPORT bool l_hashmap_insert(struct l_hashmap *hashmap,
 				const void *key, void *value)
 {
@@ -125,6 +164,15 @@ done:
 	return true;
 }
 
+/**
+ * l_hashmap_remove:
+ * @hashmap: hash table object
+ * @key: key pointer
+ *
+ * Remove entry for @key.
+ *
+ * Returns: value pointer of the removed entry or #NULL in case of failure
+ **/
 LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 {
 	struct entry *entry, *head, *prev;
@@ -172,6 +220,15 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 	return NULL;
 }
 
+/**
+ * l_hashmap_lookup:
+ * @hashmap: hash table object
+ * @key: key pointer
+ *
+ * Lookup entry for @key.
+ *
+ * Returns: value pointer for @key or #NULL in case of failure
+ **/
 LIB_EXPORT void *l_hashmap_lookup(struct l_hashmap *hashmap, const void *key)
 {
 	struct entry *entry, *head;
@@ -197,6 +254,14 @@ LIB_EXPORT void *l_hashmap_lookup(struct l_hashmap *hashmap, const void *key)
 	return NULL;
 }
 
+/**
+ * l_hashmap_foreach:
+ * @hashmap: hash table object
+ * @function: callback function
+ * @user_data: user data given to callback function
+ *
+ * Call @function for every entry in @hashmap.
+ **/
 LIB_EXPORT void l_hashmap_foreach(struct l_hashmap *hashmap,
 			l_hashmap_foreach_func_t function, void *user_data)
 {
@@ -220,6 +285,12 @@ LIB_EXPORT void l_hashmap_foreach(struct l_hashmap *hashmap,
 	}
 }
 
+/**
+ * l_hashmap_size:
+ * @hashmap: hash table object
+ *
+ * Returns: entries in the hash table
+ **/
 LIB_EXPORT unsigned int l_hashmap_size(struct l_hashmap *hashmap)
 {
 	if (!hashmap)
@@ -228,6 +299,12 @@ LIB_EXPORT unsigned int l_hashmap_size(struct l_hashmap *hashmap)
 	return hashmap->entries;
 }
 
+/**
+ * l_hashmap_isempty:
+ * @hashmap: hash table object
+ *
+ * Returns: #true if hash table is empty and #false if not
+ **/
 LIB_EXPORT bool l_hashmap_isempty(struct l_hashmap *hashmap)
 {
 	if (!hashmap)
