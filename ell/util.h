@@ -39,6 +39,8 @@ extern "C" {
 void *l_malloc(size_t size);
 void l_free(void *ptr);
 
+void *l_realloc(void *mem, size_t size);
+
 /**
  * l_new:
  * @type: type of structure

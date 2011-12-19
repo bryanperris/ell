@@ -73,6 +73,37 @@ LIB_EXPORT void *l_malloc(size_t size)
 }
 
 /**
+ * l_realloc:
+ * @mem: previously allocated memory, or NULL
+ * @size: memory size to allocate
+ *
+ * If for any reason the memory allocation fails, then execution will be
+ * halted via abort().
+ *
+ * In case @mem is NULL, this function acts like l_malloc.
+ * In case @size is 0 then #NULL will be returned.
+ *
+ * Returns: pointer to allocated memory
+ **/
+LIB_EXPORT void *l_realloc(void *mem, size_t size)
+{
+	if (likely(size)) {
+		void *ptr;
+
+		ptr = realloc(mem, size);
+		if (ptr)
+			return ptr;
+
+		fprintf(stderr, "%s:%s(): failed to re-allocate %zd bytes\n",
+					STRLOC, __PRETTY_FUNCTION__, size);
+		abort();
+	} else
+		l_free(mem);
+
+	return NULL;
+}
+
+/**
  * l_free:
  * @ptr: memory pointer
  *
