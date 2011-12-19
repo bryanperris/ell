@@ -19,11 +19,39 @@
  *
  */
 
-#include <ell/util.h>
-#include <ell/test.h>
-#include <ell/queue.h>
-#include <ell/hashmap.h>
-#include <ell/main.h>
-#include <ell/signal.h>
-#include <ell/timeout.h>
-#include <ell/io.h>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include "test.h"
+#include "private.h"
+
+/**
+ * SECTION:test
+ * @short_description: Unit test framework
+ *
+ * Unit test framework
+ */
+
+/**
+ * l_test_init:
+ * @argc: pointer to @argc parameter of main() function
+ * @argv: pointer to @argv parameter of main() function
+ *
+ * Initialize testing framework.
+ **/
+LIB_EXPORT void l_test_init(int *argc, char ***argv)
+{
+}
+
+/**
+ * l_test_run:
+ *
+ * Run all configured tests.
+ *
+ * Returns: 0 on success
+ **/
+LIB_EXPORT int l_test_run(void)
+{
+	return 0;
+}

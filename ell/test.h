@@ -19,11 +19,18 @@
  *
  */
 
-#include <ell/util.h>
-#include <ell/test.h>
-#include <ell/queue.h>
-#include <ell/hashmap.h>
-#include <ell/main.h>
-#include <ell/signal.h>
-#include <ell/timeout.h>
-#include <ell/io.h>
+#ifndef __ELL_TEST_H
+#define __ELL_TEST_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void l_test_init(int *argc, char ***argv);
+int l_test_run(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_TEST_H */
