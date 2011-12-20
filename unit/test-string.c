@@ -45,11 +45,30 @@ static void test_grow(const void *test_data)
 	l_free(a);
 }
 
+static void test_printf(const void *test_data)
+{
+	struct l_string *str;
+	char *a;
+
+	str = l_string_new(7);
+	l_string_append(str, "Foobar7");
+
+	l_string_append_printf(str, "%d", 100);
+	l_string_append_printf(str, "%s", "BarFoo");
+
+	a = l_string_free(str, false);
+	assert(a);
+	assert(!strcmp(a, "Foobar7100BarFoo"));
+
+	l_free(a);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
 	l_test_add("Grow Test", test_grow, NULL);
+	l_test_add("printf Test", test_printf, NULL);
 
 	return l_test_run();
 }
