@@ -27,6 +27,7 @@ ell/ell.pc
 unit/test-unit
 unit/test-queue
 unit/test-hashmap
+unit/test-string
 unit/test-main
 unit/test-io
 
