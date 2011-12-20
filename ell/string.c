@@ -165,6 +165,37 @@ LIB_EXPORT struct l_string *l_string_append_c(struct l_string *dest,
 }
 
 /**
+ * l_string_append_fixed:
+ * @dest: growable string object
+ * @src: Character array to copy from
+ * @max: Maximum number of characters to copy
+ *
+ * Appends the contents of a fixed size string array @src to @dest.
+ * The internal buffer of @dest is grown if necessary.  Up to a maximum of
+ * @max characters are copied.  If a null is encountered in the first @max
+ * characters, the string is copied only up to the NULL character.
+ *
+ * Returns: @dest
+ **/
+LIB_EXPORT struct l_string *l_string_append_fixed(struct l_string *dest,
+							const char *src,
+							size_t max)
+{
+	const char *nul = memchr(src, 0, max);
+
+	if (nul)
+		max = nul - src;
+
+	grow_string(dest, max);
+
+	memcpy(dest->str + dest->len, src, max);
+	dest->len += max;
+	dest->str[dest->len] = '\0';
+
+	return dest;
+}
+
+/**
  * l_string_append_vprintf:
  * @dest: growable string object
  * @format: the string format.  See the sprintf() documentation

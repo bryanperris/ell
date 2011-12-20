@@ -36,6 +36,8 @@ char *l_string_free(struct l_string *str, bool free_array);
 
 struct l_string *l_string_append(struct l_string *dest, const char *src);
 struct l_string *l_string_append_c(struct l_string *dest, const char c);
+struct l_string *l_string_append_fixed(struct l_string *dest, const char *src,
+					size_t max);
 
 void l_string_append_vprintf(struct l_string *dest,
 					const char *format, va_list args);
