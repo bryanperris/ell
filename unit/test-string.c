@@ -63,6 +63,51 @@ static void test_printf(const void *test_data)
 	l_free(a);
 }
 
+static const char fixed1[] = { 'a', 'b', 'c', 'd', '\0', 'e', 'f', 'g' };
+static const char fixed2[] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', '\0' };
+static const char fixed3[] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h' };
+
+struct fixed_test {
+	const char *input;
+	unsigned int input_len;
+	const char *expected;
+};
+
+static struct fixed_test fixed_test1 = {
+	.input = fixed1,
+	.input_len = sizeof(fixed1),
+	.expected = "Foobar7abcd"
+};
+
+static struct fixed_test fixed_test2 = {
+	.input = fixed2,
+	.input_len = sizeof(fixed2),
+	.expected = "Foobar7abcdefg"
+};
+
+static struct fixed_test fixed_test3 = {
+	.input = fixed3,
+	.input_len = sizeof(fixed3),
+	.expected = "Foobar7abcdefgh"
+};
+
+static void test_fixed(const void *test_data)
+{
+	const struct fixed_test *test = test_data;
+	struct l_string *str;
+	char *a;
+
+	str = l_string_new(7);
+	l_string_append(str, "Foobar7");
+
+	l_string_append_fixed(str, test->input, test->input_len);
+	a = l_string_free(str, false);
+	assert(a);
+	assert(!strcmp(a, test->expected));
+
+	l_free(a);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -70,5 +115,8 @@ int main(int argc, char *argv[])
 	l_test_add("Grow Test", test_grow, NULL);
 	l_test_add("printf Test", test_printf, NULL);
 
+	l_test_add("append_fixed test 1", test_fixed, &fixed_test1);
+	l_test_add("append_fixed test 2", test_fixed, &fixed_test2);
+	l_test_add("append_fixed test 3", test_fixed, &fixed_test3);
 	return l_test_run();
 }
