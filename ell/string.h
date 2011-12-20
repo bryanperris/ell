@@ -19,12 +19,25 @@
  *
  */
 
-#include <ell/util.h>
-#include <ell/test.h>
-#include <ell/queue.h>
-#include <ell/hashmap.h>
-#include <ell/main.h>
-#include <ell/signal.h>
-#include <ell/timeout.h>
-#include <ell/io.h>
-#include <ell/string.h>
+#ifndef __ELL_STRING_H
+#define __ELL_STRING_H
+
+#include <string.h>
+#include <stdbool.h>
+#include <inttypes.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct l_string *l_string_new(size_t initial_length);
+char *l_string_free(struct l_string *str, bool free_array);
+
+struct l_string *l_string_append(struct l_string *dest, const char *src);
+struct l_string *l_string_append_c(struct l_string *dest, const char c);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_STRING_H */
