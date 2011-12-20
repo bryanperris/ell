@@ -35,7 +35,7 @@
  */
 
 /**
- * l_signal:
+ * l_string:
  *
  * Opague object representing the string buffer.
  */
@@ -68,7 +68,7 @@ static void grow_string(struct l_string *str, size_t extra)
 }
 
 /**
- * l_signal_new:
+ * l_string_new:
  * @initial_length: Initial length of the groable string
  *
  * Create new growable string.
