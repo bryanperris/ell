@@ -71,15 +71,20 @@ static void grow_string(struct l_string *str, size_t extra)
  * l_string_new:
  * @initial_length: Initial length of the groable string
  *
- * Create new growable string.
+ * Create new growable string.  If the @initial_length is 0, then a safe
+ * default is chosen.
  *
  * Returns: a newly allocated #l_string object.
  **/
 LIB_EXPORT struct l_string *l_string_new(size_t initial_length)
 {
+	static const size_t DEFAULT_INITIAL_LENGTH = 127;
 	struct l_string *ret;
 
 	ret = l_new(struct l_string, 1);
+
+	if (initial_length == 0)
+		initial_length = DEFAULT_INITIAL_LENGTH;
 
 	grow_string(ret, initial_length);
 	ret->str[0] = '\0';
