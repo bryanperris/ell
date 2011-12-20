@@ -23,6 +23,8 @@
 #include <config.h>
 #endif
 
+#include <stdio.h>
+
 #include "util.h"
 #include "string.h"
 #include "private.h"
@@ -160,4 +162,55 @@ LIB_EXPORT struct l_string *l_string_append_c(struct l_string *dest,
 	dest->str[dest->len] = '\0';
 
 	return dest;
+}
+
+/**
+ * l_string_append_vprintf:
+ * @dest: growable string object
+ * @format: the string format.  See the sprintf() documentation
+ * @args: the parameters to insert
+ *
+ * Appends a formatted string to the growable string buffer.  This function
+ * is equivalent to l_string_append_printf except that the arguments are
+ * passed as a va_list.
+ **/
+LIB_EXPORT void l_string_append_vprintf(struct l_string *dest,
+					const char *format, va_list args)
+{
+	size_t len;
+	size_t have_space;
+	va_list args_copy;
+
+	va_copy(args_copy, args);
+
+	have_space = dest->max - dest->len;
+	len = vsnprintf(dest->str + dest->len, have_space, format, args);
+
+	if (len >= have_space) {
+		grow_string(dest, len);
+		len = vsprintf(dest->str + dest->len, format, args_copy);
+	}
+
+	dest->len += len;
+
+	va_end(args_copy);
+}
+
+/**
+ * l_string_append_printf:
+ * @dest: growable string object
+ * @format: the string format.  See the sprintf() documentation
+ * @...: the parameters to insert
+ *
+ * Appends a formatted string to the growable string buffer, growing it as
+ * necessary.
+ **/
+LIB_EXPORT void l_string_append_printf(struct l_string *dest,
+					const char *format, ...)
+{
+	va_list args;
+
+	va_start(args, format);
+	l_string_append_vprintf(dest, format, args);
+	va_end(args);
 }

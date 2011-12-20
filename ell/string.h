@@ -23,6 +23,7 @@
 #define __ELL_STRING_H
 
 #include <stdbool.h>
+#include <stdarg.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +36,10 @@ char *l_string_free(struct l_string *str, bool free_array);
 
 struct l_string *l_string_append(struct l_string *dest, const char *src);
 struct l_string *l_string_append_c(struct l_string *dest, const char c);
+
+void l_string_append_vprintf(struct l_string *dest,
+					const char *format, va_list args);
+void l_string_append_printf(struct l_string *dest, const char *format, ...);
 
 #ifdef __cplusplus
 }
