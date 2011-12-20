@@ -22,13 +22,13 @@
 #ifndef __ELL_STRING_H
 #define __ELL_STRING_H
 
-#include <string.h>
 #include <stdbool.h>
-#include <inttypes.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct l_string;
 
 struct l_string *l_string_new(size_t initial_length);
 char *l_string_free(struct l_string *str, bool free_array);

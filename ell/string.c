@@ -23,12 +23,6 @@
 #include <config.h>
 #endif
 
-#define _GNU_SOURCE
-#include <stdio.h>
-#include <ctype.h>
-#include <stdarg.h>
-#include <stdlib.h>
-
 #include "util.h"
 #include "string.h"
 #include "private.h"
