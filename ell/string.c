@@ -96,28 +96,32 @@ LIB_EXPORT struct l_string *l_string_new(size_t initial_length)
 
 /**
  * l_string_free:
- * @str: growable string object
- * @free_array: internal string array
+ * @string: growable string object
+ * @free_data: internal string array
  *
- * Free the growable string object.  If @free_array is #true, then the internal
- * array will be freed and NULL will be returned.  Otherwise the internal
- * array will be returned to the caller.  The caller is responsible for freeing
- * it using l_free().
+ * Free the growable string object.  If @free_data #true, then the internal
+ * string data will be freed and NULL will be returned.  Otherwise the
+ * internal string data will be returned to the caller.  The caller is
+ * responsible for freeing it using l_free().
  *
- * Returns: @str's internal buffer or NULL
+ * Returns: @string's internal buffer or NULL
  **/
-LIB_EXPORT char *l_string_free(struct l_string *str, bool free_array)
+LIB_EXPORT char *l_string_free(struct l_string *string, bool free_data)
 {
-	char *array = str->str;
+	char *result;
 
-	l_free(str);
+	if (!string)
+		return NULL;
 
-	if (free_array) {
-		l_free(array);
-		array = NULL;
-	}
+	if (free_data) {
+		l_free(string->str);
+		result = NULL;
+	} else
+		result = string->str;
 
-	return array;
+	l_free(string);
+
+	return result;
 }
 
 /**
