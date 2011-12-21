@@ -36,6 +36,24 @@
  * Growable string buffer support
  */
 
+unsigned char l_ascii_table[256] = {
+	[0x00 ... 0x08] = L_ASCII_CNTRL,
+	[0x09 ... 0x0D] = L_ASCII_CNTRL | L_ASCII_SPACE,
+	[0x0E ... 0x1F] = L_ASCII_CNTRL,
+	[0x20]		= L_ASCII_PRINT | L_ASCII_SPACE,
+	[0x21 ... 0x2F] = L_ASCII_PRINT | L_ASCII_PUNCT,
+	[0x30 ... 0x39] = L_ASCII_DIGIT | L_ASCII_XDIGIT | L_ASCII_PRINT,
+	[0x3A ... 0x40] = L_ASCII_PRINT | L_ASCII_PUNCT,
+	[0x41 ... 0x46] = L_ASCII_PRINT | L_ASCII_XDIGIT | L_ASCII_UPPER,
+	[0x47 ... 0x5A] = L_ASCII_PRINT | L_ASCII_UPPER,
+	[0x5B ... 0x60] = L_ASCII_PRINT | L_ASCII_PUNCT,
+	[0x61 ... 0x66] = L_ASCII_PRINT | L_ASCII_XDIGIT | L_ASCII_LOWER,
+	[0x67 ... 0x7A] = L_ASCII_PRINT | L_ASCII_LOWER,
+	[0x7B ... 0x7E] = L_ASCII_PRINT | L_ASCII_PUNCT,
+	[0x7F]		= L_ASCII_CNTRL,
+	[0x80 ... 0xFF] = 0,
+};
+
 /**
  * l_string:
  *
