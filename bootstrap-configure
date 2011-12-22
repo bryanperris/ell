@@ -5,7 +5,7 @@ if [ -f config.status ]; then
 fi
 
 if [ ! -f doc/gtk-doc.make ]; then
-	gtkdocize --copy --docdir doc
+	gtkdocize --copy --docdir doc --flavour no-tmpl-flat
 fi
 
 ./bootstrap && \
