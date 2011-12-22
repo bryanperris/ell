@@ -75,7 +75,7 @@ static int direct_compare_func(const void *a, const void *b)
  * No error handling is needed since. In case of real memory allocation
  * problems abort() will be called.
  *
- * Returns: a new allocated #l_hashmap object
+ * Returns: a newly allocated #l_hashmap object
  **/
 LIB_EXPORT struct l_hashmap *l_hashmap_new(void)
 {
