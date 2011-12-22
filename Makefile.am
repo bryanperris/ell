@@ -42,7 +42,7 @@ pkgconfig_DATA = ell/ell.pc
 
 noinst_PROGRAMS = unit/test-unit unit/test-queue \
 				unit/test-hashmap unit/test-string \
-				unit/test-main unit/test-io
+				unit/test-main unit/test-io unit/test-checksum
 
 unit_test_unit_LDADD = ell/libell-private.la
 
@@ -55,6 +55,8 @@ unit_test_string_LDADD = ell/libell-private.la
 unit_test_main_LDADD = ell/libell-private.la
 
 unit_test_io_LDADD = ell/libell-private.la
+
+unit_test_checksum_LDADD = ell/libell-private.la
 
 TESTS = $(noinst_PROGRAMS)
 
