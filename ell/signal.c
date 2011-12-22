@@ -91,7 +91,7 @@ static void signal_callback(int fd, uint32_t events, void *user_data)
  * From now on every signal from the set is reported via @callback function
  * indicating the Unix signal number that triggered it.
  *
- * Returns: a new allocated #l_signal object
+ * Returns: a newly allocated #l_signal object
  **/
 LIB_EXPORT struct l_signal *l_signal_create(const sigset_t *mask,
 			l_signal_notify_cb_t callback,
