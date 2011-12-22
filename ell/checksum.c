@@ -226,3 +226,30 @@ LIB_EXPORT void l_checksum_get_digest(struct l_checksum *checksum,
 	if (result < 0)
 		return;
 }
+
+/**
+ * l_checksum_get_string:
+ * @checksum: checksum object
+ *
+ * Gets the digest from @checksum as hex encoded string.
+ *
+ * Returns: a newly allocated hex string
+ **/
+LIB_EXPORT char *l_checksum_get_string(struct l_checksum *checksum)
+{
+	unsigned char digest[20];
+
+	if (unlikely(!checksum))
+		return NULL;
+
+	l_checksum_get_digest(checksum, digest, sizeof(digest));
+
+	switch (checksum->type) {
+	case L_CHECKSUM_MD5:
+		return l_util_hexstring(digest, 16);
+	case L_CHECKSUM_SHA1:
+		return l_util_hexstring(digest, 20);
+	}
+
+	return NULL;
+}

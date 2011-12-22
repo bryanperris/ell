@@ -40,6 +40,7 @@ void l_checksum_update(struct l_checksum *checksum,
 					const void *data, size_t len);
 void l_checksum_get_digest(struct l_checksum *checksum,
 					void *digest, size_t len);
+char *l_checksum_get_string(struct l_checksum *checksum);
 
 #ifdef __cplusplus
 }
