@@ -58,7 +58,7 @@ struct l_queue {
  * No error handling is needed since. In case of real memory allocation
  * problems abort() will be called.
  *
- * Returns: a new allocated #l_queue object
+ * Returns: a newly allocated #l_queue object
  **/
 LIB_EXPORT struct l_queue *l_queue_new(void)
 {
