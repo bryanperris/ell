@@ -90,7 +90,7 @@ static void timeout_callback(int fd, uint32_t events, void *user_data)
  * The timeout will on fire once. The timeout handling needs to be rearmed
  * with l_timeout_modify() to trigger again.
  *
- * Returns: a new allocated #l_timeout object
+ * Returns: a newly allocated #l_timeout object
  **/
 LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
 			l_timeout_notify_cb_t callback,
