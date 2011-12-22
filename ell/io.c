@@ -122,7 +122,7 @@ static void io_callback(int fd, uint32_t events, void *user_data)
  *
  * Create new IO handling for a given file descriptor.
  *
- * Returns: a new allocated #l_io object
+ * Returns: a newly allocated #l_io object
  **/
 LIB_EXPORT struct l_io *l_io_new(int fd)
 {
