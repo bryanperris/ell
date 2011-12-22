@@ -118,7 +118,7 @@ LIB_EXPORT void l_free(void *ptr)
  * l_strdup_printf:
  * @format: string format
  *
- * Returns: a new allocated string
+ * Returns: a newly allocated string
  **/
 LIB_EXPORT char *l_strdup_printf(const char *format, ...)
 {
