@@ -19,13 +19,30 @@
  *
  */
 
-#include <ell/util.h>
-#include <ell/test.h>
-#include <ell/queue.h>
-#include <ell/hashmap.h>
-#include <ell/string.h>
-#include <ell/main.h>
-#include <ell/signal.h>
-#include <ell/timeout.h>
-#include <ell/io.h>
-#include <ell/checksum.h>
+#ifndef __ELL_CHECKSUM_H
+#define __ELL_CHECKSUM_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct l_checksum;
+
+enum l_checksum_type {
+	L_CHECKSUM_MD5,
+	L_CHECKSUM_SHA1,
+};
+
+struct l_checksum *l_checksum_new(enum l_checksum_type type);
+void l_checksum_free(struct l_checksum *checksum);
+
+void l_checksum_update(struct l_checksum *checksum,
+					const void *data, size_t len);
+void l_checksum_get_digest(struct l_checksum *checksum,
+					void *digest, size_t len);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_CHECKSUM_H */
