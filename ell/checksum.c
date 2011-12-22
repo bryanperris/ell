@@ -26,11 +26,27 @@
 #define _GNU_SOURCE
 #include <unistd.h>
 #include <sys/socket.h>
-#include <linux/if_alg.h>
 
 #include "util.h"
 #include "checksum.h"
 #include "private.h"
+
+#ifndef AF_ALG
+#define AF_ALG	38
+#define PF_ALG	AF_ALG
+
+#include <linux/types.h>
+
+struct sockaddr_alg {
+	__u16	salg_family;
+	__u8	salg_type[14];
+	__u32	salg_feat;
+	__u32	salg_mask;
+	__u8	salg_name[64];
+};
+#else
+#include <linux/if_alg.h>
+#endif
 
 /**
  * SECTION:checksum
