@@ -60,6 +60,8 @@ void *l_realloc(void *mem, size_t size);
 
 char *l_strdup_printf(const char *format, ...);
 
+char *l_util_hexstring(const unsigned char *buf, size_t len);
+
 typedef void (*l_util_hexdump_func_t) (const char *str, void *user_data);
 
 void l_util_hexdump(bool in, const unsigned char *buf, size_t len,

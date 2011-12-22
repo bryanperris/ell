@@ -141,6 +141,34 @@ LIB_EXPORT char *l_strdup_printf(const char *format, ...)
 	return str;
 }
 
+/**
+ * l_util_hexstring:
+ * @buf: buffer pointer
+ * @len: length of buffer
+ *
+ * Returns: a newly allocated hex string
+ **/
+LIB_EXPORT char *l_util_hexstring(const unsigned char *buf, size_t len)
+{
+	static const char hexdigits[] = "0123456789abcdef";
+	char *str;
+	size_t i;
+
+	if (unlikely(!buf) || unlikely(!len))
+		return NULL;
+
+	str = l_malloc(len * 2 + 1);
+
+	for (i = 0; i < len; i++) {
+		str[(i * 2) + 0] = hexdigits[buf[i] >> 4];
+		str[(i * 2) + 1] = hexdigits[buf[i] & 0xf];
+	}
+
+	str[len * 2] = '\0';
+
+	return str;
+}
+
 LIB_EXPORT void l_util_hexdump(bool in, const unsigned char *buf, size_t len,
 			l_util_hexdump_func_t function, void *user_data)
 {
