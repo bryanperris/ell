@@ -189,6 +189,8 @@ LIB_EXPORT void l_plugin_unload(void)
 	if (!plugin_list)
 		return;
 
+	l_queue_reverse(plugin_list);
+
 	l_queue_destroy(plugin_list, plugin_destroy);
 
 	plugin_list = NULL;
