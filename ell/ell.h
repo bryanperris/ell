@@ -28,5 +28,6 @@
 #include <ell/signal.h>
 #include <ell/timeout.h>
 #include <ell/io.h>
+#include <ell/log.h>
 #include <ell/plugin.h>
 #include <ell/checksum.h>
