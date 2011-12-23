@@ -7,4 +7,5 @@ Name: ELL
 Description: Embedded Linux library
 Version: @VERSION@
 Libs: -L${libdir} -lell
+Libs.private: -ldl
 Cflags: -I${includedir}
