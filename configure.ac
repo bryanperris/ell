@@ -53,6 +53,9 @@ AC_CHECK_FUNC(timerfd_create, dummy=yes,
 AC_CHECK_FUNC(epoll_create, dummy=yes,
 			AC_MSG_ERROR(epoll support is required))
 
+AC_CHECK_LIB(dl, dlopen, dummy=yes,
+			AC_MSG_ERROR(dynamic linking loader is required))
+
 GTK_DOC_CHECK(1.10)
 
 AC_OUTPUT(Makefile doc/Makefile doc/version.xml ell/ell.pc)
