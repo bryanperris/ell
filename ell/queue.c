@@ -207,7 +207,7 @@ LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
 	}
 
 	for (prev = queue->head; prev; prev = prev->next) {
-		int match = function(entry, prev, user_data);
+		int match = function(entry->data, prev->data, user_data);
 
 		if (match > 0) {
 			if (prev == queue->head) {
