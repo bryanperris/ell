@@ -92,8 +92,6 @@ static bool plugin_add(void *handle, const struct l_plugin_desc *desc,
 			return false;
 	}
 
-	printf("Plugin %s loading\n", desc->name);
-
 	plugin = l_new(struct plugin, 1);
 
 	plugin->handle = handle;
@@ -108,8 +106,6 @@ static bool plugin_add(void *handle, const struct l_plugin_desc *desc,
 static void plugin_start(void *data, void *user_data)
 {
 	struct plugin *plugin = data;
-
-	printf("Plugin %s start\n", plugin->desc->name);
 
 	if (plugin->desc->init() < 0)
 		return;
