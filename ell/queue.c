@@ -271,6 +271,38 @@ LIB_EXPORT bool l_queue_remove(struct l_queue *queue, void *data)
 }
 
 /**
+ * l_queue_reverse:
+ * @queue: queue object
+ *
+ * Reverse entries in the queue.
+ *
+ * Returns: #true on success and #false on failure
+ **/
+LIB_EXPORT bool l_queue_reverse(struct l_queue *queue)
+{
+	struct entry *entry, *prev = NULL;
+
+	if (!queue)
+		return false;
+
+	entry = queue->head;
+
+	while (entry) {
+		struct entry *next = entry->next;
+
+		entry->next = prev;
+
+		prev = entry;
+		entry = next;
+	}
+
+	queue->tail = queue->head;
+	queue->head = prev;
+
+	return true;
+}
+
+/**
  * l_queue_foreach:
  * @queue: queue object
  * @function: callback function

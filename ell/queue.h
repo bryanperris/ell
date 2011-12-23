@@ -47,6 +47,8 @@ bool l_queue_insert(struct l_queue *queue, void *data,
 			l_queue_compare_func_t function, void *user_data);
 bool l_queue_remove(struct l_queue *queue, void *data);
 
+bool l_queue_reverse(struct l_queue *queue);
+
 void l_queue_foreach(struct l_queue *queue,
 			l_queue_foreach_func_t function, void *user_data);
 void l_queue_foreach_remove(struct l_queue *queue,
