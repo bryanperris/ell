@@ -44,7 +44,8 @@ pkgconfig_DATA = ell/ell.pc
 
 noinst_PROGRAMS = unit/test-unit unit/test-queue \
 				unit/test-hashmap unit/test-string \
-				unit/test-main unit/test-io unit/test-checksum
+				unit/test-main unit/test-io \
+				unit/test-plugin unit/test-checksum
 
 unit_test_unit_LDADD = ell/libell-private.la
 
@@ -58,7 +59,14 @@ unit_test_main_LDADD = ell/libell-private.la
 
 unit_test_io_LDADD = ell/libell-private.la
 
+unit_test_plugin_LDADD = ell/libell-private.la -ldl
+
 unit_test_checksum_LDADD = ell/libell-private.la
+
+noinst_LTLIBRARIES += unit/example-plugin.la
+
+unit_example_plugin_la_LDFLAGS = -no-undefined -module -avoid-version \
+							-rpath /dummy
 
 TESTS = $(noinst_PROGRAMS)
 

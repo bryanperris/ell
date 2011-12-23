@@ -30,6 +30,7 @@ unit/test-hashmap
 unit/test-string
 unit/test-main
 unit/test-io
+unit/test-plugin
 unit/test-checksum
 
 doc/*.bak
