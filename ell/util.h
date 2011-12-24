@@ -58,6 +58,7 @@ void *l_realloc(void *mem, size_t size);
 		__p;				\
 	}))
 
+char *l_strdup(const char *str);
 char *l_strdup_printf(const char *format, ...);
 
 char *l_util_hexstring(const unsigned char *buf, size_t len);

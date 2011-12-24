@@ -115,6 +115,31 @@ LIB_EXPORT void l_free(void *ptr)
 }
 
 /**
+ * l_strdup:
+ * @str: string pointer
+ *
+ * Allocates and duplicates sring
+ *
+ * Returns: a newly allocated string
+ **/
+LIB_EXPORT char *l_strdup(const char *str)
+{
+	if (likely(str)) {
+		char *tmp;
+
+		tmp = strdup(str);
+		if (tmp)
+			return tmp;
+
+		fprintf(stderr, "%s:%s(): failed to allocate string\n",
+						STRLOC, __PRETTY_FUNCTION__);
+		abort();
+	}
+
+	return NULL;
+}
+
+/**
  * l_strdup_printf:
  * @format: string format
  * @...: parameters to insert into format string
