@@ -67,6 +67,8 @@ typedef void (*l_util_hexdump_func_t) (const char *str, void *user_data);
 
 void l_util_hexdump(bool in, const unsigned char *buf, size_t len,
 			l_util_hexdump_func_t function, void *user_data);
+void l_util_debug(l_util_hexdump_func_t function, void *user_data,
+						const char *format, ...);
 
 #ifdef __cplusplus
 }

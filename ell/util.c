@@ -236,3 +236,25 @@ LIB_EXPORT void l_util_hexdump(bool in, const unsigned char *buf, size_t len,
 		function(str, user_data);
 	}
 }
+
+LIB_EXPORT void l_util_debug(l_util_hexdump_func_t function, void *user_data,
+						const char *format, ...)
+{
+	va_list args;
+	char *str;
+	int len;
+
+	if (!function || !format)
+		return;
+
+	va_start(args, format);
+	len = vasprintf(&str, format, args);
+	va_end(args);
+
+	if (len < 0)
+		return;
+
+	function(str, user_data);
+
+	free(str);
+}
