@@ -8,6 +8,7 @@ pkginclude_HEADERS = ell/ell.h ell/util.h \
 				ell/queue.h \
 				ell/hashmap.h \
 				ell/string.h \
+				ell/settings.h \
 				ell/main.h \
 				ell/signal.h \
 				ell/timeout.h \
@@ -24,6 +25,7 @@ ell_libell_la_SOURCES = $(include_HEADERS) ell/private.h \
 						ell/queue.c \
 						ell/hashmap.c \
 						ell/string.c \
+						ell/settings.c \
 						ell/main.c \
 						ell/signal.c \
 						ell/timeout.c \

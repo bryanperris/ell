@@ -19,16 +19,34 @@
  *
  */
 
-#include <ell/util.h>
-#include <ell/test.h>
-#include <ell/queue.h>
-#include <ell/hashmap.h>
-#include <ell/string.h>
-#include <ell/main.h>
-#include <ell/signal.h>
-#include <ell/timeout.h>
-#include <ell/io.h>
-#include <ell/log.h>
-#include <ell/plugin.h>
-#include <ell/checksum.h>
-#include <ell/settings.h>
+#ifndef __ELL_SETTINGS_H
+#define __ELL_SETTINGS_H
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct l_settings;
+
+typedef void (*l_settings_debug_cb_t) (const char *str, void *user_data);
+typedef void (*l_settings_destroy_cb_t) (void *user_data);
+
+struct l_settings *l_settings_new(void);
+void l_settings_free(struct l_settings *settings);
+
+bool l_settings_load_from_data(struct l_settings *settings,
+						const char *data, size_t len);
+bool l_settings_load_from_file(struct l_settings *settings, const char *filename);
+
+bool l_settings_set_debug(struct l_settings *settings,
+				l_settings_debug_cb_t callback,
+				void *user_data,
+				l_settings_destroy_cb_t destroy);
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_SETTINGS_H */
