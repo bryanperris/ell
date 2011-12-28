@@ -165,7 +165,6 @@ static bool parse_keyvalue(struct l_settings *settings, const char *data,
 {
 	char buf[128];
 	const char *equal = memchr(data, '=', len);
-	int i;
 
 	if (equal == NULL) {
 		sprintf(buf, "Delimiter '=' not found on line: %zd", line);
