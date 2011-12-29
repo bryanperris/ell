@@ -32,6 +32,7 @@ unit/test-main
 unit/test-io
 unit/test-plugin
 unit/test-checksum
+unit/test-settings
 
 doc/*.bak
 doc/*.stamp
