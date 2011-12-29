@@ -59,6 +59,8 @@ static l_log_func_t log_func = log_null;
  **/
 LIB_EXPORT void l_log_set_handler(l_log_func_t function)
 {
+	L_DEBUG_SYMBOL(__debug_intern, "");
+
 	log_func = function;
 }
 
