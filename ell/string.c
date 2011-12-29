@@ -24,6 +24,7 @@
 #endif
 
 #include <stdio.h>
+#include <wchar.h>
 
 #include "util.h"
 #include "string.h"
@@ -284,4 +285,73 @@ LIB_EXPORT void l_string_append_printf(struct l_string *dest,
 	va_start(args, format);
 	l_string_append_vprintf(dest, format, args);
 	va_end(args);
+}
+
+static inline bool __attribute__ ((always_inline))
+			valid_unicode(wchar_t c)
+{
+	if (c <= 0xd7ff)
+		return true;
+
+	if (c < 0xe000 || c > 0x10ffff)
+		return false;
+
+	if (c >= 0xfdd0 && c <= 0xfdef)
+		return false;
+
+	if ((c & 0xfffe) == 0xfffe)
+		return false;
+
+	return true;
+}
+
+LIB_EXPORT bool l_utf8_validate(const char *str, size_t len, const char **end)
+{
+	static const int mins[3] = { 1 << 7, 1 << 11, 1 << 16 };
+	size_t pos = 0;
+	unsigned int expect_bytes;
+	wchar_t val;
+	size_t i;
+
+	while (pos < len && str[pos]) {
+		if (str[pos] > 0) {
+			pos += 1;
+			continue;
+		}
+
+		expect_bytes = __builtin_clz(~(str[pos] << 24));
+
+		if (expect_bytes < 2 || expect_bytes > 4)
+			goto error;
+
+		if (pos + expect_bytes > len)
+			goto error;
+
+		val = str[pos] & (0xff >> (expect_bytes + 1));
+
+		for (i = pos + 1; i < pos + expect_bytes; i++) {
+			if ((str[i] & 0xc0) == 0)
+				goto error;
+
+			val <<= 6;
+			val |= str[i] & 0x3f;
+		}
+
+		if (val < mins[expect_bytes - 2])
+			goto error;
+
+		if (valid_unicode(val) == false)
+			goto error;
+
+		pos += expect_bytes;
+	}
+
+error:
+	if (end)
+		*end = str + pos;
+
+	if (pos != len)
+		return false;
+
+	return true;
 }
