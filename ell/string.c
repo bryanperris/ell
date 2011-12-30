@@ -305,6 +305,19 @@ static inline bool __attribute__ ((always_inline))
 	return true;
 }
 
+/**
+ * l_utf8_validate:
+ * @str: a pointer to character data
+ * @len: max bytes to validate
+ * @end: return location for end of valid data
+ *
+ * Validates UTF-8 encoded text. If @end is non-NULL, then the end of
+ * the valid range will be stored there (i.e. the start of the first
+ * invalid character if some bytes were invalid, or the end of the text
+ * being validated otherwise).
+ *
+ * Returns: Whether the text was valid UTF-8
+ **/
 LIB_EXPORT bool l_utf8_validate(const char *str, size_t len, const char **end)
 {
 	static const int mins[3] = { 1 << 7, 1 << 11, 1 << 16 };
