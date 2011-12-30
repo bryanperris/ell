@@ -52,6 +52,7 @@ pkgconfig_DATA = ell/ell.pc
 
 noinst_PROGRAMS = unit/test-unit unit/test-queue \
 				unit/test-hashmap unit/test-string \
+				unit/test-utf8 \
 				unit/test-main unit/test-io \
 				unit/test-plugin unit/test-checksum \
 				unit/test-settings \
@@ -64,6 +65,8 @@ unit_test_queue_LDADD = ell/libell-private.la
 unit_test_hashmap_LDADD = ell/libell-private.la
 
 unit_test_string_LDADD = ell/libell-private.la
+
+unit_test_utf8_LDADD = ell/libell-private.la
 
 unit_test_main_LDADD = ell/libell-private.la
 
