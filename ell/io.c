@@ -103,7 +103,7 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 {
 	struct l_io *io = user_data;
 
-	if (events & EPOLLHUP) {
+	if (unlikely(events & EPOLLHUP)) {
 		if (io->disconnect_handler) {
 			debug(io, "disconnect event");
 
@@ -155,6 +155,9 @@ LIB_EXPORT struct l_io *l_io_new(int fd)
 {
 	struct l_io *io;
 
+	if (unlikely(fd < 0))
+		return NULL;
+
 	io = l_new(struct l_io, 1);
 
 	io->fd = fd;
@@ -174,7 +177,7 @@ LIB_EXPORT struct l_io *l_io_new(int fd)
  **/
 LIB_EXPORT void l_io_destroy(struct l_io *io)
 {
-	if (!io)
+	if (unlikely(!io))
 		return;
 
 	io->read_handler = NULL;
@@ -191,7 +194,7 @@ LIB_EXPORT void l_io_destroy(struct l_io *io)
  **/
 LIB_EXPORT int l_io_get_fd(struct l_io *io)
 {
-	if (!io)
+	if (unlikely(!io))
 		return -1;
 
 	return io->fd;
@@ -208,7 +211,7 @@ LIB_EXPORT int l_io_get_fd(struct l_io *io)
  **/
 LIB_EXPORT bool l_io_set_close_on_destroy(struct l_io *io, bool do_close)
 {
-	if (!io)
+	if (unlikely(!io))
 		return false;
 
 	io->close_on_destroy = do_close;
@@ -232,7 +235,7 @@ LIB_EXPORT bool l_io_set_read_handler(struct l_io *io, l_io_read_cb_t callback,
 {
 	uint32_t events;
 
-	if (!io || io->fd < 0)
+	if (unlikely(!io || io->fd < 0))
 		return false;
 
 	debug(io, "set read handler");
@@ -275,7 +278,7 @@ LIB_EXPORT bool l_io_set_write_handler(struct l_io *io, l_io_write_cb_t callback
 {
 	uint32_t events;
 
-	if (!io || io->fd < 0)
+	if (unlikely(!io || io->fd < 0))
 		return false;
 
 	debug(io, "set write handler");
@@ -321,7 +324,7 @@ LIB_EXPORT bool l_io_set_disconnect_handler(struct l_io *io,
 				l_io_disconnect_cb_t callback,
 				void *user_data, l_io_destroy_cb_t destroy)
 {
-	if (!io || io->fd < 0)
+	if (unlikely(!io || io->fd < 0))
 		return false;
 
 	debug(io, "set disconnect handler");
@@ -350,7 +353,7 @@ LIB_EXPORT bool l_io_set_disconnect_handler(struct l_io *io,
 LIB_EXPORT bool l_io_set_debug(struct l_io *io, l_io_debug_cb_t callback,
 				void *user_data, l_io_destroy_cb_t destroy)
 {
-	if (!io)
+	if (unlikely(!io))
 		return false;
 
 	if (io->debug_destroy)
