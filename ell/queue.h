@@ -32,7 +32,7 @@ typedef void (*l_queue_foreach_func_t) (void *data, void *user_data);
 typedef void (*l_queue_destroy_func_t) (void *data);
 typedef int (*l_queue_compare_func_t) (const void *a, const void *b,
 							void *user_data);
-typedef bool (*l_queue_remove_func_t) (const void *data, void *user_data);
+typedef bool (*l_queue_remove_func_t) (void *data, void *user_data);
 
 struct l_queue;
 
