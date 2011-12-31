@@ -55,9 +55,9 @@ struct watch_data {
 	void *user_data;
 };
 
-static inline bool create_epoll(void)
+static inline bool __attribute__ ((always_inline)) create_epoll(void)
 {
-	if (epoll_fd)
+	if (likely(epoll_fd))
 		return true;
 
 	epoll_fd = epoll_create1(EPOLL_CLOEXEC);
@@ -83,7 +83,7 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 	struct epoll_event ev;
 	int err;
 
-	if (fd < 0 || !callback)
+	if (unlikely(fd < 0 || !callback))
 		return -EINVAL;
 
 	if (!create_epoll())
@@ -121,7 +121,7 @@ int watch_modify(int fd, uint32_t events)
 	struct epoll_event ev;
 	int err;
 
-	if (fd < 0)
+	if (unlikely(fd < 0))
 		return -EINVAL;
 
 	data = l_hashmap_lookup(watch_list, L_INT_TO_PTR(fd));
@@ -149,7 +149,7 @@ int watch_remove(int fd)
 	struct watch_data *data;
 	int err;
 
-	if (fd < 0)
+	if (unlikely(fd < 0))
 		return -EINVAL;
 
 	data = l_hashmap_remove(watch_list, L_INT_TO_PTR(fd));
@@ -182,7 +182,7 @@ static void watch_destroy(const void *key, void *value)
  **/
 LIB_EXPORT bool l_main_run(void)
 {
-	if (epoll_running)
+	if (unlikely(epoll_running))
 		return false;
 
 	if (!create_epoll())
@@ -238,7 +238,7 @@ LIB_EXPORT bool l_main_run(void)
  **/
 LIB_EXPORT bool l_main_quit(void)
 {
-	if (!epoll_running)
+	if (unlikely(!epoll_running))
 		return false;
 
 	epoll_terminate = true;
