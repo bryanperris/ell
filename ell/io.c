@@ -103,7 +103,7 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 {
 	struct l_io *io = user_data;
 
-	if (unlikely(events & EPOLLHUP)) {
+	if (unlikely(events & (EPOLLERR | EPOLLHUP))) {
 		if (io->disconnect_handler) {
 			debug(io, "disconnect event");
 
