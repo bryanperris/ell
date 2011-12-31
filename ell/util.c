@@ -195,7 +195,7 @@ LIB_EXPORT char *l_util_hexstring(const unsigned char *buf, size_t len)
 	return str;
 }
 
-LIB_EXPORT void l_util_hexdump(bool in, const unsigned char *buf, size_t len,
+static void hexdump(const char dir, const unsigned char *buf, size_t len,
 			l_util_hexdump_func_t function, void *user_data)
 {
 	static const char hexdigits[] = "0123456789abcdef";
@@ -205,7 +205,7 @@ LIB_EXPORT void l_util_hexdump(bool in, const unsigned char *buf, size_t len,
 	if (!function || !len)
 		return;
 
-	str[0] = in ? '<' : '>';
+	str[0] = dir;
 
 	for (i = 0; i < len; i++) {
 		str[((i % 16) * 3) + 1] = ' ';
@@ -235,6 +235,20 @@ LIB_EXPORT void l_util_hexdump(bool in, const unsigned char *buf, size_t len,
 		str[67] = '\0';
 		function(str, user_data);
 	}
+}
+
+LIB_EXPORT void l_util_hexdump(bool in, const void *buf, size_t len,
+			l_util_hexdump_func_t function, void *user_data)
+{
+	hexdump(in ? '<' : '>', buf, len, function, user_data);
+}
+
+LIB_EXPORT void l_util_hexdump_two(bool in, const void *buf1, size_t len1,
+			const void *buf2, size_t len2,
+			l_util_hexdump_func_t function, void *user_data)
+{
+	hexdump(in ? '<' : '>', buf1, len1, function, user_data);
+	hexdump(' ', buf2, len2, function, user_data);
 }
 
 LIB_EXPORT void l_util_debug(l_util_hexdump_func_t function, void *user_data,
