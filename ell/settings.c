@@ -25,9 +25,9 @@
 
 #include <stdio.h>
 
-#include "settings.h"
 #include "util.h"
 #include "string.h"
+#include "settings.h"
 #include "private.h"
 
 struct l_settings {
@@ -166,7 +166,7 @@ static bool parse_keyvalue(struct l_settings *settings, const char *data,
 	char buf[128];
 	const char *equal = memchr(data, '=', len);
 
-	if (equal == NULL) {
+	if (!equal) {
 		sprintf(buf, "Delimiter '=' not found on line: %zd", line);
 		debug(settings, buf);
 
@@ -212,8 +212,7 @@ LIB_EXPORT bool l_settings_load_from_data(struct l_settings *settings,
 		}
 
 		eol = memchr(data + pos, '\n', len - pos);
-
-		if (eol == NULL)
+		if (!eol)
 			eol = data + len;
 
 		line_len = eol - data - pos;
