@@ -57,11 +57,10 @@ static void timeout_destroy(void *user_data)
 	struct l_timeout *timeout = user_data;
 
 	close(timeout->fd);
+	timeout->fd = -1;
 
 	if (timeout->destroy)
 		timeout->destroy(timeout->user_data);
-
-	l_free(timeout);
 }
 
 static void timeout_callback(int fd, uint32_t events, void *user_data)
@@ -162,4 +161,6 @@ LIB_EXPORT void l_timeout_remove(struct l_timeout *timeout)
 		return;
 
 	watch_remove(timeout->fd);
+
+	l_free(timeout);
 }
