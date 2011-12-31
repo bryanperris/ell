@@ -23,11 +23,11 @@
 #include <config.h>
 #endif
 
-#include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/epoll.h>
 
+#include "log.h"
 #include "util.h"
 #include "main.h"
 #include "hashmap.h"
@@ -169,8 +169,14 @@ int watch_remove(int fd)
 static void watch_destroy(const void *key, void *value)
 {
 	int fd = L_PTR_TO_INT(key);
+	struct watch_data *data = value;
 
-	fprintf(stderr, "Dangling file descriptor %d found", fd);
+	l_error("Dangling file descriptor %d found", fd);
+
+	if (data->destroy)
+		data->destroy(data->user_data);
+
+	l_free(data);
 }
 
 /**
