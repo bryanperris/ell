@@ -102,7 +102,7 @@ LIB_EXPORT void l_hashmap_destroy(struct l_hashmap *hashmap,
 {
 	unsigned int i;
 
-	if (!hashmap)
+	if (unlikely(!hashmap))
 		return;
 
 	for (i = 0; i < NBUCKETS; i++) {
@@ -139,7 +139,7 @@ LIB_EXPORT bool l_hashmap_insert(struct l_hashmap *hashmap,
 	struct entry *entry, *head;
 	unsigned int hash;
 
-	if (!hashmap)
+	if (unlikely(!hashmap))
 		return false;
 
 	hash = hashmap->hash_func(key) % NBUCKETS;
@@ -183,7 +183,7 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 	struct entry *entry, *head, *prev;
 	unsigned int hash;
 
-	if (!hashmap)
+	if (unlikely(!hashmap))
 		return NULL;
 
 	hash = hashmap->hash_func(key) % NBUCKETS;
@@ -239,7 +239,7 @@ LIB_EXPORT void *l_hashmap_lookup(struct l_hashmap *hashmap, const void *key)
 	struct entry *entry, *head;
 	unsigned int hash;
 
-	if (!hashmap)
+	if (unlikely(!hashmap))
 		return NULL;
 
 	hash = hashmap->hash_func(key) % NBUCKETS;
@@ -272,7 +272,7 @@ LIB_EXPORT void l_hashmap_foreach(struct l_hashmap *hashmap,
 {
 	unsigned int i;
 
-	if (!hashmap || !function)
+	if (unlikely(!hashmap || !function))
 		return;
 
 	for (i = 0; i < NBUCKETS; i++) {
@@ -298,7 +298,7 @@ LIB_EXPORT void l_hashmap_foreach(struct l_hashmap *hashmap,
  **/
 LIB_EXPORT unsigned int l_hashmap_size(struct l_hashmap *hashmap)
 {
-	if (!hashmap)
+	if (unlikely(!hashmap))
 		return 0;
 
 	return hashmap->entries;
@@ -312,7 +312,7 @@ LIB_EXPORT unsigned int l_hashmap_size(struct l_hashmap *hashmap)
  **/
 LIB_EXPORT bool l_hashmap_isempty(struct l_hashmap *hashmap)
 {
-	if (!hashmap)
+	if (unlikely(!hashmap))
 		return true;
 
 	return hashmap->entries == 0;
