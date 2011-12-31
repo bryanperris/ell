@@ -33,6 +33,7 @@ unit/test-io
 unit/test-plugin
 unit/test-checksum
 unit/test-settings
+unit/test-dbus
 
 doc/*.bak
 doc/*.stamp
