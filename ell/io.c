@@ -61,20 +61,11 @@ struct l_io {
 	void *debug_data;
 };
 
-static inline void __attribute__ ((always_inline))
-			debug(struct l_io *io, const char *message)
-{
-	if (!io->debug_handler)
-		return;
-
-	io->debug_handler(message, io->debug_data);
-}
-
 static void io_cleanup(void *user_data)
 {
 	struct l_io *io = user_data;
 
-	debug(io, "cleanup");
+	l_util_debug(io->debug_handler, io->debug_data, "cleanup <%p>", io);
 
 	if (io->write_destroy)
 		io->write_destroy(io->write_data);
@@ -105,7 +96,8 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 
 	if (unlikely(events & (EPOLLERR | EPOLLHUP))) {
 		if (io->disconnect_handler) {
-			debug(io, "disconnect event");
+			l_util_debug(io->debug_handler, io->debug_data,
+						"disconnect event <%p>", io);
 
 			io->disconnect_handler(io, io->disconnect_data);
 			io->disconnect_handler = NULL;
@@ -121,13 +113,15 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 	}
 
 	if ((events & EPOLLIN) && io->read_handler) {
-		debug(io, "read event");
+		l_util_debug(io->debug_handler, io->debug_data,
+						"read event <%p>", io);
 
 		io->read_handler(io, io->read_data);
 	}
 
 	if ((events & EPOLLOUT) && io->write_handler) {
-		debug(io, "write event");
+		l_util_debug(io->debug_handler, io->debug_data,
+						"write event <%p>", io);
 
 		if (!io->write_handler(io, io->write_data)) {
 			if (io->write_destroy)
@@ -239,7 +233,8 @@ LIB_EXPORT bool l_io_set_read_handler(struct l_io *io, l_io_read_cb_t callback,
 	if (unlikely(!io || io->fd < 0))
 		return false;
 
-	debug(io, "set read handler");
+	l_util_debug(io->debug_handler, io->debug_data,
+					"set read handler <%p>", io);
 
 	if (io->read_destroy)
 		io->read_destroy(io->read_data);
@@ -282,7 +277,8 @@ LIB_EXPORT bool l_io_set_write_handler(struct l_io *io, l_io_write_cb_t callback
 	if (unlikely(!io || io->fd < 0))
 		return false;
 
-	debug(io, "set write handler");
+	l_util_debug(io->debug_handler, io->debug_data,
+					"set write handler <%p>", io);
 
 	if (io->write_handler == callback && io->write_destroy == destroy &&
 						io->write_data == user_data)
@@ -328,7 +324,8 @@ LIB_EXPORT bool l_io_set_disconnect_handler(struct l_io *io,
 	if (unlikely(!io || io->fd < 0))
 		return false;
 
-	debug(io, "set disconnect handler");
+	l_util_debug(io->debug_handler, io->debug_data,
+					"set disconnect handler <%p>", io);
 
 	if (io->disconnect_destroy)
 		io->disconnect_destroy(io->disconnect_data);
