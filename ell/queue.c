@@ -329,14 +329,17 @@ LIB_EXPORT void l_queue_foreach(struct l_queue *queue,
  * @user_data: user data given to callback function
  *
  * Remove all entries in the @queue where @function returns #true.
+ *
+ * Returns: number of removed entries
  **/
-LIB_EXPORT void l_queue_foreach_remove(struct l_queue *queue,
+LIB_EXPORT unsigned int l_queue_foreach_remove(struct l_queue *queue,
                         l_queue_remove_func_t function, void *user_data)
 {
 	struct entry *entry, *prev = NULL;
+	unsigned int count = 0;
 
 	if (!queue || !function)
-		return;
+		return 0;
 
 	entry = queue->head;
 
@@ -355,11 +358,15 @@ LIB_EXPORT void l_queue_foreach_remove(struct l_queue *queue,
 			entry = entry->next;
 
 			l_free(tmp);
+
+			count++;
 		} else {
 			prev = entry;
 			entry = entry->next;
 		}
 	}
+
+	return count;
 }
 
 /**

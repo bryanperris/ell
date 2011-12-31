@@ -51,7 +51,7 @@ bool l_queue_reverse(struct l_queue *queue);
 
 void l_queue_foreach(struct l_queue *queue,
 			l_queue_foreach_func_t function, void *user_data);
-void l_queue_foreach_remove(struct l_queue *queue,
+unsigned int l_queue_foreach_remove(struct l_queue *queue,
 			l_queue_remove_func_t function, void *user_data);
 
 unsigned int l_queue_length(struct l_queue *queue);
