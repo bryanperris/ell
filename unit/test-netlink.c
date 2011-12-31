@@ -24,6 +24,7 @@
 #endif
 
 #include <stdio.h>
+#include <sys/socket.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h>
 
