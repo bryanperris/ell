@@ -128,7 +128,7 @@ LIB_EXPORT char *l_string_free(struct l_string *string, bool free_data)
 {
 	char *result;
 
-	if (!string)
+	if (unlikely(!string))
 		return NULL;
 
 	if (free_data) {
@@ -155,7 +155,12 @@ LIB_EXPORT char *l_string_free(struct l_string *string, bool free_data)
 LIB_EXPORT struct l_string *l_string_append(struct l_string *dest,
 						const char *src)
 {
-	size_t size = strlen(src);
+	size_t size;
+
+	if (unlikely(!dest || !src))
+		return NULL;
+
+	size = strlen(src);
 
 	grow_string(dest, size);
 
@@ -179,6 +184,9 @@ LIB_EXPORT struct l_string *l_string_append(struct l_string *dest,
 LIB_EXPORT struct l_string *l_string_append_c(struct l_string *dest,
 						const char c)
 {
+	if (unlikely(!dest))
+		return NULL;
+
 	grow_string(dest, 1);
 	dest->str[dest->len++] = c;
 	dest->str[dest->len] = '\0';
@@ -203,8 +211,12 @@ LIB_EXPORT struct l_string *l_string_append_fixed(struct l_string *dest,
 							const char *src,
 							size_t max)
 {
-	const char *nul = memchr(src, 0, max);
+	const char *nul;
 
+	if (unlikely(!dest || !src || !max))
+		return NULL;
+
+	nul = memchr(src, 0, max);
 	if (nul)
 		max = nul - src;
 
@@ -234,6 +246,9 @@ LIB_EXPORT void l_string_append_vprintf(struct l_string *dest,
 	size_t have_space;
 	va_list args_copy;
 
+	if (unlikely(!dest))
+		return;
+
 	va_copy(args_copy, args);
 
 	have_space = dest->max - dest->len;
@@ -262,6 +277,9 @@ LIB_EXPORT void l_string_append_printf(struct l_string *dest,
 					const char *format, ...)
 {
 	va_list args;
+
+	if (unlikely(!dest))
+		return;
 
 	va_start(args, format);
 	l_string_append_vprintf(dest, format, args);
