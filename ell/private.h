@@ -24,6 +24,8 @@
 #define likely(x)   __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
+#define align_len(len, boundary) (((len)+(boundary)-1) & ~((boundary)-1))
+
 #define LIB_EXPORT __attribute__ ((visibility("default")))
 
 typedef void (*watch_event_cb_t) (int fd, uint32_t events, void *user_data);
