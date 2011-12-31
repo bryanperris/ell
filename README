@@ -1,0 +1,27 @@
+ELL - Embedded Linux library
+*****************************
+
+Copyright (C) 2011  Intel Corporation. All rights reserved.
+
+
+Compilation and installation
+============================
+
+In order to compiler the source code you need following software packages:
+	- GCC compiler
+	- GNU C library
+
+To configure run:
+	./configure --prefix=/usr
+
+Configure automatically searches for all required components and packages.
+
+To compile and install run:
+	make && make install
+
+
+Kernel dependencies
+===================
+
+In order to use this library you need a Linux kernel with support for
+epoll and timerfd.
