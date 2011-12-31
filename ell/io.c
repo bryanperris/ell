@@ -53,6 +53,9 @@ struct l_io {
 	l_io_write_cb_t write_handler;
 	l_io_destroy_cb_t write_destroy;
 	void *write_data;
+	l_io_disconnect_cb_t disconnect_handler;
+	l_io_destroy_cb_t disconnect_destroy;
+	void *disconnect_data;
 	l_io_debug_cb_t debug_handler;
 	l_io_destroy_cb_t debug_destroy;
 	void *debug_data;
@@ -79,6 +82,14 @@ static void io_cleanup(void *user_data)
 	if (io->read_destroy)
 		io->read_destroy(io->read_data);
 
+	if (io->disconnect_handler)
+		io->disconnect_handler(io, io->disconnect_data);
+
+	if (io->disconnect_destroy)
+		io->disconnect_destroy(io->disconnect_data);
+
+	io->disconnect_handler = NULL;
+
 	if (io->debug_destroy)
 		io->debug_destroy(io->debug_data);
 
@@ -91,6 +102,22 @@ static void io_cleanup(void *user_data)
 static void io_callback(int fd, uint32_t events, void *user_data)
 {
 	struct l_io *io = user_data;
+
+	if (events & EPOLLHUP) {
+		if (io->disconnect_handler) {
+			debug(io, "disconnect event");
+
+			io->disconnect_handler(io, io->disconnect_data);
+		}
+
+		io->read_handler = NULL;
+		io->write_handler = NULL;
+
+		watch_remove(io->fd);
+		io->fd = -1;
+
+		return;
+	}
 
 	if ((events & EPOLLIN) && io->read_handler) {
 		debug(io, "read event");
@@ -149,6 +176,9 @@ LIB_EXPORT void l_io_destroy(struct l_io *io)
 {
 	if (!io)
 		return;
+
+	io->read_handler = NULL;
+	io->write_handler = NULL;
 
 	watch_remove(io->fd);
 }
@@ -272,6 +302,36 @@ LIB_EXPORT bool l_io_set_write_handler(struct l_io *io, l_io_write_cb_t callback
 	watch_modify(io->fd, events);
 
 	io->events = events;
+
+	return true;
+}
+
+/**
+ * l_io_set_disconnect_handler:
+ * @io: IO object
+ * @callback: disconnect handler callback function
+ * @user_data: user data provided to disconnect handler callback function
+ * @destroy: destroy function for user data
+ *
+ * Set disconnect function.
+ *
+ * Returns: #true on success and #false on failure
+ **/
+LIB_EXPORT bool l_io_set_disconnect_handler(struct l_io *io,
+				l_io_disconnect_cb_t callback,
+				void *user_data, l_io_destroy_cb_t destroy)
+{
+	if (!io || io->fd < 0)
+		return false;
+
+	debug(io, "set disconnect handler");
+
+	if (io->disconnect_destroy)
+		io->disconnect_destroy(io->disconnect_data);
+
+	io->disconnect_handler = callback;
+	io->disconnect_destroy = destroy;
+	io->disconnect_data = user_data;
 
 	return true;
 }
