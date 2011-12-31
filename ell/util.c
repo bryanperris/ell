@@ -202,7 +202,7 @@ static void hexdump(const char dir, const unsigned char *buf, size_t len,
 	char str[68];
 	size_t i;
 
-	if (!function || !len)
+	if (unlikely(!len))
 		return;
 
 	str[0] = dir;
@@ -240,6 +240,9 @@ static void hexdump(const char dir, const unsigned char *buf, size_t len,
 LIB_EXPORT void l_util_hexdump(bool in, const void *buf, size_t len,
 			l_util_hexdump_func_t function, void *user_data)
 {
+	if (likely(!function))
+		return;
+
 	hexdump(in ? '<' : '>', buf, len, function, user_data);
 }
 
@@ -247,6 +250,9 @@ LIB_EXPORT void l_util_hexdump_two(bool in, const void *buf1, size_t len1,
 			const void *buf2, size_t len2,
 			l_util_hexdump_func_t function, void *user_data)
 {
+	if (likely(!function))
+		return;
+
 	hexdump(in ? '<' : '>', buf1, len1, function, user_data);
 	hexdump(' ', buf2, len2, function, user_data);
 }
@@ -258,14 +264,17 @@ LIB_EXPORT void l_util_debug(l_util_hexdump_func_t function, void *user_data,
 	char *str;
 	int len;
 
-	if (!function || !format)
+	if (likely(!function))
+		return;
+
+	if (unlikely(!format))
 		return;
 
 	va_start(args, format);
 	len = vasprintf(&str, format, args);
 	va_end(args);
 
-	if (len < 0)
+	if (unlikely(len < 0))
 		return;
 
 	function(str, user_data);
