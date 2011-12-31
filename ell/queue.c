@@ -85,7 +85,7 @@ LIB_EXPORT void l_queue_destroy(struct l_queue *queue,
 {
 	struct entry *entry;
 
-	if (!queue)
+	if (unlikely(!queue))
 		return;
 
 	entry = queue->head;
@@ -118,7 +118,7 @@ LIB_EXPORT bool l_queue_push_tail(struct l_queue *queue, void *data)
 {
 	struct entry *entry;
 
-	if (!queue)
+	if (unlikely(!queue))
 		return false;
 
 	entry = l_new(struct entry, 1);
@@ -152,7 +152,7 @@ LIB_EXPORT void *l_queue_pop_head(struct l_queue *queue)
 	struct entry *entry;
 	void *data;
 
-	if (!queue)
+	if (unlikely(!queue))
 		return NULL;
 
 	if (!queue->head)
@@ -192,7 +192,7 @@ LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
 {
 	struct entry *entry, *prev;
 
-	if (!queue || !function)
+	if (unlikely(!queue || !function))
 		return false;
 
 	entry = l_new(struct entry, 1);
@@ -246,7 +246,7 @@ LIB_EXPORT bool l_queue_remove(struct l_queue *queue, void *data)
 {
 	struct entry *entry, *prev;
 
-	if (!queue)
+	if (unlikely(!queue))
 		return false;
 
 	for (entry = queue->head, prev = NULL; entry;
@@ -282,7 +282,7 @@ LIB_EXPORT bool l_queue_reverse(struct l_queue *queue)
 {
 	struct entry *entry, *prev = NULL;
 
-	if (!queue)
+	if (unlikely(!queue))
 		return false;
 
 	entry = queue->head;
@@ -315,7 +315,7 @@ LIB_EXPORT void l_queue_foreach(struct l_queue *queue,
 {
 	struct entry *entry;
 
-	if (!queue || !function)
+	if (unlikely(!queue || !function))
 		return;
 
 	for (entry = queue->head; entry; entry = entry->next)
@@ -338,7 +338,7 @@ LIB_EXPORT unsigned int l_queue_foreach_remove(struct l_queue *queue,
 	struct entry *entry, *prev = NULL;
 	unsigned int count = 0;
 
-	if (!queue || !function)
+	if (unlikely(!queue || !function))
 		return 0;
 
 	entry = queue->head;
@@ -377,7 +377,7 @@ LIB_EXPORT unsigned int l_queue_foreach_remove(struct l_queue *queue,
  **/
 LIB_EXPORT unsigned int l_queue_length(struct l_queue *queue)
 {
-	if (!queue)
+	if (unlikely(!queue))
 		return 0;
 
 	return queue->entries;
@@ -391,7 +391,7 @@ LIB_EXPORT unsigned int l_queue_length(struct l_queue *queue)
  **/
 LIB_EXPORT bool l_queue_isempty(struct l_queue *queue)
 {
-	if (!queue)
+	if (unlikely(!queue))
 		return true;
 
 	return queue->entries == 0;
