@@ -54,7 +54,8 @@ noinst_PROGRAMS = unit/test-unit unit/test-queue \
 				unit/test-hashmap unit/test-string \
 				unit/test-main unit/test-io \
 				unit/test-plugin unit/test-checksum \
-				unit/test-settings unit/test-dbus
+				unit/test-settings \
+				unit/test-netlink unit/test-dbus
 
 unit_test_unit_LDADD = ell/libell-private.la
 
@@ -73,6 +74,8 @@ unit_test_plugin_LDADD = ell/libell-private.la -ldl
 unit_test_checksum_LDADD = ell/libell-private.la
 
 unit_test_settings_LDADD = ell/libell-private.la
+
+unit_test_netlink_LDADD = ell/libell-private.la
 
 unit_test_dbus_LDADD = ell/libell-private.la
 
