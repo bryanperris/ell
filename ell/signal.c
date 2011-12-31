@@ -99,6 +99,9 @@ LIB_EXPORT struct l_signal *l_signal_create(const sigset_t *mask,
 {
 	struct l_signal *signal;
 
+	if (unlikely(!mask))
+		return NULL;
+
 	signal = l_new(struct l_signal, 1);
 
 	signal->callback = callback;
@@ -130,7 +133,7 @@ LIB_EXPORT struct l_signal *l_signal_create(const sigset_t *mask,
  **/
 LIB_EXPORT void l_signal_remove(struct l_signal *signal)
 {
-	if (!signal)
+	if (unlikely(!signal))
 		return;
 
 	watch_remove(signal->fd);
