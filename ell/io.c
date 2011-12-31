@@ -82,13 +82,13 @@ static void io_cleanup(void *user_data)
 	if (io->read_destroy)
 		io->read_destroy(io->read_data);
 
-	if (io->disconnect_handler)
+	if (io->disconnect_handler) {
 		io->disconnect_handler(io, io->disconnect_data);
+		io->disconnect_handler = NULL;
+	}
 
 	if (io->disconnect_destroy)
 		io->disconnect_destroy(io->disconnect_data);
-
-	io->disconnect_handler = NULL;
 
 	if (io->debug_destroy)
 		io->debug_destroy(io->debug_data);
@@ -108,6 +108,7 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 			debug(io, "disconnect event");
 
 			io->disconnect_handler(io, io->disconnect_data);
+			io->disconnect_handler = NULL;
 		}
 
 		io->read_handler = NULL;
