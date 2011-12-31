@@ -58,11 +58,10 @@ static void signal_destroy(void *user_data)
 	struct l_signal *signal = user_data;
 
 	close(signal->fd);
+	signal->fd = -1;
 
 	if (signal->destroy)
 		signal->destroy(signal->user_data);
-
-	l_free(signal);
 }
 
 static void signal_callback(int fd, uint32_t events, void *user_data)
@@ -137,4 +136,6 @@ LIB_EXPORT void l_signal_remove(struct l_signal *signal)
 		return;
 
 	watch_remove(signal->fd);
+
+	l_free(signal);
 }
