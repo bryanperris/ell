@@ -142,10 +142,10 @@ LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
 LIB_EXPORT void l_timeout_modify(struct l_timeout *timeout,
 					unsigned int seconds)
 {
-	if (!timeout)
+	if (unlikely(!timeout))
 		return;
 
-	if (timeout->fd < 0)
+	if (unlikely(timeout->fd < 0))
 		return;
 }
 
@@ -157,7 +157,7 @@ LIB_EXPORT void l_timeout_modify(struct l_timeout *timeout,
  **/
 LIB_EXPORT void l_timeout_remove(struct l_timeout *timeout)
 {
-	if (!timeout)
+	if (unlikely(!timeout))
 		return;
 
 	watch_remove(timeout->fd);
