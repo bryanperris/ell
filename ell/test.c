@@ -102,7 +102,7 @@ LIB_EXPORT void l_test_add(const char *name, l_test_func_t function,
 {
 	struct test *test;
 
-	if (!name || !function)
+	if (unlikely(!name || !function))
 		return;
 
 	test = malloc(sizeof(struct test));
