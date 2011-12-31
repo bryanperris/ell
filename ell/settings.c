@@ -38,15 +38,18 @@ struct l_settings {
 
 LIB_EXPORT struct l_settings *l_settings_new(void)
 {
-	struct l_settings *ret;
+	struct l_settings *settings;
 
-	ret = l_new(struct l_settings, 1);
+	settings = l_new(struct l_settings, 1);
 
-	return ret;
+	return settings;
 }
 
 LIB_EXPORT void l_settings_free(struct l_settings *settings)
 {
+	if (unlikely(!settings))
+		return;
+
 	if (settings->debug_destroy)
 		settings->debug_destroy(settings->debug_data);
 
@@ -181,6 +184,9 @@ LIB_EXPORT bool l_settings_load_from_data(struct l_settings *settings,
 	size_t line = 1;
 	size_t line_len;
 
+	if (unlikely(!settings || !data || !len))
+		return false;
+
 	while (pos < len && r) {
 		if (l_ascii_isblank(data[pos])) {
 			pos += 1;
@@ -214,6 +220,9 @@ LIB_EXPORT bool l_settings_load_from_data(struct l_settings *settings,
 LIB_EXPORT bool l_settings_load_from_file(struct l_settings *settings,
 						const char *filename)
 {
+	if (unlikely(!settings || !filename))
+		return false;
+
 	return true;
 }
 
@@ -222,7 +231,7 @@ LIB_EXPORT bool l_settings_set_debug(struct l_settings *settings,
 					void *user_data,
 					l_settings_destroy_cb_t destroy)
 {
-	if (!settings)
+	if (unlikely(!settings))
 		return false;
 
 	if (settings->debug_destroy)
