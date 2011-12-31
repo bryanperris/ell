@@ -36,15 +36,6 @@ struct l_settings {
 	void *debug_data;
 };
 
-static inline void __attribute__ ((always_inline))
-			debug(struct l_settings *settings, const char *message)
-{
-	if (!settings->debug_handler)
-		return;
-
-	settings->debug_handler(message, settings->debug_data);
-}
-
 LIB_EXPORT struct l_settings *l_settings_new(void)
 {
 	struct l_settings *ret;
@@ -67,13 +58,11 @@ static bool parse_group(struct l_settings *settings, const char *data,
 {
 	size_t i = 1;
 	size_t end;
-	char buf[128];
 
 	while (i < len && data[i] != ']') {
 		if (l_ascii_isprint(data[i]) == false || data[i] == '[') {
-			sprintf(buf, "Invalid group name at line %zd", line);
-			debug(settings, buf);
-
+			l_util_debug(settings->debug_handler, settings->debug_data,
+					"Invalid group name at line %zd", line);
 			return false;
 		}
 
@@ -81,9 +70,8 @@ static bool parse_group(struct l_settings *settings, const char *data,
 	}
 
 	if (i >= len) {
-		sprintf(buf, "Unterminated group name at line %zd", line);
-		debug(settings, buf);
-
+		l_util_debug(settings->debug_handler, settings->debug_data,
+				"Unterminated group name at line %zd", line);
 		return false;
 	}
 
@@ -94,14 +82,13 @@ static bool parse_group(struct l_settings *settings, const char *data,
 		i += 1;
 
 	if (i != len) {
-		sprintf(buf, "Junk characters at the end of line %zd", line);
-		debug(settings, buf);
-
+		l_util_debug(settings->debug_handler, settings->debug_data,
+				"Junk characters at the end of line %zd", line);
 		return false;
 	}
 
-	sprintf(buf, "Found group: [%.*s]", (int) (end - 1), data + 1);
-	debug(settings, buf);
+	l_util_debug(settings->debug_handler, settings->debug_data,
+			"Found group: [%.*s]", (int) (end - 1), data + 1);
 
 	return true;
 }
@@ -110,7 +97,6 @@ static bool parse_key(struct l_settings *settings, const char *data,
 			size_t len, size_t line)
 {
 	unsigned int i;
-	char buf[128];
 	unsigned int end;
 
 	for (i = 0; i < len; i++) {
@@ -123,8 +109,8 @@ static bool parse_key(struct l_settings *settings, const char *data,
 		if (l_ascii_isblank(data[i]))
 			break;
 
-		sprintf(buf, "Invalid character in Key on line %zd", line);
-		debug(settings, buf);
+		l_util_debug(settings->debug_handler, settings->debug_data,
+				"Invalid character in Key on line %zd", line);
 
 		return false;
 	}
@@ -136,14 +122,14 @@ static bool parse_key(struct l_settings *settings, const char *data,
 		if (l_ascii_isblank(data[i++]))
 			continue;
 
-		sprintf(buf, "Garbage after Key on line %zd", line);
-		debug(settings, buf);
+		l_util_debug(settings->debug_handler, settings->debug_data,
+					"Garbage after Key on line %zd", line);
 
 		return false;
 	}
 
-	sprintf(buf, "Found Key: '%.*s'", end, data);
-	debug(settings, buf);
+	l_util_debug(settings->debug_handler, settings->debug_data,
+					"Found Key: '%.*s'", end, data);
 
 	return true;
 }
@@ -152,10 +138,9 @@ static bool parse_value(struct l_settings *settings, const char *data,
 			size_t len, size_t line)
 {
 	unsigned int end = len;
-	char buf[128];
 
-	sprintf(buf, "Found Value: '%.*s'", end, data);
-	debug(settings, buf);
+	l_util_debug(settings->debug_handler, settings->debug_data,
+					"Found Value: '%.*s'", end, data);
 
 	return true;
 }
@@ -163,20 +148,17 @@ static bool parse_value(struct l_settings *settings, const char *data,
 static bool parse_keyvalue(struct l_settings *settings, const char *data,
 				size_t len, size_t line)
 {
-	char buf[128];
 	const char *equal = memchr(data, '=', len);
 
 	if (!equal) {
-		sprintf(buf, "Delimiter '=' not found on line: %zd", line);
-		debug(settings, buf);
-
+		l_util_debug(settings->debug_handler, settings->debug_data,
+				"Delimiter '=' not found on line: %zd", line);
 		return false;
 	}
 
 	if (equal == data) {
-		sprintf(buf, "Empty key on line: %zd", line);
-		debug(settings, buf);
-
+		l_util_debug(settings->debug_handler, settings->debug_data,
+					"Empty key on line: %zd", line);
 		return false;
 	}
 
