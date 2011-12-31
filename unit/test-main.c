@@ -44,19 +44,36 @@ static void timeout_handler(struct l_timeout *timeout, void *user_data)
 	l_main_quit();
 }
 
+static void do_log(int priority, const char *format, va_list ap)
+{
+	vprintf(format, ap);
+}
+
 int main(int argc, char *argv[])
 {
+	struct l_timeout *timeout;
+	struct l_signal *signal;
 	sigset_t mask;
 
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGTERM);
 
-	l_signal_create(&mask, signal_handler, NULL, NULL);
+	signal = l_signal_create(&mask, signal_handler, NULL, NULL);
 
-	l_timeout_create(3, timeout_handler, NULL, NULL);
+	timeout = l_timeout_create(3, timeout_handler, NULL, NULL);
+
+	l_log_set_handler(do_log);
+
+	l_debug_enable("*");
+
+	l_debug("hello");
 
 	l_main_run();
+
+	l_timeout_remove(timeout);
+
+	l_signal_remove(signal);
 
 	return 0;
 }
