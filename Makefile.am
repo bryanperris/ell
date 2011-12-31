@@ -15,7 +15,8 @@ pkginclude_HEADERS = ell/ell.h ell/util.h \
 				ell/io.h \
 				ell/log.h \
 				ell/plugin.h \
-				ell/checksum.h
+				ell/checksum.h \
+				ell/dbus.h
 
 lib_LTLIBRARIES = ell/libell.la
 
@@ -32,7 +33,8 @@ ell_libell_la_SOURCES = $(include_HEADERS) ell/private.h \
 						ell/io.c \
 						ell/log.c \
 						ell/plugin.c \
-						ell/checksum.c
+						ell/checksum.c \
+						ell/dbus.c
 
 ell_libell_la_LDFLAGS = -version-info 0:0:0
 
