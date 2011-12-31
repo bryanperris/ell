@@ -87,7 +87,7 @@ static void io_cleanup(void *user_data)
 	if (io->close_on_destroy)
 		close(io->fd);
 
-	l_free(io);
+	io->fd = -1;
 }
 
 static void io_callback(int fd, uint32_t events, void *user_data)
@@ -179,6 +179,8 @@ LIB_EXPORT void l_io_destroy(struct l_io *io)
 	io->write_handler = NULL;
 
 	watch_remove(io->fd);
+
+	l_free(io);
 }
 
 /**
