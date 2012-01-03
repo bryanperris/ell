@@ -273,7 +273,7 @@ static void *get_header_field(struct l_dbus_message *message,
 {
 	struct dbus_header *hdr;
 	unsigned char *ptr;
-	unsigned int len;
+	int len;
 
 	hdr = message->header;
 
