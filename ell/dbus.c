@@ -257,12 +257,12 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 	l_free(message);
 }
 
-static uint32_t get_reply_serial(struct l_dbus_message *message)
+static void *get_header_field(struct l_dbus_message *message,
+					unsigned char field, char type)
 {
 	struct dbus_header *hdr;
 	unsigned char *ptr;
 	unsigned int len;
-	uint32_t reply_serial = 0;
 
 	hdr = message->header;
 
@@ -270,20 +270,24 @@ static uint32_t get_reply_serial(struct l_dbus_message *message)
 	len = hdr->field_length;
 
 	while (len > 0) {
-		unsigned char type = ptr[0];
-		unsigned char sig = ptr[2];
+		char sig = ptr[2];
 		unsigned int size = 0;
+		unsigned int offset = 0;
 
 		switch (sig) {
+		case 'o':
 		case 's':
 			size = 4 + ptr[4] + 1;
+			offset = 8;
 			break;
 		case 'u':
-			if (type == 5)
-				reply_serial = ptr[4];
 			size = 8;
+			offset = 4;
 			break;
 		}
+
+		if (sig == type && ptr[0] == field)
+			return ptr + offset;
 
 		if (!size)
 			break;
@@ -292,7 +296,18 @@ static uint32_t get_reply_serial(struct l_dbus_message *message)
 		len -= align_len(size, 8);
 	}
 
-	return reply_serial;
+	return NULL;
+}
+
+static uint32_t get_reply_serial(struct l_dbus_message *message)
+{
+	unsigned char *ptr;
+
+	ptr = get_header_field(message, DBUS_MESSAGE_FIELD_REPLY_SERIAL, 'u');
+	if (!ptr)
+		return 0;
+
+	return ptr[0];
 }
 
 static bool send_message_to_fd(int fd, struct l_dbus_message *message,
