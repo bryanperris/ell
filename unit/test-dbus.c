@@ -40,6 +40,19 @@ static void do_debug(const char *str, void *user_data)
 	l_info("%s%s", prefix, str);
 }
 
+static void signal_message(struct l_dbus_message *message, void *user_data)
+{
+	const char *path, *interface, *member, *destination;
+
+	path = l_dbus_message_get_path(message);
+	interface = l_dbus_message_get_interface(message);
+	member = l_dbus_message_get_member(message);
+	destination = l_dbus_message_get_destination(message);
+
+	l_info("path=%s destination=%s", path, destination);
+	l_info("interface=%s member=%s", interface, member);
+}
+
 static void method_return(struct l_dbus_message *message, void *user_data)
 {
 	l_main_quit();
@@ -49,6 +62,8 @@ static void ready_callback(void *user_data)
 {
 	struct l_dbus *dbus = user_data;
 	struct l_dbus_message *msg;
+
+	l_dbus_register(dbus, signal_message, NULL, NULL);
 
 	msg = l_dbus_message_new_method_call("org.freedesktop.DBus",
 					"/org/freedesktop/DBus",
