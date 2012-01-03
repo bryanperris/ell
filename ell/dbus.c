@@ -280,6 +280,10 @@ static void *get_header_field(struct l_dbus_message *message,
 			size = 4 + ptr[4] + 1;
 			offset = 8;
 			break;
+		case 'g':
+			size = 1 + ptr[4] + 1;
+			offset = 5;
+			break;
 		case 'u':
 			size = 8;
 			offset = 4;
