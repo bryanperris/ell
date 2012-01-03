@@ -81,6 +81,13 @@ unsigned int l_dbus_register(struct l_dbus *dbus,
 				void *user_data, l_dbus_destroy_func_t destroy);
 bool l_dbus_unregister(struct l_dbus *dbus, unsigned int id);
 
+uint32_t l_dbus_method_call(struct l_dbus *dbus,
+				l_dbus_message_func_t function,
+				void *user_data, l_dbus_destroy_func_t destroy,
+				const char *destination, const char *path,
+				const char *interface, const char *method,
+				const char *signature, ...);
+
 #ifdef __cplusplus
 }
 #endif

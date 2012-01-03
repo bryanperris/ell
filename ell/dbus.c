@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -1043,6 +1044,81 @@ LIB_EXPORT bool l_dbus_unregister(struct l_dbus *dbus, unsigned int id)
 	signal_list_destroy(L_UINT_TO_PTR(id), callback);
 
 	return true;
+}
+
+static void append_arguments(struct l_dbus_message *message,
+					const char *signature, va_list args)
+{
+	struct dbus_header *hdr;
+	uint32_t size, slen;
+	unsigned int len;
+
+	slen = strlen(signature);
+
+	size = message->header_size + align_len(slen + 6, 8);
+
+	message->header = l_realloc(message->header, size);
+
+	hdr = message->header;
+
+	len = DBUS_HEADER_SIZE + align_len(hdr->field_length, 8);
+	len += encode_header(8, 'g', signature, slen, message->header + len);
+
+	hdr->field_length = len - DBUS_HEADER_SIZE;
+
+	message->header_size = size;
+
+	while (*signature) {
+		char *str;
+		int num;
+
+		switch (*signature++) {
+		case 's':
+			str = va_arg(args, char *);
+			len = strlen(str);
+			size = align_len(message->body_size, 4);
+			message->body = l_realloc(message->body,
+							size + 4 + len + 1);
+			put_u32(message->body + size, len);
+			strcpy(message->body + size + 4, str);
+			message->body_size = size + 4 + len + 1;
+			break;
+		case 'u':
+			num = va_arg(args, int);
+			size = align_len(message->body_size, 4);
+			message->body = l_realloc(message->body, size + 4);
+			put_u32(message->body + size, num);
+			message->body_size = size + 4;
+			break;
+		}
+	}
+
+	hdr->body_length = message->body_size;
+}
+
+LIB_EXPORT uint32_t l_dbus_method_call(struct l_dbus *dbus,
+				l_dbus_message_func_t function,
+				void *user_data, l_dbus_destroy_func_t destroy,
+				const char *destination, const char *path,
+				const char *interface, const char *method,
+				const char *signature, ...)
+{
+	struct l_dbus_message *message;
+	va_list args;
+
+	if (unlikely(!dbus))
+		return 0;
+
+	message = l_dbus_message_new_method_call(destination, path,
+							interface, method);
+
+	if (signature) {
+		va_start(args, signature);
+		append_arguments(message, signature, args);
+		va_end(args);
+	}
+
+	return send_message(dbus, message, function, user_data, destroy);
 }
 
 LIB_EXPORT const char *l_dbus_message_get_path(struct l_dbus_message *message)
