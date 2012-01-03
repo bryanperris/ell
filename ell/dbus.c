@@ -257,6 +257,8 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 	l_free(message);
 }
 
+#define get_u32(ptr)	(*(uint32_t *) (ptr))
+
 static void *get_header_field(struct l_dbus_message *message,
 					unsigned char field, char type)
 {
@@ -277,7 +279,7 @@ static void *get_header_field(struct l_dbus_message *message,
 		switch (sig) {
 		case 'o':
 		case 's':
-			size = 4 + ptr[4] + 1;
+			size = 8 + get_u32(ptr + 4) + 1;
 			offset = 8;
 			break;
 		case 'g':
@@ -290,11 +292,11 @@ static void *get_header_field(struct l_dbus_message *message,
 			break;
 		}
 
-		if (sig == type && ptr[0] == field)
-			return ptr + offset;
-
 		if (!size)
 			break;
+
+		if (sig == type && ptr[0] == field)
+			return ptr + offset;
 
 		ptr += align_len(size, 8);
 		len -= align_len(size, 8);
@@ -311,7 +313,7 @@ static uint32_t get_reply_serial(struct l_dbus_message *message)
 	if (!ptr)
 		return 0;
 
-	return ptr[0];
+	return get_u32(ptr);
 }
 
 static bool send_message_to_fd(int fd, struct l_dbus_message *message,
