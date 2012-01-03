@@ -49,6 +49,29 @@
 #define DBUS_INTERFACE_INTROSPECTABLE	"org.freedesktop.DBus.Introspectable"
 #define DBUS_INTERFACE_PROPERTIES	"org.freedesktop.DBus.Properties"
 
+#define DBUS_MESSAGE_LITTLE_ENDIAN	('l')
+#define DBUS_MESSAGE_BIG_ENDIAN		('B')
+
+#define DBUS_MESSAGE_PROTOCOL_VERSION	1
+
+#define DBUS_MESSAGE_TYPE_METHOD_CALL	1
+#define DBUS_MESSAGE_TYPE_METHOD_RETURN	2
+#define DBUS_MESSAGE_TYPE_ERROR		3
+#define DBUS_MESSAGE_TYPE_SIGNAL	4
+
+#define DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED	0x01
+#define DBUS_MESSAGE_FLAG_NO_AUTO_START		0x02
+
+#define DBUS_MESSAGE_FIELD_PATH		1
+#define DBUS_MESSAGE_FIELD_INTERFACE	2
+#define DBUS_MESSAGE_FIELD_MEMBER	3
+#define DBUS_MESSAGE_FIELD_ERROR_NAME	4
+#define DBUS_MESSAGE_FIELD_REPLY_SERIAL	5
+#define DBUS_MESSAGE_FIELD_DESTINATION	6
+#define DBUS_MESSAGE_FIELD_SENDER	7
+#define DBUS_MESSAGE_FIELD_SIGNATURE	8
+#define DBUS_MESSAGE_FIELD_UNIX_FDS	9
+
 enum auth_state {
 	WAITING_FOR_OK,
 	WAITING_FOR_AGREE_UNIX_FD,
@@ -168,10 +191,10 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_call(const char *des
 
 	hdr = message->header;
 
-	hdr->endian = 'l';
-	hdr->message_type = 0x01;
-	hdr->flags = 0x02;
-	hdr->version = 0x01;
+	hdr->endian = DBUS_MESSAGE_LITTLE_ENDIAN;
+	hdr->message_type = DBUS_MESSAGE_TYPE_METHOD_CALL;
+	hdr->flags = DBUS_MESSAGE_FLAG_NO_AUTO_START;
+	hdr->version = DBUS_MESSAGE_PROTOCOL_VERSION;
 	hdr->body_length = 0;
 	hdr->serial = 0x00;
 
