@@ -42,18 +42,35 @@ static void do_debug(const char *str, void *user_data)
 
 static void signal_message(struct l_dbus_message *message, void *user_data)
 {
-	const char *path, *interface, *member, *destination;
+	const char *path, *interface, *member, *destination, *sender;
 
 	path = l_dbus_message_get_path(message);
-	interface = l_dbus_message_get_interface(message);
-	member = l_dbus_message_get_member(message);
 	destination = l_dbus_message_get_destination(message);
 
 	l_info("path=%s destination=%s", path, destination);
+
+	interface = l_dbus_message_get_interface(message);
+	member = l_dbus_message_get_member(message);
+
 	l_info("interface=%s member=%s", interface, member);
+
+	sender = l_dbus_message_get_sender(message);
+
+	l_info("sender=%s", sender);
+
+	if (!strcmp(member, "NameOwnerChanged")) {
+		const char *name, *old_owner, *new_owner;
+
+		if (!l_dbus_message_get_arguments(message, "sss",
+					&name, &old_owner, &new_owner))
+			return;
+
+		l_info("name=%s old=%s new=%s", name, old_owner, new_owner);
+	}
 }
 
-static void method_return(struct l_dbus_message *message, void *user_data)
+static void request_name_callback(struct l_dbus_message *message,
+							void *user_data)
 {
 	const char *error, *text;
 	uint32_t result;
@@ -67,26 +84,33 @@ static void method_return(struct l_dbus_message *message, void *user_data)
 	if (!l_dbus_message_get_arguments(message, "u", &result))
 		goto done;
 
-	l_info("result=%d", result);
+	l_info("request name result=%d", result);
 
 done:
 	l_main_quit();
 }
 
+static void add_match_callback(struct l_dbus_message *message, void *user_data)
+{
+	const char *error, *text;
+
+	if (l_dbus_message_get_error(message, &error, &text)) {
+		l_error("error=%s", error);
+		l_error("message=%s", text);
+		return;
+	}
+
+	if (!l_dbus_message_get_arguments(message, ""))
+		return;
+
+	l_info("add match");
+}
+
+static const char *match_rule = "type=signal,sender=org.freedesktop.DBus";
+
 static void ready_callback(void *user_data)
 {
-	struct l_dbus *dbus = user_data;
-	uint32_t serial;
-
-	l_dbus_register(dbus, signal_message, NULL, NULL);
-
-	serial = l_dbus_method_call(dbus, method_return, dbus, NULL,
-					"org.freedesktop.DBus",
-					"/org/freedesktop/DBus",
-					"org.freedesktop.DBus",
-					"RequestName", "su", "org.test", 0);
-
-	l_info("serial=%d", serial);
+	l_info("ready");
 }
 
 static void disconnect_callback(void *user_data)
@@ -106,6 +130,20 @@ int main(int argc, char *argv[])
 
 	l_dbus_set_ready_handler(dbus, ready_callback, dbus, NULL);
 	l_dbus_set_disconnect_handler(dbus, disconnect_callback, NULL, NULL);
+
+	l_dbus_register(dbus, signal_message, NULL, NULL);
+
+	l_dbus_method_call(dbus, add_match_callback, dbus, NULL,
+				"org.freedesktop.DBus",
+				"/org/freedesktop/DBus",
+				"org.freedesktop.DBus",
+				"AddMatch", "s", match_rule);
+
+	l_dbus_method_call(dbus, request_name_callback, dbus, NULL,
+					"org.freedesktop.DBus",
+					"/org/freedesktop/DBus",
+					"org.freedesktop.DBus",
+					"RequestName", "su", "org.test", 0);
 
 	l_main_run();
 
