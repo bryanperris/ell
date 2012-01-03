@@ -61,18 +61,17 @@ static void method_return(struct l_dbus_message *message, void *user_data)
 static void ready_callback(void *user_data)
 {
 	struct l_dbus *dbus = user_data;
-	struct l_dbus_message *msg;
+	uint32_t serial;
 
 	l_dbus_register(dbus, signal_message, NULL, NULL);
 
-	msg = l_dbus_message_new_method_call("org.freedesktop.DBus",
+	serial = l_dbus_method_call(dbus, method_return, dbus, NULL,
+					"org.freedesktop.DBus",
 					"/org/freedesktop/DBus",
-					"org.freedesktop.DBus.Introspectable",
-					"Introspect");
+					"org.freedesktop.DBus",
+					"RequestName", "su", "org.test", 0);
 
-	l_dbus_send(dbus, msg, method_return, NULL, NULL);
-
-	l_dbus_message_unref(msg);
+	l_info("serial=%d", serial);
 }
 
 static void disconnect_callback(void *user_data)
@@ -86,7 +85,7 @@ int main(int argc, char *argv[])
 
 	l_log_set_handler(do_log);
 
-	dbus = l_dbus_new(L_DBUS_SYSTEM_BUS);
+	dbus = l_dbus_new(L_DBUS_SESSION_BUS);
 
 	l_dbus_set_debug(dbus, do_debug, "[DBUS] ", NULL);
 
