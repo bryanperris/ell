@@ -173,13 +173,20 @@ static unsigned int encode_header(unsigned char field, char type,
 	ptr[2] = (unsigned char) type;
 	ptr[3] = 0x00;
 	ptr[4] = (unsigned char) len;
-	ptr[5] = 0x00;
-	ptr[6] = 0x00;
-	ptr[7] = 0x00;
 
-	strcpy(data + 8, value);
+	if (type == 's' || type == 'o') {
+		ptr[5] = 0x00;
+		ptr[6] = 0x00;
+		ptr[7] = 0x00;
 
-	return 4 + 4 + len + 1;
+		strcpy(data + 8, value);
+
+		return 4 + 4 + len + 1;
+	} else {
+		strcpy(data + 5, value);
+
+		return 4 + 1 + len + 1;
+	}
 }
 
 LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_call(const char *destination,
@@ -258,6 +265,7 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 }
 
 #define get_u32(ptr)	(*(uint32_t *) (ptr))
+#define put_u32(ptr, val) (*((uint32_t *) (ptr)) = (val))
 
 static void *get_header_field(struct l_dbus_message *message,
 					unsigned char field, char type)
@@ -283,7 +291,7 @@ static void *get_header_field(struct l_dbus_message *message,
 			offset = 8;
 			break;
 		case 'g':
-			size = 1 + ptr[4] + 1;
+			size = 5 + ptr[4] + 1;
 			offset = 5;
 			break;
 		case 'u':
