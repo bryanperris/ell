@@ -1223,14 +1223,19 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 	const char *sig;
 	bool result;
 
-	if (unlikely(!message || !signature))
+	if (unlikely(!message))
 		return false;
 
 	sig = get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, 'g');
-	if (!sig)
-		return false;
+	if (!sig) {
+		/* An empty signature is valid */
+		if (!signature || *signature == '\0')
+			return true;
 
-	if (strcmp(sig, signature))
+		return false;
+	}
+
+	if (!signature || strcmp(sig, signature))
 		return false;
 
 	va_start(args, signature);
