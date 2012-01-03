@@ -41,6 +41,7 @@ void l_queue_destroy(struct l_queue *queue,
 			l_queue_destroy_func_t destroy);
 
 bool l_queue_push_tail(struct l_queue *queue, void *data);
+bool l_queue_push_head(struct l_queue *queue, void *data);
 void *l_queue_pop_head(struct l_queue *queue);
 
 bool l_queue_insert(struct l_queue *queue, void *data,

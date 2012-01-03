@@ -140,6 +140,38 @@ LIB_EXPORT bool l_queue_push_tail(struct l_queue *queue, void *data)
 }
 
 /**
+ * l_queue_push_head:
+ * @queue: queue object
+ * @data: pointer to data
+ *
+ * Adds @data pointer at the start of the queue.
+ *
+ * Returns: #true when data has been added and #false in case an invalid
+ *          @queue object has been provided
+ **/
+LIB_EXPORT bool l_queue_push_head(struct l_queue *queue, void *data)
+{
+	struct entry *entry;
+
+	if (unlikely(!queue))
+		return false;
+
+	entry = l_new(struct entry, 1);
+
+	entry->data = data;
+	entry->next = queue->head;
+
+	queue->head = entry;
+
+	if (!queue->tail)
+		queue->tail = entry;
+
+	queue->entries++;
+
+	return true;
+}
+
+/**
  * l_queue_pop_head:
  * @queue: queue object
  *
