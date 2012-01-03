@@ -436,6 +436,29 @@ static void handle_method_return(struct l_dbus *dbus,
 	message_queue_destroy(callback);
 }
 
+static void handle_error(struct l_dbus *dbus, struct l_dbus_message *message)
+{
+	struct message_callback *callback;
+	uint32_t reply_serial;
+
+	reply_serial = get_reply_serial(message);
+	if (!reply_serial)
+		return;
+
+	callback = l_hashmap_remove(dbus->message_list,
+					L_UINT_TO_PTR(reply_serial));
+	if (!callback)
+		return;
+
+	if (callback->callback)
+		callback->callback(message, callback->user_data);
+
+	if (callback->destroy)
+		callback->destroy(callback->user_data);
+
+	message_queue_destroy(callback);
+}
+
 static void process_signal(const void *key, void *value, void *user_data)
 {
 	struct signal_callback *callback = value;
@@ -472,6 +495,9 @@ static void message_read_handler(struct l_io *io, void *user_data)
 	switch (hdr->message_type) {
 	case DBUS_MESSAGE_TYPE_METHOD_RETURN:
 		handle_method_return(dbus, message);
+		break;
+	case DBUS_MESSAGE_TYPE_ERROR:
+		handle_error(dbus, message);
 		break;
 	case DBUS_MESSAGE_TYPE_SIGNAL:
 		handle_signal(dbus, message);
