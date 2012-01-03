@@ -62,6 +62,12 @@ struct l_dbus_message *l_dbus_message_new_method_call(const char *destination,
 struct l_dbus_message *l_dbus_message_ref(struct l_dbus_message *message);
 void l_dbus_message_unref(struct l_dbus_message *message);
 
+const char *l_dbus_message_get_path(struct l_dbus_message *message);
+const char *l_dbus_message_get_interface(struct l_dbus_message *message);
+const char *l_dbus_message_get_member(struct l_dbus_message *message);
+const char *l_dbus_message_get_destination(struct l_dbus_message *message);
+const char *l_dbus_message_get_sender(struct l_dbus_message *message);
+
 typedef void (*l_dbus_message_func_t) (struct l_dbus_message *message,
 							void *user_data);
 

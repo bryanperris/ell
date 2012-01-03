@@ -1004,3 +1004,43 @@ LIB_EXPORT bool l_dbus_unregister(struct l_dbus *dbus, unsigned int id)
 
 	return true;
 }
+
+LIB_EXPORT const char *l_dbus_message_get_path(struct l_dbus_message *message)
+{
+	if (unlikely(!message))
+		return NULL;
+
+	return get_header_field(message, DBUS_MESSAGE_FIELD_PATH, 'o');
+}
+
+LIB_EXPORT const char *l_dbus_message_get_interface(struct l_dbus_message *message)
+{
+	if (unlikely(!message))
+		return NULL;
+
+	return get_header_field(message, DBUS_MESSAGE_FIELD_INTERFACE, 's');
+}
+
+LIB_EXPORT const char *l_dbus_message_get_member(struct l_dbus_message *message)
+{
+	if (unlikely(!message))
+		return NULL;
+
+	return get_header_field(message, DBUS_MESSAGE_FIELD_MEMBER, 's');
+}
+
+LIB_EXPORT const char *l_dbus_message_get_destination(struct l_dbus_message *message)
+{
+	if (unlikely(!message))
+		return NULL;
+
+	return get_header_field(message, DBUS_MESSAGE_FIELD_DESTINATION, 's');
+}
+
+LIB_EXPORT const char *l_dbus_message_get_sender(struct l_dbus_message *message)
+{
+	if (unlikely(!message))
+		return NULL;
+
+	return get_header_field(message, DBUS_MESSAGE_FIELD_SENDER, 's');
+}
