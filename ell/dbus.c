@@ -86,9 +86,11 @@ struct l_dbus {
 	bool negotiate_unix_fd;
 	bool support_unix_fd;
 	bool is_ready;
+	unsigned int next_id;
 	uint32_t next_serial;
 	struct l_queue *message_queue;
 	struct l_hashmap *message_list;
+	struct l_hashmap *signal_list;
 	l_dbus_ready_func_t ready_handler;
 	l_dbus_destroy_func_t ready_destroy;
 	void *ready_data;
@@ -111,6 +113,13 @@ struct l_dbus_message {
 struct message_callback {
 	uint32_t serial;
 	struct l_dbus_message *message;
+	l_dbus_message_func_t callback;
+	l_dbus_destroy_func_t destroy;
+	void *user_data;
+};
+
+struct signal_callback {
+	unsigned int id;
 	l_dbus_message_func_t callback;
 	l_dbus_destroy_func_t destroy;
 	void *user_data;
@@ -142,6 +151,16 @@ static void message_queue_destroy(void *data)
 static void message_list_destroy(const void *key, void *value)
 {
 	message_queue_destroy(value);
+}
+
+static void signal_list_destroy(const void *key, void *value)
+{
+	struct signal_callback *callback = value;
+
+	if (callback->destroy)
+		callback->destroy(callback->user_data);
+
+	l_free(callback);
 }
 
 static unsigned int encode_header(unsigned char field, char type,
@@ -396,6 +415,20 @@ static void handle_method_return(struct l_dbus *dbus,
 	message_queue_destroy(callback);
 }
 
+static void process_signal(const void *key, void *value, void *user_data)
+{
+	struct signal_callback *callback = value;
+	struct l_dbus_message *message = user_data;
+
+	if (callback->callback)
+		callback->callback(message, callback->user_data);
+}
+
+static void handle_signal(struct l_dbus *dbus, struct l_dbus_message *message)
+{
+	l_hashmap_foreach(dbus->signal_list, process_signal, message);
+}
+
 static void message_read_handler(struct l_io *io, void *user_data)
 {
 	struct l_dbus *dbus = user_data;
@@ -418,6 +451,9 @@ static void message_read_handler(struct l_io *io, void *user_data)
 	switch (hdr->message_type) {
 	case DBUS_MESSAGE_TYPE_METHOD_RETURN:
 		handle_method_return(dbus, message);
+		break;
+	case DBUS_MESSAGE_TYPE_SIGNAL:
+		handle_signal(dbus, message);
 		break;
 	}
 
@@ -653,10 +689,12 @@ static struct l_dbus *setup_connection(int fd, const char *guid)
 	dbus->negotiate_unix_fd = true;
 	dbus->support_unix_fd = false;
 	dbus->is_ready = false;
+	dbus->next_id = 1;
 	dbus->next_serial = 1;
 
 	dbus->message_queue = l_queue_new();
 	dbus->message_list = l_hashmap_new();
+	dbus->signal_list = l_hashmap_new();
 
 	l_io_set_close_on_destroy(dbus->io, true);
 
@@ -796,6 +834,7 @@ LIB_EXPORT void l_dbus_destroy(struct l_dbus *dbus)
 	if (dbus->ready_destroy)
 		dbus->ready_destroy(dbus->ready_data);
 
+	l_hashmap_destroy(dbus->signal_list, signal_list_destroy);
 	l_hashmap_destroy(dbus->message_list, message_list_destroy);
 	l_queue_destroy(dbus->message_queue, message_queue_destroy);
 
@@ -909,6 +948,44 @@ LIB_EXPORT bool l_dbus_cancel(struct l_dbus *dbus, uint32_t serial)
 							L_UINT_TO_PTR(serial));
 	if (!count)
 		return false;
+
+	return true;
+}
+
+LIB_EXPORT unsigned int l_dbus_register(struct l_dbus *dbus,
+				l_dbus_message_func_t function,
+				void *user_data, l_dbus_destroy_func_t destroy)
+{
+	struct signal_callback *callback;
+
+	if (unlikely(!dbus))
+		return 0;
+
+	callback = l_new(struct signal_callback, 1);
+
+	callback->id = dbus->next_id++;
+	callback->callback = function;
+	callback->destroy = destroy;
+	callback->user_data = user_data;
+
+	l_hashmap_insert(dbus->signal_list,
+				L_UINT_TO_PTR(callback->id), callback);
+
+	return callback->id;
+}
+
+LIB_EXPORT bool l_dbus_unregister(struct l_dbus *dbus, unsigned int id)
+{
+	struct signal_callback *callback;
+
+	if (unlikely(!dbus || !id))
+		return false;
+
+	callback = l_hashmap_remove(dbus->signal_list, L_UINT_TO_PTR(id));
+	if (!callback)
+		return false;
+
+	signal_list_destroy(L_UINT_TO_PTR(id), callback);
 
 	return true;
 }
