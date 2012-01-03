@@ -88,6 +88,11 @@ uint32_t l_dbus_method_call(struct l_dbus *dbus,
 				const char *interface, const char *method,
 				const char *signature, ...);
 
+bool l_dbus_message_get_error(struct l_dbus_message *message,
+					const char **name, const char **text);
+bool l_dbus_message_get_arguments(struct l_dbus_message *message,
+						const char *signature, ...);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1121,6 +1121,104 @@ LIB_EXPORT uint32_t l_dbus_method_call(struct l_dbus *dbus,
 	return send_message(dbus, message, function, user_data, destroy);
 }
 
+static bool extract_arguments_valist(struct l_dbus_message *message,
+					const char *signature, va_list args)
+{
+	void *msg = message->body;
+
+	while (*signature) {
+		const void *ptr;
+		char *str;
+		int num;
+
+		switch (*signature++) {
+		case 's':
+			str = msg + 4;
+			ptr = va_arg(args, const void **);
+			*((const char **) ptr) = str;
+			break;
+		case 'u':
+			num = get_u32(msg);
+			ptr = va_arg(args, const void *);
+			put_u32(ptr, num);
+			break;
+		}
+	}
+
+	return true;
+}
+
+static bool extract_arguments(struct l_dbus_message *message,
+					const char *signature, ...)
+{
+	va_list args;
+	bool result;
+
+	va_start(args, signature);
+	result = extract_arguments_valist(message, signature, args);
+	va_end(args);
+
+	return result;
+}
+
+LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
+					const char **name, const char **text)
+{
+	struct dbus_header *hdr;
+	const char *sig, *str;
+
+	if (unlikely(!message))
+		return false;
+
+	hdr = message->header;
+
+	if (hdr->message_type != DBUS_MESSAGE_TYPE_ERROR)
+		return false;
+
+	sig = get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, 'g');
+	if (!sig)
+		return false;
+
+	if (strcmp(sig, "s"))
+		return false;
+
+	if (!extract_arguments(message, "s", &str))
+		return false;
+
+	if (name)
+		*name = get_header_field(message,
+					DBUS_MESSAGE_FIELD_ERROR_NAME, 's');
+
+	if (text)
+		*text = str;
+
+	return true;
+}
+
+LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
+						const char *signature, ...)
+{
+	va_list args;
+	const char *sig;
+	bool result;
+
+	if (unlikely(!message || !signature))
+		return false;
+
+	sig = get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, 'g');
+	if (!sig)
+		return false;
+
+	if (strcmp(sig, signature))
+		return false;
+
+	va_start(args, signature);
+	result = extract_arguments_valist(message, signature, args);
+	va_end(args);
+
+	return result;
+}
+
 LIB_EXPORT const char *l_dbus_message_get_path(struct l_dbus_message *message)
 {
 	if (unlikely(!message))
