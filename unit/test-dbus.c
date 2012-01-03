@@ -55,6 +55,21 @@ static void signal_message(struct l_dbus_message *message, void *user_data)
 
 static void method_return(struct l_dbus_message *message, void *user_data)
 {
+	const char *error, *text;
+	uint32_t result;
+
+	if (l_dbus_message_get_error(message, &error, &text)) {
+		l_error("error=%s", error);
+		l_error("message=%s", text);
+		goto done;
+	}
+
+	if (!l_dbus_message_get_arguments(message, "u", &result))
+		goto done;
+
+	l_info("result=%d", result);
+
+done:
 	l_main_quit();
 }
 
