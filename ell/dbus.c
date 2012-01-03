@@ -245,9 +245,6 @@ static uint32_t get_reply_serial(struct l_dbus_message *message)
 	unsigned int len;
 	uint32_t reply_serial = 0;
 
-	if (unlikely(!message || !message->header))
-		return 0;
-
 	hdr = message->header;
 
 	ptr = message->header + DBUS_HEADER_SIZE;
@@ -375,12 +372,35 @@ static struct l_dbus_message *receive_message_from_fd(int fd)
 	return message;
 }
 
+static void handle_method_return(struct l_dbus *dbus,
+					struct l_dbus_message *message)
+{
+	struct message_callback *callback;
+	uint32_t reply_serial;
+
+	reply_serial = get_reply_serial(message);
+	if (!reply_serial)
+		return;
+
+	callback = l_hashmap_remove(dbus->message_list,
+					L_UINT_TO_PTR(reply_serial));
+	if (!callback)
+		return;
+
+	if (callback->callback)
+		callback->callback(message, callback->user_data);
+
+	if (callback->destroy)
+		callback->destroy(callback->user_data);
+
+	message_queue_destroy(callback);
+}
+
 static void message_read_handler(struct l_io *io, void *user_data)
 {
 	struct l_dbus *dbus = user_data;
 	struct l_dbus_message *message;
-	struct message_callback *callback;
-	uint32_t reply_serial;
+	struct dbus_header *hdr;
 	int fd;
 
 	fd = l_io_get_fd(io);
@@ -393,24 +413,14 @@ static void message_read_handler(struct l_io *io, void *user_data)
 					message->body, message->body_size,
 					dbus->debug_handler, dbus->debug_data);
 
-	reply_serial = get_reply_serial(message);
-	if (!reply_serial)
-		goto done;
+	hdr = message->header;
 
-	callback = l_hashmap_remove(dbus->message_list,
-					L_UINT_TO_PTR(reply_serial));
-	if (!callback)
-		goto done;
+	switch (hdr->message_type) {
+	case DBUS_MESSAGE_TYPE_METHOD_RETURN:
+		handle_method_return(dbus, message);
+		break;
+	}
 
-	if (callback->callback)
-		callback->callback(message, callback->user_data);
-
-	if (callback->destroy)
-		callback->destroy(callback->user_data);
-
-	message_queue_destroy(callback);
-
-done:
 	l_dbus_message_unref(message);
 }
 
