@@ -1140,6 +1140,7 @@ static bool extract_arguments_valist(struct l_dbus_message *message,
 					const char *signature, va_list args)
 {
 	void *msg = message->body;
+	unsigned int len = 0;
 
 	while (*signature) {
 		const void *ptr;
@@ -1147,15 +1148,20 @@ static bool extract_arguments_valist(struct l_dbus_message *message,
 		int num;
 
 		switch (*signature++) {
+		case 'o':
 		case 's':
-			str = msg + 4;
+			len = align_len(len, 4);
+			str = msg + len + 4;
 			ptr = va_arg(args, const void **);
 			*((const char **) ptr) = str;
+			len += 4 + strlen(str) + 1;
 			break;
 		case 'u':
-			num = get_u32(msg);
+			len = align_len(len, 4);
+			num = get_u32(msg + len);
 			ptr = va_arg(args, const void *);
 			put_u32(ptr, num);
+			len += 4;
 			break;
 		}
 	}
