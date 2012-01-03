@@ -379,7 +379,8 @@ static bool message_write_handler(struct l_io *io, void *user_data)
 	if (l_queue_isempty(dbus->message_queue))
 		return false;
 
-	return true;
+	/* Only continue sending messges if the connection is ready */
+	return dbus->is_ready;
 }
 
 static struct l_dbus_message *receive_message_from_fd(int fd)
@@ -516,7 +517,7 @@ static void message_read_handler(struct l_io *io, void *user_data)
 	l_dbus_message_unref(message);
 }
 
-static uint32_t send_message(struct l_dbus *dbus,
+static uint32_t send_message(struct l_dbus *dbus, bool priority,
 				struct l_dbus_message *message,
 				l_dbus_message_func_t function,
 				void *user_data, l_dbus_destroy_func_t destroy)
@@ -531,9 +532,20 @@ static uint32_t send_message(struct l_dbus *dbus,
 	callback->destroy = destroy;
 	callback->user_data = user_data;
 
+	if (priority) {
+		l_queue_push_head(dbus->message_queue, callback);
+
+		l_io_set_write_handler(dbus->io, message_write_handler,
+							dbus, NULL);
+
+		return callback->serial;
+	}
+
 	l_queue_push_tail(dbus->message_queue, callback);
 
-	l_io_set_write_handler(dbus->io, message_write_handler, dbus, NULL);
+	if (dbus->is_ready)
+		l_io_set_write_handler(dbus->io, message_write_handler,
+							dbus, NULL);
 
 	return callback->serial;
 }
@@ -546,6 +558,12 @@ static void hello_callback(struct l_dbus_message *message, void *user_data)
 
 	if (dbus->ready_handler)
 		dbus->ready_handler(dbus->ready_data);
+
+	/* Check for messages added before the connection was ready */
+	if (l_queue_isempty(dbus->message_queue))
+		return;
+
+	l_io_set_write_handler(dbus->io, message_write_handler, dbus, NULL);
 }
 
 static bool auth_write_handler(struct l_io *io, void *user_data)
@@ -580,7 +598,7 @@ static bool auth_write_handler(struct l_io *io, void *user_data)
 		message = l_dbus_message_new_method_call(DBUS_SERVICE_DBUS,
 				DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "Hello");
 
-		send_message(dbus, message, hello_callback, dbus, NULL);
+		send_message(dbus, true, message, hello_callback, dbus, NULL);
 
 		l_dbus_message_unref(message);
 
@@ -967,10 +985,7 @@ LIB_EXPORT uint32_t l_dbus_send(struct l_dbus *dbus,
 	if (unlikely(!dbus || !message))
 		return 0;
 
-	if (unlikely(!dbus->is_ready))
-		return 0;
-
-	return send_message(dbus, message, function, user_data, destroy);
+	return send_message(dbus, false, message, function, user_data, destroy);
 }
 
 static bool remove_entry(void *data, void *user_data)
@@ -1118,7 +1133,7 @@ LIB_EXPORT uint32_t l_dbus_method_call(struct l_dbus *dbus,
 		va_end(args);
 	}
 
-	return send_message(dbus, message, function, user_data, destroy);
+	return send_message(dbus, false, message, function, user_data, destroy);
 }
 
 static bool extract_arguments_valist(struct l_dbus_message *message,
