@@ -35,3 +35,5 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 				void *user_data, watch_destroy_cb_t destroy);
 int watch_modify(int fd, uint32_t events);
 int watch_remove(int fd);
+
+struct l_dbus_message *dbus_message_build(const void *data, size_t size);
