@@ -23,8 +23,6 @@
 #include <config.h>
 #endif
 
-#include <stdio.h>
-
 #include <ell/ell.h>
 
 static void signal_handler(struct l_signal *signal, uint32_t signo,
@@ -33,7 +31,7 @@ static void signal_handler(struct l_signal *signal, uint32_t signo,
 	switch (signo) {
 	case SIGINT:
 	case SIGTERM:
-		fprintf(stderr, "Terminate\n");
+		l_info("Terminate");
 		l_main_quit();
 		break;
 	}
@@ -42,11 +40,6 @@ static void signal_handler(struct l_signal *signal, uint32_t signo,
 static void timeout_handler(struct l_timeout *timeout, void *user_data)
 {
 	l_main_quit();
-}
-
-static void do_log(int priority, const char *format, va_list ap)
-{
-	vprintf(format, ap);
 }
 
 int main(int argc, char *argv[])
@@ -63,7 +56,7 @@ int main(int argc, char *argv[])
 
 	timeout = l_timeout_create(3, timeout_handler, NULL, NULL);
 
-	l_log_set_handler(do_log);
+	l_log_set_stderr(true);
 
 	l_debug_enable("*");
 
