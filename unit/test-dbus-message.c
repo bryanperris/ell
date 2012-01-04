@@ -23,6 +23,8 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
+
 #include <ell/ell.h>
 #include <ell/dbus.h>
 
@@ -83,11 +85,15 @@ static void check_message(const void *data)
 {
 	const struct message_data *msg_data = data;
 	struct l_dbus_message *msg;
-	struct l_dbus_message_iter iter;
+	const char *destination;
 
 	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
 
-	l_dbus_message_iter_init(&iter, msg);
+	destination = l_dbus_message_get_destination(msg);
+	assert(destination);
+	assert(!strcmp(msg_data->destination, destination));
+
+	l_info("destination=%s", destination);
 }
 
 int main(int argc, char *argv[])
