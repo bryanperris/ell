@@ -92,6 +92,32 @@ LIB_EXPORT void l_log_set_handler(l_log_func_t function)
 	log_func = function;
 }
 
+static void log_stderr(int priority, const char *format, va_list ap)
+{
+        vfprintf(stderr, format, ap);
+}
+
+/**
+ * l_log_set_stderr:
+ * @enable: #true to enable and #false to disable
+ *
+ * Enable or disable logging to stderr.
+ **/
+LIB_EXPORT bool l_log_set_stderr(bool enable)
+{
+	if (syslog_fd > 0) {
+		close(syslog_fd);
+		syslog_fd = -1;
+	}
+
+	if (enable)
+		log_func = log_stderr;
+	else
+		log_func = log_null;
+
+	return true;
+}
+
 static void log_syslog(int priority, const char *format, va_list ap)
 {
 	struct msghdr msg;

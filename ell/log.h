@@ -38,6 +38,7 @@ typedef void (*l_log_func_t) (int priority, const char *format, va_list ap);
 
 void l_log_set_ident(const char *ident);
 void l_log_set_handler(l_log_func_t function);
+bool l_log_set_stderr(bool enable);
 bool l_log_set_syslog(bool enable);
 
 void l_log(int priority, const char *format, ...)
