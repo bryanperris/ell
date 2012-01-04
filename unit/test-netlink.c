@@ -23,18 +23,12 @@
 #include <config.h>
 #endif
 
-#include <stdio.h>
 #include <sys/socket.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h>
 
 #include <ell/ell.h>
 #include <ell/netlink.h>
-
-static void do_log(int priority, const char *format, va_list ap)
-{
-	vprintf(format, ap);
-}
 
 static void do_debug(const char *str, void *user_data)
 {
@@ -83,7 +77,7 @@ int main(int argc, char *argv[])
 	struct l_netlink *netlink;
 	struct ifinfomsg msg;
 
-	l_log_set_handler(do_log);
+	l_log_set_stderr(true);
 
 	netlink = l_netlink_new(NETLINK_ROUTE);
 
