@@ -23,6 +23,7 @@
 #define __ELL_LOG_H
 
 #include <stdarg.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,7 +36,9 @@ extern "C" {
 
 typedef void (*l_log_func_t) (int priority, const char *format, va_list ap);
 
+void l_log_set_ident(const char *ident);
 void l_log_set_handler(l_log_func_t function);
+bool l_log_set_syslog(bool enable);
 
 void l_log(int priority, const char *format, ...)
 				__attribute__((format(printf, 2, 3)));
