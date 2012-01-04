@@ -88,23 +88,22 @@ LIB_EXPORT void l_log_set_handler(l_log_func_t function)
 
 static void log_syslog(int priority, const char *format, va_list ap)
 {
-	char header[64];
 	struct msghdr msg;
 	struct iovec iov[2];
-	char *str;
-	int len;
+	char hdr[64], *str;
+	int hdr_len, str_len;
 
-	len = vasprintf(&str, format, ap);
-	if (len < 0)
+	str_len = vasprintf(&str, format, ap);
+	if (str_len < 0)
 		return;
 
-	snprintf(header, sizeof(header), "<%i>%s[%lu]: ", priority,
+	hdr_len = snprintf(hdr, sizeof(hdr), "<%i>%s[%lu]: ", priority,
 				log_ident, (unsigned long) syslog_pid);
 
-	iov[0].iov_base = header;
-	iov[0].iov_len  = strlen(header);
+	iov[0].iov_base = hdr;
+	iov[0].iov_len  = hdr_len;
 	iov[1].iov_base = str;
-	iov[1].iov_len  = len;
+	iov[1].iov_len  = str_len;
 
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = iov;
