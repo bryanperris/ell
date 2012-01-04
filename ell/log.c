@@ -26,6 +26,7 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
 #include <fnmatch.h>
@@ -110,6 +111,8 @@ static void log_syslog(int priority, const char *format, va_list ap)
 	msg.msg_iovlen = 2;
 
 	sendmsg(syslog_fd, &msg, 0);
+
+	free(str);
 }
 
 /**
