@@ -23,15 +23,8 @@
 #include <config.h>
 #endif
 
-#include <stdio.h>
-
 #include <ell/ell.h>
 #include <ell/dbus.h>
-
-static void do_log(int priority, const char *format, va_list ap)
-{
-	vprintf(format, ap);
-}
 
 static void do_debug(const char *str, void *user_data)
 {
@@ -122,7 +115,7 @@ int main(int argc, char *argv[])
 {
 	struct l_dbus *dbus;
 
-	l_log_set_handler(do_log);
+	l_log_set_stderr(true);
 
 	dbus = l_dbus_new(L_DBUS_SESSION_BUS);
 
