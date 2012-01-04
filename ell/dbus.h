@@ -56,6 +56,15 @@ bool l_dbus_set_debug(struct l_dbus *dbus, l_dbus_debug_func_t function,
 
 struct l_dbus_message;
 
+struct l_dbus_message_iter {
+	void *dummy1;
+	void *dummy2;
+	void *dummy3;
+	void *dummy4;
+	size_t dummy5;
+	size_t dummy6;
+};
+
 struct l_dbus_message *l_dbus_message_new_method_call(const char *destination,
 		const char *path, const char *interface, const char *method);
 
@@ -92,6 +101,13 @@ bool l_dbus_message_get_error(struct l_dbus_message *message,
 					const char **name, const char **text);
 bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 						const char *signature, ...);
+
+bool l_dbus_message_iter_init(struct l_dbus_message_iter *iter,
+					struct l_dbus_message *message);
+char l_dbus_message_iter_get_type(struct l_dbus_message_iter *iter);
+bool l_dbus_message_iter_is_valid(struct l_dbus_message_iter *iter);
+bool l_dbus_message_iter_next_string(struct l_dbus_message_iter *iter,
+							const char **value);
 
 #ifdef __cplusplus
 }

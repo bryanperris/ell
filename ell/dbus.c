@@ -112,6 +112,15 @@ struct l_dbus_message {
 	size_t body_size;
 };
 
+struct message_iter {
+	struct l_dbus_message *message;
+	void *dummy2;
+	const char *signature;
+	void *data;
+	size_t size;
+	size_t pos;
+};
+
 struct message_callback {
 	uint32_t serial;
 	struct l_dbus_message *message;
@@ -1311,4 +1320,87 @@ LIB_EXPORT const char *l_dbus_message_get_sender(struct l_dbus_message *message)
 		return NULL;
 
 	return get_header_field(message, DBUS_MESSAGE_FIELD_SENDER, 's');
+}
+
+LIB_EXPORT bool l_dbus_message_iter_init(struct l_dbus_message_iter *iter,
+					struct l_dbus_message *message)
+{
+	struct message_iter *real_iter;
+
+	if (unlikely(!iter || !message))
+		return false;
+
+	real_iter = (struct message_iter *) iter;
+
+	real_iter->message = message;
+	real_iter->signature = message->signature;
+	real_iter->data = message->body;
+	real_iter->size = message->body_size;
+	real_iter->pos = 0;
+
+	return true;
+}
+
+LIB_EXPORT char l_dbus_message_iter_get_type(struct l_dbus_message_iter *iter)
+{
+	struct message_iter *real_iter;
+
+	if (unlikely(!iter))
+		return '\0';
+
+	real_iter = (struct message_iter *) iter;
+
+	if (!real_iter->signature)
+		return '\0';
+
+	return *real_iter->signature;
+}
+
+LIB_EXPORT bool l_dbus_message_iter_is_valid(struct l_dbus_message_iter *iter)
+{
+	struct message_iter *real_iter;
+
+	if (unlikely(!iter))
+		return false;
+
+	real_iter = (struct message_iter *) iter;
+
+	if (!real_iter->signature || *real_iter->signature == '\0')
+		return false;
+
+	return true;
+}
+
+LIB_EXPORT bool l_dbus_message_iter_next_string(struct l_dbus_message_iter *iter,
+							const char **value)
+{
+	struct message_iter *real_iter;
+	const char *str;
+	uint32_t len;
+	size_t pos;
+
+	if (unlikely(!iter))
+		return false;
+
+	real_iter = (struct message_iter *) iter;
+
+	if (!real_iter->signature)
+		return false;
+
+	if (*real_iter->signature != 's' && *real_iter->signature != 'o')
+		return false;
+
+	pos = align_len(real_iter->pos, 4);
+
+	len = get_u32(real_iter->data + pos);
+	str = (len > 0) ? real_iter->data + pos + 4 : "";
+
+	real_iter->pos = pos + len + 5;
+
+	real_iter->signature++;
+
+	if (value)
+		*value = str;
+
+	return true;
 }
