@@ -23,17 +23,11 @@
 #include <config.h>
 #endif
 
-#include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/socket.h>
 
 #include <ell/ell.h>
-
-static void do_log(int priority, const char *format, va_list ap)
-{
-	vprintf(format, ap);
-}
 
 static void do_debug(const char *str, void *user_data)
 {
@@ -78,10 +72,10 @@ int main(int argc, char *argv[])
 	struct l_io *io1, *io2;
 	int fd[2];
 
-	l_log_set_handler(do_log);
+	l_log_set_stderr(true);
 
 	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, fd) < 0) {
-		perror("Failed to create socket pair");
+		l_error("Failed to create socket pair");
 		return 0;
 	}
 
