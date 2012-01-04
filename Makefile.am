@@ -55,8 +55,8 @@ noinst_PROGRAMS = unit/test-unit unit/test-queue \
 				unit/test-utf8 \
 				unit/test-main unit/test-io \
 				unit/test-plugin unit/test-checksum \
-				unit/test-settings \
-				unit/test-netlink unit/test-dbus
+				unit/test-settings unit/test-netlink \
+				unit/test-dbus unit/test-dbus-message
 
 unit_test_unit_LDADD = ell/libell-private.la
 
@@ -81,6 +81,8 @@ unit_test_settings_LDADD = ell/libell-private.la
 unit_test_netlink_LDADD = ell/libell-private.la
 
 unit_test_dbus_LDADD = ell/libell-private.la
+
+unit_test_dbus_message_LDADD = ell/libell-private.la
 
 noinst_LTLIBRARIES += unit/example-plugin.la
 
