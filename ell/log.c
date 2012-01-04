@@ -84,6 +84,11 @@ LIB_EXPORT void l_log_set_handler(l_log_func_t function)
 		syslog_fd = -1;
 	}
 
+	if (!function) {
+		log_func = log_null;
+		return;
+	}
+
 	log_func = function;
 }
 
