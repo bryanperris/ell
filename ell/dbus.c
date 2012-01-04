@@ -107,6 +107,7 @@ struct l_dbus_message {
 	int refcount;
 	void *header;
 	size_t header_size;
+	const char *signature;
 	void *body;
 	size_t body_size;
 };
@@ -402,6 +403,9 @@ struct l_dbus_message *dbus_message_build(const void *data, size_t size)
 	memcpy(message->header, data, message->header_size);
 	memcpy(message->body, data + message->header_size, message->body_size);
 
+	message->signature = get_header_field(message,
+					DBUS_MESSAGE_FIELD_SIGNATURE, 'g');
+
 	return message;
 }
 
@@ -440,6 +444,9 @@ static struct l_dbus_message *receive_message_from_fd(int fd)
 	len = recvmsg(fd, &msg, 0);
 	if (len < 0)
 		return NULL;
+
+	message->signature = get_header_field(message,
+					DBUS_MESSAGE_FIELD_SIGNATURE, 'g');
 
 	return message;
 }
@@ -1208,7 +1215,7 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 					const char **name, const char **text)
 {
 	struct dbus_header *hdr;
-	const char *sig, *str;
+	const char *str;
 
 	if (unlikely(!message))
 		return false;
@@ -1218,11 +1225,10 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 	if (hdr->message_type != DBUS_MESSAGE_TYPE_ERROR)
 		return false;
 
-	sig = get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, 'g');
-	if (!sig)
+	if (!message->signature)
 		return false;
 
-	if (strcmp(sig, "s"))
+	if (strcmp(message->signature, "s"))
 		return false;
 
 	if (!extract_arguments(message, "s", &str))
@@ -1242,14 +1248,12 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 						const char *signature, ...)
 {
 	va_list args;
-	const char *sig;
 	bool result;
 
 	if (unlikely(!message))
 		return false;
 
-	sig = get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, 'g');
-	if (!sig) {
+	if (!message->signature) {
 		/* An empty signature is valid */
 		if (!signature || *signature == '\0')
 			return true;
@@ -1257,7 +1261,7 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 		return false;
 	}
 
-	if (!signature || strcmp(sig, signature))
+	if (!signature || strcmp(message->signature, signature))
 		return false;
 
 	va_start(args, signature);
