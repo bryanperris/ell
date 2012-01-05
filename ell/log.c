@@ -230,6 +230,32 @@ LIB_EXPORT void l_log(int priority, const char *format, ...)
  * @...: format arguments
  **/
 
+static const char *debug_pattern;
+
+void debug_enable(struct l_debug_desc *start, struct l_debug_desc *stop)
+{
+	struct l_debug_desc *desc;
+	char *pattern_copy;
+
+	if (!debug_pattern)
+		return;
+
+	pattern_copy = strdupa(debug_pattern);
+
+	while (pattern_copy) {
+		char *str = strsep(&pattern_copy, ":,");
+		if (!str)
+			break;
+
+		for (desc = start; desc < stop; desc++) {
+			if (!fnmatch(str, desc->file, 0))
+				desc->flags |= L_DEBUG_FLAG_PRINT;
+			if (!fnmatch(str, desc->func, 0))
+				desc->flags |= L_DEBUG_FLAG_PRINT;
+		}
+	}
+}
+
 extern struct l_debug_desc __start___debug[];
 extern struct l_debug_desc __stop___debug[];
 
@@ -241,26 +267,12 @@ extern struct l_debug_desc __stop___debug[];
  **/
 LIB_EXPORT void l_debug_enable(const char *pattern)
 {
-	struct l_debug_desc *desc;
-	char *pattern_copy;
-
 	if (!pattern)
 		return;
 
-	pattern_copy = strdupa(pattern);
+	debug_pattern = pattern;
 
-	while (pattern_copy) {
-		char *str = strsep(&pattern_copy, ":,");
-		if (!str)
-			break;
-
-		for (desc = __start___debug; desc < __stop___debug; desc++) {
-			if (!fnmatch(str, desc->file, 0))
-				desc->flags |= L_DEBUG_FLAG_PRINT;
-			if (!fnmatch(str, desc->func, 0))
-				desc->flags |= L_DEBUG_FLAG_PRINT;
-		}
-	}
+	debug_enable(__start___debug, __stop___debug);
 }
 
 /**
@@ -274,4 +286,6 @@ LIB_EXPORT void l_debug_disable(void)
 
 	for (desc = __start___debug; desc < __stop___debug; desc++)
 		desc->flags &= ~L_DEBUG_FLAG_PRINT;
+
+	debug_pattern = NULL;
 }
