@@ -23,27 +23,27 @@
 #include <config.h>
 #endif
 
-#include <stdio.h>
-
 #include <ell/ell.h>
 
 static int builtin_init(void)
 {
-	printf("Builtin demo plugin init\n");
+	l_info("Builtin demo plugin init");
 
 	return 0;
 }
 
 static void builtin_exit(void)
 {
-	printf("Builtin demo plugin exit\n");
+	l_info("Builtin demo plugin exit");
 }
 
 L_PLUGIN_DEFINE(__builtin_desc, builtin_demo, "Builtin demo plugin", VERSION,
-                        L_PLUGIN_PRIORITY_DEFAULT, builtin_init, builtin_exit)
+			L_PLUGIN_PRIORITY_DEFAULT, builtin_init, builtin_exit)
 
 int main(int argc, char *argv[])
 {
+	l_log_set_stderr();
+
 	l_plugin_add(&__builtin_desc, VERSION);
 
 	l_plugin_load("unit/.libs/*.so", "demo_plugin_desc", VERSION);

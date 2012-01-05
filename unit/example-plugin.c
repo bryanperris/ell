@@ -23,20 +23,18 @@
 #include <config.h>
 #endif
 
-#include <stdio.h>
-
 #include <ell/ell.h>
 
 static int demo_init(void)
 {
-	printf("External demo plugin init\n");
+	l_info("External demo plugin init");
 
 	return 0;
 }
 
 static void demo_exit(void)
 {
-	printf("External demo plugin exit\n");
+	l_info("External demo plugin exit");
 }
 
 L_PLUGIN_DEFINE(demo_plugin_desc, demo, "External demo plugin", VERSION,
