@@ -6,6 +6,5 @@ includedir=@includedir@
 Name: ELL
 Description: Embedded Linux library
 Version: @VERSION@
-Libs: -L${libdir} -lell
-Libs.private: -ldl
+Libs: -L${libdir} -lell -ldl
 Cflags: -I${includedir}
