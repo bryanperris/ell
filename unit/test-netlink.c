@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 	struct l_netlink *netlink;
 	struct ifinfomsg msg;
 
-	l_log_set_stderr(true);
+	l_log_set_stderr();
 
 	netlink = l_netlink_new(NETLINK_ROUTE);
 

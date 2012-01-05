@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
 	timeout = l_timeout_create(3, timeout_handler, NULL, NULL);
 
-	l_log_set_stderr(true);
+	l_log_set_stderr();
 
 	l_debug_enable("*");
 

@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 	struct l_io *io1, *io2;
 	int fd[2];
 
-	l_log_set_stderr(true);
+	l_log_set_stderr();
 
 	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, fd) < 0) {
 		l_error("Failed to create socket pair");

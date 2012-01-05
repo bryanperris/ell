@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
 {
 	struct l_dbus *dbus;
 
-	l_log_set_stderr(true);
+	l_log_set_stderr();
 
 	dbus = l_dbus_new(L_DBUS_SESSION_BUS);
 
