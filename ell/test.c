@@ -60,7 +60,7 @@ LIB_EXPORT void l_test_init(int *argc, char ***argv)
 	test_head = NULL;
 	test_tail = NULL;
 
-	l_log_set_stderr(true);
+	l_log_set_stderr();
 }
 
 /**

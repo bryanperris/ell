@@ -58,6 +58,14 @@ static const char *log_ident = "";
 static int syslog_fd = -1;
 static unsigned long syslog_pid;
 
+static inline void close_syslog(void)
+{
+	if (syslog_fd > 0) {
+		close(syslog_fd);
+		syslog_fd = -1;
+	}
+}
+
 /**
  * l_log_set_ident:
  * @ident: string identifier
@@ -79,10 +87,7 @@ LIB_EXPORT void l_log_set_handler(l_log_func_t function)
 {
 	L_DEBUG_SYMBOL(__debug_intern, "");
 
-	if (syslog_fd > 0) {
-		close(syslog_fd);
-		syslog_fd = -1;
-	}
+	close_syslog();
 
 	if (!function) {
 		log_func = log_null;
@@ -92,6 +97,18 @@ LIB_EXPORT void l_log_set_handler(l_log_func_t function)
 	log_func = function;
 }
 
+/**
+ * l_log_set_null:
+ *
+ * Disable logging.
+ **/
+LIB_EXPORT void l_log_set_null(void)
+{
+	close_syslog();
+
+	log_func = log_null;
+}
+
 static void log_stderr(int priority, const char *format, va_list ap)
 {
         vfprintf(stderr, format, ap);
@@ -99,23 +116,14 @@ static void log_stderr(int priority, const char *format, va_list ap)
 
 /**
  * l_log_set_stderr:
- * @enable: #true to enable and #false to disable
  *
- * Enable or disable logging to stderr.
+ * Enable logging to stderr.
  **/
-LIB_EXPORT bool l_log_set_stderr(bool enable)
+LIB_EXPORT void l_log_set_stderr(void)
 {
-	if (syslog_fd > 0) {
-		close(syslog_fd);
-		syslog_fd = -1;
-	}
+	close_syslog();
 
-	if (enable)
-		log_func = log_stderr;
-	else
-		log_func = log_null;
-
-	return true;
+	log_func = log_stderr;
 }
 
 static void log_syslog(int priority, const char *format, va_list ap)
@@ -148,42 +156,34 @@ static void log_syslog(int priority, const char *format, va_list ap)
 
 /**
  * l_log_set_syslog:
- * @enable: #true to enable and #false to disable
  *
- * Enable or disable syslog logging.
+ * Enable logging to syslog.
  **/
-LIB_EXPORT bool l_log_set_syslog(bool enable)
+LIB_EXPORT void l_log_set_syslog(void)
 {
 	struct sockaddr_un addr;
 
-	if (syslog_fd > 0) {
-		if (!enable) {
-			close(syslog_fd);
-			syslog_fd = -1;
-		}
-		return true;
-	} else if (!enable)
-		return true;
+	close_syslog();
 
 	syslog_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-	if (syslog_fd < 0)
-		return false;
+	if (syslog_fd < 0) {
+		log_func = log_null;
+		return;
+	}
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
 	strncpy(addr.sun_path, "/dev/log", sizeof(addr.sun_path));
 
 	if (connect(syslog_fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		close(syslog_fd);
-		syslog_fd = -1;
-		return false;
+		close_syslog();
+		log_func = log_null;
+		return;
 	}
 
 	syslog_pid = getpid();
 
 	log_func = log_syslog;
-
-	return true;
 }
 
 /**
