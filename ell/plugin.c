@@ -100,6 +100,9 @@ static bool plugin_add(void *handle, const struct l_plugin_desc *desc,
 
 	l_queue_insert(plugin_list, plugin, compare_priority, NULL);
 
+	if (desc->debug_start && desc->debug_stop)
+		debug_enable(desc->debug_start, desc->debug_stop);
+
 	return true;
 }
 

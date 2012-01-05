@@ -37,7 +37,10 @@ struct l_plugin_desc {
 	int priority;
 	int (*init) (void);
 	void (*exit) (void);
+	void *debug_start;
+	void *debug_stop;
 };
+
 
 #define L_PLUGIN_DEFINE(symbol, name, description, version, \
 						priority, init, exit) \
@@ -45,6 +48,19 @@ struct l_plugin_desc {
 				__attribute__ ((visibility("default"))); \
 		struct l_plugin_desc symbol = { \
 			#name, description, version, priority, init, exit \
+		};
+
+#define L_PLUGIN_DEFINE_DEBUG(symbol, name, description, version, \
+						priority, init, exit, debug) \
+		extern struct l_debug_desc __start_ ##debug[] \
+				__attribute__ ((weak, visibility("hidden"))); \
+		extern struct l_debug_desc __stop_ ##debug[] \
+				__attribute__ ((weak, visibility("hidden"))); \
+		extern struct l_plugin_desc symbol \
+				__attribute__ ((visibility("default"))); \
+		struct l_plugin_desc symbol = { \
+			#name, description, version, priority, init, exit, \
+			__start_ ##debug, __stop_ ##debug \
 		};
 
 void l_plugin_add(const struct l_plugin_desc *desc, const char *version);
