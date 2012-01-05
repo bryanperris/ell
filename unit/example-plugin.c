@@ -37,5 +37,6 @@ static void demo_exit(void)
 	l_info("External demo plugin exit");
 }
 
-L_PLUGIN_DEFINE(demo_plugin_desc, demo, "External demo plugin", VERSION,
-			L_PLUGIN_PRIORITY_DEFAULT, demo_init, demo_exit)
+L_PLUGIN_DEFINE_DEBUG(demo_plugin_desc, demo, "External demo plugin",
+					VERSION, L_PLUGIN_PRIORITY_DEFAULT,
+					demo_init, demo_exit, __debug)
