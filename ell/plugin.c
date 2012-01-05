@@ -116,6 +116,20 @@ static void plugin_start(void *data, void *user_data)
 	plugin->active = true;
 }
 
+static void update_debug(void *data, void *user_data)
+{
+	struct plugin *plugin = data;
+
+	if (plugin->desc->debug_start && plugin->desc->debug_stop)
+		debug_enable(plugin->desc->debug_start,
+						plugin->desc->debug_stop);
+}
+
+void plugin_update_debug(void)
+{
+	l_queue_foreach(plugin_list, update_debug, NULL);
+}
+
 /**
  * l_plugin_add:
  * @desc: plugin description record
