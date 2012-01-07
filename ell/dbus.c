@@ -1194,6 +1194,7 @@ static bool extract_arguments_valist(struct l_dbus_message *message,
 			*((const char **) ptr) = str;
 			len += 4 + strlen(str) + 1;
 			break;
+		case 'b':
 		case 'u':
 			len = align_len(len, 4);
 			num = get_u32(msg + len);
