@@ -581,6 +581,42 @@ static void check_basic_3(const void *data)
 	assert(val == 1);
 }
 
+static void check_struct_1(const void *data)
+{
+	const struct message_data *msg_data = data;
+	struct l_dbus_message *msg;
+	const char *str1, *str2;
+	bool result;
+
+	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
+
+	check_header(false, msg, msg_data);
+
+	result = l_dbus_message_get_arguments(msg, "(ss)", &str1, &str2);
+	assert(result);
+	assert(!strcmp(str1, "Linus"));
+	assert(!strcmp(str2, "Torvalds"));
+}
+
+static void check_struct_2(const void *data)
+{
+	const struct message_data *msg_data = data;
+	struct l_dbus_message *msg;
+	const char *str, *str1, *str2;
+	bool result;
+
+	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
+
+	check_header(false, msg, msg_data);
+
+	result = l_dbus_message_get_arguments(msg, "(s(ss))",
+							&str, &str1, &str2);
+	assert(result);
+	assert(!strcmp(str, "Linus Torvalds"));
+	assert(!strcmp(str1, "Linus"));
+	assert(!strcmp(str2, "Torvalds"));
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -588,6 +624,9 @@ int main(int argc, char *argv[])
 	l_test_add("Basic 1", check_basic_1, &message_data_basic_1);
 	l_test_add("Basic 2", check_basic_2, &message_data_basic_2);
 	l_test_add("Basic 3", check_basic_3, &message_data_basic_3);
+
+	l_test_add("Struct 1", check_struct_1, &message_data_struct_1);
+	l_test_add("Struct 2", check_struct_2, &message_data_struct_2);
 
 	return l_test_run();
 }
