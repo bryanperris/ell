@@ -1202,6 +1202,11 @@ static bool extract_arguments_valist(struct l_dbus_message *message,
 			put_u32(ptr, num);
 			len += 4;
 			break;
+		case '(':
+			len = align_len(len, 8);
+			break;
+		case ')':
+			break;
 		default:
 			return false;
 		}
