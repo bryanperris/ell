@@ -30,6 +30,8 @@
 
 #include "ell/private.h"
 
+static bool do_print = false;
+
 struct message_data {
 	const char *type;
 	const char *sender;
@@ -542,9 +544,13 @@ static void do_debug(const char *str, void *user_data)
 	l_info("%s%s", prefix, str);
 }
 
-static void check_header(bool do_print, struct l_dbus_message *msg,
-					const struct message_data *msg_data)
+static struct l_dbus_message *check_message(const struct message_data *msg_data)
 {
+	struct l_dbus_message *msg;
+
+	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
+	assert(msg);
+
 	if (do_print)
 		l_util_hexdump(false, msg_data->binary, msg_data->binary_len,
 							do_debug, "[MSG] ");
@@ -570,86 +576,71 @@ static void check_header(bool do_print, struct l_dbus_message *msg,
 		if (do_print)
 			l_info("destination=%s", destination);
 	}
+
+	return msg;
 }
 
 static void check_basic_1(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = check_message(data);
 	const char *str;
 	bool result;
-
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
-
-	check_header(false, msg, msg_data);
 
 	result = l_dbus_message_get_arguments(msg, "s", &str);
 	assert(result);
 	assert(!strcmp(str, "Linus Torvalds"));
+
+	l_dbus_message_unref(msg);
 }
 
 static void check_basic_2(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = check_message(data);
 	const char *str1, *str2;
 	bool result;
-
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
-
-	check_header(false, msg, msg_data);
 
 	result = l_dbus_message_get_arguments(msg, "ss", &str1, &str2);
 	assert(result);
 	assert(!strcmp(str1, "Linus"));
 	assert(!strcmp(str2, "Torvalds"));
+
+	l_dbus_message_unref(msg);
 }
 
 static void check_basic_3(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = check_message(data);
 	const char *str;
 	uint32_t val;
 	bool result;
-
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
-
-	check_header(false, msg, msg_data);
 
 	result = l_dbus_message_get_arguments(msg, "sb", &str, &val);
 	assert(result);
 	assert(!strcmp(str, "Linus Torvalds"));
 	assert(val == 1);
+
+	l_dbus_message_unref(msg);
 }
 
 static void check_struct_1(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = check_message(data);
 	const char *str1, *str2;
 	bool result;
-
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
-
-	check_header(false, msg, msg_data);
 
 	result = l_dbus_message_get_arguments(msg, "(ss)", &str1, &str2);
 	assert(result);
 	assert(!strcmp(str1, "Linus"));
 	assert(!strcmp(str2, "Torvalds"));
+
+	l_dbus_message_unref(msg);
 }
 
 static void check_struct_2(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = check_message(data);
 	const char *str, *str1, *str2;
 	bool result;
-
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
-
-	check_header(false, msg, msg_data);
 
 	result = l_dbus_message_get_arguments(msg, "(s(ss))",
 							&str, &str1, &str2);
@@ -657,19 +648,16 @@ static void check_struct_2(const void *data)
 	assert(!strcmp(str, "Linus Torvalds"));
 	assert(!strcmp(str1, "Linus"));
 	assert(!strcmp(str2, "Torvalds"));
+
+	l_dbus_message_unref(msg);
 }
 
 static void check_array_1(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter iter;
 	const char *str;
 	bool result;
-
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
-
-	check_header(false, msg, msg_data);
 
 	result = l_dbus_message_get_arguments(msg, "as", &iter);
 	assert(result);
@@ -684,19 +672,16 @@ static void check_array_1(const void *data)
 
 	result = l_dbus_message_iter_next_entry(&iter, &str);
 	assert(!result);
+
+	l_dbus_message_unref(msg);
 }
 
 static void check_array_2(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter iter;
 	uint32_t val;
 	bool result;
-
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
-
-	check_header(false, msg, msg_data);
 
 	result = l_dbus_message_get_arguments(msg, "ab", &iter);
 	assert(result);
@@ -715,19 +700,16 @@ static void check_array_2(const void *data)
 
 	result = l_dbus_message_iter_next_entry(&iter, &val);
 	assert(!result);
+
+	l_dbus_message_unref(msg);
 }
 
 static void check_array_3(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter array, iter;
 	const char *str;
 	bool result;
-
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
-
-	check_header(false, msg, msg_data);
 
 	result = l_dbus_message_get_arguments(msg, "aas", &array);
 	assert(result);
@@ -768,19 +750,16 @@ static void check_array_3(const void *data)
 	/* Top-level array's end element */
 	result = l_dbus_message_iter_next_entry(&array, &iter);
 	assert(!result);
+
+	l_dbus_message_unref(msg);
 }
 
 static void check_array_4(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter array;
 	const char *str1, *str2;
 	bool result;
-
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
-
-	check_header(false, msg, msg_data);
 
 	result = l_dbus_message_get_arguments(msg, "a(ss)", &array);
 	assert(result);
@@ -797,19 +776,16 @@ static void check_array_4(const void *data)
 
 	result = l_dbus_message_iter_next_entry(&array, &str1, &str2);
 	assert(!result);
+
+	l_dbus_message_unref(msg);
 }
 
 static void check_array_5(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter array1, array2;
 	const char *str;
 	bool result;
-
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
-
-	check_header(false, msg, msg_data);
 
 	result = l_dbus_message_get_arguments(msg, "asas", &array1, &array2);
 	assert(result);
@@ -835,39 +811,33 @@ static void check_array_5(const void *data)
 
 	result = l_dbus_message_iter_next_entry(&array2, &str);
 	assert(!result);
+
+	l_dbus_message_unref(msg);
 }
 
 static void check_dict_1(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter dict, iter;
 	const char *str;
 	bool result;
-
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
-
-	check_header(false, msg, msg_data);
 
 	result = l_dbus_message_get_arguments(msg, "a{sv}", &dict);
 	assert(result);
 
 	result = l_dbus_message_iter_next_entry(&dict, &str, &iter);
 	assert(!result);
+
+	l_dbus_message_unref(msg);
 }
 
 static void check_dict_2(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter dict, iter;
 	const char *str;
 	uint32_t val;
 	bool result;
-
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
-
-	check_header(false, msg, msg_data);
 
 	result = l_dbus_message_get_arguments(msg, "a{sv}", &dict);
 	assert(result);
@@ -890,6 +860,8 @@ static void check_dict_2(const void *data)
 
 	result = l_dbus_message_iter_next_entry(&dict, &str, &iter);
 	assert(!result);
+
+	l_dbus_message_unref(msg);
 }
 
 int main(int argc, char *argv[])
