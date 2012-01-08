@@ -61,8 +61,9 @@ struct l_dbus_message_iter {
 	const void *dummy2;
 	const void *dummy3;
 	const void *dummy4;
-	size_t dummy5;
+	const void *dummy5;
 	size_t dummy6;
+	size_t dummy7;
 };
 
 struct l_dbus_message *l_dbus_message_new_method_call(const char *destination,

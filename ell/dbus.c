@@ -116,6 +116,7 @@ struct message_iter {
 	struct l_dbus_message *message;
 	void *dummy2;
 	const char *signature;
+	const char *end;
 	const void *data;
 	size_t len;
 	size_t pos;
@@ -280,15 +281,16 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 #define put_u8(ptr,val)		(*((uint8_t *) (ptr)) = (val))
 #define put_u32(ptr, val)	(*((uint32_t *) (ptr)) = (val))
 
-static inline void message_iter_init(struct message_iter *real_iter,
+static inline void message_iter_init(struct message_iter *iter,
 			struct l_dbus_message *message, const char *signature,
 			const void *data, size_t len, size_t pos)
 {
-	real_iter->message = message;
-	real_iter->signature = signature;
-	real_iter->data = data;
-	real_iter->len = pos + len;
-	real_iter->pos = pos;
+	iter->message = message;
+	iter->signature = signature;
+	iter->end = NULL;
+	iter->data = data;
+	iter->len = pos + len;
+	iter->pos = pos;
 }
 
 static inline const char *end_signature(const char *signature)
@@ -418,6 +420,7 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 						uint32_val, pos + 4);
 			iter->pos = pos + uint32_val + 4;
 			signature = end_signature(signature + 1);
+			sub_iter->end = signature;
 			break;
 		case 'v':
 			pos = align_len(iter->pos, 1);
@@ -436,6 +439,9 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 		default:
 			return false;
 		}
+
+		if (signature == iter->end)
+			break;
 
 		signature++;
 	}
