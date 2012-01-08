@@ -23,6 +23,7 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
@@ -47,11 +48,13 @@
  */
 struct l_signal {
 	int fd;
-	sigset_t oldmask;
+	sigset_t mask;
 	l_signal_notify_cb_t callback;
 	l_signal_destroy_cb_t destroy;
 	void *user_data;
 };
+
+static int masked_signals[_NSIG] = { };
 
 static void signal_destroy(void *user_data)
 {
@@ -76,6 +79,60 @@ static void signal_callback(int fd, uint32_t events, void *user_data)
 
 	if (signal->callback)
 		signal->callback(signal, si.ssi_signo, signal->user_data);
+}
+
+static int masked_signals_add(const sigset_t *mask)
+{
+	sigset_t set;
+	int i, err, count = 0;
+
+	sigemptyset(&set);
+
+	for (i = 0; i < _NSIG; i++) {
+		if (sigismember(mask, i)) {
+			masked_signals[i]++;
+			if (masked_signals[i] == 1) {
+				sigaddset(&set, i);
+				count++;
+			}
+		}
+	}
+
+	if (!count)
+		return 0;
+
+	err = sigprocmask(SIG_BLOCK, &set, NULL);
+	if (err < 0) {
+		for (i = 0; i < _NSIG; i++) {
+			if (sigismember(mask, i))
+				masked_signals[i]--;
+		}
+	}
+
+	return err;
+}
+
+static int masked_signals_del(const sigset_t *mask)
+{
+	sigset_t set;
+	int i, count = 0;
+
+	sigemptyset(&set);
+
+	for (i = 0; i < _NSIG; i++) {
+		if (sigismember(mask, i)) {
+			masked_signals[i]--;
+			if (masked_signals[i] == 0) {
+				sigaddset(&set, i);
+				count++;
+			}
+		}
+	}
+
+	if (!count)
+		return 0;
+
+	return sigprocmask(SIG_UNBLOCK, &set, NULL);
 }
 
 /**
@@ -106,14 +163,16 @@ LIB_EXPORT struct l_signal *l_signal_create(const sigset_t *mask,
 	signal->callback = callback;
 	signal->destroy = destroy;
 	signal->user_data = user_data;
+	memcpy(&signal->mask, mask, sizeof(sigset_t));
 
-	if (sigprocmask(SIG_BLOCK, mask, &signal->oldmask) < 0) {
+	if (masked_signals_add(mask) < 0) {
 		l_free(signal);
 		return NULL;
 	}
 
 	signal->fd = signalfd(-1, mask, SFD_NONBLOCK | SFD_CLOEXEC);
 	if (signal->fd < 0) {
+		masked_signals_del(mask);
 		l_free(signal);
 		return NULL;
 	}
@@ -136,6 +195,7 @@ LIB_EXPORT void l_signal_remove(struct l_signal *signal)
 		return;
 
 	watch_remove(signal->fd);
+	masked_signals_del(&signal->mask);
 
 	l_free(signal);
 }
