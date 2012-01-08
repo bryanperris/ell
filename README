@@ -25,3 +25,16 @@ Kernel dependencies
 
 In order to use this library you need a Linux kernel with support for
 epoll and timerfd.
+
+For checksum usage you need if_alg (crypto user-space API) with MD5
+and SHA-1 algorithms enabled.
+
+Kernel configuration checklist:
+
+	CONFIG_TIMERFD=y
+	CONFIG_EVENTFD=y
+
+	CONFIG_CRYPTO_USER_API=y
+	CONFIG_CRYPTO_USER_API_HASH=y
+	CONFIG_CRYPTO_MD5=y
+	CONFIG_CRYPTO_SHA1=y
