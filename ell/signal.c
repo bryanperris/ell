@@ -98,7 +98,7 @@ LIB_EXPORT struct l_signal *l_signal_create(const sigset_t *mask,
 {
 	struct l_signal *signal;
 
-	if (unlikely(!mask))
+	if (unlikely(!mask || !callback))
 		return NULL;
 
 	signal = l_new(struct l_signal, 1);
