@@ -276,10 +276,14 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 	l_free(message);
 }
 
-#define get_u8(ptr)	(*(uint8_t *) (ptr))
-#define get_u32(ptr)	(*(uint32_t *) (ptr))
+#define get_u8(ptr)		(*(uint8_t *) (ptr))
+#define get_u16(ptr)		(*(uint16_t *) (ptr))
+#define get_u32(ptr)		(*(uint32_t *) (ptr))
+#define get_u64(ptr)		(*(uint64_t *) (ptr))
 #define put_u8(ptr,val)		(*((uint8_t *) (ptr)) = (val))
+#define put_u16(ptr,val)	(*((uint16_t *) (ptr)) = (val))
 #define put_u32(ptr, val)	(*((uint32_t *) (ptr)) = (val))
+#define put_u64(ptr, val)	(*((uint64_t *) (ptr)) = (val))
 
 static inline void message_iter_init(struct message_iter *iter,
 			struct l_dbus_message *message, const char *signature,
@@ -409,7 +413,9 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 		const void *ptr;
 		const char *str_val;
 		uint8_t uint8_val;
+		uint16_t uint16_val;
 		uint32_t uint32_val;
+		uint64_t uint64_val;
 
 		switch (*signature) {
 		case 'o':
@@ -442,6 +448,15 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			put_u8(ptr, uint8_val);
 			iter->pos = pos + 1;
 			break;
+		case 'q':
+			pos = align_len(iter->pos, 4);
+			if (pos + 2 > iter->len)
+				return false;
+			uint16_val = get_u16(iter->data + pos);
+			ptr = va_arg(args, const void *);
+			put_u16(ptr, uint16_val);
+			iter->pos = pos + 2;
+			break;
 		case 'b':
 		case 'u':
 			pos = align_len(iter->pos, 4);
@@ -451,6 +466,15 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			ptr = va_arg(args, const void *);
 			put_u32(ptr, uint32_val);
 			iter->pos = pos + 4;
+			break;
+		case 't':
+			pos = align_len(iter->pos, 8);
+			if (pos + 8 > iter->len)
+				return false;
+			uint64_val = get_u64(iter->data + pos);
+			ptr = va_arg(args, const void *);
+			put_u64(ptr, uint64_val);
+			iter->pos = pos + 8;
 			break;
 		case '(':
 		case '{':
