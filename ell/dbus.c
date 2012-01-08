@@ -329,9 +329,11 @@ static inline size_t calc_len(const char *signature,
 	switch (*signature) {
 	case 'o':
 	case 's':
-		return get_u32(data + align_len(pos, 4)) + 5;
+		return align_len(pos, 4) - pos +
+				get_u32(data + align_len(pos, 4)) + 5;
 	case 'g':
-		return get_u8(data + align_len(pos, 1)) + 2;
+		return align_len(pos, 1) - pos +
+				get_u8(data + align_len(pos, 1)) + 2;
 	case 'y':
 		return align_len(pos, 1) + 1 - pos;
 	case 'b':
