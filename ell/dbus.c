@@ -116,7 +116,7 @@ struct message_iter {
 	struct l_dbus_message *message;
 	void *dummy2;
 	const char *signature;
-	void *data;
+	const void *data;
 	size_t len;
 	size_t pos;
 };
@@ -275,65 +275,184 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 	l_free(message);
 }
 
-#define get_u8(ptr)	(*(uint8_t *) (ptr));
+#define get_u8(ptr)	(*(uint8_t *) (ptr))
 #define get_u32(ptr)	(*(uint32_t *) (ptr))
-#define put_u32(ptr, val) (*((uint32_t *) (ptr)) = (val))
+#define put_u8(ptr,val)		(*((uint8_t *) (ptr)) = (val))
+#define put_u32(ptr, val)	(*((uint32_t *) (ptr)) = (val))
 
-static void *get_header_field(struct l_dbus_message *message,
-					unsigned char field, char type)
+static inline void message_iter_init(struct message_iter *real_iter,
+			struct l_dbus_message *message, const char *signature,
+			const void *data, size_t len, size_t pos)
 {
-	struct dbus_header *hdr;
-	unsigned char *ptr;
-	int len;
+	real_iter->message = message;
+	real_iter->signature = signature;
+	real_iter->data = data;
+	real_iter->len = pos + len;
+	real_iter->pos = pos;
+}
 
-	hdr = message->header;
+static inline const char *end_signature(const char *signature)
+{
+	const char *ptr = signature;
+	unsigned int indent = 0;
+	char expect;
 
-	ptr = message->header + DBUS_HEADER_SIZE;
-	len = hdr->field_length;
+	switch (*signature) {
+	case '(':
+		expect = ')';
+		break;
+	case '{':
+		expect = '}';
+		break;
+	case 'a':
+		return end_signature(signature + 1);
+	default:
+		return signature;
+	}
 
-	while (len > 0) {
-		char sig = ptr[2];
-		unsigned int size = 0;
-		unsigned int offset = 0;
-
-		switch (sig) {
-		case 'o':
-		case 's':
-			size = 8 + get_u32(ptr + 4) + 1;
-			offset = 8;
-			break;
-		case 'g':
-			size = 5 + ptr[4] + 1;
-			offset = 5;
-			break;
-		case 'u':
-			size = 8;
-			offset = 4;
-			break;
-		}
-
-		if (!size)
-			break;
-
-		if (sig == type && ptr[0] == field)
-			return ptr + offset;
-
-		ptr += align_len(size, 8);
-		len -= align_len(size, 8);
+	for (ptr = signature; *ptr != '\0'; ptr++) {
+		if (*ptr == *signature)
+			indent++;
+		else if (*ptr == expect)
+			if (!--indent)
+				return ptr;
 	}
 
 	return NULL;
 }
 
-static uint32_t get_reply_serial(struct l_dbus_message *message)
+static inline size_t calc_len(const char *signature,
+					const void *data, size_t pos)
 {
-	unsigned char *ptr;
+	switch (*signature) {
+	case 'o':
+	case 's':
+		return get_u32(data + align_len(pos, 4)) + 5;
+	case 'g':
+		return get_u8(data + align_len(pos, 1)) + 2;
+	case 'y':
+		return align_len(pos, 1) + 1 - pos;
+	case 'b':
+	case 'u':
+		return align_len(pos, 4) + 4 - pos;
+	case 'a':
+		return get_u32(data + align_len(pos, 4)) + 4;
+	}
 
-	ptr = get_header_field(message, DBUS_MESSAGE_FIELD_REPLY_SERIAL, 'u');
-	if (!ptr)
-		return 0;
+	return 0;
+}
 
-	return get_u32(ptr);
+static bool message_iter_next_entry_valist(struct message_iter *iter,
+							va_list args)
+{
+	const char *signature = iter->signature;
+
+	while (*signature) {
+		struct message_iter *sub_iter;
+		unsigned char indent = 0;
+		size_t pos, len;
+		const void *ptr;
+		const char *str_val;
+		uint8_t uint8_val;
+		uint32_t uint32_val;
+
+		switch (*signature) {
+		case 'o':
+		case 's':
+			pos = align_len(iter->pos, 4);
+			if (pos + 5 > iter->len)
+				return false;
+			uint32_val = get_u32(iter->data + pos);
+			str_val = iter->data + pos + 4;
+			ptr = va_arg(args, const void **);
+			*((const char **) ptr) = str_val;
+			iter->pos = pos + uint32_val + 5;
+			break;
+		case 'g':
+			pos = align_len(iter->pos, 1);
+			if (pos + 2 > iter->len)
+				return false;
+			uint8_val = get_u8(iter->data + pos);
+			str_val = iter->data + pos + 1;
+			ptr = va_arg(args, const void **);
+			*((const char **) ptr) = str_val;
+			iter->pos = pos + uint8_val + 2;
+			break;
+		case 'y':
+			pos = align_len(iter->pos, 1);
+			if (pos + 1 > iter->len)
+				return false;
+			uint8_val = get_u8(iter->data + pos);
+			ptr = va_arg(args, const void *);
+			put_u8(ptr, uint8_val);
+			iter->pos = pos + 1;
+			break;
+		case 'b':
+		case 'u':
+			pos = align_len(iter->pos, 4);
+			if (pos + 4 > iter->len)
+				return false;
+			uint32_val = get_u32(iter->data + pos);
+			ptr = va_arg(args, const void *);
+			put_u32(ptr, uint32_val);
+			iter->pos = pos + 4;
+			break;
+		case '(':
+		case '{':
+			indent++;
+			pos = align_len(iter->pos, 8);
+			iter->pos = pos;
+			break;
+		case ')':
+		case '}':
+			indent--;
+			break;
+		case 'a':
+			pos = align_len(iter->pos, 4);
+			if (pos + 4 > iter->len)
+				return false;
+			uint32_val = get_u32(iter->data + pos);
+			sub_iter = va_arg(args, void *);
+			message_iter_init(sub_iter, iter->message,
+						signature + 1, iter->data,
+						uint32_val, pos + 4);
+			iter->pos = pos + uint32_val + 4;
+			signature = end_signature(signature + 1);
+			break;
+		case 'v':
+			pos = align_len(iter->pos, 1);
+			if (pos + 2 > iter->len)
+				return false;
+			uint8_val = get_u8(iter->data + pos);
+			str_val = iter->data + pos + 1;
+			len = calc_len(str_val, iter->data,
+						pos + uint8_val + 2);
+			sub_iter = va_arg(args, void *);
+			message_iter_init(sub_iter, iter->message,
+						str_val, iter->data,
+						len, pos + uint8_val + 2);
+			iter->pos = pos + uint8_val + 2 + len;
+			break;
+		default:
+			return false;
+		}
+
+		signature++;
+	}
+
+	return true;
+}
+
+static inline bool message_iter_next_entry(struct message_iter *iter, ...)
+{
+	va_list args;
+	bool result;
+
+        va_start(args, iter);
+	result = message_iter_next_entry_valist(iter, args);
+	va_end(args);
+
+	return result;
 }
 
 static bool send_message_to_fd(int fd, struct l_dbus_message *message,
@@ -394,6 +513,58 @@ static bool message_write_handler(struct l_io *io, void *user_data)
 	return dbus->is_ready;
 }
 
+static inline bool get_header_field(struct l_dbus_message *message,
+						uint8_t type, ...)
+{
+	struct message_iter header, field, iter;
+	uint8_t endian, message_type, flags, version, field_type;
+	uint32_t body_length, serial;
+
+	message_iter_init(&header, message, "yyyyuua(yv)",
+				message->header, message->header_size, 0);
+
+	if (!message_iter_next_entry(&header, &endian,
+					&message_type, &flags, &version,
+					&body_length, &serial, &field))
+		return false;
+
+	while (message_iter_next_entry(&field, &field_type, &iter)) {
+		va_list args;
+		bool result;
+
+		if (field_type != type)
+			continue;
+
+		va_start(args, type);
+		result = message_iter_next_entry_valist(&iter, args);
+		va_end(args);
+
+		return result;
+	}
+
+	return false;
+}
+
+static inline const char *get_signature(struct l_dbus_message *message)
+{
+	const char *signature;
+
+	if (get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, &signature))
+		return signature;
+
+	return NULL;
+}
+
+static uint32_t get_reply_serial(struct l_dbus_message *message)
+{
+	uint32_t serial;
+
+	if (get_header_field(message, DBUS_MESSAGE_FIELD_REPLY_SERIAL, &serial))
+		return serial;
+
+	return 0;
+}
+
 struct l_dbus_message *dbus_message_build(const void *data, size_t size)
 {
 	const struct dbus_header *hdr = data;
@@ -413,8 +584,7 @@ struct l_dbus_message *dbus_message_build(const void *data, size_t size)
 	memcpy(message->header, data, message->header_size);
 	memcpy(message->body, data + message->header_size, message->body_size);
 
-	message->signature = get_header_field(message,
-					DBUS_MESSAGE_FIELD_SIGNATURE, 'g');
+	message->signature = get_signature(message);
 
 	return message;
 }
@@ -455,8 +625,7 @@ static struct l_dbus_message *receive_message_from_fd(int fd)
 	if (len < 0)
 		return NULL;
 
-	message->signature = get_header_field(message,
-					DBUS_MESSAGE_FIELD_SIGNATURE, 'g');
+	message->signature = get_signature(message);
 
 	return message;
 }
@@ -1175,154 +1344,6 @@ LIB_EXPORT uint32_t l_dbus_method_call(struct l_dbus *dbus,
 	return send_message(dbus, false, message, function, user_data, destroy);
 }
 
-static inline void message_iter_init(struct message_iter *real_iter,
-				struct l_dbus_message *message,
-				const char *signature, size_t len, size_t pos)
-{
-	real_iter->message = message;
-	real_iter->signature = signature;
-	real_iter->data = message->body;
-	real_iter->len = pos + len;
-	real_iter->pos = pos;
-}
-
-static inline const char *end_signature(const char *signature)
-{
-	const char *ptr = signature;
-	unsigned int indent = 0;
-	char expect;
-
-	switch (*signature) {
-	case '(':
-		expect = ')';
-		break;
-	case '{':
-		expect = '}';
-		break;
-	case 'a':
-		return end_signature(signature + 1);
-	default:
-		return signature;
-	}
-
-	for (ptr = signature; *ptr != '\0'; ptr++) {
-		if (*ptr == *signature)
-			indent++;
-		else if (*ptr == expect)
-			if (!--indent)
-				return ptr;
-	}
-
-	return NULL;
-}
-
-static inline size_t calc_len(const char *signature,
-					const void *data, size_t pos)
-{
-	switch (*signature) {
-	case 'o':
-	case 's':
-		return get_u32(data + align_len(pos, 4)) + 5;
-	case 'b':
-	case 'u':
-		return align_len(pos, 4) + 4 - pos;
-	case 'a':
-		return get_u32(data + align_len(pos, 4)) + 4;
-	}
-
-	return 0;
-}
-
-static bool message_iter_next_entry_valist(struct message_iter *iter,
-							va_list args)
-{
-	const char *signature = iter->signature;
-
-	while (*signature) {
-		struct message_iter *sub_iter;
-		unsigned char indent = 0;
-		size_t pos, len;
-		const void *ptr;
-		char *str;
-		int num;
-
-		switch (*signature) {
-		case 'o':
-		case 's':
-			pos = align_len(iter->pos, 4);
-			if (pos + 5 > iter->len)
-				return false;
-			num = get_u32(iter->data + pos);
-			str = iter->data + pos + 4;
-			ptr = va_arg(args, const void **);
-			*((const char **) ptr) = str;
-			iter->pos = pos + num + 5;
-			break;
-		case 'b':
-		case 'u':
-			pos = align_len(iter->pos, 4);
-			if (pos + 4 > iter->len)
-				return false;
-			num = get_u32(iter->data + pos);
-			ptr = va_arg(args, const void *);
-			put_u32(ptr, num);
-			iter->pos = pos + 4;
-			break;
-		case '(':
-		case '{':
-			indent++;
-			pos = align_len(iter->pos, 8);
-			iter->pos = pos;
-			break;
-		case ')':
-		case '}':
-			indent--;
-			break;
-		case 'a':
-			pos = align_len(iter->pos, 4);
-			if (pos + 4 > iter->len)
-				return false;
-			num = get_u32(iter->data + pos);
-			sub_iter = va_arg(args, void *);
-			message_iter_init(sub_iter, iter->message,
-					iter->signature + 1, num, pos + 4);
-			iter->pos = pos + num + 4;
-			signature = end_signature(signature + 1);
-			break;
-		case 'v':
-			pos = align_len(iter->pos, 1);
-			if (pos + 2 > iter->len)
-				return false;
-			num = get_u8(iter->data + pos);
-			str = iter->data + pos + 1;
-			len = calc_len(str, iter->data, pos + num + 2);
-			sub_iter = va_arg(args, void *);
-			message_iter_init(sub_iter, iter->message,
-						str, len, pos + num + 2);
-			iter->pos = pos + num + 2 + len;
-			break;
-		default:
-			return false;
-		}
-
-		signature++;
-	}
-
-	return true;
-}
-
-static inline bool message_iter_next_entry(struct message_iter *iter, ...)
-{
-	va_list args;
-	bool result;
-
-        va_start(args, iter);
-	result = message_iter_next_entry_valist(iter, args);
-	va_end(args);
-
-	return result;
-}
-
 LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 					const char **name, const char **text)
 {
@@ -1345,14 +1366,13 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 		return false;
 
 	message_iter_init(&iter, message, message->signature,
-						message->body_size, 0);
+				message->body, message->body_size, 0);
 
 	if (!message_iter_next_entry(&iter, &str))
 		return false;
 
 	if (name)
-		*name = get_header_field(message,
-					DBUS_MESSAGE_FIELD_ERROR_NAME, 's');
+		get_header_field(message, DBUS_MESSAGE_FIELD_ERROR_NAME, name);
 
 	if (text)
 		*text = str;
@@ -1382,7 +1402,7 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 		return false;
 
 	message_iter_init(&iter, message, message->signature,
-						message->body_size, 0);
+				message->body, message->body_size, 0);
 
 	va_start(args, signature);
 	result = message_iter_next_entry_valist(&iter, args);
@@ -1393,42 +1413,68 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 
 LIB_EXPORT const char *l_dbus_message_get_path(struct l_dbus_message *message)
 {
+	const char *path;
+
 	if (unlikely(!message))
 		return NULL;
 
-	return get_header_field(message, DBUS_MESSAGE_FIELD_PATH, 'o');
+	if (get_header_field(message, DBUS_MESSAGE_FIELD_PATH, &path))
+		return path;
+
+	return NULL;
 }
 
 LIB_EXPORT const char *l_dbus_message_get_interface(struct l_dbus_message *message)
 {
+	const char *interface;
+
 	if (unlikely(!message))
 		return NULL;
 
-	return get_header_field(message, DBUS_MESSAGE_FIELD_INTERFACE, 's');
+	if (get_header_field(message, DBUS_MESSAGE_FIELD_INTERFACE, &interface))
+		return interface;
+
+	return NULL;
 }
 
 LIB_EXPORT const char *l_dbus_message_get_member(struct l_dbus_message *message)
 {
+	const char *member;
+
 	if (unlikely(!message))
 		return NULL;
 
-	return get_header_field(message, DBUS_MESSAGE_FIELD_MEMBER, 's');
+	if (get_header_field(message, DBUS_MESSAGE_FIELD_MEMBER, &member))
+		return member;
+
+	return NULL;
 }
 
 LIB_EXPORT const char *l_dbus_message_get_destination(struct l_dbus_message *message)
 {
+	const char *destination;
+
 	if (unlikely(!message))
 		return NULL;
 
-	return get_header_field(message, DBUS_MESSAGE_FIELD_DESTINATION, 's');
+	if (get_header_field(message, DBUS_MESSAGE_FIELD_DESTINATION,
+							&destination))
+		return destination;
+
+	return NULL;
 }
 
 LIB_EXPORT const char *l_dbus_message_get_sender(struct l_dbus_message *message)
 {
+	const char *sender;
+
 	if (unlikely(!message))
 		return NULL;
 
-	return get_header_field(message, DBUS_MESSAGE_FIELD_SENDER, 's');
+	if (get_header_field(message, DBUS_MESSAGE_FIELD_SENDER, &sender))
+		return sender;
+
+	return NULL;
 }
 
 LIB_EXPORT char l_dbus_message_iter_get_type(struct l_dbus_message_iter *iter)

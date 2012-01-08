@@ -57,10 +57,10 @@ bool l_dbus_set_debug(struct l_dbus *dbus, l_dbus_debug_func_t function,
 struct l_dbus_message;
 
 struct l_dbus_message_iter {
-	void *dummy1;
-	void *dummy2;
-	void *dummy3;
-	void *dummy4;
+	const void *dummy1;
+	const void *dummy2;
+	const void *dummy3;
+	const void *dummy4;
 	size_t dummy5;
 	size_t dummy6;
 };
