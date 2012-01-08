@@ -97,6 +97,9 @@ LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
 {
 	struct l_timeout *timeout;
 
+	if (unlikely(!callback))
+		return NULL;
+
 	timeout = l_new(struct l_timeout, 1);
 
 	timeout->callback = callback;
