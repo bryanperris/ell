@@ -364,6 +364,9 @@ static inline size_t calc_len(const char *signature,
 	case '{':
 		expect = '}';
 		break;
+	case 'v':
+		len = calc_len_one('g', data, pos);
+		return len + calc_len(data + pos + 1, data, pos + len);
 	default:
 		return calc_len_one(*signature, data, pos);
 	}
@@ -374,7 +377,12 @@ static inline size_t calc_len(const char *signature,
 		else if (*ptr == expect)
 			if (!--indent)
 				break;
-		len += calc_len_one(*ptr, data, pos + len);
+		if (*ptr == 'v') {
+			size_t siglen = calc_len_one('g', data, pos + len);
+			len += calc_len(data + pos + len + 1, data,
+							pos + len + siglen);
+		} else
+			len += calc_len_one(*ptr, data, pos + len);
         }
 
 	return len;
