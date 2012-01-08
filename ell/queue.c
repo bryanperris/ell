@@ -235,7 +235,7 @@ LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
 	if (!queue->head) {
 		queue->head = entry;
 		queue->tail = entry;
-		return true;
+		goto done;
 	}
 
 	for (prev = queue->head; prev; prev = prev->next) {
@@ -245,7 +245,7 @@ LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
 			if (prev == queue->head) {
 				entry->next = queue->head;
 				queue->head = entry;
-				return true;
+				goto done;
 			}
 
 			entry->next = prev->next;
@@ -254,12 +254,15 @@ LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
 			if (!entry->next)
 				queue->tail = entry;
 
-			return true;
+			goto done;
 		}
 	}
 
 	queue->tail->next = entry;
 	queue->tail = entry;
+
+done:
+	queue->entries++;
 
 	return true;
 }
@@ -295,6 +298,8 @@ LIB_EXPORT bool l_queue_remove(struct l_queue *queue, void *data)
 			queue->tail = prev;
 
 		l_free(entry);
+
+		queue->entries--;
 
 		return true;
 	}
@@ -397,6 +402,8 @@ LIB_EXPORT unsigned int l_queue_foreach_remove(struct l_queue *queue,
 			entry = entry->next;
 		}
 	}
+
+	queue->entries -= count;
 
 	return count;
 }
