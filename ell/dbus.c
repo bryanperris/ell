@@ -323,10 +323,10 @@ static inline const char *end_signature(const char *signature)
 	return NULL;
 }
 
-static inline size_t calc_len(const char *signature,
+static inline size_t calc_len_one(const char signature,
 					const void *data, size_t pos)
 {
-	switch (*signature) {
+	switch (signature) {
 	case 'o':
 	case 's':
 		return align_len(pos, 4) - pos +
@@ -341,9 +341,43 @@ static inline size_t calc_len(const char *signature,
 		return align_len(pos, 4) + 4 - pos;
 	case 'a':
 		return get_u32(data + align_len(pos, 4)) + 4;
+	case '(':
+	case '{':
+		return align_len(pos, 8) - pos;
 	}
 
 	return 0;
+}
+
+static inline size_t calc_len(const char *signature,
+					const void *data, size_t pos)
+{
+	const char *ptr = signature;
+	unsigned int indent = 0;
+	size_t len = 0;
+	char expect;
+
+	switch (*signature) {
+	case '(':
+		expect = ')';
+		break;
+	case '{':
+		expect = '}';
+		break;
+	default:
+		return calc_len_one(*signature, data, pos);
+	}
+
+	for (ptr = signature; *ptr != '\0'; ptr++) {
+		if (*ptr == *signature)
+			indent++;
+		else if (*ptr == expect)
+			if (!--indent)
+				break;
+		len += calc_len_one(*ptr, data, pos + len);
+        }
+
+	return len;
 }
 
 static bool message_iter_next_entry_valist(struct message_iter *iter,
