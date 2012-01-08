@@ -336,9 +336,18 @@ static inline size_t calc_len_one(const char signature,
 				get_u8(data + align_len(pos, 1)) + 2;
 	case 'y':
 		return align_len(pos, 1) + 1 - pos;
+	case 'n':
+	case 'q':
+		return align_len(pos, 2) + 2 - pos;
 	case 'b':
+	case 'i':
 	case 'u':
+	case 'h':
 		return align_len(pos, 4) + 4 - pos;
+	case 'x':
+	case 't':
+	case 'd':
+		return align_len(pos, 8) + 8 - pos;
 	case 'a':
 		return get_u32(data + align_len(pos, 4)) + 4;
 	case '(':
