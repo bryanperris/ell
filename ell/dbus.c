@@ -288,6 +288,9 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 #define get_u16(ptr)		(*(uint16_t *) (ptr))
 #define get_u32(ptr)		(*(uint32_t *) (ptr))
 #define get_u64(ptr)		(*(uint64_t *) (ptr))
+#define get_s16(ptr)		(*(int16_t *) (ptr))
+#define get_s32(ptr)		(*(int32_t *) (ptr))
+#define get_s64(ptr)		(*(int64_t *) (ptr))
 #define put_u8(ptr,val)		(*((uint8_t *) (ptr)) = (val))
 #define put_u16(ptr,val)	(*((uint16_t *) (ptr)) = (val))
 #define put_u32(ptr, val)	(*((uint32_t *) (ptr)) = (val))
@@ -423,6 +426,9 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 		uint16_t uint16_val;
 		uint32_t uint32_val;
 		uint64_t uint64_val;
+		int16_t int16_val;
+		int32_t int32_val;
+		int64_t int64_val;
 		int fd;
 
 		switch (*signature) {
@@ -461,6 +467,14 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			*va_arg(args, uint8_t *) = uint8_val;
 			iter->pos = pos + 1;
 			break;
+		case 'n':
+			pos = align_len(iter->pos, 2);
+			if (pos + 2 > iter->len)
+				return false;
+			int16_val = get_s16(iter->data + pos);
+			*va_arg(args, int16_t *) = int16_val;
+			iter->pos = pos + 2;
+			break;
 		case 'q':
 			pos = align_len(iter->pos, 2);
 			if (pos + 2 > iter->len)
@@ -469,6 +483,14 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			*va_arg(args, uint16_t *) = uint16_val;
 			iter->pos = pos + 2;
 			break;
+		case 'i':
+			pos = align_len(iter->pos, 4);
+			if (pos + 4 > iter->len)
+				return false;
+			int32_val = get_s32(iter->data + pos);
+			*va_arg(args, int32_t *) = int32_val;
+			iter->pos = pos + 4;
+			break;
 		case 'u':
 			pos = align_len(iter->pos, 4);
 			if (pos + 4 > iter->len)
@@ -476,6 +498,14 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			uint32_val = get_u32(iter->data + pos);
 			*va_arg(args, uint32_t *) = uint32_val;
 			iter->pos = pos + 4;
+			break;
+		case 'x':
+			pos = align_len(iter->pos, 8);
+			if (pos + 8 > iter->len)
+				return false;
+			int64_val = get_s64(iter->data + pos);
+			*va_arg(args, int64_t *) = int64_val;
+			iter->pos = pos + 8;
 			break;
 		case 't':
 			pos = align_len(iter->pos, 8);
