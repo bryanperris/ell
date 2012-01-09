@@ -418,7 +418,6 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 		struct message_iter *sub_iter;
 		unsigned char indent = 0;
 		size_t pos, len;
-		const void *ptr;
 		const char *str_val;
 		uint8_t uint8_val;
 		uint16_t uint16_val;
@@ -434,8 +433,7 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 				return false;
 			uint32_val = get_u32(iter->data + pos);
 			str_val = iter->data + pos + 4;
-			ptr = va_arg(args, const void **);
-			*((const char **) ptr) = str_val;
+			*va_arg(args, const void **) = str_val;
 			iter->pos = pos + uint32_val + 5;
 			break;
 		case 'g':
@@ -444,8 +442,7 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 				return false;
 			uint8_val = get_u8(iter->data + pos);
 			str_val = iter->data + pos + 1;
-			ptr = va_arg(args, const void **);
-			*((const char **) ptr) = str_val;
+			*va_arg(args, const void **) = str_val;
 			iter->pos = pos + uint8_val + 2;
 			break;
 		case 'y':
@@ -453,8 +450,7 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			if (pos + 1 > iter->len)
 				return false;
 			uint8_val = get_u8(iter->data + pos);
-			ptr = va_arg(args, const void *);
-			put_u8(ptr, uint8_val);
+			*va_arg(args, uint8_t *) = uint8_val;
 			iter->pos = pos + 1;
 			break;
 		case 'q':
@@ -462,8 +458,7 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			if (pos + 2 > iter->len)
 				return false;
 			uint16_val = get_u16(iter->data + pos);
-			ptr = va_arg(args, const void *);
-			put_u16(ptr, uint16_val);
+			*va_arg(args, uint16_t *) = uint16_val;
 			iter->pos = pos + 2;
 			break;
 		case 'b':
@@ -472,8 +467,7 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			if (pos + 4 > iter->len)
 				return false;
 			uint32_val = get_u32(iter->data + pos);
-			ptr = va_arg(args, const void *);
-			put_u32(ptr, uint32_val);
+			*va_arg(args, uint32_t *) = uint32_val;
 			iter->pos = pos + 4;
 			break;
 		case 't':
@@ -481,8 +475,7 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			if (pos + 8 > iter->len)
 				return false;
 			uint64_val = get_u64(iter->data + pos);
-			ptr = va_arg(args, const void *);
-			put_u64(ptr, uint64_val);
+			*va_arg(args, uint64_t *) = uint64_val;
 			iter->pos = pos + 8;
 			break;
 		case 'h':
