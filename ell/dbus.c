@@ -108,8 +108,11 @@ struct l_dbus_message {
 	void *header;
 	size_t header_size;
 	const char *signature;
+	uint32_t unix_fds;
 	void *body;
 	size_t body_size;
+	int fds[16];
+	uint32_t num_fds;
 };
 
 struct message_iter {
@@ -265,11 +268,16 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_ref(struct l_dbus_message *mess
 
 LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 {
+	unsigned int i;
+
 	if (unlikely(!message))
 		return;
 
 	if (__sync_sub_and_fetch(&message->refcount, 1))
 		return;
+
+	for (i = 0; i < message->num_fds; i++)
+		close(message->fds[i]);
 
 	l_free(message->header);
 	l_free(message->body);
@@ -416,6 +424,7 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 		uint16_t uint16_val;
 		uint32_t uint32_val;
 		uint64_t uint64_val;
+		int fd;
 
 		switch (*signature) {
 		case 'o':
@@ -475,6 +484,19 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			ptr = va_arg(args, const void *);
 			put_u64(ptr, uint64_val);
 			iter->pos = pos + 8;
+			break;
+		case 'h':
+			pos = align_len(iter->pos, 4);
+			if (pos + 4 > iter->len)
+				return false;
+			uint32_val = get_u32(iter->data + pos);
+			if (uint32_val < iter->message->num_fds)
+				fd = fcntl(iter->message->fds[uint32_val],
+							F_DUPFD_CLOEXEC, 3);
+			else
+				fd = -1;
+			*va_arg(args, int *) = fd;
+			iter->pos = pos + 4;
 			break;
 		case '(':
 		case '{':
@@ -678,6 +700,7 @@ static struct l_dbus_message *receive_message_from_fd(int fd)
 	struct dbus_header hdr;
 	struct msghdr msg;
 	struct iovec iov[2];
+	struct cmsghdr *cmsg;
 	ssize_t len;
 
 	message = l_new(struct l_dbus_message, 1);
@@ -703,10 +726,41 @@ static struct l_dbus_message *receive_message_from_fd(int fd)
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 2;
+	msg.msg_control = &message->fds;
+	msg.msg_controllen = CMSG_SPACE(16 * sizeof(int));
 
-	len = recvmsg(fd, &msg, 0);
+	len = recvmsg(fd, &msg, MSG_CMSG_CLOEXEC);
 	if (len < 0)
 		return NULL;
+
+	get_header_field(message, DBUS_MESSAGE_FIELD_UNIX_FDS,
+						&message->unix_fds);
+
+	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg;
+				cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+		unsigned int i;
+
+		if (cmsg->cmsg_level != SOL_SOCKET ||
+					cmsg->cmsg_type != SCM_RIGHTS)
+			continue;
+
+		message->num_fds = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+
+		memcpy(message->fds, CMSG_DATA(cmsg),
+					message->num_fds * sizeof(int));
+
+		/* Set FD_CLOEXEC on all file descriptors */
+		for (i = 0; i < message->num_fds; i++) {
+			long flags;
+
+			flags = fcntl(fd, F_GETFD, NULL);
+			if (flags < 0)
+				continue;
+
+			if (!(flags & FD_CLOEXEC))
+				fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+                }
+	}
 
 	message->signature = get_signature(message);
 
