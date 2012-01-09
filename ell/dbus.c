@@ -462,7 +462,7 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			iter->pos = pos + 1;
 			break;
 		case 'q':
-			pos = align_len(iter->pos, 4);
+			pos = align_len(iter->pos, 2);
 			if (pos + 2 > iter->len)
 				return false;
 			uint16_val = get_u16(iter->data + pos);
