@@ -1467,12 +1467,13 @@ static void append_arguments(struct l_dbus_message *message,
 	message->header_size = size;
 
 	while (*signature) {
-		char *str;
+		const char *str;
 		int num;
 
 		switch (*signature++) {
+		case 'o':
 		case 's':
-			str = va_arg(args, char *);
+			str = va_arg(args, const char *);
 			len = strlen(str);
 			size = align_len(message->body_size, 4);
 			message->body = l_realloc(message->body,
