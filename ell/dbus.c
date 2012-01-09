@@ -515,6 +515,14 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			*va_arg(args, uint64_t *) = uint64_val;
 			iter->pos = pos + 8;
 			break;
+		case 'd':
+			pos = align_len(iter->pos, 8);
+			if (pos + 8 > iter->len)
+				return false;
+			uint64_val = get_u64(iter->data + pos);
+			*va_arg(args, double *) = (double) uint64_val;
+			iter->pos = pos + 8;
+			break;
 		case 'h':
 			pos = align_len(iter->pos, 4);
 			if (pos + 4 > iter->len)
