@@ -445,6 +445,14 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			*va_arg(args, const void **) = str_val;
 			iter->pos = pos + uint8_val + 2;
 			break;
+		case 'b':
+			pos = align_len(iter->pos, 4);
+			if (pos + 4 > iter->len)
+				return false;
+			uint32_val = get_u32(iter->data + pos);
+			*va_arg(args, bool *) = !!uint32_val;
+			iter->pos = pos + 4;
+			break;
 		case 'y':
 			pos = align_len(iter->pos, 1);
 			if (pos + 1 > iter->len)
@@ -461,7 +469,6 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 			*va_arg(args, uint16_t *) = uint16_val;
 			iter->pos = pos + 2;
 			break;
-		case 'b':
 		case 'u':
 			pos = align_len(iter->pos, 4);
 			if (pos + 4 > iter->len)
