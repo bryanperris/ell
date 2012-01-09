@@ -1227,13 +1227,13 @@ static void check_basic_3(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	const char *str;
-	uint32_t val;
+	bool val;
 	bool result;
 
 	result = l_dbus_message_get_arguments(msg, "sb", &str, &val);
 	assert(result);
 	assert(!strcmp(str, "Linus Torvalds"));
-	assert(val == 1);
+	assert(val);
 
 	l_dbus_message_unref(msg);
 }
@@ -1348,23 +1348,22 @@ static void check_array_2(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter iter;
-	uint32_t val;
-	bool result;
+	bool result, val;
 
 	result = l_dbus_message_get_arguments(msg, "ab", &iter);
 	assert(result);
 
 	result = l_dbus_message_iter_next_entry(&iter, &val);
 	assert(result);
-	assert(val == 1);
+	assert(val);
 
 	result = l_dbus_message_iter_next_entry(&iter, &val);
 	assert(result);
-	assert(val == 1);
+	assert(val);
 
 	result = l_dbus_message_iter_next_entry(&iter, &val);
 	assert(result);
-	assert(val == 0);
+	assert(!val);
 
 	result = l_dbus_message_iter_next_entry(&iter, &val);
 	assert(!result);
@@ -1488,8 +1487,7 @@ static void check_array_6(const void *data)
 	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter array, iter;
 	const char *str;
-	uint32_t val;
-	bool result;
+	bool result, val;
 
 	result = l_dbus_message_get_arguments(msg, "av", &array);
 	assert(result);
@@ -1506,7 +1504,7 @@ static void check_array_6(const void *data)
 
 	result = l_dbus_message_iter_get_variant(&iter, "b", &val);
 	assert(result);
-	assert(val == 1);
+	assert(val);
 
 	result = l_dbus_message_iter_next_entry(&array, &iter);
 	assert(!result);
@@ -1535,8 +1533,7 @@ static void check_dict_2(const void *data)
 	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter dict, iter;
 	const char *str;
-	uint32_t val;
-	bool result;
+	bool result, val;
 
 	result = l_dbus_message_get_arguments(msg, "a{sv}", &dict);
 	assert(result);
@@ -1555,7 +1552,7 @@ static void check_dict_2(const void *data)
 
 	result = l_dbus_message_iter_get_variant(&iter, "b", &val);
 	assert(result);
-	assert(val == 1);
+	assert(val);
 
 	result = l_dbus_message_iter_next_entry(&dict, &str, &iter);
 	assert(!result);
@@ -1638,8 +1635,7 @@ static void check_variant_3(const void *data)
 	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter iter;
 	const char *str1, *str2;
-	uint32_t val;
-	bool result;
+	bool result, val;
 
 	result = l_dbus_message_get_arguments(msg, "v", &iter);
 	assert(result);
@@ -1649,7 +1645,7 @@ static void check_variant_3(const void *data)
 	assert(result);
 	assert(!strcmp(str1, "Linus"));
 	assert(!strcmp(str2, "Torvalds"));
-	assert(val == 1);
+	assert(val);
 
 	l_dbus_message_unref(msg);
 }
@@ -1679,8 +1675,7 @@ static void check_variant_5(const void *data)
 	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter entry, iter;
 	const char *str;
-	uint32_t val;
-	bool result;
+	bool result, val;
 
 	result = l_dbus_message_get_arguments(msg, "v", &entry);
 	assert(result);
@@ -1691,7 +1686,7 @@ static void check_variant_5(const void *data)
 
 	result = l_dbus_message_iter_get_variant(&iter, "b", &val);
 	assert(result);
-	assert(val == 1);
+	assert(val);
 
 	l_dbus_message_unref(msg);
 }
@@ -1701,8 +1696,7 @@ static void check_complex_1(const void *data)
 	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter dict, iter;
 	const char *path, *str;
-	uint32_t val;
-	bool result;
+	bool result, val;
 
 	result = l_dbus_message_get_arguments(msg, "oa{sv}", &path, &dict);
 	assert(result);
@@ -1722,7 +1716,7 @@ static void check_complex_1(const void *data)
 
 	result = l_dbus_message_iter_get_variant(&iter, "b", &val);
 	assert(result);
-	assert(val == 1);
+	assert(val);
 
 	result = l_dbus_message_iter_next_entry(&dict, &str, &iter);
 	assert(!result);
@@ -1817,14 +1811,13 @@ static void check_complex_4(const void *data)
 	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter dict;
 	const char *str1, *str2;
-	uint32_t val1, val2;
-	bool result;
+	bool result, val1, val2;
 
 	result = l_dbus_message_get_arguments(msg, "(bba{ss})",
 						&val1, &val2, &dict);
 	assert(result);
-	assert(val1 == 0);
-	assert(val2 == 0);
+	assert(!val1);
+	assert(!val2);
 
 	result = l_dbus_message_iter_next_entry(&dict, &str1, &str2);
 	assert(result);
@@ -1842,14 +1835,13 @@ static void check_complex_5(const void *data)
 	struct l_dbus_message *msg = check_message(data);
 	struct l_dbus_message_iter dict;
 	const char *str1, *str2;
-	uint32_t val1, val2;
-	bool result;
+	bool result, val1, val2;
 
 	result = l_dbus_message_get_arguments(msg, "(bba{ss})",
 						&val1, &val2, &dict);
 	assert(result);
-	assert(val1 == 1);
-	assert(val2 == 0);
+	assert(val1);
+	assert(!val2);
 
 	result = l_dbus_message_iter_next_entry(&dict, &str1, &str2);
 	assert(!result);
