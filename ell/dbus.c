@@ -1444,7 +1444,7 @@ LIB_EXPORT bool l_dbus_unregister(struct l_dbus *dbus, unsigned int id)
 	return true;
 }
 
-static void append_arguments(struct l_dbus_message *message,
+static bool append_arguments(struct l_dbus_message *message,
 					const char *signature, va_list args)
 {
 	struct dbus_header *hdr;
@@ -1493,6 +1493,8 @@ static void append_arguments(struct l_dbus_message *message,
 	}
 
 	hdr->body_length = message->body_size;
+
+	return true;
 }
 
 LIB_EXPORT uint32_t l_dbus_method_call(struct l_dbus *dbus,
@@ -1578,6 +1580,25 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 
 	va_start(args, signature);
 	result = message_iter_next_entry_valist(&iter, args);
+	va_end(args);
+
+	return result;
+}
+
+LIB_EXPORT bool l_dbus_message_set_arguments(struct l_dbus_message *message,
+						const char *signature, ...)
+{
+	va_list args;
+	bool result;
+
+	if (unlikely(!message))
+		return false;
+
+	if (!signature)
+		return true;
+
+	va_start(args, signature);
+	result = append_arguments(message, signature, args);
 	va_end(args);
 
 	return result;

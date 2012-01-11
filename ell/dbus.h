@@ -110,6 +110,9 @@ bool l_dbus_message_iter_next_entry(struct l_dbus_message_iter *iter, ...);
 bool l_dbus_message_iter_get_variant(struct l_dbus_message_iter *iter,
 						const char *signature, ...);
 
+bool l_dbus_message_set_arguments(struct l_dbus_message *message,
+						const char *signature, ...);
+
 #ifdef __cplusplus
 }
 #endif
