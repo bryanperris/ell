@@ -1625,7 +1625,7 @@ static void build_basic_11(const void *data)
 	compare_message(msg, data);
 }
 
-static void check_struct_1(const void *data)
+static void parse_struct_1(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	const char *str1, *str2;
@@ -1639,7 +1639,20 @@ static void check_struct_1(const void *data)
 	l_dbus_message_unref(msg);
 }
 
-static void check_struct_2(const void *data)
+static void build_struct_1(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	const char *str1 = "Linus";
+	const char *str2 = "Torvalds";
+	bool result;
+
+	result = l_dbus_message_set_arguments(msg, "(ss)", &str1, &str2);
+	assert(result);
+
+	compare_message(msg, data);
+}
+
+static void parse_struct_2(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	const char *str, *str1, *str2;
@@ -1653,6 +1666,21 @@ static void check_struct_2(const void *data)
 	assert(!strcmp(str2, "Torvalds"));
 
 	l_dbus_message_unref(msg);
+}
+
+static void build_struct_2(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	const char *str = "Linus Torvalds";
+	const char *str1 = "Linus";
+	const char *str2 = "Torvalds";
+	bool result;
+
+	result = l_dbus_message_set_arguments(msg, "(s(ss))",
+							&str, &str1, &str2);
+	assert(result);
+
+	compare_message(msg, data);
 }
 
 static void check_array_1(const void *data)
@@ -2211,8 +2239,10 @@ int main(int argc, char *argv[])
 	l_test_add("Basic 11 (parse)", parse_basic_11, &message_data_basic_11);
 	l_test_add("Basic 11 (build)", build_basic_11, &message_data_basic_11);
 
-	l_test_add("Struct 1", check_struct_1, &message_data_struct_1);
-	l_test_add("Struct 2", check_struct_2, &message_data_struct_2);
+	l_test_add("Struct 1 (parse)", parse_struct_1, &message_data_struct_1);
+	l_test_add("Struct 1 (build)", build_struct_1, &message_data_struct_1);
+	l_test_add("Struct 2 (parse)", parse_struct_2, &message_data_struct_2);
+	l_test_add("Struct 2 (build)", build_struct_2, &message_data_struct_2);
 
 	l_test_add("Array 1", check_array_1, &message_data_array_1);
 	l_test_add("Array 2", check_array_2, &message_data_array_2);
