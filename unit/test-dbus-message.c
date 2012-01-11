@@ -1384,8 +1384,9 @@ static void parse_basic_1(const void *data)
 static void build_basic_1(const void *data)
 {
 	struct l_dbus_message *msg = build_message(data);
+	const char *str = "Linus Torvalds";
 
-	l_dbus_message_set_arguments(msg, "s", "Linus Torvalds");
+	l_dbus_message_set_arguments(msg, "s", &str);
 
 	compare_message(msg, data);
 }
@@ -1407,8 +1408,10 @@ static void parse_basic_2(const void *data)
 static void build_basic_2(const void *data)
 {
 	struct l_dbus_message *msg = build_message(data);
+	const char *str1 = "Linus";
+	const char *str2 = "Torvalds";
 
-	l_dbus_message_set_arguments(msg, "ss", "Linus", "Torvalds");
+	l_dbus_message_set_arguments(msg, "ss", &str1, &str2);
 
 	compare_message(msg, data);
 }
@@ -1430,13 +1433,15 @@ static void parse_basic_3(const void *data)
 static void build_basic_3(const void *data)
 {
 	struct l_dbus_message *msg = build_message(data);
+	const char *str = "Linus Torvalds";
+	bool val = true;
 
-	l_dbus_message_set_arguments(msg, "sb", "Linus Torvalds", true);
+	l_dbus_message_set_arguments(msg, "sb", &str, &val);
 
 	compare_message(msg, data);
 }
 
-static void check_basic_4(const void *data)
+static void parse_basic_4(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	uint8_t val;
@@ -1449,7 +1454,17 @@ static void check_basic_4(const void *data)
 	l_dbus_message_unref(msg);
 }
 
-static void check_basic_5(const void *data)
+static void build_basic_4(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	uint8_t val = 23;
+
+	l_dbus_message_set_arguments(msg, "y", &val);
+
+	compare_message(msg, data);
+}
+
+static void parse_basic_5(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	uint16_t val;
@@ -1462,7 +1477,17 @@ static void check_basic_5(const void *data)
 	l_dbus_message_unref(msg);
 }
 
-static void check_basic_6(const void *data)
+static void build_basic_5(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	uint16_t val = 42;
+
+	l_dbus_message_set_arguments(msg, "q", &val);
+
+	compare_message(msg, data);
+}
+
+static void parse_basic_6(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	uint32_t val;
@@ -1475,7 +1500,17 @@ static void check_basic_6(const void *data)
 	l_dbus_message_unref(msg);
 }
 
-static void check_basic_7(const void *data)
+static void build_basic_6(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	uint32_t val = 4711;
+
+	l_dbus_message_set_arguments(msg, "u", &val);
+
+	compare_message(msg, data);
+}
+
+static void parse_basic_7(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	uint64_t val;
@@ -1488,7 +1523,17 @@ static void check_basic_7(const void *data)
 	l_dbus_message_unref(msg);
 }
 
-static void check_basic_8(const void *data)
+static void build_basic_7(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	uint64_t val = 10000;
+
+	l_dbus_message_set_arguments(msg, "t", &val);
+
+	compare_message(msg, data);
+}
+
+static void parse_basic_8(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	int16_t val;
@@ -1501,7 +1546,17 @@ static void check_basic_8(const void *data)
 	l_dbus_message_unref(msg);
 }
 
-static void check_basic_9(const void *data)
+static void build_basic_8(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	int16_t val = -42;
+
+	l_dbus_message_set_arguments(msg, "n", &val);
+
+	compare_message(msg, data);
+}
+
+static void parse_basic_9(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	int32_t val;
@@ -1514,7 +1569,17 @@ static void check_basic_9(const void *data)
 	l_dbus_message_unref(msg);
 }
 
-static void check_basic_10(const void *data)
+static void build_basic_9(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	int32_t val = -4711;
+
+	l_dbus_message_set_arguments(msg, "i", &val);
+
+	compare_message(msg, data);
+}
+
+static void parse_basic_10(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	int64_t val;
@@ -1527,7 +1592,17 @@ static void check_basic_10(const void *data)
 	l_dbus_message_unref(msg);
 }
 
-static void check_basic_11(const void *data)
+static void build_basic_10(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	int64_t val = -10000;
+
+	l_dbus_message_set_arguments(msg, "x", &val);
+
+	compare_message(msg, data);
+}
+
+static void parse_basic_11(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	double val;
@@ -1538,6 +1613,16 @@ static void check_basic_11(const void *data)
 	assert(val = M_PI);
 
 	l_dbus_message_unref(msg);
+}
+
+static void build_basic_11(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	double val = M_PI;
+
+	l_dbus_message_set_arguments(msg, "d", &val);
+
+	compare_message(msg, data);
 }
 
 static void check_struct_1(const void *data)
@@ -2109,14 +2194,22 @@ int main(int argc, char *argv[])
 	l_test_add("Basic 3 (build)", build_basic_2, &message_data_basic_2);
 	l_test_add("Basic 3 (parse)", parse_basic_3, &message_data_basic_3);
 	l_test_add("Basic 3 (build)", build_basic_3, &message_data_basic_3);
-	l_test_add("Basic 4", check_basic_4, &message_data_basic_4);
-	l_test_add("Basic 5", check_basic_5, &message_data_basic_5);
-	l_test_add("Basic 6", check_basic_6, &message_data_basic_6);
-	l_test_add("Basic 7", check_basic_7, &message_data_basic_7);
-	l_test_add("Basic 8", check_basic_8, &message_data_basic_8);
-	l_test_add("Basic 9", check_basic_9, &message_data_basic_9);
-	l_test_add("Basic 10", check_basic_10, &message_data_basic_10);
-	l_test_add("Basic 11", check_basic_11, &message_data_basic_11);
+	l_test_add("Basic 4 (parse)", parse_basic_4, &message_data_basic_4);
+	l_test_add("Basic 4 (build)", build_basic_4, &message_data_basic_4);
+	l_test_add("Basic 5 (parse)", parse_basic_5, &message_data_basic_5);
+	l_test_add("Basic 5 (build)", build_basic_5, &message_data_basic_5);
+	l_test_add("Basic 6 (parse)", parse_basic_6, &message_data_basic_6);
+	l_test_add("Basic 6 (build)", build_basic_6, &message_data_basic_6);
+	l_test_add("Basic 7 (parse)", parse_basic_7, &message_data_basic_7);
+	l_test_add("Basic 7 (build)", build_basic_7, &message_data_basic_7);
+	l_test_add("Basic 8 (parse)", parse_basic_8, &message_data_basic_8);
+	l_test_add("Basic 8 (build)", build_basic_8, &message_data_basic_8);
+	l_test_add("Basic 9 (parse)", parse_basic_9, &message_data_basic_9);
+	l_test_add("Basic 9 (build)", build_basic_9, &message_data_basic_9);
+	l_test_add("Basic 10 (parse)", parse_basic_10, &message_data_basic_10);
+	l_test_add("Basic 10 (build)", build_basic_10, &message_data_basic_10);
+	l_test_add("Basic 11 (parse)", parse_basic_11, &message_data_basic_11);
+	l_test_add("Basic 11 (build)", build_basic_11, &message_data_basic_11);
 
 	l_test_add("Struct 1", check_struct_1, &message_data_struct_1);
 	l_test_add("Struct 2", check_struct_2, &message_data_struct_2);
