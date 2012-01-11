@@ -1486,17 +1486,17 @@ LIB_EXPORT bool l_dbus_unregister(struct l_dbus *dbus, unsigned int id)
 static inline size_t body_realloc(struct l_dbus_message *message,
 					size_t len, unsigned int boundary)
 {
-	size_t size;
+	size_t size = align_len(message->body_size, boundary);
 
-	size = align_len(message->body_size, boundary);
+	if (size + len > message->body_size) {
+		message->body = l_realloc(message->body, size + len);
 
-	message->body = l_realloc(message->body, size + len);
-
-	if (size - message->body_size > 0)
-		memset(message->body + message->body_size, 0,
+		if (size - message->body_size > 0)
+			memset(message->body + message->body_size, 0,
 						size - message->body_size);
 
-	message->body_size = size + len;
+		message->body_size = size + len;
+	}
 
 	return size;
 }
