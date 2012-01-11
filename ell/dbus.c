@@ -295,6 +295,9 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 #define put_u16(ptr,val)	(*((uint16_t *) (ptr)) = (val))
 #define put_u32(ptr, val)	(*((uint32_t *) (ptr)) = (val))
 #define put_u64(ptr, val)	(*((uint64_t *) (ptr)) = (val))
+#define put_s16(ptr, val)	(*((int16_t *) (ptr)) = (val))
+#define put_s32(ptr, val)	(*((int32_t *) (ptr)) = (val))
+#define put_s64(ptr, val)	(*((int64_t *) (ptr)) = (val))
 
 static inline void message_iter_init(struct message_iter *iter,
 			struct l_dbus_message *message, const char *signature,
@@ -1480,6 +1483,24 @@ LIB_EXPORT bool l_dbus_unregister(struct l_dbus *dbus, unsigned int id)
 	return true;
 }
 
+static inline size_t body_realloc(struct l_dbus_message *message,
+					size_t len, unsigned int boundary)
+{
+	size_t size;
+
+	size = align_len(message->body_size, boundary);
+
+	message->body = l_realloc(message->body, size + len);
+
+	if (size - message->body_size > 0)
+		memset(message->body + message->body_size, 0,
+						size - message->body_size);
+
+	message->body_size = size + len;
+
+	return size;
+}
+
 static bool append_arguments(struct l_dbus_message *message,
 					const char *signature, va_list args)
 {
@@ -1507,43 +1528,78 @@ static bool append_arguments(struct l_dbus_message *message,
 
 	while (*signature) {
 		const char *str;
-		uint32_t num;
+		uint8_t uint8_val;
+		uint16_t uint16_val;
+		uint32_t uint32_val;
+		uint64_t uint64_val;
+		int16_t int16_val;
+		int32_t int32_val;
+		int64_t int64_val;
+		double double_val;
 
 		switch (*signature++) {
 		case 'o':
 		case 's':
-			str = va_arg(args, const char *);
+			str = *va_arg(args, const char **);
 			len = strlen(str);
-			size = align_len(message->body_size, 4);
-			message->body = l_realloc(message->body,
-							size + 4 + len + 1);
-			if (size - message->body_size > 0)
-				memset(message->body + message->body_size,
-						0, size - message->body_size);
-			put_u32(message->body + size, len);
-			strcpy(message->body + size + 4, str);
-			message->body_size = size + 4 + len + 1;
+			pos = body_realloc(message, len + 5, 4);
+			put_u32(message->body + pos, len);
+			strcpy(message->body + pos + 4, str);
+			break;
+		case 'g':
+			str = *va_arg(args, const char **);
+			len = strlen(str);
+			pos = body_realloc(message, len + 2, 1);
+			put_u8(message->body + pos, len);
+			strcpy(message->body + pos + 1, str);
 			break;
 		case 'b':
-			num = va_arg(args, int);
-			size = align_len(message->body_size, 4);
-			message->body = l_realloc(message->body, size + 4);
-			if (size - message->body_size > 0)
-				memset(message->body + message->body_size,
-						0, size - message->body_size);
-			put_u32(message->body + size, num);
-			message->body_size = size + 4;
+			uint32_val = *va_arg(args, bool *);
+			pos = body_realloc(message, 4, 4);
+			put_u32(message->body + pos, uint32_val);
+			break;
+		case 'y':
+			uint8_val = *va_arg(args, uint8_t *);
+			pos = body_realloc(message, 1, 1);
+			put_u8(message->body + pos, uint8_val);
+			break;
+		case 'n':
+			int16_val = *va_arg(args, int16_t *);
+			pos = body_realloc(message, 2, 2);
+			put_s16(message->body + pos, int16_val);
+			break;
+		case 'q':
+			uint16_val = *va_arg(args, uint16_t *);
+			pos = body_realloc(message, 2, 2);
+			put_u16(message->body + pos, uint16_val);
+			break;
+		case 'i':
+			int32_val = *va_arg(args, int32_t *);
+			pos = body_realloc(message, 4, 4);
+			put_s32(message->body + pos, int32_val);
 			break;
 		case 'u':
-			num = va_arg(args, uint32_t);
-			size = align_len(message->body_size, 4);
-			message->body = l_realloc(message->body, size + 4);
-			if (size - message->body_size > 0)
-				memset(message->body + message->body_size,
-						0, size - message->body_size);
-			put_u32(message->body + size, num);
-			message->body_size = size + 4;
+			uint32_val = *va_arg(args, uint32_t *);
+			pos = body_realloc(message, 4, 4);
+			put_u32(message->body + pos, uint32_val);
 			break;
+		case 'x':
+			int64_val = *va_arg(args, int64_t *);
+			pos = body_realloc(message, 8, 8);
+			put_s64(message->body + pos, int64_val);
+			break;
+		case 't':
+			uint64_val = *va_arg(args, uint64_t *);
+			pos = body_realloc(message, 8, 8);
+			put_u64(message->body + pos, uint64_val);
+			break;
+		case 'd':
+			double_val = *va_arg(args, double *);
+			pos = body_realloc(message, 8, 8);
+			*((double *) (message->body + pos)) = double_val;
+			break;
+		default:
+			return false;
 		}
 	}
 
