@@ -368,3 +368,33 @@ error:
 
 	return true;
 }
+
+/**
+ * l_utf8_strlen:
+ * @str: a pointer to character data
+ *
+ * Computes the number of UTF-8 characters (not bytes) in the string given
+ * by @str.
+ *
+ * Returns: The number of UTF-8 characters in the string
+ **/
+LIB_EXPORT size_t l_utf8_strlen(const char *str)
+{
+	size_t l = 0;
+	unsigned int expect_bytes;
+
+	if (str == NULL)
+		return 0;
+
+	while (*str != '\0') {
+		if (*str < 0) {
+			expect_bytes = __builtin_clz(~(*str << 24));
+			str += expect_bytes;
+		} else
+			str += 1;
+
+		l += 1;
+	}
+
+	return l;
+}

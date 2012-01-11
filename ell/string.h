@@ -111,6 +111,7 @@ void l_string_append_vprintf(struct l_string *dest,
 void l_string_append_printf(struct l_string *dest, const char *format, ...);
 
 bool l_utf8_validate(const char *src, size_t len, const char **end);
+size_t l_utf8_strlen(const char *src);
 
 #ifdef __cplusplus
 }
