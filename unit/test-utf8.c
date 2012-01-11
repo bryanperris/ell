@@ -828,6 +828,25 @@ static void test_utf8_validate(const void *test_data)
 		assert(res == false);
 }
 
+struct utf8_strlen_test {
+	const char *utf8;
+	size_t utf8_len;
+};
+
+static struct utf8_strlen_test utf8_strlen_test1 = {
+	.utf8 = "abc\xce\xba\xe1\xbd\xb9\xcf\x83\xce\xbc\xce\xb5",
+	.utf8_len = 8,
+};
+
+static void test_utf8_strlen(const void *test_data)
+{
+	const struct utf8_strlen_test *test = test_data;
+	size_t len;
+
+	len = l_utf8_strlen(test->utf8);
+	assert(len == test->utf8_len);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -990,6 +1009,9 @@ int main(int argc, char *argv[])
 					&utf8_validate_test78);
 	l_test_add("Validate UTF 79", test_utf8_validate,
 					&utf8_validate_test79);
+
+	l_test_add("Strlen UTF 1", test_utf8_strlen,
+					&utf8_strlen_test1);
 
 	return l_test_run();
 }
