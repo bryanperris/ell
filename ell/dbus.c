@@ -1496,14 +1496,13 @@ static void append_arguments(struct l_dbus_message *message,
 }
 
 LIB_EXPORT uint32_t l_dbus_method_call(struct l_dbus *dbus,
-				l_dbus_message_func_t function,
-				void *user_data, l_dbus_destroy_func_t destroy,
 				const char *destination, const char *path,
 				const char *interface, const char *method,
-				const char *signature, ...)
+				l_dbus_message_func_t setup,
+				l_dbus_message_func_t function,
+				void *user_data, l_dbus_destroy_func_t destroy)
 {
 	struct l_dbus_message *message;
-	va_list args;
 
 	if (unlikely(!dbus))
 		return 0;
@@ -1511,11 +1510,8 @@ LIB_EXPORT uint32_t l_dbus_method_call(struct l_dbus *dbus,
 	message = l_dbus_message_new_method_call(destination, path,
 							interface, method);
 
-	if (signature) {
-		va_start(args, signature);
-		append_arguments(message, signature, args);
-		va_end(args);
-	}
+	if (setup)
+		setup(message, user_data);
 
 	return send_message(dbus, false, message, function, user_data, destroy);
 }
