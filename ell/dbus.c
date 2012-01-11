@@ -1450,7 +1450,7 @@ static bool append_arguments(struct l_dbus_message *message,
 {
 	struct dbus_header *hdr;
 	uint32_t size, slen;
-	unsigned int len;
+	size_t len, pos;
 
 	slen = strlen(signature);
 
@@ -1460,8 +1460,11 @@ static bool append_arguments(struct l_dbus_message *message,
 
 	hdr = message->header;
 
-	len = DBUS_HEADER_SIZE + align_len(hdr->field_length, 8);
-	len += encode_header(8, 'g', signature, slen, message->header + len);
+	pos = DBUS_HEADER_SIZE + align_len(hdr->field_length, 8);
+	len = pos + encode_header(8, 'g', signature, slen,
+						message->header + pos);
+
+	message->signature = message->header + pos + 5;
 
 	hdr->field_length = len - DBUS_HEADER_SIZE;
 
