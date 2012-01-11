@@ -381,20 +381,15 @@ error:
 LIB_EXPORT size_t l_utf8_strlen(const char *str)
 {
 	size_t l = 0;
-	unsigned int expect_bytes;
+	size_t i;
+	unsigned char b;
 
-	if (str == NULL)
-		return 0;
+	for (i = 0; str[i]; i++) {
+		b = str[i];
 
-	while (*str != '\0') {
-		if (*str < 0) {
-			expect_bytes = __builtin_clz(~(*str << 24));
-			str += expect_bytes;
-		} else
-			str += 1;
-
-		l += 1;
+		if ((b >> 6) == 2)
+			l += 1;
 	}
 
-	return l;
+	return i - l;
 }
