@@ -800,7 +800,8 @@ static struct l_dbus_message *receive_message_from_fd(int fd)
                 }
 	}
 
-	message->signature = get_signature(message);
+	get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE,
+						&message->signature);
 
 	return message;
 }
@@ -811,8 +812,8 @@ static void handle_method_return(struct l_dbus *dbus,
 	struct message_callback *callback;
 	uint32_t reply_serial;
 
-	reply_serial = get_reply_serial(message);
-	if (!reply_serial)
+	if (!get_header_field(message, DBUS_MESSAGE_FIELD_REPLY_SERIAL,
+							&reply_serial))
 		return;
 
 	callback = l_hashmap_remove(dbus->message_list,
@@ -834,8 +835,8 @@ static void handle_error(struct l_dbus *dbus, struct l_dbus_message *message)
 	struct message_callback *callback;
 	uint32_t reply_serial;
 
-	reply_serial = get_reply_serial(message);
-	if (!reply_serial)
+	if (!get_header_field(message, DBUS_MESSAGE_FIELD_REPLY_SERIAL,
+							&reply_serial))
 		return;
 
 	callback = l_hashmap_remove(dbus->message_list,
