@@ -1341,7 +1341,34 @@ static struct l_dbus_message *check_message(const struct message_data *msg_data)
 	return msg;
 }
 
-static void check_basic_1(const void *data)
+static struct l_dbus_message *build_message(const struct message_data *msg_data)
+{
+	struct l_dbus_message *msg;
+
+	msg = l_dbus_message_new_method_call(msg_data->destination,
+			msg_data->path, msg_data->interface, msg_data->member);
+	assert(msg);
+
+	return msg;
+}
+
+static void compare_message(struct l_dbus_message *msg,
+					const struct message_data *msg_data)
+{
+	bool result;
+
+	if (do_print)
+		l_util_hexdump(true, msg_data->binary, msg_data->binary_len,
+							do_debug, "[MSG] ");
+
+	result = dbus_message_compare(msg, msg_data->binary,
+						msg_data->binary_len);
+	assert(result);
+
+	l_dbus_message_unref(msg);
+}
+
+static void parse_basic_1(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	const char *str;
@@ -1354,7 +1381,16 @@ static void check_basic_1(const void *data)
 	l_dbus_message_unref(msg);
 }
 
-static void check_basic_2(const void *data)
+static void build_basic_1(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+
+	l_dbus_message_set_arguments(msg, "s", "Linus Torvalds");
+
+	compare_message(msg, data);
+}
+
+static void parse_basic_2(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	const char *str1, *str2;
@@ -1368,7 +1404,16 @@ static void check_basic_2(const void *data)
 	l_dbus_message_unref(msg);
 }
 
-static void check_basic_3(const void *data)
+static void build_basic_2(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+
+	l_dbus_message_set_arguments(msg, "ss", "Linus", "Torvalds");
+
+	compare_message(msg, data);
+}
+
+static void parse_basic_3(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
 	const char *str;
@@ -1380,6 +1425,15 @@ static void check_basic_3(const void *data)
 	assert(val);
 
 	l_dbus_message_unref(msg);
+}
+
+static void build_basic_3(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+
+	l_dbus_message_set_arguments(msg, "sb", "Linus Torvalds", true);
+
+	compare_message(msg, data);
 }
 
 static void check_basic_4(const void *data)
@@ -2049,9 +2103,12 @@ int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
-	l_test_add("Basic 1", check_basic_1, &message_data_basic_1);
-	l_test_add("Basic 2", check_basic_2, &message_data_basic_2);
-	l_test_add("Basic 3", check_basic_3, &message_data_basic_3);
+	l_test_add("Basic 1 (parse)", parse_basic_1, &message_data_basic_1);
+	l_test_add("Basic 1 (build)", build_basic_1, &message_data_basic_1);
+	l_test_add("Basic 2 (parse)", parse_basic_2, &message_data_basic_2);
+	l_test_add("Basic 3 (build)", build_basic_2, &message_data_basic_2);
+	l_test_add("Basic 3 (parse)", parse_basic_3, &message_data_basic_3);
+	l_test_add("Basic 3 (build)", build_basic_3, &message_data_basic_3);
 	l_test_add("Basic 4", check_basic_4, &message_data_basic_4);
 	l_test_add("Basic 5", check_basic_5, &message_data_basic_5);
 	l_test_add("Basic 6", check_basic_6, &message_data_basic_6);
