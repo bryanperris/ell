@@ -62,6 +62,11 @@ static void signal_message(struct l_dbus_message *message, void *user_data)
 	}
 }
 
+static void request_name_setup(struct l_dbus_message *message, void *user_data)
+{
+	l_dbus_message_set_arguments(message, "su", "org.test", 0);
+}
+
 static void request_name_callback(struct l_dbus_message *message,
 							void *user_data)
 {
@@ -83,6 +88,13 @@ done:
 	l_main_quit();
 }
 
+static const char *match_rule = "type=signal,sender=org.freedesktop.DBus";
+
+static void add_match_setup(struct l_dbus_message *message, void *user_data)
+{
+	l_dbus_message_set_arguments(message, "s", match_rule);
+}
+
 static void add_match_callback(struct l_dbus_message *message, void *user_data)
 {
 	const char *error, *text;
@@ -98,8 +110,6 @@ static void add_match_callback(struct l_dbus_message *message, void *user_data)
 
 	l_info("add match");
 }
-
-static const char *match_rule = "type=signal,sender=org.freedesktop.DBus";
 
 static void ready_callback(void *user_data)
 {
@@ -126,17 +136,17 @@ int main(int argc, char *argv[])
 
 	l_dbus_register(dbus, signal_message, NULL, NULL);
 
-	l_dbus_method_call(dbus, add_match_callback, dbus, NULL,
-				"org.freedesktop.DBus",
+	l_dbus_method_call(dbus, "org.freedesktop.DBus",
 				"/org/freedesktop/DBus",
-				"org.freedesktop.DBus",
-				"AddMatch", "s", match_rule);
+				"org.freedesktop.DBus", "AddMatch",
+				add_match_setup,
+				add_match_callback, NULL, NULL);
 
-	l_dbus_method_call(dbus, request_name_callback, dbus, NULL,
-					"org.freedesktop.DBus",
-					"/org/freedesktop/DBus",
-					"org.freedesktop.DBus",
-					"RequestName", "su", "org.test", 0);
+	l_dbus_method_call(dbus, "org.freedesktop.DBus",
+				"/org/freedesktop/DBus",
+				"org.freedesktop.DBus", "RequestName",
+				request_name_setup,
+				request_name_callback, NULL, NULL);
 
 	l_main_run();
 
