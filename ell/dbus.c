@@ -1472,7 +1472,7 @@ static bool append_arguments(struct l_dbus_message *message,
 
 	while (*signature) {
 		const char *str;
-		int num;
+		uint32_t num;
 
 		switch (*signature++) {
 		case 'o':
@@ -1482,14 +1482,30 @@ static bool append_arguments(struct l_dbus_message *message,
 			size = align_len(message->body_size, 4);
 			message->body = l_realloc(message->body,
 							size + 4 + len + 1);
+			if (size - message->body_size > 0)
+				memset(message->body + message->body_size,
+						0, size - message->body_size);
 			put_u32(message->body + size, len);
 			strcpy(message->body + size + 4, str);
 			message->body_size = size + 4 + len + 1;
 			break;
-		case 'u':
+		case 'b':
 			num = va_arg(args, int);
 			size = align_len(message->body_size, 4);
 			message->body = l_realloc(message->body, size + 4);
+			if (size - message->body_size > 0)
+				memset(message->body + message->body_size,
+						0, size - message->body_size);
+			put_u32(message->body + size, num);
+			message->body_size = size + 4;
+			break;
+		case 'u':
+			num = va_arg(args, uint32_t);
+			size = align_len(message->body_size, 4);
+			message->body = l_realloc(message->body, size + 4);
+			if (size - message->body_size > 0)
+				memset(message->body + message->body_size,
+						0, size - message->body_size);
 			put_u32(message->body + size, num);
 			message->body_size = size + 4;
 			break;
