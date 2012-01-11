@@ -656,56 +656,56 @@ static bool message_write_handler(struct l_io *io, void *user_data)
 	return dbus->is_ready;
 }
 
-static inline bool get_header_field(struct l_dbus_message *message,
-						uint8_t type, ...)
+static bool get_header_field_from_iter_valist(struct message_iter *header,
+						uint8_t type, va_list args)
 {
-	struct message_iter header, field, iter;
+	struct message_iter array, iter;
 	uint8_t endian, message_type, flags, version, field_type;
 	uint32_t body_length, serial;
 
-	message_iter_init(&header, message, "yyyyuua(yv)",
-				message->header, message->header_size, 0);
-
-	if (!message_iter_next_entry(&header, &endian,
+	if (!message_iter_next_entry(header, &endian,
 					&message_type, &flags, &version,
-					&body_length, &serial, &field))
+					&body_length, &serial, &array))
 		return false;
 
-	while (message_iter_next_entry(&field, &field_type, &iter)) {
-		va_list args;
-		bool result;
-
+	while (message_iter_next_entry(&array, &field_type, &iter)) {
 		if (field_type != type)
 			continue;
 
-		va_start(args, type);
-		result = message_iter_next_entry_valist(&iter, args);
-		va_end(args);
-
-		return result;
+		return message_iter_next_entry_valist(&iter, args);
 	}
 
 	return false;
 }
 
-static inline const char *get_signature(struct l_dbus_message *message)
+static bool get_header_field_from_iter(struct message_iter *header,
+						uint8_t type, ...)
 {
-	const char *signature;
+	va_list args;
+	bool result;
 
-	if (get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, &signature))
-		return signature;
+	va_start(args, type);
+	result = get_header_field_from_iter_valist(header, type, args);
+	va_end(args);
 
-	return NULL;
+	return result;
 }
 
-static uint32_t get_reply_serial(struct l_dbus_message *message)
+static inline bool get_header_field(struct l_dbus_message *message,
+                                                uint8_t type, ...)
 {
-	uint32_t serial;
+	struct message_iter header;
+	va_list args;
+	bool result;
 
-	if (get_header_field(message, DBUS_MESSAGE_FIELD_REPLY_SERIAL, &serial))
-		return serial;
+	message_iter_init(&header, message, "yyyyuua(yv)",
+				message->header, message->header_size, 0);
 
-	return 0;
+	va_start(args, type);
+	result = get_header_field_from_iter_valist(&header, type, args);
+	va_end(args);
+
+	return result;
 }
 
 struct l_dbus_message *dbus_message_build(const void *data, size_t size)
@@ -727,9 +727,44 @@ struct l_dbus_message *dbus_message_build(const void *data, size_t size)
 	memcpy(message->header, data, message->header_size);
 	memcpy(message->body, data + message->header_size, message->body_size);
 
-	message->signature = get_signature(message);
+	get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE,
+						&message->signature);
 
 	return message;
+}
+
+bool dbus_message_compare(struct l_dbus_message *message,
+					const void *data, size_t size)
+{
+	const struct dbus_header *hdr = data;
+	struct message_iter header;
+	const char *signature;
+	size_t header_size;
+	bool result;
+
+	header_size = align_len(DBUS_HEADER_SIZE + hdr->field_length, 8);
+
+	message_iter_init(&header, NULL, "yyyyuua(yv)", data, header_size, 0);
+
+	result = get_header_field_from_iter(&header,
+				DBUS_MESSAGE_FIELD_SIGNATURE, &signature);
+
+	if (result) {
+		if (!message->signature)
+			return false;
+
+		if (strcmp(signature, message->signature))
+			return false;
+	} else if (message->signature)
+		return false;
+
+	if (message->body_size != size - header_size)
+		return false;
+
+	if (!message->body_size)
+		return true;
+
+	return !memcmp(message->body, data + header_size, size - header_size);
 }
 
 static struct l_dbus_message *receive_message_from_fd(int fd)

@@ -43,3 +43,5 @@ int watch_modify(int fd, uint32_t events);
 int watch_remove(int fd);
 
 struct l_dbus_message *dbus_message_build(const void *data, size_t size);
+bool dbus_message_compare(struct l_dbus_message *message,
+					const void *data, size_t size);
