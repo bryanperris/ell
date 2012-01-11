@@ -1598,6 +1598,13 @@ static bool append_arguments(struct l_dbus_message *message,
 			pos = body_realloc(message, 8, 8);
 			*((double *) (message->body + pos)) = double_val;
 			break;
+		case '(':
+		case '{':
+			pos = body_realloc(message, 0, 8);
+			break;
+		case ')':
+		case '}':
+			break;
 		default:
 			return false;
 		}
