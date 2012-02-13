@@ -64,7 +64,8 @@ static bool parse_group(struct l_settings *settings, const char *data,
 
 	while (i < len && data[i] != ']') {
 		if (l_ascii_isprint(data[i]) == false || data[i] == '[') {
-			l_util_debug(settings->debug_handler, settings->debug_data,
+			l_util_debug(settings->debug_handler,
+					settings->debug_data,
 					"Invalid group name at line %zd", line);
 			return false;
 		}
