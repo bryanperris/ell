@@ -49,6 +49,7 @@ static bool epoll_terminate;
 static struct l_hashmap *watch_list;
 
 struct watch_data {
+	int fd;
 	uint32_t events;
 	watch_event_cb_t callback;
 	watch_destroy_cb_t destroy;
@@ -91,26 +92,23 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 
 	data = l_new(struct watch_data, 1);
 
+	data->fd = fd;
 	data->events = events;
 	data->callback = callback;
 	data->destroy = destroy;
 	data->user_data = user_data;
 
-	if (l_hashmap_insert(watch_list, L_INT_TO_PTR(fd), data) < 0) {
-		l_free(data);
-		return -ENOMEM;
-	}
-
 	memset(&ev, 0, sizeof(ev));
 	ev.events = events;
-	ev.data.fd = fd;
+	ev.data.ptr = data;
 
-	err = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev);
+	err = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, data->fd, &ev);
 	if (err < 0) {
-		l_hashmap_remove(watch_list, L_INT_TO_PTR(fd));
 		l_free(data);
 		return err;
 	}
+
+	l_hashmap_insert(watch_list, L_INT_TO_PTR(data->fd), data);
 
 	return 0;
 }
@@ -133,9 +131,9 @@ int watch_modify(int fd, uint32_t events)
 
 	memset(&ev, 0, sizeof(ev));
 	ev.events = events;
-	ev.data.fd = fd;
+	ev.data.ptr = data;
 
-	err = epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev);
+	err = epoll_ctl(epoll_fd, EPOLL_CTL_MOD, data->fd, &ev);
 	if (err < 0)
 		return err;
 
@@ -156,7 +154,7 @@ int watch_remove(int fd)
 	if (!data)
 		return -ENXIO;
 
-	err = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+	err = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, data->fd, NULL);
 
 	if (data->destroy)
 		data->destroy(data->user_data);
@@ -168,10 +166,9 @@ int watch_remove(int fd)
 
 static void watch_destroy(const void *key, void *value)
 {
-	int fd = L_PTR_TO_INT(key);
 	struct watch_data *data = value;
 
-	l_error("Dangling file descriptor %d found", fd);
+	l_error("Dangling file descriptor %d found", data->fd);
 
 	if (data->destroy)
 		data->destroy(data->user_data);
@@ -210,17 +207,10 @@ LIB_EXPORT bool l_main_run(void)
 			continue;
 
 		for (n = 0; n < nfds; n++) {
-			struct watch_data *data;
-			int fd = events[n].data.fd;
+			struct watch_data *data = events[n].data.ptr;
 
-			data = l_hashmap_lookup(watch_list, L_INT_TO_PTR(fd));
-			if (!data)
-				continue;
-
-			if (!data->callback)
-				continue;
-
-			data->callback(fd, events[n].events, data->user_data);
+			data->callback(data->fd, events[n].events,
+							data->user_data);
 		}
 	}
 
