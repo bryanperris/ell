@@ -110,6 +110,8 @@ void l_string_append_vprintf(struct l_string *dest,
 					const char *format, va_list args);
 void l_string_append_printf(struct l_string *dest, const char *format, ...);
 
+unsigned int l_string_length(struct l_string *string);
+
 bool l_utf8_validate(const char *src, size_t len, const char **end);
 size_t l_utf8_strlen(const char *src);
 

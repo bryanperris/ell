@@ -287,6 +287,20 @@ LIB_EXPORT void l_string_append_printf(struct l_string *dest,
 	va_end(args);
 }
 
+/**
+ * l_string_length:
+ * @string: growable string object
+ *
+ * Returns: bytes used in the string.
+ **/
+LIB_EXPORT unsigned int l_string_length(struct l_string *string)
+{
+	if (unlikely(!string))
+		return 0;
+
+	return string->len;
+}
+
 static inline bool __attribute__ ((always_inline))
 			valid_unicode(wchar_t c)
 {
