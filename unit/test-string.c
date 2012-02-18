@@ -37,6 +37,7 @@ static void test_grow(const void *test_data)
 
 	assert(l_string_append(str, "Foobar7") == str);
 	assert(l_string_append(str, "BarFoo"));
+	assert(l_string_length(str) == strlen("Foobar7BarFoo"));
 
 	a = l_string_free(str, false);
 	assert(a);
@@ -55,6 +56,8 @@ static void test_printf(const void *test_data)
 
 	l_string_append_printf(str, "%d", 100);
 	l_string_append_printf(str, "%s", "BarFoo");
+
+	assert(l_string_length(str) == strlen("Foobar7100BarFoo"));
 
 	a = l_string_free(str, false);
 	assert(a);
@@ -101,6 +104,8 @@ static void test_fixed(const void *test_data)
 	l_string_append(str, "Foobar7");
 
 	l_string_append_fixed(str, test->input, test->input_len);
+	assert(l_string_length(str) == strlen(test->expected));
+
 	a = l_string_free(str, false);
 	assert(a);
 	assert(!strcmp(a, test->expected));
@@ -118,5 +123,6 @@ int main(int argc, char *argv[])
 	l_test_add("append_fixed test 1", test_fixed, &fixed_test1);
 	l_test_add("append_fixed test 2", test_fixed, &fixed_test2);
 	l_test_add("append_fixed test 3", test_fixed, &fixed_test3);
+
 	return l_test_run();
 }
