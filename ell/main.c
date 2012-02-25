@@ -25,12 +25,12 @@
 
 #include <errno.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/epoll.h>
 
 #include "log.h"
 #include "util.h"
 #include "main.h"
-#include "hashmap.h"
 #include "private.h"
 
 /**
@@ -46,8 +46,6 @@ static int epoll_fd;
 static bool epoll_running;
 static bool epoll_terminate;
 
-static struct l_hashmap *watch_list;
-
 struct watch_data {
 	int fd;
 	uint32_t events;
@@ -56,8 +54,15 @@ struct watch_data {
 	void *user_data;
 };
 
+#define DEFAULT_WATCH_ENTRIES 128
+
+static unsigned int watch_entries;
+static struct watch_data **watch_list;
+
 static inline bool __attribute__ ((always_inline)) create_epoll(void)
 {
+	unsigned int i;
+
 	if (likely(epoll_fd))
 		return true;
 
@@ -67,12 +72,17 @@ static inline bool __attribute__ ((always_inline)) create_epoll(void)
 		return false;
 	}
 
-	watch_list = l_hashmap_new();
+	watch_list = malloc(DEFAULT_WATCH_ENTRIES * sizeof(void *));
 	if (!watch_list) {
 		close(epoll_fd);
 		epoll_fd = 0;
 		return false;
 	}
+
+	watch_entries = DEFAULT_WATCH_ENTRIES;
+
+	for (i = 0; i < watch_entries; i++)
+		watch_list[i] = NULL;
 
 	return true;
 }
@@ -84,11 +94,14 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 	struct epoll_event ev;
 	int err;
 
-	if (unlikely(fd < 0 || !callback))
+	if (unlikely(fd <= 0 || !callback))
 		return -EINVAL;
 
 	if (!create_epoll())
 		return -EIO;
+
+	if ((unsigned int) fd > watch_entries)
+		return -ERANGE;
 
 	data = l_new(struct watch_data, 1);
 
@@ -108,7 +121,7 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 		return err;
 	}
 
-	l_hashmap_insert(watch_list, L_INT_TO_PTR(data->fd), data);
+	watch_list[fd - 1] = data;
 
 	return 0;
 }
@@ -119,10 +132,13 @@ int watch_modify(int fd, uint32_t events)
 	struct epoll_event ev;
 	int err;
 
-	if (unlikely(fd < 0))
+	if (unlikely(fd <= 0))
 		return -EINVAL;
 
-	data = l_hashmap_lookup(watch_list, L_INT_TO_PTR(fd));
+	if ((unsigned int) fd > watch_entries)
+		return -ERANGE;
+
+	data = watch_list[fd - 1];
 	if (!data)
 		return -ENXIO;
 
@@ -147,12 +163,17 @@ int watch_remove(int fd)
 	struct watch_data *data;
 	int err;
 
-	if (unlikely(fd < 0))
+	if (unlikely(fd <= 0))
 		return -EINVAL;
 
-	data = l_hashmap_remove(watch_list, L_INT_TO_PTR(fd));
+	if ((unsigned int) fd > watch_entries)
+		return -ERANGE;
+
+	data = watch_list[fd - 1];
 	if (!data)
 		return -ENXIO;
+
+	watch_list[fd - 1] = NULL;
 
 	err = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, data->fd, NULL);
 
@@ -164,18 +185,6 @@ int watch_remove(int fd)
 	return err;
 }
 
-static void watch_destroy(const void *key, void *value)
-{
-	struct watch_data *data = value;
-
-	l_error("Dangling file descriptor %d found", data->fd);
-
-	if (data->destroy)
-		data->destroy(data->user_data);
-
-	l_free(data);
-}
-
 /**
  * l_main_run:
  *
@@ -185,6 +194,8 @@ static void watch_destroy(const void *key, void *value)
  **/
 LIB_EXPORT bool l_main_run(void)
 {
+	unsigned int i;
+
 	if (unlikely(epoll_running))
 		return false;
 
@@ -214,7 +225,23 @@ LIB_EXPORT bool l_main_run(void)
 		}
 	}
 
-	l_hashmap_destroy(watch_list, watch_destroy);
+	for (i = 0; i < watch_entries; i++) {
+		struct watch_data *data = watch_list[i];
+
+		if (!data)
+			continue;
+
+		l_error("Dangling file descriptor %d found", data->fd);
+
+		if (data->destroy)
+			data->destroy(data->user_data);
+
+		l_free(data);
+	}
+
+	watch_entries = 0;
+
+	free(watch_list);
 	watch_list = NULL;
 
 	epoll_running = false;
