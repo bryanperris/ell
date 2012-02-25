@@ -77,6 +77,19 @@ static void timeout_callback(int fd, uint32_t events, void *user_data)
 		timeout->callback(timeout, timeout->user_data);
 }
 
+static inline int timeout_set(int fd, unsigned int seconds)
+{
+	struct itimerspec itimer;
+
+	memset(&itimer, 0, sizeof(itimer));
+	itimer.it_interval.tv_sec = 0;
+	itimer.it_interval.tv_nsec = 0;
+	itimer.it_value.tv_sec = seconds;
+	itimer.it_value.tv_nsec = 0;
+
+	return timerfd_settime(fd, 0, &itimer, NULL);
+}
+
 /**
  * l_timeout_create:
  * @seconds: timeout in seconds
@@ -114,15 +127,7 @@ LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
 	}
 
 	if (seconds > 0) {
-		struct itimerspec itimer;
-
-		memset(&itimer, 0, sizeof(itimer));
-		itimer.it_interval.tv_sec = 0;
-		itimer.it_interval.tv_nsec = 0;
-		itimer.it_value.tv_sec = seconds;
-		itimer.it_value.tv_nsec = 0;
-
-		if (timerfd_settime(timeout->fd, 0, &itimer, NULL) < 0) {
+		if (timeout_set(timeout->fd, seconds) < 0) {
 			close(timeout->fd);
 			l_free(timeout);
 			return NULL;
@@ -150,6 +155,13 @@ LIB_EXPORT void l_timeout_modify(struct l_timeout *timeout,
 
 	if (unlikely(timeout->fd < 0))
 		return;
+
+	if (seconds > 0) {
+		if (timeout_set(timeout->fd, seconds) < 0)
+			return;
+	}
+
+	watch_modify(timeout->fd, EPOLLIN | EPOLLONESHOT);
 }
 
 /**
