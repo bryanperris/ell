@@ -94,13 +94,13 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 	struct epoll_event ev;
 	int err;
 
-	if (unlikely(fd <= 0 || !callback))
+	if (unlikely(fd < 0 || !callback))
 		return -EINVAL;
 
 	if (!create_epoll())
 		return -EIO;
 
-	if ((unsigned int) fd > watch_entries)
+	if ((unsigned int) fd > watch_entries - 1)
 		return -ERANGE;
 
 	data = l_new(struct watch_data, 1);
@@ -121,7 +121,7 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 		return err;
 	}
 
-	watch_list[fd - 1] = data;
+	watch_list[fd] = data;
 
 	return 0;
 }
@@ -132,13 +132,13 @@ int watch_modify(int fd, uint32_t events)
 	struct epoll_event ev;
 	int err;
 
-	if (unlikely(fd <= 0))
+	if (unlikely(fd < 0))
 		return -EINVAL;
 
-	if ((unsigned int) fd > watch_entries)
+	if ((unsigned int) fd > watch_entries - 1)
 		return -ERANGE;
 
-	data = watch_list[fd - 1];
+	data = watch_list[fd];
 	if (!data)
 		return -ENXIO;
 
@@ -163,17 +163,17 @@ int watch_remove(int fd)
 	struct watch_data *data;
 	int err;
 
-	if (unlikely(fd <= 0))
+	if (unlikely(fd < 0))
 		return -EINVAL;
 
-	if ((unsigned int) fd > watch_entries)
+	if ((unsigned int) fd > watch_entries - 1)
 		return -ERANGE;
 
-	data = watch_list[fd - 1];
+	data = watch_list[fd];
 	if (!data)
 		return -ENXIO;
 
-	watch_list[fd - 1] = NULL;
+	watch_list[fd] = NULL;
 
 	err = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, data->fd, NULL);
 
