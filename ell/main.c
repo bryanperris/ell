@@ -231,10 +231,12 @@ LIB_EXPORT bool l_main_run(void)
 		if (!data)
 			continue;
 
-		l_error("Dangling file descriptor %d found", data->fd);
+		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, data->fd, NULL);
 
 		if (data->destroy)
 			data->destroy(data->user_data);
+		else
+			l_error("Dangling file descriptor %d found", data->fd);
 
 		l_free(data);
 	}
