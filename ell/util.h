@@ -36,6 +36,8 @@ extern "C" {
 #define L_PTR_TO_INT(p) ((int) ((intptr_t) (p)))
 #define L_INT_TO_PTR(u) ((void *) ((intptr_t) (u)))
 
+#define L_ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 void *l_malloc(size_t size);
 void l_free(void *ptr);
 
