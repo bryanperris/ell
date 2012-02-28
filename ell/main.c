@@ -336,7 +336,7 @@ LIB_EXPORT bool l_main_run(void)
 		if (epoll_terminate)
 			break;
 
-		timeout = l_hashmap_size(idle_list) > 0 ? 0 : -1;
+		timeout = l_queue_isempty(idle_list) ? -1 : 0;
 		nfds = epoll_wait(epoll_fd, events, MAX_EPOLL_EVENTS, timeout);
 
 		for (n = 0; n < nfds; n++) {
