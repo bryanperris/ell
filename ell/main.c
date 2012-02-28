@@ -29,7 +29,7 @@
 #include <sys/epoll.h>
 #include <limits.h>
 
-#include "hashmap.h"
+#include "queue.h"
 #include "log.h"
 #include "util.h"
 #include "main.h"
@@ -44,12 +44,15 @@
 
 #define MAX_EPOLL_EVENTS 10
 
+#define IDLE_FLAG_DISPATCHING	1
+#define IDLE_FLAG_DESTROYED	2
+
 static int epoll_fd;
 static bool epoll_running;
 static bool epoll_terminate;
 static int idle_id;
 
-static struct l_hashmap *idle_list;
+static struct l_queue *idle_list;
 
 struct watch_data {
 	int fd;
@@ -68,6 +71,8 @@ struct idle_data {
 	idle_event_cb_t callback;
 	idle_destroy_cb_t destroy;
 	void *user_data;
+	uint32_t flags;
+	int id;
 };
 
 static inline bool __attribute__ ((always_inline)) create_epoll(void)
@@ -87,7 +92,7 @@ static inline bool __attribute__ ((always_inline)) create_epoll(void)
 	if (!watch_list)
 		goto close_epoll;
 
-	idle_list = l_hashmap_new();
+	idle_list = l_queue_new();
 	if (!idle_list)
 		goto free_watch_list;
 
@@ -209,11 +214,43 @@ int watch_remove(int fd)
 	return err;
 }
 
+static bool idle_remove_by_id(void *data, void *user_data)
+{
+	struct idle_data *idle = data;
+	int id = L_PTR_TO_INT(user_data);
+
+	if (idle->id != id)
+		return false;
+
+	if (idle->destroy)
+		idle->destroy(idle->user_data);
+
+	if (idle->flags & IDLE_FLAG_DISPATCHING) {
+		idle->flags |= IDLE_FLAG_DESTROYED;
+		return false;
+	}
+
+	l_free(idle);
+
+	return true;
+}
+
+static bool idle_prune(void *data, void *user_data)
+{
+	struct idle_data *idle = data;
+
+	if ((idle->flags & IDLE_FLAG_DESTROYED) == 0)
+		return false;
+
+	l_free(idle);
+
+	return true;
+}
+
 int idle_add(idle_event_cb_t callback, void *user_data,
 		idle_destroy_cb_t destroy)
 {
 	struct idle_data *data;
-	int id;
 
 	if (unlikely(!callback))
 		return -EINVAL;
@@ -227,59 +264,47 @@ int idle_add(idle_event_cb_t callback, void *user_data,
 	data->destroy = destroy;
 	data->user_data = user_data;
 
-	if (l_hashmap_insert(idle_list, L_INT_TO_PTR(idle_id), data) < 0) {
+	if (!l_queue_push_tail(idle_list, data)) {
 		l_free(data);
 		return -ENOMEM;
 	}
 
-	id = idle_id++;
+	data->id = idle_id++;
 
 	if (idle_id == INT_MAX)
 		idle_id = 0;
 
-	return id;
+	return data->id;
 }
 
-int idle_remove(int id)
+void idle_remove(int id)
 {
-	struct idle_data *data;
-
-	if (unlikely(id <= 0))
-		return -EINVAL;
-
-	data = l_hashmap_remove(idle_list, L_INT_TO_PTR(id));
-	if (!data)
-		return -ENXIO;
-
-	if (data->destroy)
-		data->destroy(data->user_data);
-
-	l_free(data);
-
-	return 0;
+	l_queue_foreach_remove(idle_list, idle_remove_by_id,
+					L_INT_TO_PTR(id));
 }
 
-static void idle_destroy(const void *key, void *value)
+static void idle_destroy(void *data)
 {
-	int id = L_PTR_TO_INT(key);
-	struct idle_data *data = value;
+	struct idle_data *idle = data;
 
-	l_error("Dangling idle descriptor %d found", id);
+	l_error("Dangling idle descriptor %p, %d found", data, idle->id);
 
-	if (data->destroy)
-		data->destroy(data->user_data);
+	if (idle->destroy)
+		idle->destroy(idle->user_data);
 
-	l_free(data);
+	l_free(idle);
 }
 
-static void dispatch_idle(const void *key, void *value, void *user_data)
+static void idle_dispatch(void *data, void *user_data)
 {
-	struct idle_data *data = value;
+	struct idle_data *idle = data;
 
-	if (!data->callback)
+	if (!idle->callback)
 		return;
 
-	data->callback(data->user_data);
+	idle->flags |= IDLE_FLAG_DISPATCHING;
+	idle->callback(idle->user_data);
+	idle->flags &= ~IDLE_FLAG_DISPATCHING;
 }
 
 /**
@@ -321,7 +346,8 @@ LIB_EXPORT bool l_main_run(void)
 							data->user_data);
 		}
 
-		l_hashmap_foreach(idle_list, dispatch_idle, NULL);
+		l_queue_foreach(idle_list, idle_dispatch, NULL);
+		l_queue_foreach_remove(idle_list, idle_prune, NULL);
 	}
 
 	for (i = 0; i < watch_entries; i++) {
@@ -345,7 +371,7 @@ LIB_EXPORT bool l_main_run(void)
 	free(watch_list);
 	watch_list = NULL;
 
-	l_hashmap_destroy(idle_list, idle_destroy);
+	l_queue_destroy(idle_list, idle_destroy);
 	idle_list = NULL;
 
 	epoll_running = false;
