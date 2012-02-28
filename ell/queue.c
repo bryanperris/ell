@@ -381,7 +381,7 @@ LIB_EXPORT unsigned int l_queue_foreach_remove(struct l_queue *queue,
 	entry = queue->head;
 
 	while (entry) {
-		if (function(entry, user_data)) {
+		if (function(entry->data, user_data)) {
 			struct entry *tmp = entry;
 
 			if (prev)
