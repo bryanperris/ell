@@ -259,6 +259,29 @@ int idle_remove(int id)
 	return 0;
 }
 
+static void idle_destroy(const void *key, void *value)
+{
+	int id = L_PTR_TO_INT(key);
+	struct idle_data *data = value;
+
+	l_error("Dangling idle descriptor %d found", id);
+
+	if (data->destroy)
+		data->destroy(data->user_data);
+
+	l_free(data);
+}
+
+static void dispatch_idle(const void *key, void *value, void *user_data)
+{
+	struct idle_data *data = value;
+
+	if (!data->callback)
+		return;
+
+	data->callback(data->user_data);
+}
+
 /**
  * l_main_run:
  *
@@ -283,13 +306,13 @@ LIB_EXPORT bool l_main_run(void)
 	for (;;) {
 		struct epoll_event events[MAX_EPOLL_EVENTS];
 		int n, nfds;
+		int timeout;
 
 		if (epoll_terminate)
 			break;
 
-		nfds = epoll_wait(epoll_fd, events, MAX_EPOLL_EVENTS, -1);
-		if (nfds < 0)
-			continue;
+		timeout = l_hashmap_size(idle_list) > 0 ? 0 : -1;
+		nfds = epoll_wait(epoll_fd, events, MAX_EPOLL_EVENTS, timeout);
 
 		for (n = 0; n < nfds; n++) {
 			struct watch_data *data = events[n].data.ptr;
@@ -297,6 +320,8 @@ LIB_EXPORT bool l_main_run(void)
 			data->callback(data->fd, events[n].events,
 							data->user_data);
 		}
+
+		l_hashmap_foreach(idle_list, dispatch_idle, NULL);
 	}
 
 	for (i = 0; i < watch_entries; i++) {
@@ -319,6 +344,9 @@ LIB_EXPORT bool l_main_run(void)
 
 	free(watch_list);
 	watch_list = NULL;
+
+	l_hashmap_destroy(idle_list, idle_destroy);
+	idle_list = NULL;
 
 	epoll_running = false;
 
