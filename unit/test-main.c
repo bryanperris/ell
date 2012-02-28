@@ -52,6 +52,11 @@ static void idle_handler(struct l_idle *idle, void *user_data)
 	count += 1;
 }
 
+static void oneshot_handler(void *user_data)
+{
+	l_info("One-shot");
+}
+
 int main(int argc, char *argv[])
 {
 	struct l_timeout *timeout;
@@ -74,6 +79,8 @@ int main(int argc, char *argv[])
 	l_debug_enable("*");
 
 	l_debug("hello");
+
+	l_idle_oneshot(oneshot_handler, NULL, NULL);
 
 	l_main_run();
 
