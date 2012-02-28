@@ -42,10 +42,21 @@ static void timeout_handler(struct l_timeout *timeout, void *user_data)
 	l_main_quit();
 }
 
+static void idle_handler(struct l_idle *idle, void *user_data)
+{
+	static int count = 0;
+
+	if ((count % 1000000) == 0)
+		l_info("Idling...");
+
+	count += 1;
+}
+
 int main(int argc, char *argv[])
 {
 	struct l_timeout *timeout;
 	struct l_signal *signal;
+	struct l_idle *idle;
 	sigset_t mask;
 
 	sigemptyset(&mask);
@@ -55,6 +66,8 @@ int main(int argc, char *argv[])
 	signal = l_signal_create(&mask, signal_handler, NULL, NULL);
 
 	timeout = l_timeout_create(3, timeout_handler, NULL, NULL);
+
+	idle = l_idle_create(idle_handler, NULL, NULL);
 
 	l_log_set_stderr();
 
@@ -67,6 +80,8 @@ int main(int argc, char *argv[])
 	l_timeout_remove(timeout);
 
 	l_signal_remove(signal);
+
+	l_idle_remove(idle);
 
 	return 0;
 }
