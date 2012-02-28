@@ -37,10 +37,17 @@ void plugin_update_debug(void);
 typedef void (*watch_event_cb_t) (int fd, uint32_t events, void *user_data);
 typedef void (*watch_destroy_cb_t) (void *user_data);
 
+typedef void (*idle_event_cb_t) (void *user_data);
+typedef void (*idle_destroy_cb_t) (void *user_data);
+
 int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 				void *user_data, watch_destroy_cb_t destroy);
 int watch_modify(int fd, uint32_t events);
 int watch_remove(int fd);
+
+int idle_add(idle_event_cb_t callback, void *user_data,
+		idle_destroy_cb_t destroy);
+int idle_remove(int id);
 
 struct l_dbus_message *dbus_message_build(const void *data, size_t size);
 bool dbus_message_compare(struct l_dbus_message *message,

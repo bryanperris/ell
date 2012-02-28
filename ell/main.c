@@ -27,7 +27,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/epoll.h>
+#include <limits.h>
 
+#include "hashmap.h"
 #include "log.h"
 #include "util.h"
 #include "main.h"
@@ -45,6 +47,9 @@
 static int epoll_fd;
 static bool epoll_running;
 static bool epoll_terminate;
+static int idle_id;
+
+static struct l_hashmap *idle_list;
 
 struct watch_data {
 	int fd;
@@ -58,6 +63,12 @@ struct watch_data {
 
 static unsigned int watch_entries;
 static struct watch_data **watch_list;
+
+struct idle_data {
+	idle_event_cb_t callback;
+	idle_destroy_cb_t destroy;
+	void *user_data;
+};
 
 static inline bool __attribute__ ((always_inline)) create_epoll(void)
 {
@@ -73,11 +84,14 @@ static inline bool __attribute__ ((always_inline)) create_epoll(void)
 	}
 
 	watch_list = malloc(DEFAULT_WATCH_ENTRIES * sizeof(void *));
-	if (!watch_list) {
-		close(epoll_fd);
-		epoll_fd = 0;
-		return false;
-	}
+	if (!watch_list)
+		goto close_epoll;
+
+	idle_list = l_hashmap_new();
+	if (!idle_list)
+		goto free_watch_list;
+
+	idle_id = 0;
 
 	watch_entries = DEFAULT_WATCH_ENTRIES;
 
@@ -85,6 +99,16 @@ static inline bool __attribute__ ((always_inline)) create_epoll(void)
 		watch_list[i] = NULL;
 
 	return true;
+
+free_watch_list:
+	free(watch_list);
+	watch_list = NULL;
+
+close_epoll:
+	close(epoll_fd);
+	epoll_fd = 0;
+
+	return false;
 }
 
 int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
@@ -183,6 +207,56 @@ int watch_remove(int fd)
 	l_free(data);
 
 	return err;
+}
+
+int idle_add(idle_event_cb_t callback, void *user_data,
+		idle_destroy_cb_t destroy)
+{
+	struct idle_data *data;
+	int id;
+
+	if (unlikely(!callback))
+		return -EINVAL;
+
+	if (!create_epoll())
+		return -EIO;
+
+	data = l_new(struct idle_data, 1);
+
+	data->callback = callback;
+	data->destroy = destroy;
+	data->user_data = user_data;
+
+	if (l_hashmap_insert(idle_list, L_INT_TO_PTR(idle_id), data) < 0) {
+		l_free(data);
+		return -ENOMEM;
+	}
+
+	id = idle_id++;
+
+	if (idle_id == INT_MAX)
+		idle_id = 0;
+
+	return id;
+}
+
+int idle_remove(int id)
+{
+	struct idle_data *data;
+
+	if (unlikely(id <= 0))
+		return -EINVAL;
+
+	data = l_hashmap_remove(idle_list, L_INT_TO_PTR(id));
+	if (!data)
+		return -ENXIO;
+
+	if (data->destroy)
+		data->destroy(data->user_data);
+
+	l_free(data);
+
+	return 0;
 }
 
 /**
