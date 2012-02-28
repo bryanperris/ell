@@ -42,7 +42,11 @@
  * Opague object representing the idle time event.
  */
 struct l_idle {
-	l_idle_notify_cb_t callback;
+	union {
+		l_idle_notify_cb_t callback;
+		l_idle_oneshot_cb_t oneshot;
+	};
+
 	l_idle_destroy_cb_t destroy;
 	void *user_data;
 	int id;
@@ -62,6 +66,16 @@ static void idle_callback(void *user_data)
 
 	if (idle->callback)
 		idle->callback(idle, idle->user_data);
+}
+
+static void oneshot_callback(void *user_data)
+{
+	struct l_idle *idle = user_data;
+
+	if (idle->oneshot)
+		idle->oneshot(idle->user_data);
+
+	l_idle_remove(idle);
 }
 
 /**
@@ -99,6 +113,39 @@ LIB_EXPORT struct l_idle *l_idle_create(l_idle_notify_cb_t callback,
 	return idle;
 }
 
+/**
+ * l_idle_oneshot:
+ * @callback: idle callback function
+ * @user_data: user data provided to idle callback function
+ * @destroy: destroy function for user data
+ *
+ * Create a new idle event processing object.  The callback will be called
+ * only once at which point the object will be destroyed.
+ *
+ * Returns: true if the oneshot idle object could be created successfully.
+ **/
+LIB_EXPORT bool l_idle_oneshot(l_idle_oneshot_cb_t callback, void *user_data,
+				l_idle_destroy_cb_t destroy)
+{
+	struct l_idle *idle;
+
+	if (unlikely(!callback))
+		return NULL;
+
+	idle = l_new(struct l_idle, 1);
+
+	idle->oneshot = callback;
+	idle->destroy = destroy;
+	idle->user_data = user_data;
+
+	idle->id = idle_add(oneshot_callback, idle, idle_destroy);
+	if (idle->id < 0) {
+		l_free(idle);
+		return false;
+	}
+
+	return true;
+}
 /**
  * l_idle_remove:
  * @idle: idle object
