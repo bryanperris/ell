@@ -97,8 +97,8 @@ static bool parse_group(struct l_settings *settings, const char *data,
 	return true;
 }
 
-static bool parse_key(struct l_settings *settings, const char *data,
-			size_t len, size_t line)
+static unsigned int parse_key(struct l_settings *settings, const char *data,
+				size_t len, size_t line)
 {
 	unsigned int i;
 	unsigned int end;
@@ -116,7 +116,7 @@ static bool parse_key(struct l_settings *settings, const char *data,
 		l_util_debug(settings->debug_handler, settings->debug_data,
 				"Invalid character in Key on line %zd", line);
 
-		return false;
+		return 0;
 	}
 
 	end = i;
@@ -129,13 +129,13 @@ static bool parse_key(struct l_settings *settings, const char *data,
 		l_util_debug(settings->debug_handler, settings->debug_data,
 					"Garbage after Key on line %zd", line);
 
-		return false;
+		return 0;
 	}
 
 	l_util_debug(settings->debug_handler, settings->debug_data,
 					"Found Key: '%.*s'", end, data);
 
-	return true;
+	return end;
 }
 
 static bool parse_value(struct l_settings *settings, const char *data,
