@@ -143,6 +143,12 @@ static bool parse_value(struct l_settings *settings, const char *data,
 {
 	unsigned int end = len;
 
+	if (!l_utf8_validate(data, len, NULL)) {
+		l_util_debug(settings->debug_handler, settings->debug_data,
+				"Invalid UTF8 in value on line: %zd", line);
+		return false;
+	}
+
 	l_util_debug(settings->debug_handler, settings->debug_data,
 					"Found Value: '%.*s'", end, data);
 
