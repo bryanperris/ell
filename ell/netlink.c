@@ -120,7 +120,7 @@ static bool can_write_data(struct l_io *io, void *user_data)
 
 	written = sendto(sk, data, command->len, 0,
 				(struct sockaddr *) &addr, sizeof(addr));
-	if (written != command->len) {
+	if (written < 0 || (uint32_t) written != command->len) {
 		l_hashmap_remove(netlink->command_lookup,
 					L_UINT_TO_PTR(command->id));
 		destroy_command(NULL, command);
