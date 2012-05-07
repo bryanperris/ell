@@ -380,3 +380,31 @@ LIB_EXPORT const char *l_settings_get_value(struct l_settings *settings,
 
 	return setting->value;
 }
+
+LIB_EXPORT bool l_settings_get_bool(struct l_settings *settings,
+					char *group_name, char *key, bool *out)
+{
+	const char *value = l_settings_get_value(settings, group_name, key);
+
+	if (!value)
+		return false;
+
+	if (!strcasecmp(value, "true") || !strcmp(value, "1")) {
+		if (out)
+			*out = true;
+
+		return true;
+	}
+
+	if (!strcasecmp(value, "false") || !strcmp(value, "0")) {
+		if (out)
+			*out = false;
+
+		return true;
+	}
+
+	l_util_debug(settings->debug_handler, settings->debug_data,
+			"Could not interpret %s as a bool", value);
+
+	return false;
+}
