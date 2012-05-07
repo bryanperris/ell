@@ -140,6 +140,32 @@ LIB_EXPORT char *l_strdup(const char *str)
 }
 
 /**
+ * l_strndup:
+ * @str: string pointer
+ *
+ * Allocates and duplicates sring.  If the string is longer than @max
+ * characters, only @max are copied and a null terminating character
+ * is added.
+ *
+ * Returns: a newly allocated string
+ **/
+LIB_EXPORT char *l_strndup(const char *str, size_t max)
+{
+	if (likely(str)) {
+		char *tmp;
+
+		tmp = strndup(str, max);
+		if (tmp)
+			return tmp;
+
+		fprintf(stderr, "%s:%s(): failed to allocate string\n",
+						STRLOC, __PRETTY_FUNCTION__);
+		abort();
+	}
+
+	return NULL;
+}
+/**
  * l_strdup_printf:
  * @format: string format
  * @...: parameters to insert into format string
