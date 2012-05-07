@@ -358,3 +358,25 @@ LIB_EXPORT bool l_settings_has_key(struct l_settings *settings,
 
 	return setting != NULL;
 }
+
+LIB_EXPORT const char *l_settings_get_value(struct l_settings *settings,
+						char *group_name, char *key)
+{
+	struct group_data *group;
+	struct setting_data *setting;
+
+	if (unlikely(!settings))
+		return NULL;
+
+	group = l_queue_find(settings->groups, group_match, group_name);
+
+	if (!group)
+		return NULL;
+
+	setting = l_queue_find(group->settings, key_match, key);
+
+	if (setting == NULL)
+		return NULL;
+
+	return setting->value;
+}
