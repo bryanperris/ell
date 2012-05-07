@@ -290,6 +290,30 @@ done:
 }
 
 /**
+ * l_queue_find:
+ * @queue: queue object
+ * @function: match function
+ * @user_data: user data given to compare function
+ *
+ * Finds an entry in the queue by running the match @function
+ *
+ * Returns: Matching entry or NULL if no entry can be found
+ **/
+LIB_EXPORT void *l_queue_find(struct l_queue *queue,
+				l_queue_match_func_t function, void *user_data)
+{
+	struct entry *entry;
+
+	if (unlikely(!queue || !function))
+		return NULL;
+
+	for (entry = queue->head; entry; entry = entry->next)
+		if (function(entry->data, user_data))
+			return entry->data;
+
+	return NULL;
+}
+/**
  * l_queue_remove:
  * @queue: queue object
  * @data: pointer to data
