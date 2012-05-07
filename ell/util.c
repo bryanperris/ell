@@ -142,6 +142,7 @@ LIB_EXPORT char *l_strdup(const char *str)
 /**
  * l_strndup:
  * @str: string pointer
+ * @max: Maximum number of characters to copy
  *
  * Allocates and duplicates sring.  If the string is longer than @max
  * characters, only @max are copied and a null terminating character
