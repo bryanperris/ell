@@ -331,3 +331,30 @@ LIB_EXPORT bool l_settings_has_group(struct l_settings *settings,
 
 	return group != NULL;
 }
+
+static bool key_match(const void *a, const void *b)
+{
+	const struct setting_data *setting = a;
+	const char *key = b;
+
+	return !strcmp(setting->key, key);
+}
+
+LIB_EXPORT bool l_settings_has_key(struct l_settings *settings,
+					char *group_name, char *key)
+{
+	struct group_data *group;
+	struct setting_data *setting;
+
+	if (unlikely(!settings))
+		return false;
+
+	group = l_queue_find(settings->groups, group_match, group_name);
+
+	if (!group)
+		return false;
+
+	setting = l_queue_find(group->settings, key_match, key);
+
+	return setting != NULL;
+}
