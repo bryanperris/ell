@@ -208,6 +208,27 @@ LIB_EXPORT void *l_queue_pop_head(struct l_queue *queue)
 }
 
 /**
+ * l_queue_peek_head:
+ * @queue: queue object
+ *
+ * Peeks at the first element of the queue an returns it.
+ *
+ * Returns: data pointer to first element or #NULL in case an empty queue
+ **/
+LIB_EXPORT void *l_queue_peek_head(struct l_queue *queue)
+{
+	struct entry *entry;
+
+	if (unlikely(!queue))
+		return NULL;
+
+	if (!queue->head)
+		return NULL;
+
+	entry = queue->head;
+	return entry->data;
+}
+/**
  * l_queue_insert:
  * @queue: queue object
  * @data: pointer to data
