@@ -27,20 +27,52 @@
 
 #include "util.h"
 #include "string.h"
+#include "queue.h"
 #include "settings.h"
 #include "private.h"
+
+struct setting_data {
+	char *key;
+	char *value;
+};
+
+struct group_data {
+	char *name;
+	struct l_queue *settings;
+};
 
 struct l_settings {
 	l_settings_debug_cb_t debug_handler;
 	l_settings_destroy_cb_t debug_destroy;
 	void *debug_data;
+	struct l_queue *groups;
 };
+
+static void setting_destroy(void *data)
+{
+	struct setting_data *pair = data;
+
+	l_free(pair->key);
+	l_free(pair->value);
+	l_free(pair);
+}
+
+static void group_destroy(void *data)
+{
+	struct group_data *group = data;
+
+	l_free(group->name);
+	l_queue_destroy(group->settings, setting_destroy);
+
+	l_free(group);
+}
 
 LIB_EXPORT struct l_settings *l_settings_new(void)
 {
 	struct l_settings *settings;
 
 	settings = l_new(struct l_settings, 1);
+	settings->groups = l_queue_new();
 
 	return settings;
 }
@@ -53,6 +85,8 @@ LIB_EXPORT void l_settings_free(struct l_settings *settings)
 	if (settings->debug_destroy)
 		settings->debug_destroy(settings->debug_data);
 
+	l_queue_destroy(settings->groups, group_destroy);
+
 	l_free(settings);
 }
 
@@ -61,6 +95,7 @@ static bool parse_group(struct l_settings *settings, const char *data,
 {
 	size_t i = 1;
 	size_t end;
+	struct group_data *group;
 
 	while (i < len && data[i] != ']') {
 		if (l_ascii_isprint(data[i]) == false || data[i] == '[') {
@@ -94,6 +129,12 @@ static bool parse_group(struct l_settings *settings, const char *data,
 	l_util_debug(settings->debug_handler, settings->debug_data,
 			"Found group: [%.*s]", (int) (end - 1), data + 1);
 
+	group = l_new(struct group_data, 1);
+	group->name = l_strndup(data + 1, end - 1);
+	group->settings = l_queue_new();
+
+	l_queue_push_head(settings->groups, group);
+
 	return true;
 }
 
@@ -102,6 +143,8 @@ static unsigned int parse_key(struct l_settings *settings, const char *data,
 {
 	unsigned int i;
 	unsigned int end;
+	struct group_data *group;
+	struct setting_data *pair;
 
 	for (i = 0; i < len; i++) {
 		if (l_ascii_isalnum(data[i]))
@@ -135,6 +178,11 @@ static unsigned int parse_key(struct l_settings *settings, const char *data,
 	l_util_debug(settings->debug_handler, settings->debug_data,
 					"Found Key: '%.*s'", end, data);
 
+	group = l_queue_peek_head(settings->groups);
+	pair = l_new(struct setting_data, 1);
+	pair->key = l_strndup(data, end);
+	l_queue_push_head(group->settings, pair);
+
 	return end;
 }
 
@@ -142,15 +190,27 @@ static bool parse_value(struct l_settings *settings, const char *data,
 			size_t len, size_t line)
 {
 	unsigned int end = len;
+	struct group_data *group;
+	struct setting_data *pair;
+
+	group = l_queue_peek_head(settings->groups);
 
 	if (!l_utf8_validate(data, len, NULL)) {
 		l_util_debug(settings->debug_handler, settings->debug_data,
 				"Invalid UTF8 in value on line: %zd", line);
+
+		pair = l_queue_pop_head(group->settings);
+		l_free(pair->key);
+		l_free(pair);
+
 		return false;
 	}
 
 	l_util_debug(settings->debug_handler, settings->debug_data,
 					"Found Value: '%.*s'", end, data);
+
+	pair = l_queue_peek_head(group->settings);
+	pair->value = l_strndup(data, end);
 
 	return true;
 }
