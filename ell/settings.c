@@ -310,3 +310,24 @@ LIB_EXPORT bool l_settings_set_debug(struct l_settings *settings,
 
 	return true;
 }
+
+static bool group_match(const void *a, const void *b)
+{
+	const struct group_data *group = a;
+	const char *name = b;
+
+	return !strcmp(group->name, name);
+}
+
+LIB_EXPORT bool l_settings_has_group(struct l_settings *settings,
+					char *group_name)
+{
+	struct group_data *group;
+
+	if (unlikely(!settings))
+		return false;
+
+	group = l_queue_find(settings->groups, group_match, group_name);
+
+	return group != NULL;
+}

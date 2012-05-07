@@ -45,6 +45,9 @@ bool l_settings_set_debug(struct l_settings *settings,
 				l_settings_debug_cb_t callback,
 				void *user_data,
 				l_settings_destroy_cb_t destroy);
+
+bool l_settings_has_group(struct l_settings *settings, char *group_name);
+
 #ifdef __cplusplus
 }
 #endif
