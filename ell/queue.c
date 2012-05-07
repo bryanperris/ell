@@ -228,6 +228,7 @@ LIB_EXPORT void *l_queue_peek_head(struct l_queue *queue)
 	entry = queue->head;
 	return entry->data;
 }
+
 /**
  * l_queue_insert:
  * @queue: queue object
