@@ -38,10 +38,11 @@ extern "C" {
 
 #define L_ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
-void *l_malloc(size_t size);
+void *l_malloc(size_t size) __attribute__ ((warn_unused_result, malloc));
 void l_free(void *ptr);
 
-void *l_realloc(void *mem, size_t size);
+void *l_realloc(void *mem, size_t size)
+			__attribute__ ((warn_unused_result, malloc));
 
 /**
  * l_new:
