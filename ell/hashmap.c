@@ -38,9 +38,12 @@
 
 typedef unsigned int (*hash_func_t) (const void *p);
 typedef int (*compare_func_t) (const void *a, const void *b);
+typedef void *(*key_new_func_t) (const void *p);
+typedef void (*key_free_func_t) (void *p);
+typedef const void *(*key_user_func_t) (const void *p);
 
 struct entry {
-	const void *key;
+	void *key;
 	void *value;
 	struct entry *next;
 };
@@ -53,9 +56,34 @@ struct entry {
 struct l_hashmap {
 	hash_func_t hash_func;
 	compare_func_t compare_func;
+	key_new_func_t key_new_func;
+	key_free_func_t key_free_func;
+	key_user_func_t key_user_func;
 	unsigned int entries;
 	struct entry buckets[NBUCKETS];
 };
+
+static inline void *get_key_new(const struct l_hashmap *hashmap,
+				const void *key)
+{
+	if (hashmap->key_new_func)
+		return hashmap->key_new_func(key);
+	return (void *)key;
+}
+
+static inline void free_key(const struct l_hashmap *hashmap, void *key)
+{
+	if (hashmap->key_free_func)
+		hashmap->key_free_func(key);
+}
+
+static inline const void *get_key_user(const struct l_hashmap *hashmap,
+				const void *key)
+{
+	if (hashmap->key_user_func)
+		return hashmap->key_user_func(key);
+	return key;
+}
 
 static inline unsigned int hash_superfast(const uint8_t *key, unsigned int len)
 {
@@ -122,10 +150,13 @@ static int direct_compare_func(const void *a, const void *b)
 /**
  * l_hashmap_new:
  *
- * Create a new hash table.
+ * Create a new hash table. The keys are managed as pointers, that is,
+ * the pointer value is hashed and looked up.
  *
  * No error handling is needed since. In case of real memory allocation
  * problems abort() will be called.
+ *
+ * See also l_hashmap_string_new().
  *
  * Returns: a newly allocated #l_hashmap object
  **/
@@ -137,6 +168,71 @@ LIB_EXPORT struct l_hashmap *l_hashmap_new(void)
 
 	hashmap->hash_func = direct_hash_func;
 	hashmap->compare_func = direct_compare_func;
+	hashmap->entries = 0;
+
+	return hashmap;
+}
+
+struct strkey {
+	int len;
+	char str[];
+};
+
+static unsigned int string_hash_func(const void *p)
+{
+	const struct strkey *sk = p;
+	return hash_superfast((const uint8_t *)sk->str, sk->len);
+}
+
+static int string_compare(const void *pa, const void *pb)
+{
+	const struct strkey *a = pa, *b = pb;
+	int r = a->len - b->len;
+	if (r == 0)
+		r = memcmp(a->str, b->str, a->len);
+	return r;
+}
+
+static void *string_key_new(const void *p)
+{
+	struct strkey *sk;
+	int len = strlen(p);
+	sk = l_malloc(sizeof(struct strkey) + len + 1);
+	sk->len = len;
+	memcpy(sk->str, p, len + 1);
+	return sk;
+}
+
+static const void *string_key_user(const void *p)
+{
+	const struct strkey *sk = p;
+	return sk->str;
+}
+
+/**
+ * l_hashmap_string_new:
+ *
+ * Create a new hash table. The keys are considered strings and are
+ * copied.
+ *
+ * No error handling is needed since. In case of real memory allocation
+ * problems abort() will be called.
+ *
+ * See also l_hashmap_new().
+ *
+ * Returns: a newly allocated #l_hashmap object
+ **/
+LIB_EXPORT struct l_hashmap *l_hashmap_string_new(void)
+{
+	struct l_hashmap *hashmap;
+
+	hashmap = l_new(struct l_hashmap, 1);
+
+	hashmap->hash_func = string_hash_func;
+	hashmap->compare_func = string_compare;
+	hashmap->key_new_func = string_key_new;
+	hashmap->key_free_func = l_free;
+	hashmap->key_user_func = string_key_user;
 	hashmap->entries = 0;
 
 	return hashmap;
@@ -167,6 +263,8 @@ LIB_EXPORT void l_hashmap_destroy(struct l_hashmap *hashmap,
 			if (destroy)
 				destroy(entry->key, entry->value);
 
+			free_key(hashmap, entry->key);
+
 			if (entry->next == head)
 				break;
 		}
@@ -190,23 +288,24 @@ LIB_EXPORT bool l_hashmap_insert(struct l_hashmap *hashmap,
 {
 	struct entry *entry, *head;
 	unsigned int hash;
+	void *key_new;
 
 	if (unlikely(!hashmap))
 		return false;
 
-	hash = hashmap->hash_func(key) % NBUCKETS;
+	key_new = get_key_new(hashmap, key);
+	hash = hashmap->hash_func(key_new) % NBUCKETS;
 	head = &hashmap->buckets[hash];
 
 	if (!head->next) {
-		head->key = key;
+		head->key = key_new;
 		head->value = value;
 		head->next = head;
 		goto done;
 	}
 
 	entry = l_new(struct entry, 1);
-
-	entry->key = key;
+	entry->key = key_new;
 	entry->value = value;
 	entry->next = head;
 
@@ -234,31 +333,37 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 {
 	struct entry *entry, *head, *prev;
 	unsigned int hash;
+	void *key_new;
 
 	if (unlikely(!hashmap))
 		return NULL;
 
-	hash = hashmap->hash_func(key) % NBUCKETS;
+	key_new = get_key_new(hashmap, key);
+	hash = hashmap->hash_func(key_new) % NBUCKETS;
 	head = &hashmap->buckets[hash];
 
-	if (!head->next)
+	if (!head->next) {
+		free_key(hashmap, key_new);
 		return NULL;
+	}
 
 	for (entry = head, prev = NULL;; prev = entry, entry = entry->next) {
 		void *value;
 
-		if (hashmap->compare_func(key, entry->key))
+		if (hashmap->compare_func(key_new, entry->key))
 			continue;
 
 		value = entry->value;
 
 		if (entry == head) {
 			if (entry->next == head) {
+				free_key(hashmap, entry->key);
 				head->key = NULL;
 				head->value = NULL;
 				head->next = NULL;
 			} else {
 				entry = entry->next;
+				free_key(hashmap, head->key);
 				head->key = entry->key;
 				head->value = entry->value;
 				head->next = entry->next;
@@ -266,14 +371,15 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 			}
 		} else {
 			prev->next = entry->next;
+			free_key(hashmap, entry->key);
 			l_free(entry);
 		}
 
 		hashmap->entries--;
-
+		free_key(hashmap, key_new);
 		return value;
-        }
-
+	}
+	free_key(hashmap, key_new);
 	return NULL;
 }
 
@@ -290,24 +396,31 @@ LIB_EXPORT void *l_hashmap_lookup(struct l_hashmap *hashmap, const void *key)
 {
 	struct entry *entry, *head;
 	unsigned int hash;
+	void *key_new;
 
 	if (unlikely(!hashmap))
 		return NULL;
 
-	hash = hashmap->hash_func(key) % NBUCKETS;
+	key_new = get_key_new(hashmap, key);
+	hash = hashmap->hash_func(key_new) % NBUCKETS;
 	head = &hashmap->buckets[hash];
 
-	if (!head->next)
+	if (!head->next) {
+		free_key(hashmap, key_new);
 		return NULL;
+	}
 
 	for (entry = head;; entry = entry->next) {
-		if (!hashmap->compare_func(key, entry->key))
+		if (!hashmap->compare_func(key_new, entry->key)) {
+			free_key(hashmap, key_new);
 			return entry->value;
+		}
 
 		if (entry->next == head)
 			break;
 	}
 
+	free_key(hashmap, key_new);
 	return NULL;
 }
 
@@ -334,7 +447,8 @@ LIB_EXPORT void l_hashmap_foreach(struct l_hashmap *hashmap,
 			continue;
 
 		for (entry = head;; entry = entry->next) {
-			function(entry->key, entry->value, user_data);
+			function(get_key_user(hashmap, entry->key),
+					entry->value, user_data);
 
 			if (entry->next == head)
 				break;

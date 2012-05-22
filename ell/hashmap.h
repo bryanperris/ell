@@ -35,6 +35,8 @@ typedef void (*l_hashmap_destroy_func_t) (const void *key, void *value);
 struct l_hashmap;
 
 struct l_hashmap *l_hashmap_new(void);
+struct l_hashmap *l_hashmap_string_new(void);
+
 void l_hashmap_destroy(struct l_hashmap *hashmap,
 			l_hashmap_destroy_func_t destroy);
 
