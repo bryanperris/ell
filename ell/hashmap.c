@@ -57,6 +57,58 @@ struct l_hashmap {
 	struct entry buckets[NBUCKETS];
 };
 
+static inline unsigned int hash_superfast(const uint8_t *key, unsigned int len)
+{
+	/*
+	 * Paul Hsieh (http://www.azillionmonkeys.com/qed/hash.html)
+	 * used by WebCore (http://webkit.org/blog/8/hashtables-part-2/),
+	 * EFL's eina, kmod and possible others.
+	 */
+	unsigned int tmp, hash = len, rem = len & 3;
+
+	len /= 4;
+
+	/* Main loop */
+	for (; len > 0; len--) {
+		hash += L_GET_UNALIGNED((uint16_t *) key);
+		tmp = (L_GET_UNALIGNED((uint16_t *)(key + 2)) << 11) ^ hash;
+		hash = (hash << 16) ^ tmp;
+		key += 4;
+		hash += hash >> 11;
+	}
+
+	/* Handle end cases */
+	switch (rem) {
+	case 3:
+		hash += L_GET_UNALIGNED((uint16_t *) key);
+		hash ^= hash << 16;
+		hash ^= key[2] << 18;
+		hash += hash >> 11;
+		break;
+
+	case 2:
+		hash += L_GET_UNALIGNED((uint16_t *) key);
+		hash ^= hash << 11;
+		hash += hash >> 17;
+		break;
+
+	case 1:
+		hash += *key;
+		hash ^= hash << 10;
+		hash += hash >> 1;
+	}
+
+	/* Force "avalanching" of final 127 bits */
+	hash ^= hash << 3;
+	hash += hash >> 5;
+	hash ^= hash << 4;
+	hash += hash >> 17;
+	hash ^= hash << 25;
+	hash += hash >> 6;
+
+	return hash;
+}
+
 static unsigned int direct_hash_func(const void *p)
 {
 	return L_PTR_TO_UINT(p);
