@@ -36,6 +36,22 @@ extern "C" {
 #define L_PTR_TO_INT(p) ((int) ((intptr_t) (p)))
 #define L_INT_TO_PTR(u) ((void *) ((intptr_t) (u)))
 
+#define L_GET_UNALIGNED(ptr)			\
+({						\
+	struct __attribute__((packed)) {	\
+		typeof(*(ptr)) __v;		\
+	} *__p = (typeof(__p)) (ptr);		\
+	__p->__v;				\
+})
+
+#define L_PUT_UNALIGNED(val, ptr)		\
+do {						\
+	struct __attribute__((packed)) {	\
+		typeof(*(ptr)) __v;		\
+	} *__p = (typeof(__p)) (ptr);		\
+	__p->__v = (val);			\
+} while(0)
+
 #define L_ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 void *l_malloc(size_t size) __attribute__ ((warn_unused_result, malloc));
