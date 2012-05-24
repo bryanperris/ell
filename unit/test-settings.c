@@ -51,6 +51,15 @@ static void test_settings(const void *test_data)
 	l_settings_set_debug(settings, settings_debug, NULL, NULL);
 
 	l_settings_load_from_data(settings, test->input, strlen(test->input));
+
+	assert(l_settings_has_group(settings, "Foobar"));
+	assert(!l_settings_has_group(settings, "Foobar2"));
+
+	assert(l_settings_has_key(settings, "Foobar", "Key"));
+	assert(!l_settings_has_key(settings, "Foobar", "Key2"));
+
+	assert(!l_settings_get_bool(settings, "Foobar", "Key", NULL));
+
 	l_settings_free(settings);
 }
 
