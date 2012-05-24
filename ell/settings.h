@@ -57,6 +57,8 @@ const char *l_settings_get_value(struct l_settings *settings, char *group_name,
 bool l_settings_get_bool(struct l_settings *settings, char *group_name,
 				char *key, bool *out);
 
+bool l_settings_get_int(struct l_settings *settings, char *group_name,
+				char *key, int *out);
 #ifdef __cplusplus
 }
 #endif

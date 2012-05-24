@@ -24,6 +24,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "util.h"
 #include "string.h"
@@ -405,6 +406,35 @@ LIB_EXPORT bool l_settings_get_bool(struct l_settings *settings,
 
 	l_util_debug(settings->debug_handler, settings->debug_data,
 			"Could not interpret %s as a bool", value);
+
+	return false;
+}
+
+LIB_EXPORT bool l_settings_get_int(struct l_settings *settings,
+					char *group_name, char *key, int *out)
+{
+	const char *value = l_settings_get_value(settings, group_name, key);
+	int r;
+	char *endp;
+
+	if (!value)
+		return false;
+
+	if (*value == '\0')
+		goto error;
+
+	r = strtol(value, &endp, 10);
+	if (*endp != '\0')
+		goto error;
+
+	if (out)
+		*out = r;
+
+	return true;
+
+error:
+	l_util_debug(settings->debug_handler, settings->debug_data,
+			"Could not interpret %s as an int", value);
 
 	return false;
 }
