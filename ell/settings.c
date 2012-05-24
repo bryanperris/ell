@@ -468,3 +468,33 @@ error:
 
 	return false;
 }
+
+LIB_EXPORT bool l_settings_get_int64(struct l_settings *settings,
+					char *group_name, char *key,
+					int64_t *out)
+{
+	const char *value = l_settings_get_value(settings, group_name, key);
+	int64_t r;
+	char *endp;
+
+	if (!value)
+		return false;
+
+	if (*value == '\0')
+		goto error;
+
+	r = strtoll(value, &endp, 10);
+	if (*endp != '\0')
+		goto error;
+
+	if (out)
+		*out = r;
+
+	return true;
+
+error:
+	l_util_debug(settings->debug_handler, settings->debug_data,
+			"Could not interpret %s as an int64", value);
+
+	return false;
+}
