@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "util.h"
 #include "string.h"
@@ -414,7 +415,8 @@ LIB_EXPORT bool l_settings_get_int(struct l_settings *settings,
 					char *group_name, char *key, int *out)
 {
 	const char *value = l_settings_get_value(settings, group_name, key);
-	int r;
+	long int r;
+	int t;
 	char *endp;
 
 	if (!value)
@@ -423,8 +425,13 @@ LIB_EXPORT bool l_settings_get_int(struct l_settings *settings,
 	if (*value == '\0')
 		goto error;
 
-	r = strtol(value, &endp, 10);
+	errno = 0;
+
+	t = r = strtol(value, &endp, 10);
 	if (*endp != '\0')
+		goto error;
+
+	if (unlikely(errno == ERANGE || r != t))
 		goto error;
 
 	if (out)
@@ -444,7 +451,8 @@ LIB_EXPORT bool l_settings_get_uint(struct l_settings *settings,
 					unsigned int *out)
 {
 	const char *value = l_settings_get_value(settings, group_name, key);
-	unsigned int r;
+	unsigned long int r;
+	unsigned int t;
 	char *endp;
 
 	if (!value)
@@ -453,8 +461,13 @@ LIB_EXPORT bool l_settings_get_uint(struct l_settings *settings,
 	if (*value == '\0')
 		goto error;
 
-	r = strtoul(value, &endp, 10);
+	errno = 0;
+
+	t = r = strtoul(value, &endp, 10);
 	if (*endp != '\0')
+		goto error;
+
+	if (unlikely(errno == ERANGE || r != t))
 		goto error;
 
 	if (out)
@@ -483,8 +496,13 @@ LIB_EXPORT bool l_settings_get_int64(struct l_settings *settings,
 	if (*value == '\0')
 		goto error;
 
+	errno = 0;
+
 	r = strtoll(value, &endp, 10);
 	if (*endp != '\0')
+		goto error;
+
+	if (unlikely(errno == ERANGE))
 		goto error;
 
 	if (out)
@@ -513,8 +531,13 @@ LIB_EXPORT bool l_settings_get_uint64(struct l_settings *settings,
 	if (*value == '\0')
 		goto error;
 
+	errno = 0;
+
 	r = strtoull(value, &endp, 10);
 	if (*endp != '\0')
+		goto error;
+
+	if (unlikely(errno == ERANGE))
 		goto error;
 
 	if (out)
