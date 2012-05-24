@@ -65,6 +65,9 @@ bool l_settings_get_uint(struct l_settings *settings, char *group_name,
 
 bool l_settings_get_int64(struct l_settings *settings, char *group_name,
 				char *key, int64_t *out);
+
+bool l_settings_get_uint64(struct l_settings *settings, char *group_name,
+				char *key, uint64_t *out);
 #ifdef __cplusplus
 }
 #endif
