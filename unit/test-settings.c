@@ -90,6 +90,7 @@ static void test_settings(const void *test_data)
 	str = l_settings_get_string(settings, "Foobar", "String");
 	assert(str);
 	assert(!strcmp(str, "\tFoobar "));
+	l_free(str);
 
 	str = l_settings_get_string(settings, "Foobar", "StringBad1");
 	assert(!str);
