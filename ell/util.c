@@ -196,6 +196,24 @@ LIB_EXPORT char *l_strdup_printf(const char *format, ...)
 }
 
 /**
+ * l_strfreev:
+ * @strlist: String list to free
+ *
+ * Frees a list of strings
+ **/
+LIB_EXPORT void l_strfreev(char **strlist)
+{
+	if (likely(strlist)) {
+		int i;
+
+		for (i = 0; strlist[i]; i++)
+			l_free(strlist[i]);
+
+		l_free(strlist);
+	}
+}
+
+/**
  * l_util_hexstring:
  * @buf: buffer pointer
  * @len: length of buffer

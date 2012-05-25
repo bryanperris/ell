@@ -64,6 +64,7 @@ void *l_realloc(void *mem, size_t size)
 char *l_strdup(const char *str);
 char *l_strndup(const char *str, size_t max);
 char *l_strdup_printf(const char *format, ...);
+void l_strfreev(char **strlist);
 
 char *l_util_hexstring(const unsigned char *buf, size_t len);
 
