@@ -166,6 +166,7 @@ LIB_EXPORT char *l_strndup(const char *str, size_t max)
 
 	return NULL;
 }
+
 /**
  * l_strdup_printf:
  * @format: string format
