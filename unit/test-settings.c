@@ -41,7 +41,10 @@ static struct settings_test settings_test1 = {
 		"IntegerF=18446744073709551615\n"
 		"IntegerG=2247483647\nIntegerH=4294967296\n"
 		"IntegerI=9223372036854775808\n"
-		"IntegerJ=18446744073709551616\n",
+		"IntegerJ=18446744073709551616\n"
+		"String=\\tFoobar\\s\n"
+		"StringBad1=Foobar\\\n"
+		"StringBad2=Foobar\\b123\n",
 };
 
 static void settings_debug(const char *str, void *userdata)
@@ -57,6 +60,7 @@ static void test_settings(const void *test_data)
 	unsigned int uint32;
 	int64_t int64;
 	uint64_t uint64;
+	char *str;
 
 	settings = l_settings_new();
 
@@ -82,6 +86,16 @@ static void test_settings(const void *test_data)
 	assert(!l_settings_get_uint(settings, "Foobar", "FoobarH", &uint32));
 	assert(!l_settings_get_int64(settings, "Foobar", "IntegerI", &int64));
 	assert(!l_settings_get_uint64(settings, "Foobar", "IntegerJ", &uint64));
+
+	str = l_settings_get_string(settings, "Foobar", "String");
+	assert(str);
+	assert(!strcmp(str, "\tFoobar "));
+
+	str = l_settings_get_string(settings, "Foobar", "StringBad1");
+	assert(!str);
+
+	str = l_settings_get_string(settings, "Foobar", "StringBad2");
+	assert(!str);
 
 	l_settings_free(settings);
 }
