@@ -92,6 +92,46 @@ LIB_EXPORT void l_settings_free(struct l_settings *settings)
 	l_free(settings);
 }
 
+static char *unescape_value(const char *value)
+{
+	char *ret;
+	char *n;
+	const char *o;
+
+	ret = l_new(char, strlen(value) + 1);
+
+	for (n = ret, o = value; *o; o++, n++) {
+		if (*o != '\\') {
+			*n = *o;
+			continue;
+		}
+
+		o += 1;
+
+		switch (*o) {
+		case 's':
+			*n = ' ';
+			break;
+		case 'n':
+			*n = '\n';
+			break;
+		case 't':
+			*n = '\t';
+			break;
+		case 'r':
+			*n = '\r';
+			break;
+		case '\\':
+			*n = '\\';
+			break;
+		default:
+			return NULL;
+		}
+	}
+
+	return ret;
+}
+
 static bool parse_group(struct l_settings *settings, const char *data,
 			size_t len, size_t line)
 {
@@ -550,4 +590,15 @@ error:
 			"Could not interpret %s as a uint64", value);
 
 	return false;
+}
+
+LIB_EXPORT char *l_settings_get_string(struct l_settings *settings,
+					char *group_name, char *key)
+{
+	const char *value = l_settings_get_value(settings, group_name, key);
+
+	if (!value)
+		return NULL;
+
+	return unescape_value(value);
 }
