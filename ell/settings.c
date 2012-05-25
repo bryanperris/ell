@@ -125,6 +125,7 @@ static char *unescape_value(const char *value)
 			*n = '\\';
 			break;
 		default:
+			l_free(ret);
 			return NULL;
 		}
 	}
