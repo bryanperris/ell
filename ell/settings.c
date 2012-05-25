@@ -637,3 +637,38 @@ error:
 
 	return false;
 }
+
+LIB_EXPORT bool l_settings_get_float(struct l_settings *settings,
+					char *group_name, char *key,
+					float *out)
+{
+	const char *value = l_settings_get_value(settings, group_name, key);
+	char *endp;
+	float r;
+
+	if (!value)
+		return NULL;
+
+	if (*value == '\0')
+		goto error;
+
+	errno = 0;
+
+	r = strtof(value, &endp);
+	if (*endp != '\0')
+		goto error;
+
+	if (unlikely(errno == ERANGE))
+		goto error;
+
+	if (out)
+		*out = r;
+
+	return true;
+
+error:
+	l_util_debug(settings->debug_handler, settings->debug_data,
+			"Could not interpret %s as a float", value);
+
+	return false;
+}

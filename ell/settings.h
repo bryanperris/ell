@@ -74,6 +74,9 @@ char *l_settings_get_string(struct l_settings *settings, char *group_name,
 
 bool l_settings_get_double(struct l_settings *settings, char *group_name,
 				char *key, double *out);
+
+bool l_settings_get_float(struct l_settings *settings, char *group_name,
+				char *key, float *out);
 #ifdef __cplusplus
 }
 #endif
