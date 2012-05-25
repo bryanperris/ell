@@ -602,3 +602,38 @@ LIB_EXPORT char *l_settings_get_string(struct l_settings *settings,
 
 	return unescape_value(value);
 }
+
+LIB_EXPORT bool l_settings_get_double(struct l_settings *settings,
+					char *group_name, char *key,
+					double *out)
+{
+	const char *value = l_settings_get_value(settings, group_name, key);
+	char *endp;
+	double r;
+
+	if (!value)
+		return NULL;
+
+	if (*value == '\0')
+		goto error;
+
+	errno = 0;
+
+	r = strtod(value, &endp);
+	if (*endp != '\0')
+		goto error;
+
+	if (unlikely(errno == ERANGE))
+		goto error;
+
+	if (out)
+		*out = r;
+
+	return true;
+
+error:
+	l_util_debug(settings->debug_handler, settings->debug_data,
+			"Could not interpret %s as a double", value);
+
+	return false;
+}
