@@ -52,6 +52,9 @@ pkgconfigdir = $(libdir)/pkgconfig
 
 pkgconfig_DATA = ell/ell.pc
 
+unit_test_data_files = unit/settings.test
+EXTRA_DIST = $(unit_test_data_files)
+
 noinst_PROGRAMS = unit/test-unit unit/test-queue \
 				unit/test-hashmap unit/test-string \
 				unit/test-utf8 \
