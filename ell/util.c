@@ -259,6 +259,61 @@ LIB_EXPORT char **l_strsplit(const char *str, const char sep)
 
 	return ret;
 }
+
+/**
+ * l_strsplit_set:
+ * @str: String to split
+ * @separators: A set of delimiters
+ *
+ * Splits a string into pieces which do not contain the delimiter characters
+ * that can be found in @separators.
+ * As a special case, an empty string is returned as an empty array, e.g.
+ * an array with just the NULL element.
+ *
+ * Note that this function only works with ASCII delimiters.
+ *
+ * Returns: A newly allocated %NULL terminated string array.  This array
+ * should be freed using l_strfreev().
+ **/
+LIB_EXPORT char **l_strsplit_set(const char *str, const char *separators)
+{
+	int len;
+	int i;
+	const char *p;
+	char **ret;
+	bool sep_table[256];
+
+	if (unlikely(!str))
+		return NULL;
+
+	if (str[0] == '\0')
+		return l_new(char *, 1);
+
+	memset(sep_table, 0, sizeof(sep_table));
+
+	for (p = separators; *p; p++)
+		sep_table[(unsigned char) *p] = true;
+
+	for (p = str, len = 1; *p; p++)
+		if (sep_table[(unsigned char) *p] == true)
+			len += 1;
+
+	ret = l_new(char *, len + 1);
+
+	for (i = 0, p = str, len = 0; p[len]; len++) {
+		if (sep_table[(unsigned char) p[len]] != true)
+			continue;
+
+		ret[i++] = l_strndup(p, len);
+		p += len + 1;
+		len = 0;
+	}
+
+	ret[i++] = l_strndup(p, len);
+
+	return ret;
+}
+
 /**
  * l_util_hexstring:
  * @buf: buffer pointer
