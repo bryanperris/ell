@@ -26,6 +26,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/mman.h>
 
 #include "util.h"
 #include "string.h"
@@ -330,10 +335,47 @@ LIB_EXPORT bool l_settings_load_from_data(struct l_settings *settings,
 LIB_EXPORT bool l_settings_load_from_file(struct l_settings *settings,
 						const char *filename)
 {
+	int fd;
+	struct stat st;
+	char *data;
+	bool r;
+
 	if (unlikely(!settings || !filename))
 		return false;
 
-	return true;
+	fd = open(filename, O_RDONLY);
+	if (fd < 0) {
+		l_util_debug(settings->debug_handler, settings->debug_data,
+				"Could not open %s (%s)", filename,
+				strerror(errno));
+		return false;
+	}
+
+	if (fstat(fd, &st) < 0) {
+		l_util_debug(settings->debug_handler, settings->debug_data,
+				"Could not stat %s (%s)", filename,
+				strerror(errno));
+		close(fd);
+
+		return false;
+	}
+
+	data = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	if (data == MAP_FAILED) {
+		l_util_debug(settings->debug_handler, settings->debug_data,
+				"Could not mmap %s (%s)", filename,
+				strerror(errno));
+		close(fd);
+
+		return false;
+	}
+
+	r = l_settings_load_from_data(settings, data, st.st_size);
+
+	munmap(data, st.st_size);
+	close(fd);
+
+	return r;
 }
 
 LIB_EXPORT bool l_settings_set_debug(struct l_settings *settings,
