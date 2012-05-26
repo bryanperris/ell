@@ -29,12 +29,7 @@
 
 #include <ell/ell.h>
 
-struct settings_test {
-	const char *input;
-};
-
-static struct settings_test settings_test1 = {
-	.input = "[Foobar]\n#Comment\n#Comment2\nKey=Value\n"
+static const char *data1 = "[Foobar]\n#Comment\n#Comment2\nKey=Value\n"
 		"IntegerA=2147483647\nIntegerB=-2147483648\n"
 		"IntegerC=4294967295\nIntegerD=9223372036854775807\n"
 		"IntegerE=-9223372036854775808\n"
@@ -47,30 +42,21 @@ static struct settings_test settings_test1 = {
 		"StringBad2=Foobar\\b123\n"
 		"StringList=Foo,Bar,Baz\n"
 		"StringListEmpty=\n"
-		"StringListOne=FooBarBaz\n",
-};
+		"StringListOne=FooBarBaz\n";
 
 static void settings_debug(const char *str, void *userdata)
 {
 	printf("%s\n", str);
 }
 
-static void test_settings(const void *test_data)
+static void test_settings(struct l_settings *settings)
 {
-	const struct settings_test *test = test_data;
-	struct l_settings *settings;
 	int int32;
 	unsigned int uint32;
 	int64_t int64;
 	uint64_t uint64;
 	char *str;
 	char **strv;
-
-	settings = l_settings_new();
-
-	l_settings_set_debug(settings, settings_debug, NULL, NULL);
-
-	l_settings_load_from_data(settings, test->input, strlen(test->input));
 
 	assert(l_settings_has_group(settings, "Foobar"));
 	assert(!l_settings_has_group(settings, "Foobar2"));
@@ -123,6 +109,32 @@ static void test_settings(const void *test_data)
 	assert(!strcmp(strv[0], "FooBarBaz"));
 	assert(strv[1] == NULL);
 	l_strfreev(strv);
+}
+
+static void test_load_from_data(const void *test_data)
+{
+	struct l_settings *settings;
+
+	settings = l_settings_new();
+
+	l_settings_set_debug(settings, settings_debug, NULL, NULL);
+	l_settings_load_from_data(settings, data1, strlen(data1));
+
+	test_settings(settings);
+
+	l_settings_free(settings);
+}
+
+static void test_load_from_file(const void *test_data)
+{
+	struct l_settings *settings;
+
+	settings = l_settings_new();
+
+	l_settings_set_debug(settings, settings_debug, NULL, NULL);
+	assert(l_settings_load_from_file(settings, "unit/settings.test"));
+
+	test_settings(settings);
 
 	l_settings_free(settings);
 }
@@ -131,7 +143,8 @@ int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
-	l_test_add("Settings Test 1", test_settings, &settings_test1);
+	l_test_add("Load from Data", test_load_from_data, NULL);
+	l_test_add("Load from File", test_load_from_file, NULL);
 
 	return l_test_run();
 }
