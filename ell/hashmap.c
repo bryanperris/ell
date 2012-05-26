@@ -68,6 +68,7 @@ static inline void *get_key_new(const struct l_hashmap *hashmap,
 {
 	if (hashmap->key_new_func)
 		return hashmap->key_new_func(key);
+
 	return (void *)key;
 }
 
@@ -78,10 +79,11 @@ static inline void free_key(const struct l_hashmap *hashmap, void *key)
 }
 
 static inline const void *get_key_user(const struct l_hashmap *hashmap,
-				const void *key)
+					const void *key)
 {
 	if (hashmap->key_user_func)
 		return hashmap->key_user_func(key);
+
 	return key;
 }
 
@@ -124,6 +126,7 @@ static inline unsigned int hash_superfast(const uint8_t *key, unsigned int len)
 		hash += *key;
 		hash ^= hash << 10;
 		hash += hash >> 1;
+		break;
 	}
 
 	/* Force "avalanching" of final 127 bits */
@@ -175,12 +178,13 @@ LIB_EXPORT struct l_hashmap *l_hashmap_new(void)
 
 struct strkey {
 	int len;
-	char str[];
+	char str[0];
 };
 
 static unsigned int string_hash_func(const void *p)
 {
 	const struct strkey *sk = p;
+
 	return hash_superfast((const uint8_t *)sk->str, sk->len);
 }
 
@@ -188,8 +192,10 @@ static int string_compare(const void *pa, const void *pb)
 {
 	const struct strkey *a = pa, *b = pb;
 	int r = a->len - b->len;
+
 	if (r == 0)
 		r = memcmp(a->str, b->str, a->len);
+
 	return r;
 }
 
@@ -197,15 +203,18 @@ static void *string_key_new(const void *p)
 {
 	struct strkey *sk;
 	int len = strlen(p);
+
 	sk = l_malloc(sizeof(struct strkey) + len + 1);
 	sk->len = len;
 	memcpy(sk->str, p, len + 1);
+
 	return sk;
 }
 
 static const void *string_key_user(const void *p)
 {
 	const struct strkey *sk = p;
+
 	return sk->str;
 }
 
@@ -377,9 +386,12 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 
 		hashmap->entries--;
 		free_key(hashmap, key_new);
+
 		return value;
 	}
+
 	free_key(hashmap, key_new);
+
 	return NULL;
 }
 
