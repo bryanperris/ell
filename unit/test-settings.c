@@ -44,7 +44,10 @@ static struct settings_test settings_test1 = {
 		"IntegerJ=18446744073709551616\n"
 		"String=\\tFoobar\\s\n"
 		"StringBad1=Foobar\\\n"
-		"StringBad2=Foobar\\b123\n",
+		"StringBad2=Foobar\\b123\n"
+		"StringList=Foo,Bar,Baz\n"
+		"StringListEmpty=\n"
+		"StringListOne=FooBarBaz\n",
 };
 
 static void settings_debug(const char *str, void *userdata)
@@ -61,6 +64,7 @@ static void test_settings(const void *test_data)
 	int64_t int64;
 	uint64_t uint64;
 	char *str;
+	char **strv;
 
 	settings = l_settings_new();
 
@@ -97,6 +101,28 @@ static void test_settings(const void *test_data)
 
 	str = l_settings_get_string(settings, "Foobar", "StringBad2");
 	assert(!str);
+
+	strv = l_settings_get_string_list(settings, "Foobar",
+						"StringList", ',');
+	assert(strv);
+	assert(!strcmp(strv[0], "Foo"));
+	assert(!strcmp(strv[1], "Bar"));
+	assert(!strcmp(strv[2], "Baz"));
+	assert(strv[3] == NULL);
+	l_strfreev(strv);
+
+	strv = l_settings_get_string_list(settings, "Foobar", "StringListEmpty",						',');
+	assert(strv);
+	assert(strv[0] == NULL);
+	l_strfreev(strv);
+
+	strv = l_settings_get_string_list(settings, "Foobar", "StringListOne",
+						',');
+	assert(strv);
+	assert(strv[0]);
+	assert(!strcmp(strv[0], "FooBarBaz"));
+	assert(strv[1] == NULL);
+	l_strfreev(strv);
 
 	l_settings_free(settings);
 }
