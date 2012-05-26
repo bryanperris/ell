@@ -72,6 +72,9 @@ bool l_settings_get_uint64(struct l_settings *settings, char *group_name,
 char *l_settings_get_string(struct l_settings *settings, char *group_name,
 				char *key);
 
+char **l_settings_get_string_list(struct l_settings *settings, char *group_name,
+					char *key, char delimiter);
+
 bool l_settings_get_double(struct l_settings *settings, char *group_name,
 				char *key, double *out);
 

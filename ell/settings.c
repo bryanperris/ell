@@ -604,6 +604,27 @@ LIB_EXPORT char *l_settings_get_string(struct l_settings *settings,
 	return unescape_value(value);
 }
 
+LIB_EXPORT char **l_settings_get_string_list(struct l_settings *settings,
+						char *group_name, char *key,
+						char delimiter)
+{
+	const char *value = l_settings_get_value(settings, group_name, key);
+	char *str;
+	char **ret;
+
+	if (!value)
+		return NULL;
+
+	str = unescape_value(value);
+	if (str == NULL)
+		return NULL;
+
+	ret = l_strsplit(str, delimiter);
+	l_free(str);
+
+	return ret;
+}
+
 LIB_EXPORT bool l_settings_get_double(struct l_settings *settings,
 					char *group_name, char *key,
 					double *out)
