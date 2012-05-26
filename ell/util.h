@@ -65,6 +65,7 @@ char *l_strdup(const char *str);
 char *l_strndup(const char *str, size_t max);
 char *l_strdup_printf(const char *format, ...);
 void l_strfreev(char **strlist);
+char **l_strsplit(const char *str, const char sep);
 
 char *l_util_hexstring(const unsigned char *buf, size_t len);
 
