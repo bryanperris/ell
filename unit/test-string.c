@@ -125,6 +125,19 @@ static void test_strsplit(const void *test_data)
 	l_strfreev(strv);
 }
 
+static void test_strsplit_set(const void *test_data)
+{
+	char **strv = l_strsplit_set("Foo:bar,Baz Blu", ":, ");
+
+	assert(strv);
+	assert(!strcmp(strv[0], "Foo"));
+	assert(!strcmp(strv[1], "bar"));
+	assert(!strcmp(strv[2], "Baz"));
+	assert(!strcmp(strv[3], "Blu"));
+	assert(strv[4] == NULL);
+	l_strfreev(strv);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -137,6 +150,7 @@ int main(int argc, char *argv[])
 	l_test_add("append_fixed test 3", test_fixed, &fixed_test3);
 
 	l_test_add("strplit", test_strsplit, NULL);
+	l_test_add("strsplit_set", test_strsplit_set, NULL);
 
 	return l_test_run();
 }
