@@ -315,6 +315,46 @@ LIB_EXPORT char **l_strsplit_set(const char *str, const char *separators)
 }
 
 /**
+ * l_strjoinv:
+ * @str_array: a %NULL terminated array of strings to join
+ * @delim: Delimiting character
+ *
+ * Joins strings contanied in the @str_array into one long string delimited
+ * by @delim.
+ *
+ * Returns: A newly allocated string that should be freed using l_free()
+ */
+LIB_EXPORT char *l_strjoinv(char **str_array, const char delim)
+{
+	size_t len = 0;
+	unsigned int i;
+	char *ret;
+	char *p;
+
+	if (unlikely(!str_array))
+		return NULL;
+
+	if (!str_array[0])
+		return l_strdup("");
+
+	for (i = 0; str_array[i]; i++)
+		len += strlen(str_array[i]);
+
+	len += 1 + i - 1;
+
+	ret = l_malloc(len);
+
+	p = stpcpy(ret, str_array[0]);
+
+	for (i = 1; str_array[i]; i++) {
+		*p++ = delim;
+		p = stpcpy(p, str_array[i]);
+	}
+
+	return ret;
+}
+
+/**
  * l_util_hexstring:
  * @buf: buffer pointer
  * @len: length of buffer
