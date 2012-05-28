@@ -139,12 +139,85 @@ static void test_load_from_file(const void *test_data)
 	l_settings_free(settings);
 }
 
+static void test_set_methods(const void *test_data)
+{
+	struct l_settings *settings;
+	int int32;
+	unsigned int uint32;
+	int64_t int64;
+	uint64_t uint64;
+	bool b;
+	const char *v;
+	char *s;
+
+	settings = l_settings_new();
+
+	l_settings_set_debug(settings, settings_debug, NULL, NULL);
+
+	/* Integer tests */
+	assert(l_settings_set_int(settings, "Main", "Integers", -15));
+	assert(l_settings_get_int(settings, "Main", "Integers", &int32));
+	assert(int32 == -15);
+	v = l_settings_get_value(settings, "Main", "Integers");
+	assert(v);
+	assert(!strcmp(v, "-15"));
+
+	assert(l_settings_set_uint(settings, "Main", "Integers", 15));
+	assert(l_settings_get_uint(settings, "Main", "Integers", &uint32));
+	assert(uint32 == 15);
+	v = l_settings_get_value(settings, "Main", "Integers");
+	assert(v);
+	assert(!strcmp(v, "15"));
+
+	assert(l_settings_set_int64(settings, "Main", "Integers", -2423492340));
+	assert(l_settings_get_int64(settings, "Main", "Integers", &int64));
+	assert(int64 == -2423492340);
+	v = l_settings_get_value(settings, "Main", "Integers");
+	assert(v);
+	assert(!strcmp(v, "-2423492340"));
+
+	assert(l_settings_set_uint64(settings, "Main", "Integers", 2423492340));
+	assert(l_settings_get_uint64(settings, "Main", "Integers", &uint64));
+	assert(uint64 == 2423492340);
+	v = l_settings_get_value(settings, "Main", "Integers");
+	assert(v);
+	assert(!strcmp(v, "2423492340"));
+
+	/* Boolean tests */
+	assert(l_settings_set_bool(settings, "Main", "Boolean", true));
+	assert(l_settings_get_bool(settings, "Main", "Boolean", &b));
+	assert(b == true);
+	v = l_settings_get_value(settings, "Main", "Boolean");
+	assert(v);
+	assert(!strcmp(v, "true"));
+
+	assert(l_settings_set_bool(settings, "Main", "Boolean", false));
+	assert(l_settings_get_bool(settings, "Main", "Boolean", &b));
+	assert(b == false);
+	v = l_settings_get_value(settings, "Main", "Boolean");
+	assert(v);
+	assert(!strcmp(v, "false"));
+
+	/* String tests */
+	assert(l_settings_set_string(settings, "Main", "String", "  \tFoobar"));
+	s = l_settings_get_string(settings, "Main", "String");
+	assert(s);
+	assert(!strcmp(s, "  \tFoobar"));
+	l_free(s);
+	v = l_settings_get_value(settings, "Main", "String");
+	assert(v);
+	assert(!strcmp(v, "\\s\\s\\tFoobar"));
+
+	l_settings_free(settings);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
 	l_test_add("Load from Data", test_load_from_data, NULL);
 	l_test_add("Load from File", test_load_from_file, NULL);
+	l_test_add("Set Methods", test_set_methods, NULL);
 
 	return l_test_run();
 }
