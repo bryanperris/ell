@@ -46,6 +46,7 @@ struct entry {
 	void *key;
 	void *value;
 	struct entry *next;
+	unsigned int hash;
 };
 
 /**
@@ -303,12 +304,13 @@ LIB_EXPORT bool l_hashmap_insert(struct l_hashmap *hashmap,
 		return false;
 
 	key_new = get_key_new(hashmap, key);
-	hash = hashmap->hash_func(key_new) % NBUCKETS;
-	head = &hashmap->buckets[hash];
+	hash = hashmap->hash_func(key_new);
+	head = &hashmap->buckets[hash % NBUCKETS];
 
 	if (!head->next) {
 		head->key = key_new;
 		head->value = value;
+		head->hash = hash;
 		head->next = head;
 		goto done;
 	}
@@ -316,6 +318,7 @@ LIB_EXPORT bool l_hashmap_insert(struct l_hashmap *hashmap,
 	entry = l_new(struct entry, 1);
 	entry->key = key_new;
 	entry->value = value;
+	entry->hash = hash;
 	entry->next = head;
 
 	while (head->next != entry->next)
@@ -348,8 +351,8 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 		return NULL;
 
 	key_new = get_key_new(hashmap, key);
-	hash = hashmap->hash_func(key_new) % NBUCKETS;
-	head = &hashmap->buckets[hash];
+	hash = hashmap->hash_func(key_new);
+	head = &hashmap->buckets[hash % NBUCKETS];
 
 	if (!head->next) {
 		free_key(hashmap, key_new);
@@ -358,6 +361,9 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 
 	for (entry = head, prev = NULL;; prev = entry, entry = entry->next) {
 		void *value;
+
+		if (entry->hash != hash)
+			continue;
 
 		if (hashmap->compare_func(key_new, entry->key))
 			continue;
@@ -369,12 +375,14 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 				free_key(hashmap, entry->key);
 				head->key = NULL;
 				head->value = NULL;
+				head->hash = 0;
 				head->next = NULL;
 			} else {
 				entry = entry->next;
 				free_key(hashmap, head->key);
 				head->key = entry->key;
 				head->value = entry->value;
+				head->hash = entry->hash;
 				head->next = entry->next;
 				l_free(entry);
 			}
@@ -414,8 +422,8 @@ LIB_EXPORT void *l_hashmap_lookup(struct l_hashmap *hashmap, const void *key)
 		return NULL;
 
 	key_new = get_key_new(hashmap, key);
-	hash = hashmap->hash_func(key_new) % NBUCKETS;
-	head = &hashmap->buckets[hash];
+	hash = hashmap->hash_func(key_new);
+	head = &hashmap->buckets[hash % NBUCKETS];
 
 	if (!head->next) {
 		free_key(hashmap, key_new);
@@ -423,7 +431,8 @@ LIB_EXPORT void *l_hashmap_lookup(struct l_hashmap *hashmap, const void *key)
 	}
 
 	for (entry = head;; entry = entry->next) {
-		if (!hashmap->compare_func(key_new, entry->key)) {
+		if (entry->hash == hash &&
+				!hashmap->compare_func(key_new, entry->key)) {
 			free_key(hashmap, key_new);
 			return entry->value;
 		}
