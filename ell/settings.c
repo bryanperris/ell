@@ -504,6 +504,21 @@ LIB_EXPORT bool l_settings_get_bool(struct l_settings *settings,
 	return false;
 }
 
+LIB_EXPORT bool l_settings_set_bool(struct l_settings *settings,
+					char *group_name, char *key, bool in)
+{
+	static const char *true_str = "true";
+	static const char *false_str = "false";
+	const char *v;
+
+	if (in == false)
+		v = false_str;
+	else
+		v = true_str;
+
+	return l_settings_set_value(settings, group_name, key, v);
+}
+
 LIB_EXPORT bool l_settings_get_int(struct l_settings *settings,
 					char *group_name, char *key, int *out)
 {
