@@ -140,33 +140,32 @@ static char *unescape_value(const char *value)
 
 static char *escape_value(const char *value)
 {
-	size_t size = strlen(value);
 	size_t i;
 	size_t j;
 	char *ret;
 	bool lead_whitespace;
 
-	for (i = 0, lead_whitespace = true; i < size; i++) {
+	for (i = 0, j = 0, lead_whitespace = true; value[i]; i++) {
 		switch (value[i]) {
 		case ' ':
 		case '\t':
 			if (lead_whitespace)
-				size += 1;
+				j += 1;
 
 			break;
 		case '\n':
 		case '\r':
 		case '\\':
-			size += 1;
+			j += 1;
 			/* Fall through */
 		default:
 			lead_whitespace = false;
 		}
 	}
 
-	ret = l_malloc(size + 1);
+	ret = l_malloc(i + j + 1);
 
-	for (i = 0, j = 0, lead_whitespace = true; i < size; i++) {
+	for (i = 0, j = 0, lead_whitespace = true; value[i]; i++) {
 		switch (value[i]) {
 		case ' ':
 			if (lead_whitespace) {
@@ -203,6 +202,8 @@ static char *escape_value(const char *value)
 			lead_whitespace = false;
 		}
 	}
+
+	ret[j] = '\0';
 
 	return ret;
 }
