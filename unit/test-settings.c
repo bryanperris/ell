@@ -115,6 +115,12 @@ static void test_settings(struct l_settings *settings)
 	assert(!strcmp(strv[0], "Foobar"));
 	assert(!strv[1]);
 	l_strfreev(strv);
+
+	assert(!l_settings_get_keys(settings, "Nonexistent"));
+
+	strv = l_settings_get_keys(settings, "Foobar");
+	assert(strv);
+	l_strfreev(strv);
 }
 
 static void test_load_from_data(const void *test_data)
