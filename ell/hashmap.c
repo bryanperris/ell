@@ -40,7 +40,6 @@ typedef unsigned int (*hash_func_t) (const void *p);
 typedef int (*compare_func_t) (const void *a, const void *b);
 typedef void *(*key_new_func_t) (const void *p);
 typedef void (*key_free_func_t) (void *p);
-typedef const void *(*key_user_func_t) (const void *p);
 
 struct entry {
 	void *key;
@@ -59,7 +58,6 @@ struct l_hashmap {
 	compare_func_t compare_func;
 	key_new_func_t key_new_func;
 	key_free_func_t key_free_func;
-	key_user_func_t key_user_func;
 	unsigned int entries;
 	struct entry buckets[NBUCKETS];
 };
@@ -77,15 +75,6 @@ static inline void free_key(const struct l_hashmap *hashmap, void *key)
 {
 	if (hashmap->key_free_func)
 		hashmap->key_free_func(key);
-}
-
-static inline const void *get_key_user(const struct l_hashmap *hashmap,
-					const void *key)
-{
-	if (hashmap->key_user_func)
-		return hashmap->key_user_func(key);
-
-	return key;
 }
 
 static inline unsigned int hash_superfast(const uint8_t *key, unsigned int len)
@@ -212,13 +201,6 @@ static void *string_key_new(const void *p)
 	return sk;
 }
 
-static const void *string_key_user(const void *p)
-{
-	const struct strkey *sk = p;
-
-	return sk->str;
-}
-
 /**
  * l_hashmap_string_new:
  *
@@ -242,7 +224,6 @@ LIB_EXPORT struct l_hashmap *l_hashmap_string_new(void)
 	hashmap->compare_func = string_compare;
 	hashmap->key_new_func = string_key_new;
 	hashmap->key_free_func = l_free;
-	hashmap->key_user_func = string_key_user;
 	hashmap->entries = 0;
 
 	return hashmap;
@@ -468,8 +449,7 @@ LIB_EXPORT void l_hashmap_foreach(struct l_hashmap *hashmap,
 			continue;
 
 		for (entry = head;; entry = entry->next) {
-			function(get_key_user(hashmap, entry->key),
-					entry->value, user_data);
+			function(entry->key, entry->value, user_data);
 
 			if (entry->next == head)
 				break;
