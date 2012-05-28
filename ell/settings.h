@@ -47,43 +47,45 @@ bool l_settings_set_debug(struct l_settings *settings,
 				void *user_data,
 				l_settings_destroy_cb_t destroy);
 
-bool l_settings_has_group(struct l_settings *settings, char *group_name);
-bool l_settings_has_key(struct l_settings *settings,
-					char *group_name, char *key);
+bool l_settings_has_group(struct l_settings *settings, const char *group_name);
+bool l_settings_has_key(struct l_settings *settings, const char *group_name,
+			const char *key);
 
-const char *l_settings_get_value(struct l_settings *settings, char *group_name,
-					char *key);
-bool l_settings_set_value(struct l_settings *settings, char *group_name,
-				char *key, const char *value);
+const char *l_settings_get_value(struct l_settings *settings,
+					const char *group_name,
+					const char *key);
+bool l_settings_set_value(struct l_settings *settings, const char *group_name,
+				const char *key, const char *value);
 
-bool l_settings_get_bool(struct l_settings *settings, char *group_name,
-				char *key, bool *out);
-bool l_settings_set_bool(struct l_settings *settings, char *group_name,
-				char *key, bool in);
+bool l_settings_get_bool(struct l_settings *settings, const char *group_name,
+				const char *key, bool *out);
+bool l_settings_set_bool(struct l_settings *settings, const char *group_name,
+				const char *key, bool in);
 
-bool l_settings_get_int(struct l_settings *settings, char *group_name,
-				char *key, int *out);
+bool l_settings_get_int(struct l_settings *settings, const char *group_name,
+				const char *key, int *out);
 
-bool l_settings_get_uint(struct l_settings *settings, char *group_name,
-				char *key, unsigned int *out);
+bool l_settings_get_uint(struct l_settings *settings, const char *group_name,
+				const char *key, unsigned int *out);
 
-bool l_settings_get_int64(struct l_settings *settings, char *group_name,
-				char *key, int64_t *out);
+bool l_settings_get_int64(struct l_settings *settings, const char *group_name,
+				const char *key, int64_t *out);
 
-bool l_settings_get_uint64(struct l_settings *settings, char *group_name,
-				char *key, uint64_t *out);
+bool l_settings_get_uint64(struct l_settings *settings, const char *group_name,
+				const char *key, uint64_t *out);
 
-char *l_settings_get_string(struct l_settings *settings, char *group_name,
-				char *key);
+char *l_settings_get_string(struct l_settings *settings, const char *group_name,
+				const char *key);
 
-char **l_settings_get_string_list(struct l_settings *settings, char *group_name,
-					char *key, char delimiter);
+char **l_settings_get_string_list(struct l_settings *settings,
+					const char *group_name,
+					const char *key, char delimiter);
 
-bool l_settings_get_double(struct l_settings *settings, char *group_name,
-				char *key, double *out);
+bool l_settings_get_double(struct l_settings *settings, const char *group_name,
+				const char *key, double *out);
 
-bool l_settings_get_float(struct l_settings *settings, char *group_name,
-				char *key, float *out);
+bool l_settings_get_float(struct l_settings *settings, const char *group_name,
+				const char *key, float *out);
 #ifdef __cplusplus
 }
 #endif

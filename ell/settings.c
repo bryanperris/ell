@@ -405,7 +405,7 @@ static bool group_match(const void *a, const void *b)
 }
 
 LIB_EXPORT bool l_settings_has_group(struct l_settings *settings,
-					char *group_name)
+					const char *group_name)
 {
 	struct group_data *group;
 
@@ -426,7 +426,7 @@ static bool key_match(const void *a, const void *b)
 }
 
 LIB_EXPORT bool l_settings_has_key(struct l_settings *settings,
-					char *group_name, char *key)
+					const char *group_name, const char *key)
 {
 	struct group_data *group;
 	struct setting_data *setting;
@@ -445,7 +445,8 @@ LIB_EXPORT bool l_settings_has_key(struct l_settings *settings,
 }
 
 LIB_EXPORT const char *l_settings_get_value(struct l_settings *settings,
-						char *group_name, char *key)
+						const char *group_name,
+						const char *key)
 {
 	struct group_data *group;
 	struct setting_data *setting;
@@ -467,7 +468,7 @@ LIB_EXPORT const char *l_settings_get_value(struct l_settings *settings,
 }
 
 LIB_EXPORT bool l_settings_set_value(struct l_settings *settings,
-					char *group_name, char *key,
+					const char *group_name, const char *key,
 					const char *value)
 {
 	if (unlikely(!settings))
@@ -477,7 +478,8 @@ LIB_EXPORT bool l_settings_set_value(struct l_settings *settings,
 }
 
 LIB_EXPORT bool l_settings_get_bool(struct l_settings *settings,
-					char *group_name, char *key, bool *out)
+					const char *group_name, const char *key,
+					bool *out)
 {
 	const char *value = l_settings_get_value(settings, group_name, key);
 
@@ -505,7 +507,8 @@ LIB_EXPORT bool l_settings_get_bool(struct l_settings *settings,
 }
 
 LIB_EXPORT bool l_settings_set_bool(struct l_settings *settings,
-					char *group_name, char *key, bool in)
+					const char *group_name, const char *key,
+					bool in)
 {
 	static const char *true_str = "true";
 	static const char *false_str = "false";
@@ -520,7 +523,8 @@ LIB_EXPORT bool l_settings_set_bool(struct l_settings *settings,
 }
 
 LIB_EXPORT bool l_settings_get_int(struct l_settings *settings,
-					char *group_name, char *key, int *out)
+					const char *group_name,
+					const char *key, int *out)
 {
 	const char *value = l_settings_get_value(settings, group_name, key);
 	long int r;
@@ -555,7 +559,7 @@ error:
 }
 
 LIB_EXPORT bool l_settings_get_uint(struct l_settings *settings,
-					char *group_name, char *key,
+					const char *group_name, const char *key,
 					unsigned int *out)
 {
 	const char *value = l_settings_get_value(settings, group_name, key);
@@ -591,7 +595,7 @@ error:
 }
 
 LIB_EXPORT bool l_settings_get_int64(struct l_settings *settings,
-					char *group_name, char *key,
+					const char *group_name, const char *key,
 					int64_t *out)
 {
 	const char *value = l_settings_get_value(settings, group_name, key);
@@ -626,7 +630,7 @@ error:
 }
 
 LIB_EXPORT bool l_settings_get_uint64(struct l_settings *settings,
-					char *group_name, char *key,
+					const char *group_name, const char *key,
 					uint64_t *out)
 {
 	const char *value = l_settings_get_value(settings, group_name, key);
@@ -661,7 +665,7 @@ error:
 }
 
 LIB_EXPORT char *l_settings_get_string(struct l_settings *settings,
-					char *group_name, char *key)
+					const char *group_name, const char *key)
 {
 	const char *value = l_settings_get_value(settings, group_name, key);
 
@@ -672,8 +676,9 @@ LIB_EXPORT char *l_settings_get_string(struct l_settings *settings,
 }
 
 LIB_EXPORT char **l_settings_get_string_list(struct l_settings *settings,
-						char *group_name, char *key,
-						char delimiter)
+						const char *group_name,
+						const char *key,
+						const char delimiter)
 {
 	const char *value = l_settings_get_value(settings, group_name, key);
 	char *str;
@@ -693,7 +698,7 @@ LIB_EXPORT char **l_settings_get_string_list(struct l_settings *settings,
 }
 
 LIB_EXPORT bool l_settings_get_double(struct l_settings *settings,
-					char *group_name, char *key,
+					const char *group_name, const char *key,
 					double *out)
 {
 	const char *value = l_settings_get_value(settings, group_name, key);
@@ -728,7 +733,7 @@ error:
 }
 
 LIB_EXPORT bool l_settings_get_float(struct l_settings *settings,
-					char *group_name, char *key,
+					const char *group_name, const char *key,
 					float *out)
 {
 	const char *value = l_settings_get_value(settings, group_name, key);
