@@ -605,6 +605,17 @@ error:
 	return false;
 }
 
+LIB_EXPORT bool l_settings_set_uint(struct l_settings *settings,
+					const char *group_name, const char *key,
+					unsigned int in)
+{
+	char buf[64];
+
+	snprintf(buf, sizeof(buf), "%u", in);
+
+	return l_settings_set_value(settings, group_name, key, buf);
+}
+
 LIB_EXPORT bool l_settings_get_int64(struct l_settings *settings,
 					const char *group_name, const char *key,
 					int64_t *out)
