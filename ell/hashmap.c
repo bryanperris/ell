@@ -299,19 +299,15 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 {
 	struct entry *entry, *head, *prev;
 	unsigned int hash;
-	void *key_new;
 
 	if (unlikely(!hashmap))
 		return NULL;
 
-	key_new = get_key_new(hashmap, key);
-	hash = hashmap->hash_func(key_new);
+	hash = hashmap->hash_func(key);
 	head = &hashmap->buckets[hash % NBUCKETS];
 
-	if (!head->next) {
-		free_key(hashmap, key_new);
+	if (!head->next)
 		return NULL;
-	}
 
 	for (entry = head, prev = NULL;; prev = entry, entry = entry->next) {
 		void *value;
@@ -319,7 +315,7 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 		if (entry->hash != hash)
 			continue;
 
-		if (hashmap->compare_func(key_new, entry->key))
+		if (hashmap->compare_func(key, entry->key))
 			continue;
 
 		value = entry->value;
@@ -347,12 +343,9 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 		}
 
 		hashmap->entries--;
-		free_key(hashmap, key_new);
 
 		return value;
 	}
-
-	free_key(hashmap, key_new);
 
 	return NULL;
 }
@@ -370,32 +363,25 @@ LIB_EXPORT void *l_hashmap_lookup(struct l_hashmap *hashmap, const void *key)
 {
 	struct entry *entry, *head;
 	unsigned int hash;
-	void *key_new;
 
 	if (unlikely(!hashmap))
 		return NULL;
 
-	key_new = get_key_new(hashmap, key);
-	hash = hashmap->hash_func(key_new);
+	hash = hashmap->hash_func(key);
 	head = &hashmap->buckets[hash % NBUCKETS];
 
-	if (!head->next) {
-		free_key(hashmap, key_new);
+	if (!head->next)
 		return NULL;
-	}
 
 	for (entry = head;; entry = entry->next) {
 		if (entry->hash == hash &&
-				!hashmap->compare_func(key_new, entry->key)) {
-			free_key(hashmap, key_new);
+				!hashmap->compare_func(key, entry->key))
 			return entry->value;
-		}
 
 		if (entry->next == head)
 			break;
 	}
 
-	free_key(hashmap, key_new);
 	return NULL;
 }
 
