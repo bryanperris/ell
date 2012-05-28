@@ -155,8 +155,6 @@ static void test_str(const void *test_data)
 
 	assert(l_hashmap_lookup(hashmap, "not in hash") == NULL);
 
-
-
 	l_hashmap_destroy(hashmap, NULL);
 }
 
