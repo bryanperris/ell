@@ -473,6 +473,36 @@ static bool group_match(const void *a, const void *b)
 	return !strcmp(group->name, name);
 }
 
+struct gather_data {
+	int cur;
+	char **v;
+};
+
+static void gather_groups(void *data, void *user_data)
+{
+	struct group_data *group_data = data;
+	struct gather_data *gather = user_data;
+
+	gather->v[gather->cur++] = l_strdup(group_data->name);
+}
+
+LIB_EXPORT char **l_settings_get_groups(struct l_settings *settings)
+{
+	char **ret;
+	struct gather_data gather;
+
+	if (unlikely(!settings))
+		return NULL;
+
+	ret = l_new(char *, l_queue_length(settings->groups) + 1);
+	gather.v = ret;
+	gather.cur = 0;
+
+	l_queue_foreach(settings->groups, gather_groups, &gather);
+
+	return ret;
+}
+
 LIB_EXPORT bool l_settings_has_group(struct l_settings *settings,
 					const char *group_name)
 {
