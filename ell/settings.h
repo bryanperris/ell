@@ -91,6 +91,8 @@ char **l_settings_get_string_list(struct l_settings *settings,
 
 bool l_settings_get_double(struct l_settings *settings, const char *group_name,
 				const char *key, double *out);
+bool l_settings_set_double(struct l_settings *settings, const char *group_name,
+				const char *key, double in);
 
 bool l_settings_get_float(struct l_settings *settings, const char *group_name,
 				const char *key, float *out);

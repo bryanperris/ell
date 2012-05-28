@@ -776,6 +776,17 @@ error:
 	return false;
 }
 
+LIB_EXPORT bool l_settings_set_double(struct l_settings *settings,
+					const char *group_name, const char *key,
+					double in)
+{
+	L_AUTO_CLEANUP_VAR(char *, buf, l_free);
+
+	buf = l_strdup_printf("%d", in);
+
+	return l_settings_set_value(settings, group_name, key, buf);
+}
+
 LIB_EXPORT bool l_settings_get_float(struct l_settings *settings,
 					const char *group_name, const char *key,
 					float *out)
