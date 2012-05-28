@@ -138,6 +138,31 @@ static void test_strsplit_set(const void *test_data)
 	l_strfreev(strv);
 }
 
+static void test_joinv(const void *test_data)
+{
+	char *strv1[] = { NULL };
+	char *strv2[] = { "Foo", "Bar", NULL };
+	char **strv3 = l_strsplit("Foo:bar:bz", ':');
+	char *r;
+
+	assert(!l_strjoinv(NULL, ':'));
+
+	r = l_strjoinv(strv1, ':');
+	assert(r);
+	assert(!strcmp(r, ""));
+	l_free(r);
+
+	r = l_strjoinv(strv2, ':');
+	assert(r);
+	assert(!strcmp(r, "Foo:Bar"));
+	l_free(r);
+
+	r = l_strjoinv(strv3, ':');
+	assert(r);
+	assert(!strcmp(r, "Foo:bar:bz"));
+	l_free(r);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -151,6 +176,8 @@ int main(int argc, char *argv[])
 
 	l_test_add("strplit", test_strsplit, NULL);
 	l_test_add("strsplit_set", test_strsplit_set, NULL);
+
+	l_test_add("joinv", test_joinv, NULL);
 
 	return l_test_run();
 }
