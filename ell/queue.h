@@ -49,7 +49,7 @@ void *l_queue_peek_head(struct l_queue *queue);
 bool l_queue_insert(struct l_queue *queue, void *data,
 			l_queue_compare_func_t function, void *user_data);
 void *l_queue_find(struct l_queue *queue,
-			l_queue_match_func_t function, void *user_data);
+			l_queue_match_func_t function, const void *user_data);
 bool l_queue_remove(struct l_queue *queue, void *data);
 
 bool l_queue_reverse(struct l_queue *queue);
