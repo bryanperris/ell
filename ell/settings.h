@@ -64,6 +64,8 @@ bool l_settings_set_bool(struct l_settings *settings, const char *group_name,
 
 bool l_settings_get_int(struct l_settings *settings, const char *group_name,
 				const char *key, int *out);
+bool l_settings_set_int(struct l_settings *settings, const char *group_name,
+				const char *key, int in);
 
 bool l_settings_get_uint(struct l_settings *settings, const char *group_name,
 				const char *key, unsigned int *out);
