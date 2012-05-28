@@ -832,6 +832,23 @@ LIB_EXPORT char **l_settings_get_string_list(struct l_settings *settings,
 	return ret;
 }
 
+LIB_EXPORT bool l_settings_set_string_list(struct l_settings *settings,
+					const char *group_name, const char *key,
+					char **value, char delimiter)
+{
+	char *buf;
+	char *tmp;
+
+	if (unlikely(!settings || !value))
+		return false;
+
+	tmp = l_strjoinv(value, delimiter);
+	buf = escape_value(tmp);
+	l_free(tmp);
+
+	return set_value(settings, group_name, key, buf);
+}
+
 LIB_EXPORT bool l_settings_get_double(struct l_settings *settings,
 					const char *group_name, const char *key,
 					double *out)
