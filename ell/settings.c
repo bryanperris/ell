@@ -524,6 +524,38 @@ static bool key_match(const void *a, const void *b)
 	return !strcmp(setting->key, key);
 }
 
+static void gather_keys(void *data, void *user_data)
+{
+	struct setting_data *setting_data = data;
+	struct gather_data *gather = user_data;
+
+	gather->v[gather->cur++] = l_strdup(setting_data->key);
+}
+
+LIB_EXPORT char **l_settings_get_keys(struct l_settings *settings,
+					const char *group_name)
+{
+	char **ret;
+	struct group_data *group_data;
+	struct gather_data gather;
+
+	if (unlikely(!settings))
+		return NULL;
+
+	group_data = l_queue_find(settings->groups, group_match, group_name);
+
+	if (!group_data)
+		return NULL;
+
+	ret = l_new(char *, l_queue_length(group_data->settings) + 1);
+	gather.v = ret;
+	gather.cur = 0;
+
+	l_queue_foreach(group_data->settings, gather_keys, &gather);
+
+	return ret;
+}
+
 LIB_EXPORT bool l_settings_has_key(struct l_settings *settings,
 					const char *group_name, const char *key)
 {
