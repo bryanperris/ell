@@ -313,10 +313,10 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 		void *value;
 
 		if (entry->hash != hash)
-			continue;
+			goto next;
 
 		if (hashmap->compare_func(key, entry->key))
-			continue;
+			goto next;
 
 		value = entry->value;
 
@@ -345,6 +345,10 @@ LIB_EXPORT void *l_hashmap_remove(struct l_hashmap *hashmap, const void *key)
 		hashmap->entries--;
 
 		return value;
+
+next:
+		if (entry->next == head)
+			break;
 	}
 
 	return NULL;
