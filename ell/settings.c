@@ -138,6 +138,75 @@ static char *unescape_value(const char *value)
 	return ret;
 }
 
+static char *escape_value(const char *value)
+{
+	size_t size = strlen(value);
+	size_t i;
+	size_t j;
+	char *ret;
+	bool lead_whitespace;
+
+	for (i = 0, lead_whitespace = true; i < size; i++) {
+		switch (value[i]) {
+		case ' ':
+		case '\t':
+			if (lead_whitespace)
+				size += 1;
+
+			break;
+		case '\n':
+		case '\r':
+		case '\\':
+			size += 1;
+			/* Fall through */
+		default:
+			lead_whitespace = false;
+		}
+	}
+
+	ret = l_malloc(size + 1);
+
+	for (i = 0, j = 0, lead_whitespace = true; i < size; i++) {
+		switch (value[i]) {
+		case ' ':
+			if (lead_whitespace) {
+				ret[j++] = '\\';
+				ret[j++] = 's';
+			} else
+				ret[j++] = value[i];
+
+			break;
+		case '\t':
+			if (lead_whitespace) {
+				ret[j++] = '\\';
+				ret[j++] = 't';
+			} else
+				ret[j++] = value[i];
+
+			break;
+		case '\n':
+			ret[j++] = '\\';
+			ret[j++] = 'n';
+			lead_whitespace = false;
+			break;
+		case '\r':
+			ret[j++] = '\\';
+			ret[j++] = 'r';
+			lead_whitespace = false;
+			break;
+		case '\\':
+			ret[j++] = '\\';
+			ret[j++] = '\\';
+			lead_whitespace = false;
+		default:
+			ret[j++] = value[i];
+			lead_whitespace = false;
+		}
+	}
+
+	return ret;
+}
+
 static bool parse_group(struct l_settings *settings, const char *data,
 			size_t len, size_t line)
 {
@@ -725,6 +794,20 @@ LIB_EXPORT char *l_settings_get_string(struct l_settings *settings,
 		return NULL;
 
 	return unescape_value(value);
+}
+
+LIB_EXPORT bool l_settings_set_string(struct l_settings *settings,
+					const char *group_name, const char *key,
+					const char *value)
+{
+	char *buf;
+
+	if (unlikely(!settings || !value))
+		return false;
+
+	buf = escape_value(value);
+
+	return set_value(settings, group_name, key, buf);
 }
 
 LIB_EXPORT char **l_settings_get_string_list(struct l_settings *settings,
