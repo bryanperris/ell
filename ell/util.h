@@ -52,6 +52,9 @@ do {						\
 	__p->__v = (val);			\
 } while(0)
 
+#define L_AUTO_CLEANUP_VAR(vartype,varname,destroy) \
+	vartype varname __attribute__((cleanup(destroy)));
+
 #define L_ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 void *l_malloc(size_t size) __attribute__ ((warn_unused_result, malloc));
