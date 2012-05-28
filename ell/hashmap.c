@@ -166,39 +166,12 @@ LIB_EXPORT struct l_hashmap *l_hashmap_new(void)
 	return hashmap;
 }
 
-struct strkey {
-	int len;
-	char str[0];
-};
-
 static unsigned int string_hash_func(const void *p)
 {
-	const struct strkey *sk = p;
+	const char *s = p;
+	size_t len = strlen(s);
 
-	return hash_superfast((const uint8_t *)sk->str, sk->len);
-}
-
-static int string_compare(const void *pa, const void *pb)
-{
-	const struct strkey *a = pa, *b = pb;
-	int r = a->len - b->len;
-
-	if (r == 0)
-		r = memcmp(a->str, b->str, a->len);
-
-	return r;
-}
-
-static void *string_key_new(const void *p)
-{
-	struct strkey *sk;
-	int len = strlen(p);
-
-	sk = l_malloc(sizeof(struct strkey) + len + 1);
-	sk->len = len;
-	memcpy(sk->str, p, len + 1);
-
-	return sk;
+	return hash_superfast((const uint8_t *)s, len);
 }
 
 /**
@@ -221,8 +194,8 @@ LIB_EXPORT struct l_hashmap *l_hashmap_string_new(void)
 	hashmap = l_new(struct l_hashmap, 1);
 
 	hashmap->hash_func = string_hash_func;
-	hashmap->compare_func = string_compare;
-	hashmap->key_new_func = string_key_new;
+	hashmap->compare_func = (compare_func_t) strcmp;
+	hashmap->key_new_func = (key_new_func_t) l_strdup;
 	hashmap->key_free_func = l_free;
 	hashmap->entries = 0;
 
