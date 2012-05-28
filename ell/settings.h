@@ -53,6 +53,8 @@ bool l_settings_has_key(struct l_settings *settings,
 
 const char *l_settings_get_value(struct l_settings *settings, char *group_name,
 					char *key);
+bool l_settings_set_value(struct l_settings *settings, char *group_name,
+				char *key, const char *value);
 
 bool l_settings_get_bool(struct l_settings *settings, char *group_name,
 				char *key, bool *out);
