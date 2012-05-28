@@ -536,10 +536,83 @@ LIB_EXPORT const char *l_settings_get_value(struct l_settings *settings,
 	return setting->value;
 }
 
+static bool validate_group_name(const char *group_name)
+{
+	int i;
+
+	for (i = 0; group_name[i]; i++) {
+		if (!l_ascii_isprint(group_name[i]))
+			return false;
+
+		if (group_name[i] == ']' || group_name[i] == '[')
+			return false;
+	}
+
+	return true;
+}
+
+static bool validate_key(const char *key)
+{
+	int i;
+
+	for (i = 0; key[i]; i++) {
+		if (l_ascii_isalnum(key[i]))
+			continue;
+
+		if (key[i] == '_' || key[i] == '-')
+			continue;
+
+		return false;
+	}
+
+	return true;
+}
+
 static bool set_value(struct l_settings *settings, const char *group_name,
 			const char *key, char *value)
 {
-	l_free(value);
+	struct group_data *group;
+	struct setting_data *pair;
+
+	if (!validate_group_name(group_name)) {
+		l_util_debug(settings->debug_handler, settings->debug_data,
+				"Invalid group name %s", group_name);
+		l_free(value);
+
+		return false;
+	}
+
+	if (!validate_key(key)) {
+		l_util_debug(settings->debug_handler, settings->debug_data,
+				"Invalid key %s", key);
+		l_free(value);
+
+		return false;
+	}
+
+	group = l_queue_find(settings->groups, group_match, group_name);
+	if (!group) {
+		group = l_new(struct group_data, 1);
+		group->name = l_strdup(group_name);
+		group->settings = l_queue_new();
+
+		l_queue_push_head(settings->groups, group);
+		goto add_pair;
+	}
+
+	pair = l_queue_find(group->settings, key_match, key);
+	if (!pair) {
+add_pair:
+		pair = l_new(struct setting_data, 1);
+		pair->key = l_strdup(key);
+		pair->value = value;
+		l_queue_push_head(group->settings, pair);
+
+		return true;
+	}
+
+	l_free(pair->value);
+	pair->value = value;
 
 	return true;
 }
