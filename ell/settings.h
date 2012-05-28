@@ -79,6 +79,8 @@ bool l_settings_set_int64(struct l_settings *settings, const char *group_name,
 
 bool l_settings_get_uint64(struct l_settings *settings, const char *group_name,
 				const char *key, uint64_t *out);
+bool l_settings_set_uint64(struct l_settings *settings, const char *group_name,
+				const char *key, uint64_t in);
 
 char *l_settings_get_string(struct l_settings *settings, const char *group_name,
 				const char *key);

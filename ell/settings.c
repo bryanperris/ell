@@ -697,6 +697,17 @@ error:
 	return false;
 }
 
+LIB_EXPORT bool l_settings_set_uint64(struct l_settings *settings,
+					const char *group_name, const char *key,
+					uint64_t in)
+{
+	char buf[64];
+
+	snprintf(buf, sizeof(buf), "%" PRIu64, in);
+
+	return l_settings_set_value(settings, group_name, key, buf);
+}
+
 LIB_EXPORT char *l_settings_get_string(struct l_settings *settings,
 					const char *group_name, const char *key)
 {
