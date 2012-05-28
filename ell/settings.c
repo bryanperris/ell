@@ -467,14 +467,22 @@ LIB_EXPORT const char *l_settings_get_value(struct l_settings *settings,
 	return setting->value;
 }
 
+static bool set_value(struct l_settings *settings, const char *group_name,
+			const char *key, char *value)
+{
+	l_free(value);
+
+	return true;
+}
+
 LIB_EXPORT bool l_settings_set_value(struct l_settings *settings,
 					const char *group_name, const char *key,
 					const char *value)
 {
-	if (unlikely(!settings))
+	if (unlikely(!settings || !value))
 		return false;
 
-	return true;
+	return set_value(settings, group_name, key, l_strdup(value));
 }
 
 LIB_EXPORT bool l_settings_get_bool(struct l_settings *settings,
