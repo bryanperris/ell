@@ -108,6 +108,8 @@ bool l_settings_get_float(struct l_settings *settings, const char *group_name,
 bool l_settings_set_float(struct l_settings *settings, const char *group_name,
 				const char *key, float in);
 
+bool l_settings_remove_key(struct l_settings *settings, const char *group_name,
+				const char *key);
 bool l_settings_remove_group(struct l_settings *settings,
 				const char *group_name);
 #ifdef __cplusplus

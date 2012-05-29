@@ -1086,3 +1086,21 @@ LIB_EXPORT bool l_settings_remove_group(struct l_settings *settings,
 	return l_queue_remove_if(settings->groups, group_match, group_name,
 					group_destroy);
 }
+
+LIB_EXPORT bool l_settings_remove_key(struct l_settings *settings,
+					const char *group_name,
+					const char *key)
+{
+	struct group_data *group;
+
+	if (unlikely(!settings))
+		return false;
+
+	group = l_queue_find(settings->groups, group_match, group_name);
+
+	if (!group)
+		return false;
+
+	return l_queue_remove_if(group->settings, key_match, key,
+					setting_destroy);
+}
