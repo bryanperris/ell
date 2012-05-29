@@ -121,6 +121,10 @@ static void test_settings(struct l_settings *settings)
 	strv = l_settings_get_keys(settings, "Foobar");
 	assert(strv);
 	l_strfreev(strv);
+
+	assert(!l_settings_remove_group(settings, "Bar"));
+	assert(l_settings_remove_group(settings, "Foobar"));
+	assert(!l_settings_has_group(settings, "Foobar"));
 }
 
 static void test_load_from_data(const void *test_data)
