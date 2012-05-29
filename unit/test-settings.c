@@ -122,6 +122,11 @@ static void test_settings(struct l_settings *settings)
 	assert(strv);
 	l_strfreev(strv);
 
+	assert(!l_settings_remove_key(settings, "Bar", "Foo"));
+	assert(!l_settings_remove_key(settings, "Foobar", "Nonexistent"));
+	assert(l_settings_remove_key(settings, "Foobar", "Key"));
+	assert(!l_settings_has_key(settings, "Foobar", "Key"));
+
 	assert(!l_settings_remove_group(settings, "Bar"));
 	assert(l_settings_remove_group(settings, "Foobar"));
 	assert(!l_settings_has_group(settings, "Foobar"));
