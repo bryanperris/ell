@@ -1076,3 +1076,13 @@ LIB_EXPORT bool l_settings_set_float(struct l_settings *settings,
 
 	return l_settings_set_value(settings, group_name, key, buf);
 }
+
+LIB_EXPORT bool l_settings_remove_group(struct l_settings *settings,
+					const char *group_name)
+{
+	if (unlikely(!settings))
+		return false;
+
+	return l_queue_remove_if(settings->groups, group_match, group_name,
+					group_destroy);
+}
