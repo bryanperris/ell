@@ -37,6 +37,11 @@ typedef bool (*l_queue_remove_func_t) (void *data, void *user_data);
 
 struct l_queue;
 
+struct l_queue_entry {
+	void *data;
+	struct l_queue_entry *next;
+};
+
 struct l_queue *l_queue_new(void);
 void l_queue_destroy(struct l_queue *queue,
 			l_queue_destroy_func_t destroy);

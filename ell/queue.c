@@ -34,19 +34,14 @@
  * Queue support
  */
 
-struct entry {
-	void *data;
-	struct entry *next;
-};
-
 /**
  * l_queue:
  *
  * Opague object representing the queue.
  */
 struct l_queue {
-	struct entry *head;
-	struct entry *tail;
+	struct l_queue_entry *head;
+	struct l_queue_entry *tail;
 	unsigned int entries;
 };
 
@@ -83,7 +78,7 @@ LIB_EXPORT struct l_queue *l_queue_new(void)
 LIB_EXPORT void l_queue_destroy(struct l_queue *queue,
 				l_queue_destroy_func_t destroy)
 {
-	struct entry *entry;
+	struct l_queue_entry *entry;
 
 	if (unlikely(!queue))
 		return;
@@ -91,7 +86,7 @@ LIB_EXPORT void l_queue_destroy(struct l_queue *queue,
 	entry = queue->head;
 
 	while (entry) {
-		struct entry *tmp = entry;
+		struct l_queue_entry *tmp = entry;
 
 		if (destroy)
 			destroy(entry->data);
@@ -116,12 +111,12 @@ LIB_EXPORT void l_queue_destroy(struct l_queue *queue,
  **/
 LIB_EXPORT bool l_queue_push_tail(struct l_queue *queue, void *data)
 {
-	struct entry *entry;
+	struct l_queue_entry *entry;
 
 	if (unlikely(!queue))
 		return false;
 
-	entry = l_new(struct entry, 1);
+	entry = l_new(struct l_queue_entry, 1);
 
 	entry->data = data;
 	entry->next = NULL;
@@ -151,12 +146,12 @@ LIB_EXPORT bool l_queue_push_tail(struct l_queue *queue, void *data)
  **/
 LIB_EXPORT bool l_queue_push_head(struct l_queue *queue, void *data)
 {
-	struct entry *entry;
+	struct l_queue_entry *entry;
 
 	if (unlikely(!queue))
 		return false;
 
-	entry = l_new(struct entry, 1);
+	entry = l_new(struct l_queue_entry, 1);
 
 	entry->data = data;
 	entry->next = queue->head;
@@ -181,7 +176,7 @@ LIB_EXPORT bool l_queue_push_head(struct l_queue *queue, void *data)
  **/
 LIB_EXPORT void *l_queue_pop_head(struct l_queue *queue)
 {
-	struct entry *entry;
+	struct l_queue_entry *entry;
 	void *data;
 
 	if (unlikely(!queue))
@@ -217,7 +212,7 @@ LIB_EXPORT void *l_queue_pop_head(struct l_queue *queue)
  **/
 LIB_EXPORT void *l_queue_peek_head(struct l_queue *queue)
 {
-	struct entry *entry;
+	struct l_queue_entry *entry;
 
 	if (unlikely(!queue))
 		return NULL;
@@ -239,7 +234,7 @@ LIB_EXPORT void *l_queue_peek_head(struct l_queue *queue)
  **/
 LIB_EXPORT void *l_queue_peek_tail(struct l_queue *queue)
 {
-	struct entry *entry;
+	struct l_queue_entry *entry;
 
 	if (unlikely(!queue))
 		return NULL;
@@ -266,12 +261,12 @@ LIB_EXPORT void *l_queue_peek_tail(struct l_queue *queue)
 LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
                         l_queue_compare_func_t function, void *user_data)
 {
-	struct entry *entry, *prev;
+	struct l_queue_entry *entry, *prev;
 
 	if (unlikely(!queue || !function))
 		return false;
 
-	entry = l_new(struct entry, 1);
+	entry = l_new(struct l_queue_entry, 1);
 
 	entry->data = data;
 	entry->next = NULL;
@@ -325,7 +320,7 @@ LIB_EXPORT void *l_queue_find(struct l_queue *queue,
 				l_queue_match_func_t function,
 				const void *user_data)
 {
-	struct entry *entry;
+	struct l_queue_entry *entry;
 
 	if (unlikely(!queue || !function))
 		return NULL;
@@ -348,7 +343,7 @@ LIB_EXPORT void *l_queue_find(struct l_queue *queue,
  **/
 LIB_EXPORT bool l_queue_remove(struct l_queue *queue, void *data)
 {
-	struct entry *entry, *prev;
+	struct l_queue_entry *entry, *prev;
 
 	if (unlikely(!queue))
 		return false;
@@ -386,7 +381,7 @@ LIB_EXPORT bool l_queue_remove(struct l_queue *queue, void *data)
  **/
 LIB_EXPORT bool l_queue_reverse(struct l_queue *queue)
 {
-	struct entry *entry, *prev = NULL;
+	struct l_queue_entry *entry, *prev = NULL;
 
 	if (unlikely(!queue))
 		return false;
@@ -394,7 +389,7 @@ LIB_EXPORT bool l_queue_reverse(struct l_queue *queue)
 	entry = queue->head;
 
 	while (entry) {
-		struct entry *next = entry->next;
+		struct l_queue_entry *next = entry->next;
 
 		entry->next = prev;
 
@@ -419,7 +414,7 @@ LIB_EXPORT bool l_queue_reverse(struct l_queue *queue)
 LIB_EXPORT void l_queue_foreach(struct l_queue *queue,
 			l_queue_foreach_func_t function, void *user_data)
 {
-	struct entry *entry;
+	struct l_queue_entry *entry;
 
 	if (unlikely(!queue || !function))
 		return;
@@ -441,7 +436,7 @@ LIB_EXPORT void l_queue_foreach(struct l_queue *queue,
 LIB_EXPORT unsigned int l_queue_foreach_remove(struct l_queue *queue,
                         l_queue_remove_func_t function, void *user_data)
 {
-	struct entry *entry, *prev = NULL;
+	struct l_queue_entry *entry, *prev = NULL;
 	unsigned int count = 0;
 
 	if (unlikely(!queue || !function))
@@ -451,7 +446,7 @@ LIB_EXPORT unsigned int l_queue_foreach_remove(struct l_queue *queue,
 
 	while (entry) {
 		if (function(entry->data, user_data)) {
-			struct entry *tmp = entry;
+			struct l_queue_entry *tmp = entry;
 
 			if (prev)
 				prev->next = entry->next;
@@ -493,7 +488,7 @@ LIB_EXPORT bool l_queue_remove_if(struct l_queue *queue,
 					const void *user_data,
 					l_queue_destroy_func_t destroy)
 {
-	struct entry *entry, *prev = NULL;
+	struct l_queue_entry *entry, *prev = NULL;
 
 	if (unlikely(!queue || !function))
 		return false;
@@ -502,7 +497,7 @@ LIB_EXPORT bool l_queue_remove_if(struct l_queue *queue,
 
 	while (entry) {
 		if (function(entry->data, user_data)) {
-			struct entry *tmp = entry;
+			struct l_queue_entry *tmp = entry;
 
 			if (prev)
 				prev->next = entry->next;
