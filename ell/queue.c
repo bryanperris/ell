@@ -230,6 +230,28 @@ LIB_EXPORT void *l_queue_peek_head(struct l_queue *queue)
 }
 
 /**
+ * l_queue_peek_tail:
+ * @queue: queue object
+ *
+ * Peeks at the last element of the queue an returns it.
+ *
+ * Returns: data pointer to first element or #NULL in case an empty queue
+ **/
+LIB_EXPORT void *l_queue_peek_tail(struct l_queue *queue)
+{
+	struct entry *entry;
+
+	if (unlikely(!queue))
+		return NULL;
+
+	if (!queue->tail)
+		return NULL;
+
+	entry = queue->tail;
+	return entry->data;
+}
+
+/**
  * l_queue_insert:
  * @queue: queue object
  * @data: pointer to data

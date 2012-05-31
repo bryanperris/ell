@@ -45,6 +45,7 @@ bool l_queue_push_tail(struct l_queue *queue, void *data);
 bool l_queue_push_head(struct l_queue *queue, void *data);
 void *l_queue_pop_head(struct l_queue *queue);
 void *l_queue_peek_head(struct l_queue *queue);
+void *l_queue_peek_tail(struct l_queue *queue);
 
 bool l_queue_insert(struct l_queue *queue, void *data,
 			l_queue_compare_func_t function, void *user_data);
