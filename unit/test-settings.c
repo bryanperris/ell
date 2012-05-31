@@ -44,6 +44,20 @@ static const char *data1 = "[Foobar]\n#Comment\n#Comment2\nKey=Value\n"
 		"StringListEmpty=\n"
 		"StringListOne=FooBarBaz\n";
 
+static const char *data2 = "[Group1]\nKey=Value\n"
+			"IntegerA=2147483647\nIntegerB=-2147483648\n"
+			"IntegerC=4294967295\nIntegerD=9223372036854775807\n"
+			"IntegerE=-9223372036854775808\n"
+			"IntegerF=18446744073709551615\n"
+			"IntegerG=2247483647\nIntegerH=4294967296\n"
+			"String=\\tFoobar\\s\n"
+			"StringBad1=Foobar\\\n"
+			"StringBad2=Foobar\\b123\n"
+			"StringList=Foo,Bar,Baz\n"
+			"StringListEmpty=\n"
+			"StringListOne=FooBarBaz\n\n"
+			"[Group2]\nKey=Value\n";
+
 static void settings_debug(const char *str, void *userdata)
 {
 	printf("%s\n", str);
@@ -232,6 +246,26 @@ static void test_set_methods(const void *test_data)
 	l_settings_free(settings);
 }
 
+static void test_to_data(const void *test_data)
+{
+	const char *data = test_data;
+	struct l_settings *settings;
+	char *res;
+	size_t res_len;
+
+	settings = l_settings_new();
+
+	l_settings_set_debug(settings, settings_debug, NULL, NULL);
+	l_settings_load_from_data(settings, data2, strlen(data2));
+
+	res = l_settings_to_data(settings, &res_len);
+
+	assert(!strcmp(res, data));
+	l_free(res);
+
+	l_settings_free(settings);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -239,6 +273,7 @@ int main(int argc, char *argv[])
 	l_test_add("Load from Data", test_load_from_data, NULL);
 	l_test_add("Load from File", test_load_from_file, NULL);
 	l_test_add("Set Methods", test_set_methods, NULL);
+	l_test_add("Export to Data 1", test_to_data, data2);
 
 	return l_test_run();
 }
