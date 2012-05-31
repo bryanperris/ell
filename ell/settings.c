@@ -251,7 +251,7 @@ static bool parse_group(struct l_settings *settings, const char *data,
 	group->name = l_strndup(data + 1, end - 1);
 	group->settings = l_queue_new();
 
-	l_queue_push_head(settings->groups, group);
+	l_queue_push_tail(settings->groups, group);
 
 	return true;
 }
@@ -296,7 +296,7 @@ static unsigned int parse_key(struct l_settings *settings, const char *data,
 	l_util_debug(settings->debug_handler, settings->debug_data,
 					"Found Key: '%.*s'", end, data);
 
-	group = l_queue_peek_head(settings->groups);
+	group = l_queue_peek_tail(settings->groups);
 	pair = l_new(struct setting_data, 1);
 	pair->key = l_strndup(data, end);
 	l_queue_push_head(group->settings, pair);
@@ -311,13 +311,13 @@ static bool parse_value(struct l_settings *settings, const char *data,
 	struct group_data *group;
 	struct setting_data *pair;
 
-	group = l_queue_peek_head(settings->groups);
+	group = l_queue_peek_tail(settings->groups);
+	pair = l_queue_pop_head(group->settings);
 
 	if (!l_utf8_validate(data, len, NULL)) {
 		l_util_debug(settings->debug_handler, settings->debug_data,
 				"Invalid UTF8 in value on line: %zd", line);
 
-		pair = l_queue_pop_head(group->settings);
 		l_free(pair->key);
 		l_free(pair);
 
@@ -327,8 +327,8 @@ static bool parse_value(struct l_settings *settings, const char *data,
 	l_util_debug(settings->debug_handler, settings->debug_data,
 					"Found Value: '%.*s'", end, data);
 
-	pair = l_queue_peek_head(group->settings);
 	pair->value = l_strndup(data, end);
+	l_queue_push_tail(group->settings, pair);
 
 	return true;
 }
@@ -659,7 +659,7 @@ static bool set_value(struct l_settings *settings, const char *group_name,
 		group->name = l_strdup(group_name);
 		group->settings = l_queue_new();
 
-		l_queue_push_head(settings->groups, group);
+		l_queue_push_tail(settings->groups, group);
 		goto add_pair;
 	}
 
@@ -669,7 +669,7 @@ add_pair:
 		pair = l_new(struct setting_data, 1);
 		pair->key = l_strdup(key);
 		pair->value = value;
-		l_queue_push_head(group->settings, pair);
+		l_queue_push_tail(group->settings, pair);
 
 		return true;
 	}
