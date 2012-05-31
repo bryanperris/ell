@@ -70,6 +70,8 @@ unsigned int l_queue_foreach_remove(struct l_queue *queue,
 unsigned int l_queue_length(struct l_queue *queue);
 bool l_queue_isempty(struct l_queue *queue);
 
+const struct l_queue_entry *l_queue_get_entries(struct l_queue *queue);
+
 #ifdef __cplusplus
 }
 #endif

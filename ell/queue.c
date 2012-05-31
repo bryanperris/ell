@@ -551,3 +551,21 @@ LIB_EXPORT bool l_queue_isempty(struct l_queue *queue)
 
 	return queue->entries == 0;
 }
+
+/**
+ * l_queue_get_entries:
+ * @queue: queue object
+ *
+ * This function gives direct, read-only access to the internal list structure
+ * of the queue.  This can be used to efficiently traverse the elements.
+ *
+ * Returns: A pointer to the head of the queue.
+ **/
+LIB_EXPORT const struct l_queue_entry *l_queue_get_entries(
+							struct l_queue *queue)
+{
+	if (unlikely(!queue))
+		return NULL;
+
+	return queue->head;
+}
