@@ -402,6 +402,47 @@ LIB_EXPORT bool l_settings_load_from_data(struct l_settings *settings,
 	return r;
 }
 
+LIB_EXPORT char *l_settings_to_data(struct l_settings *settings, size_t *len)
+{
+	struct l_string *buf;
+	char *ret;
+	const struct l_queue_entry *group_entry;
+
+	if (unlikely(!settings))
+		return NULL;
+
+	buf = l_string_new(255);
+
+	group_entry = l_queue_get_entries(settings->groups);
+	while (group_entry) {
+		struct group_data *group = group_entry->data;
+		const struct l_queue_entry *setting_entry =
+				l_queue_get_entries(group->settings);
+
+		l_string_append_printf(buf, "[%s]\n", group->name);
+
+		while (setting_entry) {
+			struct setting_data *setting = setting_entry->data;
+
+			l_string_append_printf(buf, "%s=%s\n",
+						setting->key, setting->value);
+			setting_entry = setting_entry->next;
+		}
+
+		if (group_entry->next)
+			l_string_append_c(buf, '\n');
+
+		group_entry = group_entry->next;
+	}
+
+	ret = l_string_free(buf, false);
+
+	if (len)
+		*len = strlen(ret);
+
+	return ret;
+}
+
 LIB_EXPORT bool l_settings_load_from_file(struct l_settings *settings,
 						const char *filename)
 {

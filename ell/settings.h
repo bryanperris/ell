@@ -39,6 +39,8 @@ void l_settings_free(struct l_settings *settings);
 
 bool l_settings_load_from_data(struct l_settings *settings,
 						const char *data, size_t len);
+char *l_settings_to_data(struct l_settings *settings, size_t *len);
+
 bool l_settings_load_from_file(struct l_settings *settings,
 					const char *filename);
 
