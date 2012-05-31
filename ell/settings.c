@@ -244,9 +244,6 @@ static bool parse_group(struct l_settings *settings, const char *data,
 		return false;
 	}
 
-	l_util_debug(settings->debug_handler, settings->debug_data,
-			"Found group: [%.*s]", (int) (end - 1), data + 1);
-
 	group = l_new(struct group_data, 1);
 	group->name = l_strndup(data + 1, end - 1);
 	group->settings = l_queue_new();
@@ -293,9 +290,6 @@ static unsigned int parse_key(struct l_settings *settings, const char *data,
 		return 0;
 	}
 
-	l_util_debug(settings->debug_handler, settings->debug_data,
-					"Found Key: '%.*s'", end, data);
-
 	group = l_queue_peek_tail(settings->groups);
 	pair = l_new(struct setting_data, 1);
 	pair->key = l_strndup(data, end);
@@ -323,9 +317,6 @@ static bool parse_value(struct l_settings *settings, const char *data,
 
 		return false;
 	}
-
-	l_util_debug(settings->debug_handler, settings->debug_data,
-					"Found Value: '%.*s'", end, data);
 
 	pair->value = l_strndup(data, end);
 	l_queue_push_tail(group->settings, pair);
