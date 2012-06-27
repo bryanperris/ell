@@ -37,6 +37,7 @@ unit/test-settings
 unit/test-netlink
 unit/test-dbus
 unit/test-dbus-message
+unit/test-dbus-util
 
 doc/*.bak
 doc/*.stamp
