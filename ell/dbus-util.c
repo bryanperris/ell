@@ -148,3 +148,48 @@ bool _dbus_valid_signature(const char *sig)
 
 	return true;
 }
+
+static bool valid_member_name(const char *start, const char *end)
+{
+	const char *p;
+
+	if ((end - start) < 1)
+		return false;
+
+	if (*start >= '0' && *start <= '9')
+		return false;
+
+	for (p = start; p < end; p++)
+		if (!is_valid_character(*p))
+			return false;
+
+	return true;
+}
+
+bool _dbus_valid_interface(const char *interface)
+{
+	const char *sep;
+
+	if (!interface)
+		return false;
+
+	if (interface[0] == '\0' || strlen(interface) > DBUS_MAX_INTERFACE_LEN)
+		return false;
+
+	sep = strchrnul(interface, '.');
+	if (*sep == '\0')
+		return false;
+
+	while (true) {
+		if (!valid_member_name(interface, sep))
+			return false;
+
+		if (*sep == '\0')
+			break;
+
+		interface = sep + 1;
+		sep = strchrnul(interface, '.');
+	}
+
+	return true;
+}
