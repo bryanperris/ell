@@ -30,6 +30,25 @@
 
 #include "private.h"
 
+#define DBUS_MAX_INTERFACE_LEN 255
+
+static inline bool is_valid_character(const char c)
+{
+	if (c >= 'a' && c <= 'z')
+		return true;
+
+	if (c >= 'A' && c <= 'Z')
+		return true;
+
+	if (c >= '0' && c <= '9')
+		return true;
+
+	if (c == '_')
+		return true;
+
+	return false;
+}
+
 bool _dbus_valid_object_path(const char *path)
 {
 	unsigned int i;
@@ -53,16 +72,7 @@ bool _dbus_valid_object_path(const char *path)
 
 		c = path[i];
 
-		if (path[i] >= 'a' && path[i] <= 'z')
-			continue;
-
-		if (path[i] >= 'A' && path[i] <= 'Z')
-			continue;
-
-		if (path[i] >= '0' && path[i] <= '9')
-			continue;
-
-		if (path[i] == '_' || path[i] == '/')
+		if (is_valid_character(path[i]) || path[i] == '/')
 			continue;
 
 		return false;
