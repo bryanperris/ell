@@ -54,3 +54,4 @@ bool dbus_message_compare(struct l_dbus_message *message,
 					const void *data, size_t size);
 
 bool _dbus_valid_object_path(const char *path);
+bool _dbus_valid_signature(const char *sig);
