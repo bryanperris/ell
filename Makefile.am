@@ -38,6 +38,7 @@ ell_libell_la_SOURCES = $(include_HEADERS) ell/private.h \
 						ell/checksum.c \
 						ell/netlink.c \
 						ell/dbus.c \
+						ell/dbus-util.c \
 						ell/idle.c
 
 ell_libell_la_LDFLAGS = -version-info 0:0:0
