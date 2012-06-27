@@ -66,6 +66,37 @@ static void test_signature(const void *test_data)
 	assert(valid == test->valid);
 }
 
+struct interface_test {
+	bool valid;
+	const char *interface;
+};
+
+#define INTERFACE_TEST(v, iface, i)				\
+	static struct interface_test iface_test##i = {		\
+		.valid = v,					\
+		.interface = iface,				\
+	}
+
+INTERFACE_TEST(false, "org", 1);
+INTERFACE_TEST(true, "org.foobar", 2);
+INTERFACE_TEST(false, ".", 3);
+INTERFACE_TEST(false, "org.", 4);
+INTERFACE_TEST(false, "org.0bar", 5);
+INTERFACE_TEST(false, "org.bar-", 6);
+INTERFACE_TEST(true, "org.bar.baz", 7);
+INTERFACE_TEST(false, "org.bar.", 8);
+INTERFACE_TEST(true, "org.a.b.c", 9);
+
+static void test_interface(const void *test_data)
+{
+	const struct interface_test *test = test_data;
+	bool valid;
+
+	valid = _dbus_valid_interface(test->interface);
+
+	assert(valid == test->valid);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -86,6 +117,16 @@ int main(int argc, char *argv[])
 	l_test_add("Signature test 14", test_signature, &sig_test14);
 	l_test_add("Signature test 15", test_signature, &sig_test15);
 	l_test_add("Signature test 16", test_signature, &sig_test16);
+
+	l_test_add("Interface Test 1", test_interface, &iface_test1);
+	l_test_add("Interface Test 2", test_interface, &iface_test2);
+	l_test_add("Interface Test 3", test_interface, &iface_test3);
+	l_test_add("Interface Test 4", test_interface, &iface_test4);
+	l_test_add("Interface Test 5", test_interface, &iface_test5);
+	l_test_add("Interface Test 6", test_interface, &iface_test6);
+	l_test_add("Interface Test 7", test_interface, &iface_test7);
+	l_test_add("Interface Test 8", test_interface, &iface_test8);
+	l_test_add("Interface Test 9", test_interface, &iface_test9);
 
 	return l_test_run();
 }
