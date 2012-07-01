@@ -31,6 +31,7 @@
 #include "dbus-private.h"
 
 #define DBUS_MAX_INTERFACE_LEN 255
+#define DBUS_MAX_METHOD_LEN 255
 
 static inline bool is_valid_character(const char c)
 {
@@ -161,6 +162,26 @@ static bool valid_member_name(const char *start, const char *end)
 
 	for (p = start; p < end; p++)
 		if (!is_valid_character(*p))
+			return false;
+
+	return true;
+}
+
+bool _dbus_valid_method(const char *method)
+{
+	unsigned int i;
+
+	if (!method)
+		return false;
+
+	if (method[0] == '\0' || strlen(method) > DBUS_MAX_METHOD_LEN)
+		return false;
+
+	if (method[0] >= '0' && method[0] <= '9')
+		return false;
+
+	for (i = 0; method[i]; i++)
+		if (!is_valid_character(method[i]))
 			return false;
 
 	return true;

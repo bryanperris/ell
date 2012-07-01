@@ -26,3 +26,4 @@ bool dbus_message_compare(struct l_dbus_message *message,
 bool _dbus_valid_object_path(const char *path);
 bool _dbus_valid_signature(const char *sig);
 bool _dbus_valid_interface(const char *interface);
+bool _dbus_valid_method(const char *method);
