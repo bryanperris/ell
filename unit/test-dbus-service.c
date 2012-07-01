@@ -70,6 +70,12 @@ static const struct introspect_test changed_test = {
 		"\t\t</signal>\n",
 };
 
+static const struct introspect_test bar_test = {
+	.name = "Bar",
+	.expected_xml = "\t\t<property name=\"Bar\" type=\"y\" "
+		"access=\"readwrite\"/>\n",
+};
+
 static void test_introspect_method(const void *test_data)
 {
 	const struct introspect_test *test = test_data;
@@ -106,6 +112,24 @@ static void test_introspect_signal(const void *test_data)
 	l_free(xml);
 }
 
+static void test_introspect_property(const void *test_data)
+{
+	const struct introspect_test *test = test_data;
+	struct l_dbus_service_property *property;
+	struct l_string *buf;
+	char *xml;
+
+	property = _dbus_service_find_property(service, test->name);
+	assert(property);
+
+	buf = l_string_new(0);
+	_dbus_service_property_introspection(property, buf);
+	xml = l_string_free(buf, false);
+
+	assert(!strcmp(test->expected_xml, xml));
+	l_free(xml);
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -124,6 +148,8 @@ int main(int argc, char *argv[])
 
 	l_dbus_service_signal(service, "Changed", 0, "b", "new_value");
 
+	l_dbus_service_rw_property(service, "Bar", "y");
+
 	l_test_add("Test Frobate Introspection", test_introspect_method,
 			&frobate_test);
 	l_test_add("Test Bazify Introspection", test_introspect_method,
@@ -133,6 +159,9 @@ int main(int argc, char *argv[])
 
 	l_test_add("Test Changed Introspection", test_introspect_signal,
 			&changed_test);
+
+	l_test_add("Test Bar Property Introspection", test_introspect_property,
+			&bar_test);
 
 	ret = l_test_run();
 
