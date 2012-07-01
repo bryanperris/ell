@@ -43,6 +43,11 @@ enum l_dbus_service_signal_flag {
 	L_DBUS_SERVICE_SIGNAL_FLAG_DEPRECATED =	1,
 };
 
+enum l_dbus_service_property_flag {
+	L_DBUS_SERVICE_PROPERTY_FLAG_DEPRECATED = 1,
+	L_DBUS_SERVICE_PROPERTY_FLAG_WRITABLE	= 2,
+};
+
 typedef void (*l_dbus_service_method_cb_t) (struct l_dbus *,
 						struct l_dbus_message *message,
 						void *user_data);
