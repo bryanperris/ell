@@ -41,8 +41,15 @@ struct l_dbus_service_method {
 	char metainfo[];
 };
 
+struct l_dbus_service_signal {
+	uint32_t flags;
+	unsigned char name_len;
+	char metainfo[];
+};
+
 struct l_dbus_service {
 	struct l_queue *methods;
+	struct l_queue *signals;
 	void *user_data;
 	void (*user_destroy) (void *data);
 };
@@ -193,6 +200,52 @@ error:
 	return false;
 }
 
+bool l_dbus_service_signal(struct l_dbus_service *service, const char *name,
+				uint32_t flags, const char *signature, ...)
+{
+	va_list args;
+	unsigned int metainfo_len;
+	struct l_dbus_service_signal *info;
+	char *p;
+
+	if (!_dbus_valid_method(name))
+		return false;
+
+	if (unlikely(!signature))
+		return false;
+
+	if (signature[0] && !_dbus_valid_signature(signature))
+		return false;
+
+	/* Pre-calculate the needed meta-info length */
+	metainfo_len = strlen(name) + 1;
+	metainfo_len += strlen(signature) + 1;
+
+	va_start(args, signature);
+
+	if (!size_params(signature, args, &metainfo_len)) {
+		va_end(args);
+		return false;
+	}
+
+	va_end(args);
+
+	info = l_malloc(sizeof(*info) + metainfo_len);
+	info->flags = flags;
+	info->name_len = strlen(name);
+
+	p = stpcpy(info->metainfo, name) + 1;
+
+	va_start(args, signature);
+	p = stpcpy(p, signature) + 1;
+	p = copy_params(p, signature, args);
+	va_end(args);
+
+	l_queue_push_tail(service->signals, info);
+
+	return true;
+}
+
 struct l_dbus_service *_dbus_service_new(const char *interface, void *user_data,
 					void (*destroy) (void *))
 {
@@ -200,6 +253,7 @@ struct l_dbus_service *_dbus_service_new(const char *interface, void *user_data,
 
 	service = l_new(struct l_dbus_service, 1);
 	service->methods = l_queue_new();
+	service->signals = l_queue_new();
 	service->user_data = user_data;
 	service->user_destroy = destroy;
 
@@ -212,6 +266,8 @@ void _dbus_service_free(struct l_dbus_service *service)
 		service->user_destroy(service->user_data);
 
 	l_queue_destroy(service->methods, l_free);
+	l_queue_destroy(service->signals, l_free);
+
 	l_free(service);
 }
 
