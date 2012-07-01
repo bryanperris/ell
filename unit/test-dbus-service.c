@@ -76,6 +76,32 @@ static const struct introspect_test bar_test = {
 		"access=\"readwrite\"/>\n",
 };
 
+static const struct introspect_test interface_test = {
+	.name = "",
+	.expected_xml =
+		"\t<interface name=\"org.freedesktop.SampleInterface\">\n"
+		"\t\t<method name=\"Frobate\">\n"
+		"\t\t\t<arg name=\"bar\" type=\"s\" direction=\"out\"/>\n"
+		"\t\t\t<arg name=\"baz\" type=\"a{us}\" direction=\"out\"/>\n"
+		"\t\t\t<arg name=\"foo\" type=\"i\" direction=\"in\"/>\n"
+		"\t\t\t<annotation name=\"org.freedesktop.DBus.Deprecated\" "
+		"value=\"true\"/>\n"
+		"\t\t</method>\n"
+		"\t\t<method name=\"Bazify\">\n"
+		"\t\t\t<arg name=\"bar\" type=\"v\" direction=\"out\"/>\n"
+		"\t\t\t<arg name=\"bar\" type=\"(iiu)\" direction=\"in\"/>\n"
+		"\t\t</method>\n"
+		"\t\t<method name=\"Mogrify\">\n"
+		"\t\t\t<arg name=\"bar\" type=\"(iiav)\" direction=\"in\"/>\n"
+		"\t\t</method>\n"
+		"\t\t<signal name=\"Changed\">\n"
+		"\t\t\t<arg name=\"new_value\" type=\"b\"/>\n"
+		"\t\t</signal>\n"
+		"\t\t<property name=\"Bar\" type=\"y\" "
+		"access=\"readwrite\"/>\n"
+		"\t</interface>\n",
+};
+
 static void test_introspect_method(const void *test_data)
 {
 	const struct introspect_test *test = test_data;
@@ -130,6 +156,20 @@ static void test_introspect_property(const void *test_data)
 	l_free(xml);
 }
 
+static void test_introspect_interface(const void *test_data)
+{
+	const struct introspect_test *test = test_data;
+	struct l_string *buf;
+	char *xml;
+
+	buf = l_string_new(0);
+	_dbus_service_introspection(service, buf);
+	xml = l_string_free(buf, false);
+
+	assert(!strcmp(test->expected_xml, xml));
+	l_free(xml);
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -162,6 +202,9 @@ int main(int argc, char *argv[])
 
 	l_test_add("Test Bar Property Introspection", test_introspect_property,
 			&bar_test);
+
+	l_test_add("Test Interface Introspection", test_introspect_interface,
+			&interface_test);
 
 	ret = l_test_run();
 
