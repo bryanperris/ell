@@ -161,3 +161,21 @@ void _dbus_service_free(struct l_dbus_service *service)
 	l_queue_destroy(service->methods, l_free);
 	l_free(service);
 }
+
+static bool match_method(const void *a, const void *b)
+{
+	const struct l_dbus_service_method *method = a;
+	const char *name = b;
+
+	if (!strcmp(method->metainfo, name))
+		return true;
+
+	return false;
+}
+
+struct l_dbus_service_method *_dbus_service_find_method(
+						struct l_dbus_service *service,
+						const char *method)
+{
+	return l_queue_find(service->methods, match_method, method);
+}
