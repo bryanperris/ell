@@ -48,6 +48,9 @@ bool l_dbus_service_method(struct l_dbus_service *service, const char *name,
 				const char *return_sig, const char *param_sig,
 				...);
 
+bool l_dbus_service_signal(struct l_dbus_service *service, const char *name,
+				uint32_t flags, const char *signature, ...);
+
 #ifdef __cplusplus
 }
 #endif

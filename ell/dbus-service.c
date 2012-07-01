@@ -288,3 +288,21 @@ struct l_dbus_service_method *_dbus_service_find_method(
 {
 	return l_queue_find(service->methods, match_method, method);
 }
+
+static bool match_signal(const void *a, const void *b)
+{
+	const struct l_dbus_service_signal *signal = a;
+	const char *name = b;
+
+	if (!strcmp(signal->metainfo, name))
+		return true;
+
+	return false;
+}
+
+struct l_dbus_service_signal *_dbus_service_find_signal(
+						struct l_dbus_service *service,
+						const char *signal)
+{
+	return l_queue_find(service->signals, match_signal, signal);
+}

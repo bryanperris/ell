@@ -21,6 +21,7 @@
 
 struct l_string;
 struct l_dbus_service_method;
+struct l_dbus_service_signal;
 
 struct l_dbus_message *dbus_message_build(const void *data, size_t size);
 bool dbus_message_compare(struct l_dbus_message *message,
@@ -42,3 +43,6 @@ void _dbus_service_free(struct l_dbus_service *service);
 struct l_dbus_service_method *_dbus_service_find_method(
 						struct l_dbus_service *service,
 						const char *method);
+struct l_dbus_service_signal *_dbus_service_find_signal(
+						struct l_dbus_service *service,
+						const char *signal);
