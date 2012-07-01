@@ -29,6 +29,7 @@
 
 #include "util.h"
 #include "queue.h"
+#include "string.h"
 #include "dbus-service.h"
 #include "dbus-private.h"
 #include "private.h"
@@ -45,6 +46,58 @@ struct l_dbus_service {
 	void *user_data;
 	void (*user_destroy) (void *data);
 };
+
+void _dbus_service_method_introspection(struct l_dbus_service_method *info,
+					struct l_string *buf)
+{
+	const char *sig;
+	const char *end;
+	const char *pname;
+	unsigned int offset = info->name_len + 1;
+
+	l_string_append_printf(buf, "\t\t<method name=\"%s\">\n",
+				info->metainfo);
+
+	sig = info->metainfo + offset;
+	offset += strlen(sig) + 1;
+
+	for (; *sig; sig++) {
+		end = _dbus_signature_end(sig);
+		pname = info->metainfo + offset;
+
+		l_string_append_printf(buf, "\t\t\t<arg name=\"%s\" "
+					"type=\"%.*s\" direction=\"out\"/>\n",
+					pname, (int) (end - sig + 1), sig);
+		sig = end;
+		offset += strlen(pname) + 1;
+	}
+
+	sig = info->metainfo + offset;
+	offset += strlen(sig) + 1;
+
+	for (; *sig; sig++) {
+		end = _dbus_signature_end(sig);
+		pname = info->metainfo + offset;
+
+		l_string_append_printf(buf, "\t\t\t<arg name=\"%s\" "
+					"type=\"%.*s\" direction=\"in\"/>\n",
+					pname, (int) (end - sig + 1), sig);
+		sig = end;
+		offset += strlen(pname) + 1;
+	}
+
+	if (info->flags & L_DBUS_SERVICE_METHOD_FLAG_DEPRECATED)
+		l_string_append(buf, "\t\t\t<annotation name=\""
+				"org.freedesktop.DBus.Deprecated\" "
+				"value=\"true\"/>\n");
+
+	if (info->flags & L_DBUS_SERVICE_METHOD_FLAG_NOREPLY)
+		l_string_append(buf, "\t\t\t<annotation name=\""
+				"org.freedesktop.DBus.Method.NoReply\" "
+				"value=\"true\"/>\n");
+
+	l_string_append(buf, "\t\t</method>\n");
+}
 
 static char *copy_params(char *dest, const char *signature, va_list args)
 {

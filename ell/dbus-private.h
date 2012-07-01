@@ -19,6 +19,7 @@
  *
  */
 
+struct l_string;
 struct l_dbus_service_method;
 
 struct l_dbus_message *dbus_message_build(const void *data, size_t size);
@@ -31,6 +32,9 @@ bool _dbus_valid_object_path(const char *path);
 bool _dbus_valid_signature(const char *sig);
 bool _dbus_valid_interface(const char *interface);
 bool _dbus_valid_method(const char *method);
+
+void _dbus_service_method_introspection(struct l_dbus_service_method *info,
+					struct l_string *buf);
 
 struct l_dbus_service *_dbus_service_new(const char *interface, void *user_data,
 					void (*destroy) (void *));
