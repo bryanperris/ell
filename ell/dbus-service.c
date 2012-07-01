@@ -54,6 +54,7 @@ struct l_dbus_service_property {
 };
 
 struct l_dbus_service {
+	char *interface;
 	struct l_queue *methods;
 	struct l_queue *signals;
 	struct l_queue *properties;
@@ -367,6 +368,8 @@ struct l_dbus_service *_dbus_service_new(const char *interface, void *user_data,
 	struct l_dbus_service *service;
 
 	service = l_new(struct l_dbus_service, 1);
+
+	service->interface = l_strdup(interface);
 
 	service->methods = l_queue_new();
 	service->signals = l_queue_new();
