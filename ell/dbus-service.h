@@ -39,6 +39,10 @@ enum l_dbus_service_method_flag {
 	L_DBUS_SERVICE_METHOD_FLAG_ASYNC =	4,
 };
 
+enum l_dbus_service_signal_flag {
+	L_DBUS_SERVICE_SIGNAL_FLAG_DEPRECATED =	1,
+};
+
 typedef void (*l_dbus_service_method_cb_t) (struct l_dbus *,
 						struct l_dbus_message *message,
 						void *user_data);
