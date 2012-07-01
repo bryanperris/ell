@@ -63,6 +63,13 @@ static const struct introspect_test mogrify_test = {
 		"\t\t</method>\n",
 };
 
+static const struct introspect_test changed_test = {
+	.name = "Changed",
+	.expected_xml = "\t\t<signal name=\"Changed\">\n"
+		"\t\t\t<arg name=\"new_value\" type=\"b\"/>\n"
+		"\t\t</signal>\n",
+};
+
 static void test_introspect_method(const void *test_data)
 {
 	const struct introspect_test *test = test_data;
@@ -75,6 +82,24 @@ static void test_introspect_method(const void *test_data)
 
 	buf = l_string_new(0);
 	_dbus_service_method_introspection(method, buf);
+	xml = l_string_free(buf, false);
+
+	assert(!strcmp(test->expected_xml, xml));
+	l_free(xml);
+}
+
+static void test_introspect_signal(const void *test_data)
+{
+	const struct introspect_test *test = test_data;
+	struct l_dbus_service_signal *signal;
+	struct l_string *buf;
+	char *xml;
+
+	signal = _dbus_service_find_signal(service, test->name);
+	assert(signal);
+
+	buf = l_string_new(0);
+	_dbus_service_signal_introspection(signal, buf);
 	xml = l_string_free(buf, false);
 
 	assert(!strcmp(test->expected_xml, xml));
@@ -97,6 +122,8 @@ int main(int argc, char *argv[])
 				"bar", "bar");
 	l_dbus_service_method(service, "Mogrify", 0, NULL, "", "(iiav)", "bar");
 
+	l_dbus_service_signal(service, "Changed", 0, "b", "new_value");
+
 	l_test_add("Test Frobate Introspection", test_introspect_method,
 			&frobate_test);
 	l_test_add("Test Bazify Introspection", test_introspect_method,
@@ -104,7 +131,11 @@ int main(int argc, char *argv[])
 	l_test_add("Test Mogrify Introspection", test_introspect_method,
 			&mogrify_test);
 
+	l_test_add("Test Changed Introspection", test_introspect_signal,
+			&changed_test);
+
 	ret = l_test_run();
+
 	_dbus_service_free(service);
 
 	return ret;
