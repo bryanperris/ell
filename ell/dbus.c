@@ -39,6 +39,7 @@
 #include "hashmap.h"
 #include "dbus.h"
 #include "private.h"
+#include "dbus-private.h"
 
 #define DEFAULT_SYSTEM_BUS_ADDRESS "unix:path=/var/run/dbus/system_bus_socket"
 

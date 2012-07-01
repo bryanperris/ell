@@ -29,7 +29,7 @@
 #include <ell/ell.h>
 #include <ell/dbus.h>
 
-#include "ell/private.h"
+#include "ell/dbus-private.h"
 
 static bool do_print = false;
 

@@ -28,7 +28,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "private.h"
+#include "dbus-private.h"
 
 #define DBUS_MAX_INTERFACE_LEN 255
 

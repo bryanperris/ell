@@ -23,6 +23,7 @@ pkginclude_HEADERS = ell/ell.h ell/util.h \
 lib_LTLIBRARIES = ell/libell.la
 
 ell_libell_la_SOURCES = $(include_HEADERS) ell/private.h \
+						ell/dbus-private.h \
 						ell/util.c \
 						ell/test.c \
 						ell/queue.c \

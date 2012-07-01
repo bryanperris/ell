@@ -26,7 +26,7 @@
 #include <assert.h>
 
 #include <ell/ell.h>
-#include "ell/private.h"
+#include "ell/dbus-private.h"
 
 struct signature_test {
 	bool valid;

@@ -48,11 +48,3 @@ int watch_remove(int fd);
 int idle_add(idle_event_cb_t callback, void *user_data,
 		idle_destroy_cb_t destroy);
 void idle_remove(int id);
-
-struct l_dbus_message *dbus_message_build(const void *data, size_t size);
-bool dbus_message_compare(struct l_dbus_message *message,
-					const void *data, size_t size);
-
-bool _dbus_valid_object_path(const char *path);
-bool _dbus_valid_signature(const char *sig);
-bool _dbus_valid_interface(const char *interface);
