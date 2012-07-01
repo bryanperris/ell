@@ -20,6 +20,7 @@
  */
 
 struct l_string;
+struct l_dbus_service;
 struct l_dbus_service_method;
 struct l_dbus_service_signal;
 struct l_dbus_service_property;
@@ -40,6 +41,8 @@ void _dbus_service_method_introspection(struct l_dbus_service_method *info,
 void _dbus_service_signal_introspection(struct l_dbus_service_signal *info,
 					struct l_string *buf);
 void _dbus_service_property_introspection(struct l_dbus_service_property *info,
+						struct l_string *buf);
+void _dbus_service_introspection(struct l_dbus_service *service,
 						struct l_string *buf);
 
 struct l_dbus_service *_dbus_service_new(const char *interface, void *user_data,

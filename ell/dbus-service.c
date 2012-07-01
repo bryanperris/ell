@@ -171,6 +171,25 @@ void _dbus_service_property_introspection(struct l_dbus_service_property *info,
 		l_string_append(buf, "/>\n");
 }
 
+void _dbus_service_introspection(struct l_dbus_service *service,
+						struct l_string *buf)
+{
+	l_string_append_printf(buf, "\t<interface name=\"%s\">\n",
+				service->interface);
+
+	l_queue_foreach(service->methods,
+		(l_queue_foreach_func_t) _dbus_service_method_introspection,
+		buf);
+	l_queue_foreach(service->signals,
+		(l_queue_foreach_func_t) _dbus_service_signal_introspection,
+		buf);
+	l_queue_foreach(service->properties,
+		(l_queue_foreach_func_t) _dbus_service_property_introspection,
+		buf);
+
+	l_string_append(buf, "\t</interface>\n");
+}
+
 static char *copy_params(char *dest, const char *signature, va_list args)
 {
 	const char *pname;
