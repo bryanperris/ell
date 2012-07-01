@@ -38,6 +38,7 @@ unit/test-netlink
 unit/test-dbus
 unit/test-dbus-message
 unit/test-dbus-util
+unit/test-dbus-service
 
 doc/*.bak
 doc/*.stamp
