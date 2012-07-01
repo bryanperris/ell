@@ -106,6 +106,39 @@ void _dbus_service_method_introspection(struct l_dbus_service_method *info,
 	l_string_append(buf, "\t\t</method>\n");
 }
 
+void _dbus_service_signal_introspection(struct l_dbus_service_signal *info,
+					struct l_string *buf)
+{
+	const char *sig;
+	const char *end;
+	const char *pname;
+	unsigned int offset = info->name_len + 1;
+
+	l_string_append_printf(buf, "\t\t<signal name=\"%s\">\n",
+				info->metainfo);
+
+	sig = info->metainfo + offset;
+	offset += strlen(sig) + 1;
+
+	for (; *sig; sig++) {
+		end = _dbus_signature_end(sig);
+		pname = info->metainfo + offset;
+
+		l_string_append_printf(buf, "\t\t\t<arg name=\"%s\" "
+					"type=\"%.*s\"/>\n",
+					pname, (int) (end - sig + 1), sig);
+		sig = end;
+		offset += strlen(pname) + 1;
+	}
+
+	if (info->flags & L_DBUS_SERVICE_SIGNAL_FLAG_DEPRECATED)
+		l_string_append(buf, "\t\t\t<annotation name=\""
+				"org.freedesktop.DBus.Deprecated\" "
+				"value=\"true\"/>\n");
+
+	l_string_append(buf, "\t\t</signal>\n");
+}
+
 static char *copy_params(char *dest, const char *signature, va_list args)
 {
 	const char *pname;

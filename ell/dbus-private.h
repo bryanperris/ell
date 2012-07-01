@@ -36,6 +36,8 @@ bool _dbus_valid_method(const char *method);
 
 void _dbus_service_method_introspection(struct l_dbus_service_method *info,
 					struct l_string *buf);
+void _dbus_service_signal_introspection(struct l_dbus_service_signal *info,
+					struct l_string *buf);
 
 struct l_dbus_service *_dbus_service_new(const char *interface, void *user_data,
 					void (*destroy) (void *));
