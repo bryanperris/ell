@@ -401,3 +401,21 @@ struct l_dbus_service_signal *_dbus_service_find_signal(
 {
 	return l_queue_find(service->signals, match_signal, signal);
 }
+
+static bool match_property(const void *a, const void *b)
+{
+	const struct l_dbus_service_property *property = a;
+	const char *name = b;
+
+	if (!strcmp(property->metainfo, name))
+		return true;
+
+	return false;
+}
+
+struct l_dbus_service_property *_dbus_service_find_property(
+						struct l_dbus_service *service,
+						const char *property)
+{
+	return l_queue_find(service->properties, match_property, property);
+}
