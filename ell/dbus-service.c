@@ -180,10 +180,11 @@ static bool size_params(const char *signature, va_list args, unsigned int *len)
 	return true;
 }
 
-bool l_dbus_service_method(struct l_dbus_service *service, const char *name,
-				uint32_t flags, l_dbus_service_method_cb_t cb,
-				const char *return_sig, const char *param_sig,
-				...)
+LIB_EXPORT bool l_dbus_service_method(struct l_dbus_service *service,
+					const char *name, uint32_t flags,
+					l_dbus_service_method_cb_t cb,
+					const char *return_sig,
+					const char *param_sig, ...)
 {
 	va_list args;
 	unsigned int metainfo_len;
@@ -240,8 +241,9 @@ error:
 	return false;
 }
 
-bool l_dbus_service_signal(struct l_dbus_service *service, const char *name,
-				uint32_t flags, const char *signature, ...)
+LIB_EXPORT bool l_dbus_service_signal(struct l_dbus_service *service,
+					const char *name, uint32_t flags,
+					const char *signature, ...)
 {
 	va_list args;
 	unsigned int metainfo_len;
@@ -286,8 +288,9 @@ bool l_dbus_service_signal(struct l_dbus_service *service, const char *name,
 	return true;
 }
 
-bool l_dbus_service_property(struct l_dbus_service *service, const char *name,
-				uint32_t flags, const char *signature)
+LIB_EXPORT bool l_dbus_service_property(struct l_dbus_service *service,
+					const char *name, uint32_t flags,
+					const char *signature)
 {
 	unsigned int metainfo_len;
 	struct l_dbus_service_property *info;
@@ -318,14 +321,16 @@ bool l_dbus_service_property(struct l_dbus_service *service, const char *name,
 	return true;
 }
 
-bool l_dbus_service_ro_property(struct l_dbus_service *service,
-				const char *name, const char *signature)
+LIB_EXPORT bool l_dbus_service_ro_property(struct l_dbus_service *service,
+						const char *name,
+						const char *signature)
 {
 	return l_dbus_service_property(service, name, 0, signature);
 }
 
-bool l_dbus_service_rw_property(struct l_dbus_service *service,
-				const char *name, const char *signature)
+LIB_EXPORT bool l_dbus_service_rw_property(struct l_dbus_service *service,
+						const char *name,
+						const char *signature)
 {
 	return l_dbus_service_property(service, name,
 					L_DBUS_SERVICE_PROPERTY_FLAG_WRITABLE,
