@@ -146,6 +146,30 @@ void _dbus_service_signal_introspection(struct l_dbus_service_signal *info,
 	l_string_append(buf, "\t\t</signal>\n");
 }
 
+void _dbus_service_property_introspection(struct l_dbus_service_property *info,
+						struct l_string *buf)
+{
+	unsigned int offset = info->name_len + 1;
+	const char *signature = info->metainfo + offset;
+
+	l_string_append_printf(buf, "\t\t<property name=\"%s\" type=\"%s\" ",
+				info->metainfo, signature);
+
+	if (info->flags & L_DBUS_SERVICE_PROPERTY_FLAG_WRITABLE)
+		l_string_append(buf, "access=\"readwrite\"");
+	else
+		l_string_append(buf, "access=\"read\"");
+
+	if (info->flags & L_DBUS_SERVICE_METHOD_FLAG_DEPRECATED) {
+		l_string_append(buf, ">\n");
+		l_string_append(buf, "\t\t\t<annotation name=\""
+				"org.freedesktop.DBus.Deprecated\" "
+				"value=\"true\"/>\n");
+		l_string_append(buf, "\t\t</property>\n");
+	} else
+		l_string_append(buf, "/>\n");
+}
+
 static char *copy_params(char *dest, const char *signature, va_list args)
 {
 	const char *pname;
