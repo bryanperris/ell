@@ -29,7 +29,25 @@
 extern "C" {
 #endif
 
+struct l_dbus;
 struct l_dbus_service;
+struct l_dbus_message;
+
+enum l_dbus_service_method_flag {
+	L_DBUS_SERVICE_METHOD_FLAG_DEPRECATED =	1,
+	L_DBUS_SERVICE_METHOD_FLAG_NOREPLY =	2,
+	L_DBUS_SERVICE_METHOD_FLAG_ASYNC =	4,
+};
+
+typedef void (*l_dbus_service_method_cb_t) (struct l_dbus *,
+						struct l_dbus_message *message,
+						void *user_data);
+
+bool l_dbus_service_method(struct l_dbus_service *service, const char *name,
+				uint32_t flags, l_dbus_service_method_cb_t cb,
+				const char *return_sig, const char *param_sig,
+				...);
+
 #ifdef __cplusplus
 }
 #endif
