@@ -47,9 +47,16 @@ struct l_dbus_service_signal {
 	char metainfo[];
 };
 
+struct l_dbus_service_property {
+	uint32_t flags;
+	unsigned char name_len;
+	char metainfo[];
+};
+
 struct l_dbus_service {
 	struct l_queue *methods;
 	struct l_queue *signals;
+	struct l_queue *properties;
 	void *user_data;
 	void (*user_destroy) (void *data);
 };
@@ -279,14 +286,63 @@ bool l_dbus_service_signal(struct l_dbus_service *service, const char *name,
 	return true;
 }
 
+bool l_dbus_service_property(struct l_dbus_service *service, const char *name,
+				uint32_t flags, const char *signature)
+{
+	unsigned int metainfo_len;
+	struct l_dbus_service_property *info;
+	char *p;
+
+	if (!_dbus_valid_method(name))
+		return false;
+
+	if (unlikely(!signature))
+		return false;
+
+	if (!_dbus_valid_signature(signature))
+		return false;
+
+	/* Pre-calculate the needed meta-info length */
+	metainfo_len = strlen(name) + 1;
+	metainfo_len += strlen(signature) + 1;
+
+	info = l_malloc(sizeof(*info) + metainfo_len);
+	info->flags = flags;
+	info->name_len = strlen(name);
+
+	p = stpcpy(info->metainfo, name) + 1;
+	strcpy(p, signature);
+
+	l_queue_push_tail(service->properties, info);
+
+	return true;
+}
+
+bool l_dbus_service_ro_property(struct l_dbus_service *service,
+				const char *name, const char *signature)
+{
+	return l_dbus_service_property(service, name, 0, signature);
+}
+
+bool l_dbus_service_rw_property(struct l_dbus_service *service,
+				const char *name, const char *signature)
+{
+	return l_dbus_service_property(service, name,
+					L_DBUS_SERVICE_PROPERTY_FLAG_WRITABLE,
+					signature);
+}
+
 struct l_dbus_service *_dbus_service_new(const char *interface, void *user_data,
 					void (*destroy) (void *))
 {
 	struct l_dbus_service *service;
 
 	service = l_new(struct l_dbus_service, 1);
+
 	service->methods = l_queue_new();
 	service->signals = l_queue_new();
+	service->properties = l_queue_new();
+
 	service->user_data = user_data;
 	service->user_destroy = destroy;
 
@@ -300,6 +356,7 @@ void _dbus_service_free(struct l_dbus_service *service)
 
 	l_queue_destroy(service->methods, l_free);
 	l_queue_destroy(service->signals, l_free);
+	l_queue_destroy(service->properties, l_free);
 
 	l_free(service);
 }

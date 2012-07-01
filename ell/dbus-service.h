@@ -60,6 +60,15 @@ bool l_dbus_service_method(struct l_dbus_service *service, const char *name,
 bool l_dbus_service_signal(struct l_dbus_service *service, const char *name,
 				uint32_t flags, const char *signature, ...);
 
+bool l_dbus_service_property(struct l_dbus_service *service, const char *name,
+				uint32_t flags, const char *signature);
+bool l_dbus_service_ro_property(struct l_dbus_service *service,
+					const char *name,
+					const char *signature);
+bool l_dbus_service_rw_property(struct l_dbus_service *service,
+					const char *name,
+					const char *signature);
+
 #ifdef __cplusplus
 }
 #endif
