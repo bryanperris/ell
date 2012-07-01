@@ -97,6 +97,30 @@ static void test_interface(const void *test_data)
 	assert(valid == test->valid);
 }
 
+struct method_test {
+	bool valid;
+	const char *method;
+};
+
+#define METHOD_TEST(v, m, i)					\
+	static struct method_test method_test##i = {		\
+		.valid = v,					\
+		.method = m,					\
+	}
+
+METHOD_TEST(false, "0Bar", 1);
+METHOD_TEST(true, "Bar", 2);
+
+static void test_method(const void *test_data)
+{
+	const struct method_test *test = test_data;
+	bool valid;
+
+	valid = _dbus_valid_method(test->method);
+
+	assert(valid == test->valid);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -127,6 +151,9 @@ int main(int argc, char *argv[])
 	l_test_add("Interface Test 7", test_interface, &iface_test7);
 	l_test_add("Interface Test 8", test_interface, &iface_test8);
 	l_test_add("Interface Test 9", test_interface, &iface_test9);
+
+	l_test_add("Method Test 1", test_method, &method_test1);
+	l_test_add("Method Test 2", test_method, &method_test2);
 
 	return l_test_run();
 }
