@@ -312,36 +312,6 @@ static inline void message_iter_init(struct message_iter *iter,
 	iter->pos = pos;
 }
 
-static inline const char *end_signature(const char *signature)
-{
-	const char *ptr = signature;
-	unsigned int indent = 0;
-	char expect;
-
-	switch (*signature) {
-	case '(':
-		expect = ')';
-		break;
-	case '{':
-		expect = '}';
-		break;
-	case 'a':
-		return end_signature(signature + 1);
-	default:
-		return signature;
-	}
-
-	for (ptr = signature; *ptr != '\0'; ptr++) {
-		if (*ptr == *signature)
-			indent++;
-		else if (*ptr == expect)
-			if (!--indent)
-				return ptr;
-	}
-
-	return NULL;
-}
-
 static inline size_t calc_len_one(const char signature,
 					const void *data, size_t pos)
 {
@@ -560,7 +530,7 @@ static bool message_iter_next_entry_valist(struct message_iter *iter,
 						signature + 1, iter->data,
 						uint32_val, pos + 4);
 			iter->pos = pos + uint32_val + 4;
-			signature = end_signature(signature + 1);
+			signature = _dbus_signature_end(signature + 1);
 			sub_iter->end = signature;
 			break;
 		case 'v':

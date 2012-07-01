@@ -23,6 +23,8 @@ struct l_dbus_message *dbus_message_build(const void *data, size_t size);
 bool dbus_message_compare(struct l_dbus_message *message,
 					const void *data, size_t size);
 
+const char *_dbus_signature_end(const char *signature);
+
 bool _dbus_valid_object_path(const char *path);
 bool _dbus_valid_signature(const char *sig);
 bool _dbus_valid_interface(const char *interface);

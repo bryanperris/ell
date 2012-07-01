@@ -214,3 +214,33 @@ bool _dbus_valid_interface(const char *interface)
 
 	return true;
 }
+
+const char *_dbus_signature_end(const char *signature)
+{
+	const char *ptr = signature;
+	unsigned int indent = 0;
+	char expect;
+
+	switch (*signature) {
+	case '(':
+		expect = ')';
+		break;
+	case '{':
+		expect = '}';
+		break;
+	case 'a':
+		return _dbus_signature_end(signature + 1);
+	default:
+		return signature;
+	}
+
+	for (ptr = signature; *ptr != '\0'; ptr++) {
+		if (*ptr == *signature)
+			indent++;
+		else if (*ptr == expect)
+			if (!--indent)
+				return ptr;
+	}
+
+	return NULL;
+}
