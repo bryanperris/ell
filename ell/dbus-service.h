@@ -19,17 +19,19 @@
  *
  */
 
-struct l_dbus_message *dbus_message_build(const void *data, size_t size);
-bool dbus_message_compare(struct l_dbus_message *message,
-					const void *data, size_t size);
+#ifndef __ELL_SERVICE_H
+#define __ELL_SERVICE_H
 
-const char *_dbus_signature_end(const char *signature);
+#include <stdint.h>
+#include <stdbool.h>
 
-bool _dbus_valid_object_path(const char *path);
-bool _dbus_valid_signature(const char *sig);
-bool _dbus_valid_interface(const char *interface);
-bool _dbus_valid_method(const char *method);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-struct l_dbus_service *_dbus_service_new(const char *interface, void *user_data,
-					void (*destroy) (void *));
-void _dbus_service_free(struct l_dbus_service *service);
+struct l_dbus_service;
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_DBUS_SERVICE_H */

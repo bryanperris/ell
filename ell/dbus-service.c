@@ -19,17 +19,42 @@
  *
  */
 
-struct l_dbus_message *dbus_message_build(const void *data, size_t size);
-bool dbus_message_compare(struct l_dbus_message *message,
-					const void *data, size_t size);
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
-const char *_dbus_signature_end(const char *signature);
+#define _GNU_SOURCE
 
-bool _dbus_valid_object_path(const char *path);
-bool _dbus_valid_signature(const char *sig);
-bool _dbus_valid_interface(const char *interface);
-bool _dbus_valid_method(const char *method);
+#include "util.h"
+#include "queue.h"
+#include "dbus-service.h"
+#include "dbus-private.h"
+#include "private.h"
+
+struct l_dbus_service {
+	struct l_queue *methods;
+	void *user_data;
+	void (*user_destroy) (void *data);
+};
 
 struct l_dbus_service *_dbus_service_new(const char *interface, void *user_data,
-					void (*destroy) (void *));
-void _dbus_service_free(struct l_dbus_service *service);
+					void (*destroy) (void *))
+{
+	struct l_dbus_service *service;
+
+	service = l_new(struct l_dbus_service, 1);
+	service->methods = l_queue_new();
+	service->user_data = user_data;
+	service->user_destroy = destroy;
+
+	return service;
+}
+
+void _dbus_service_free(struct l_dbus_service *service)
+{
+	if (service->user_destroy)
+		service->user_destroy(service->user_data);
+
+	l_queue_destroy(service->methods, l_free);
+	l_free(service);
+}

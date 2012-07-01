@@ -18,6 +18,7 @@ pkginclude_HEADERS = ell/ell.h ell/util.h \
 				ell/checksum.h \
 				ell/netlink.h \
 				ell/dbus.h \
+				ell/dbus-service.h \
 				ell/idle.h
 
 lib_LTLIBRARIES = ell/libell.la
@@ -40,6 +41,7 @@ ell_libell_la_SOURCES = $(include_HEADERS) ell/private.h \
 						ell/netlink.c \
 						ell/dbus.c \
 						ell/dbus-util.c \
+						ell/dbus-service.c \
 						ell/idle.c
 
 ell_libell_la_LDFLAGS = -version-info 0:0:0
