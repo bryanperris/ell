@@ -277,6 +277,35 @@ LIB_EXPORT bool l_hashmap_set_key_copy_function(struct l_hashmap *hashmap,
 }
 
 /**
+ * l_hashmap_set_key_free_function:
+ * @hashmap: hash table object
+ * @func: Key destructor function
+ *
+ * Sets the key destructor function to be used by this object.  This function
+ * should undo the result of the function specified in
+ * l_hashmap_set_key_copy_function(). This function can be NULL, in which
+ * case no destructor is called.
+ *
+ * This function can only be called when the @hashmap is empty.
+ *
+ * Returns: #true when the key free function could be updated successfully,
+ * and #false otherwise.
+ **/
+LIB_EXPORT bool l_hashmap_set_key_free_function(struct l_hashmap *hashmap,
+						l_hashmap_key_free_func_t func)
+{
+	if (unlikely(!hashmap))
+		return false;
+
+	if (hashmap->entries != 0)
+		return false;
+
+	hashmap->key_free_func = func;
+
+	return true;
+}
+
+/**
  * l_hashmap_destroy:
  * @hashmap: hash table object
  * @destroy: destroy function

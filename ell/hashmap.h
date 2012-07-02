@@ -49,6 +49,8 @@ bool l_hashmap_set_compare_function(struct l_hashmap *hashmap,
 						l_hashmap_compare_func_t func);
 bool l_hashmap_set_key_copy_function(struct l_hashmap *hashmap,
 						l_hashmap_key_new_func_t func);
+bool l_hashmap_set_key_free_function(struct l_hashmap *hashmap,
+					l_hashmap_key_free_func_t func);
 
 void l_hashmap_destroy(struct l_hashmap *hashmap,
 			l_hashmap_destroy_func_t destroy);
