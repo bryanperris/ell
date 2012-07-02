@@ -35,6 +35,8 @@ typedef unsigned int (*l_hashmap_hash_func_t) (const void *p);
 
 struct l_hashmap;
 
+unsigned int l_str_hash(const void *p);
+
 struct l_hashmap *l_hashmap_new(void);
 struct l_hashmap *l_hashmap_string_new(void);
 

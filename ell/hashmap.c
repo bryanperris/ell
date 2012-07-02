@@ -165,7 +165,7 @@ LIB_EXPORT struct l_hashmap *l_hashmap_new(void)
 	return hashmap;
 }
 
-static unsigned int string_hash_func(const void *p)
+LIB_EXPORT unsigned int l_str_hash(const void *p)
 {
 	const char *s = p;
 	size_t len = strlen(s);
@@ -192,7 +192,7 @@ LIB_EXPORT struct l_hashmap *l_hashmap_string_new(void)
 
 	hashmap = l_new(struct l_hashmap, 1);
 
-	hashmap->hash_func = string_hash_func;
+	hashmap->hash_func = l_str_hash;
 	hashmap->compare_func = (compare_func_t) strcmp;
 	hashmap->key_new_func = (key_new_func_t) l_strdup;
 	hashmap->key_free_func = l_free;
