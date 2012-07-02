@@ -36,8 +36,6 @@
 
 #define NBUCKETS 127
 
-typedef void (*key_free_func_t) (void *p);
-
 struct entry {
 	void *key;
 	void *value;
@@ -54,7 +52,7 @@ struct l_hashmap {
 	l_hashmap_hash_func_t hash_func;
 	l_hashmap_compare_func_t compare_func;
 	l_hashmap_key_new_func_t key_new_func;
-	key_free_func_t key_free_func;
+	l_hashmap_key_free_func_t key_free_func;
 	unsigned int entries;
 	struct entry buckets[NBUCKETS];
 };

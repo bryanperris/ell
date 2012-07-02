@@ -34,6 +34,7 @@ typedef void (*l_hashmap_destroy_func_t) (const void *key, void *value);
 typedef unsigned int (*l_hashmap_hash_func_t) (const void *p);
 typedef int (*l_hashmap_compare_func_t) (const void *a, const void *b);
 typedef void *(*l_hashmap_key_new_func_t) (const void *p);
+typedef void (*l_hashmap_key_free_func_t) (void *p);
 
 struct l_hashmap;
 
