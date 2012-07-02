@@ -250,6 +250,33 @@ LIB_EXPORT bool l_hashmap_set_compare_function(struct l_hashmap *hashmap,
 }
 
 /**
+ * l_hashmap_set_key_copy_function:
+ * @hashmap: hash table object
+ * @func: Key duplication function
+ *
+ * Sets the key duplication function to be used by this object.  If the
+ * function is NULL, then the keys are assigned directly.
+ *
+ * This function can only be called when the @hashmap is empty.
+ *
+ * Returns: #true when the key copy function could be updated successfully,
+ * and #false otherwise.
+ **/
+LIB_EXPORT bool l_hashmap_set_key_copy_function(struct l_hashmap *hashmap,
+						l_hashmap_key_new_func_t func)
+{
+	if (unlikely(!hashmap))
+		return false;
+
+	if (hashmap->entries != 0)
+		return false;
+
+	hashmap->key_new_func = func;
+
+	return true;
+}
+
+/**
  * l_hashmap_destroy:
  * @hashmap: hash table object
  * @destroy: destroy function
