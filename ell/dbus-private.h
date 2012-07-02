@@ -21,7 +21,7 @@
 
 struct l_string;
 struct l_dbus_service;
-struct l_dbus_service_method;
+struct _dbus_method;
 struct l_dbus_service_signal;
 struct l_dbus_service_property;
 
@@ -36,7 +36,7 @@ bool _dbus_valid_signature(const char *sig);
 bool _dbus_valid_interface(const char *interface);
 bool _dbus_valid_method(const char *method);
 
-void _dbus_service_method_introspection(struct l_dbus_service_method *info,
+void _dbus_method_introspection(struct _dbus_method *info,
 					struct l_string *buf);
 void _dbus_service_signal_introspection(struct l_dbus_service_signal *info,
 					struct l_string *buf);
@@ -48,8 +48,8 @@ void _dbus_service_introspection(struct l_dbus_service *service,
 struct l_dbus_service *_dbus_service_new(const char *interface, void *user_data,
 					void (*destroy) (void *));
 void _dbus_service_free(struct l_dbus_service *service);
-struct l_dbus_service_method *_dbus_service_find_method(
-						struct l_dbus_service *service,
+
+struct _dbus_method *_dbus_service_find_method(struct l_dbus_service *service,
 						const char *method);
 struct l_dbus_service_signal *_dbus_service_find_signal(
 						struct l_dbus_service *service,

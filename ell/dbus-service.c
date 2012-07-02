@@ -34,7 +34,7 @@
 #include "dbus-private.h"
 #include "private.h"
 
-struct l_dbus_service_method {
+struct _dbus_method {
 	l_dbus_service_method_cb_t cb;
 	uint32_t flags;
 	unsigned char name_len;
@@ -62,7 +62,7 @@ struct l_dbus_service {
 	void (*user_destroy) (void *data);
 };
 
-void _dbus_service_method_introspection(struct l_dbus_service_method *info,
+void _dbus_method_introspection(struct _dbus_method *info,
 					struct l_string *buf)
 {
 	const char *sig;
@@ -178,8 +178,7 @@ void _dbus_service_introspection(struct l_dbus_service *service,
 				service->interface);
 
 	l_queue_foreach(service->methods,
-		(l_queue_foreach_func_t) _dbus_service_method_introspection,
-		buf);
+		(l_queue_foreach_func_t) _dbus_method_introspection, buf);
 	l_queue_foreach(service->signals,
 		(l_queue_foreach_func_t) _dbus_service_signal_introspection,
 		buf);
@@ -232,7 +231,7 @@ LIB_EXPORT bool l_dbus_service_method(struct l_dbus_service *service,
 {
 	va_list args;
 	unsigned int metainfo_len;
-	struct l_dbus_service_method *info;
+	struct _dbus_method *info;
 	char *p;
 
 	if (!_dbus_valid_method(name))
@@ -414,7 +413,7 @@ void _dbus_service_free(struct l_dbus_service *service)
 
 static bool match_method(const void *a, const void *b)
 {
-	const struct l_dbus_service_method *method = a;
+	const struct _dbus_method *method = a;
 	const char *name = b;
 
 	if (!strcmp(method->metainfo, name))
@@ -423,8 +422,7 @@ static bool match_method(const void *a, const void *b)
 	return false;
 }
 
-struct l_dbus_service_method *_dbus_service_find_method(
-						struct l_dbus_service *service,
+struct _dbus_method *_dbus_service_find_method(struct l_dbus_service *service,
 						const char *method)
 {
 	return l_queue_find(service->methods, match_method, method);
