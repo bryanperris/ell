@@ -105,7 +105,7 @@ static const struct introspect_test interface_test = {
 static void test_introspect_method(const void *test_data)
 {
 	const struct introspect_test *test = test_data;
-	struct l_dbus_service_method *method;
+	struct _dbus_method *method;
 	struct l_string *buf;
 	char *xml;
 
@@ -113,7 +113,7 @@ static void test_introspect_method(const void *test_data)
 	assert(method);
 
 	buf = l_string_new(0);
-	_dbus_service_method_introspection(method, buf);
+	_dbus_method_introspection(method, buf);
 	xml = l_string_free(buf, false);
 
 	assert(!strcmp(test->expected_xml, xml));
@@ -123,7 +123,7 @@ static void test_introspect_method(const void *test_data)
 static void test_introspect_signal(const void *test_data)
 {
 	const struct introspect_test *test = test_data;
-	struct l_dbus_service_signal *signal;
+	struct _dbus_signal *signal;
 	struct l_string *buf;
 	char *xml;
 
@@ -131,7 +131,7 @@ static void test_introspect_signal(const void *test_data)
 	assert(signal);
 
 	buf = l_string_new(0);
-	_dbus_service_signal_introspection(signal, buf);
+	_dbus_signal_introspection(signal, buf);
 	xml = l_string_free(buf, false);
 
 	assert(!strcmp(test->expected_xml, xml));
@@ -141,7 +141,7 @@ static void test_introspect_signal(const void *test_data)
 static void test_introspect_property(const void *test_data)
 {
 	const struct introspect_test *test = test_data;
-	struct l_dbus_service_property *property;
+	struct _dbus_property *property;
 	struct l_string *buf;
 	char *xml;
 
@@ -149,7 +149,7 @@ static void test_introspect_property(const void *test_data)
 	assert(property);
 
 	buf = l_string_new(0);
-	_dbus_service_property_introspection(property, buf);
+	_dbus_property_introspection(property, buf);
 	xml = l_string_free(buf, false);
 
 	assert(!strcmp(test->expected_xml, xml));
