@@ -224,6 +224,32 @@ LIB_EXPORT bool l_hashmap_set_hash_function(struct l_hashmap *hashmap,
 }
 
 /**
+ * l_hashmap_set_compare_function:
+ * @hashmap: hash table object
+ * @func: Key compare function
+ *
+ * Sets the key comparison function to be used by this object.
+ *
+ * This function can only be called when the @hashmap is empty.
+ *
+ * Returns: #true when the comparison function could be updated successfully,
+ * and #false otherwise.
+ **/
+LIB_EXPORT bool l_hashmap_set_compare_function(struct l_hashmap *hashmap,
+						l_hashmap_compare_func_t func)
+{
+	if (unlikely(!hashmap))
+		return false;
+
+	if (hashmap->entries != 0)
+		return false;
+
+	hashmap->compare_func = func;
+
+	return true;
+}
+
+/**
  * l_hashmap_destroy:
  * @hashmap: hash table object
  * @destroy: destroy function
