@@ -164,12 +164,12 @@ static void message_queue_destroy(void *data)
 	l_free(callback);
 }
 
-static void message_list_destroy(const void *key, void *value)
+static void message_list_destroy(void *value)
 {
 	message_queue_destroy(value);
 }
 
-static void signal_list_destroy(const void *key, void *value)
+static void signal_list_destroy(void *value)
 {
 	struct signal_callback *callback = value;
 
@@ -1449,7 +1449,7 @@ LIB_EXPORT bool l_dbus_unregister(struct l_dbus *dbus, unsigned int id)
 	if (!callback)
 		return false;
 
-	signal_list_destroy(L_UINT_TO_PTR(id), callback);
+	signal_list_destroy(callback);
 
 	return true;
 }
