@@ -30,6 +30,7 @@
 #include "util.h"
 #include "queue.h"
 #include "string.h"
+#include "hashmap.h"
 #include "dbus-service.h"
 #include "dbus-private.h"
 #include "private.h"
@@ -60,6 +61,22 @@ struct l_dbus_service {
 	struct l_queue *properties;
 	void *user_data;
 	void (*user_destroy) (void *data);
+};
+
+struct child_node {
+	struct object_node *node;
+	struct child_node *next;
+	char subpath[];
+};
+
+struct object_node {
+	struct l_queue *interfaces;
+	struct child_node *children;
+};
+
+struct _dbus_object_tree {
+	struct l_hashmap *interfaces;
+	struct object_node *root;
 };
 
 void _dbus_method_introspection(struct _dbus_method *info,
@@ -459,4 +476,26 @@ struct _dbus_property *_dbus_service_find_property(
 						const char *property)
 {
 	return l_queue_find(service->properties, match_property, property);
+}
+
+struct _dbus_object_tree *_dbus_object_tree_new()
+{
+	struct _dbus_object_tree *tree;
+
+	tree = l_new(struct _dbus_object_tree, 1);
+
+	tree->interfaces = l_hashmap_new();
+	l_hashmap_set_hash_function(tree->interfaces, l_str_hash);
+	l_hashmap_set_compare_function(tree->interfaces,
+					(l_hashmap_compare_func_t)strcmp);
+
+	return tree;
+}
+
+void _dbus_object_tree_free(struct _dbus_object_tree *tree)
+{
+	l_hashmap_destroy(tree->interfaces,
+				(l_hashmap_destroy_func_t) _dbus_service_free);
+
+	l_free(tree);
 }

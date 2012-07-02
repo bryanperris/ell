@@ -56,3 +56,6 @@ struct _dbus_signal *_dbus_service_find_signal(struct l_dbus_service *service,
 struct _dbus_property *_dbus_service_find_property(
 						struct l_dbus_service *service,
 						const char *property);
+
+struct _dbus_object_tree *_dbus_object_tree_new();
+void _dbus_object_tree_free(struct _dbus_object_tree *tree);
