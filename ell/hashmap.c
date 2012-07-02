@@ -328,7 +328,7 @@ LIB_EXPORT void l_hashmap_destroy(struct l_hashmap *hashmap,
 
 		for (entry = head;; entry = entry->next) {
 			if (destroy)
-				destroy(entry->key, entry->value);
+				destroy(entry->value);
 
 			free_key(hashmap, entry->key);
 

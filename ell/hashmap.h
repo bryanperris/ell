@@ -30,7 +30,7 @@ extern "C" {
 
 typedef void (*l_hashmap_foreach_func_t) (const void *key, void *value,
 							void *user_data);
-typedef void (*l_hashmap_destroy_func_t) (const void *key, void *value);
+typedef void (*l_hashmap_destroy_func_t) (void *value);
 typedef unsigned int (*l_hashmap_hash_func_t) (const void *p);
 typedef int (*l_hashmap_compare_func_t) (const void *a, const void *b);
 typedef void *(*l_hashmap_key_new_func_t) (const void *p);
