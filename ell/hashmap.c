@@ -36,7 +36,6 @@
 
 #define NBUCKETS 127
 
-typedef int (*compare_func_t) (const void *a, const void *b);
 typedef void *(*key_new_func_t) (const void *p);
 typedef void (*key_free_func_t) (void *p);
 
@@ -54,7 +53,7 @@ struct entry {
  */
 struct l_hashmap {
 	l_hashmap_hash_func_t hash_func;
-	compare_func_t compare_func;
+	l_hashmap_compare_func_t compare_func;
 	key_new_func_t key_new_func;
 	key_free_func_t key_free_func;
 	unsigned int entries;
@@ -193,7 +192,7 @@ LIB_EXPORT struct l_hashmap *l_hashmap_string_new(void)
 	hashmap = l_new(struct l_hashmap, 1);
 
 	hashmap->hash_func = l_str_hash;
-	hashmap->compare_func = (compare_func_t) strcmp;
+	hashmap->compare_func = (l_hashmap_compare_func_t) strcmp;
 	hashmap->key_new_func = (key_new_func_t) l_strdup;
 	hashmap->key_free_func = l_free;
 	hashmap->entries = 0;
