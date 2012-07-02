@@ -198,6 +198,32 @@ LIB_EXPORT struct l_hashmap *l_hashmap_string_new(void)
 }
 
 /**
+ * l_hashmap_set_hash_function:
+ * @hashmap: hash table object
+ * @func: Key hashing function
+ *
+ * Sets the hashing function to be used by this object.
+ *
+ * This function can only be called when the @hashmap is empty.
+ *
+ * Returns: #true when the hashing function could be updated successfully,
+ * and #false otherwise.
+ **/
+LIB_EXPORT bool l_hashmap_set_hash_function(struct l_hashmap *hashmap,
+						l_hashmap_hash_func_t func)
+{
+	if (unlikely(!hashmap))
+		return false;
+
+	if (hashmap->entries != 0)
+		return false;
+
+	hashmap->hash_func = func;
+
+	return true;
+}
+
+/**
  * l_hashmap_destroy:
  * @hashmap: hash table object
  * @destroy: destroy function
