@@ -41,7 +41,7 @@ struct _dbus_method {
 	char metainfo[];
 };
 
-struct l_dbus_service_signal {
+struct _dbus_signal {
 	uint32_t flags;
 	unsigned char name_len;
 	char metainfo[];
@@ -114,7 +114,7 @@ void _dbus_method_introspection(struct _dbus_method *info,
 	l_string_append(buf, "\t\t</method>\n");
 }
 
-void _dbus_service_signal_introspection(struct l_dbus_service_signal *info,
+void _dbus_signal_introspection(struct _dbus_signal *info,
 					struct l_string *buf)
 {
 	const char *sig;
@@ -180,8 +180,7 @@ void _dbus_service_introspection(struct l_dbus_service *service,
 	l_queue_foreach(service->methods,
 		(l_queue_foreach_func_t) _dbus_method_introspection, buf);
 	l_queue_foreach(service->signals,
-		(l_queue_foreach_func_t) _dbus_service_signal_introspection,
-		buf);
+		(l_queue_foreach_func_t) _dbus_signal_introspection, buf);
 	l_queue_foreach(service->properties,
 		(l_queue_foreach_func_t) _dbus_service_property_introspection,
 		buf);
@@ -290,7 +289,7 @@ LIB_EXPORT bool l_dbus_service_signal(struct l_dbus_service *service,
 {
 	va_list args;
 	unsigned int metainfo_len;
-	struct l_dbus_service_signal *info;
+	struct _dbus_signal *info;
 	char *p;
 
 	if (!_dbus_valid_method(name))
@@ -430,7 +429,7 @@ struct _dbus_method *_dbus_service_find_method(struct l_dbus_service *service,
 
 static bool match_signal(const void *a, const void *b)
 {
-	const struct l_dbus_service_signal *signal = a;
+	const struct _dbus_signal *signal = a;
 	const char *name = b;
 
 	if (!strcmp(signal->metainfo, name))
@@ -439,8 +438,7 @@ static bool match_signal(const void *a, const void *b)
 	return false;
 }
 
-struct l_dbus_service_signal *_dbus_service_find_signal(
-						struct l_dbus_service *service,
+struct _dbus_signal *_dbus_service_find_signal(struct l_dbus_service *service,
 						const char *signal)
 {
 	return l_queue_find(service->signals, match_signal, signal);
