@@ -70,7 +70,7 @@ struct l_netlink {
 	void *debug_data;
 };
 
-static void destroy_command(const void *key, void *data)
+static void destroy_command(void *data)
 {
 	struct command *command = data;
 
@@ -80,7 +80,7 @@ static void destroy_command(const void *key, void *data)
 	l_free(command);
 }
 
-static void destroy_notify(const void *key, void *data)
+static void destroy_notify(void *data)
 {
 	struct notify *notify = data;
 
@@ -90,7 +90,7 @@ static void destroy_notify(const void *key, void *data)
 	l_free(notify);
 }
 
-static void destroy_notify_group(const void *key, void *data)
+static void destroy_notify_group(void *data)
 {
 	struct l_hashmap *notify_list = data;
 
@@ -123,7 +123,7 @@ static bool can_write_data(struct l_io *io, void *user_data)
 	if (written < 0 || (uint32_t) written != command->len) {
 		l_hashmap_remove(netlink->command_lookup,
 					L_UINT_TO_PTR(command->id));
-		destroy_command(NULL, command);
+		destroy_command(command);
 		return true;
 	}
 
@@ -193,7 +193,7 @@ static void process_message(struct l_netlink *netlink, struct nlmsghdr *nlmsg)
 done:
 	l_hashmap_remove(netlink->command_lookup, L_UINT_TO_PTR(command->id));
 
-	destroy_command(NULL, command);
+	destroy_command(command);
 }
 
 static void process_multi(struct l_netlink *netlink, struct nlmsghdr *nlmsg)
@@ -210,7 +210,7 @@ static void process_multi(struct l_netlink *netlink, struct nlmsghdr *nlmsg)
 		l_hashmap_remove(netlink->command_lookup,
 					L_UINT_TO_PTR(command->id));
 
-		destroy_command(NULL, command);
+		destroy_command(command);
 	} else {
 		command = l_hashmap_lookup(netlink->command_pending,
 					L_UINT_TO_PTR(nlmsg->nlmsg_seq));
@@ -463,7 +463,7 @@ LIB_EXPORT bool l_netlink_cancel(struct l_netlink *netlink, unsigned int id)
 					L_UINT_TO_PTR(command->seq));
 	}
 
-	destroy_command(NULL, command);
+	destroy_command(command);
 
 	return true;
 }
@@ -582,7 +582,7 @@ LIB_EXPORT bool l_netlink_unregister(struct l_netlink *netlink, unsigned int id)
 	if (l_hashmap_size(notify_list) == 0)
 		drop_membership(netlink, notify->group);
 
-	destroy_notify(NULL, notify);
+	destroy_notify(notify);
 
 	return true;
 }
