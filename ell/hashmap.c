@@ -36,7 +36,6 @@
 
 #define NBUCKETS 127
 
-typedef unsigned int (*hash_func_t) (const void *p);
 typedef int (*compare_func_t) (const void *a, const void *b);
 typedef void *(*key_new_func_t) (const void *p);
 typedef void (*key_free_func_t) (void *p);
@@ -54,7 +53,7 @@ struct entry {
  * Opague object representing the hash table.
  */
 struct l_hashmap {
-	hash_func_t hash_func;
+	l_hashmap_hash_func_t hash_func;
 	compare_func_t compare_func;
 	key_new_func_t key_new_func;
 	key_free_func_t key_free_func;
