@@ -23,7 +23,7 @@ struct l_string;
 struct l_dbus_service;
 struct _dbus_method;
 struct _dbus_signal;
-struct l_dbus_service_property;
+struct _dbus_property;
 
 struct l_dbus_message *dbus_message_build(const void *data, size_t size);
 bool dbus_message_compare(struct l_dbus_message *message,
@@ -40,7 +40,7 @@ void _dbus_method_introspection(struct _dbus_method *info,
 					struct l_string *buf);
 void _dbus_signal_introspection(struct _dbus_signal *info,
 					struct l_string *buf);
-void _dbus_service_property_introspection(struct l_dbus_service_property *info,
+void _dbus_property_introspection(struct _dbus_property *info,
 						struct l_string *buf);
 void _dbus_service_introspection(struct l_dbus_service *service,
 						struct l_string *buf);
@@ -53,6 +53,6 @@ struct _dbus_method *_dbus_service_find_method(struct l_dbus_service *service,
 						const char *method);
 struct _dbus_signal *_dbus_service_find_signal(struct l_dbus_service *service,
 						const char *signal);
-struct l_dbus_service_property *_dbus_service_find_property(
+struct _dbus_property *_dbus_service_find_property(
 						struct l_dbus_service *service,
 						const char *property);

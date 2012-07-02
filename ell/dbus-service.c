@@ -47,7 +47,7 @@ struct _dbus_signal {
 	char metainfo[];
 };
 
-struct l_dbus_service_property {
+struct _dbus_property {
 	uint32_t flags;
 	unsigned char name_len;
 	char metainfo[];
@@ -147,7 +147,7 @@ void _dbus_signal_introspection(struct _dbus_signal *info,
 	l_string_append(buf, "\t\t</signal>\n");
 }
 
-void _dbus_service_property_introspection(struct l_dbus_service_property *info,
+void _dbus_property_introspection(struct _dbus_property *info,
 						struct l_string *buf)
 {
 	unsigned int offset = info->name_len + 1;
@@ -182,8 +182,7 @@ void _dbus_service_introspection(struct l_dbus_service *service,
 	l_queue_foreach(service->signals,
 		(l_queue_foreach_func_t) _dbus_signal_introspection, buf);
 	l_queue_foreach(service->properties,
-		(l_queue_foreach_func_t) _dbus_service_property_introspection,
-		buf);
+		(l_queue_foreach_func_t) _dbus_property_introspection, buf);
 
 	l_string_append(buf, "\t</interface>\n");
 }
@@ -335,7 +334,7 @@ LIB_EXPORT bool l_dbus_service_property(struct l_dbus_service *service,
 					const char *signature)
 {
 	unsigned int metainfo_len;
-	struct l_dbus_service_property *info;
+	struct _dbus_property *info;
 	char *p;
 
 	if (!_dbus_valid_method(name))
@@ -446,7 +445,7 @@ struct _dbus_signal *_dbus_service_find_signal(struct l_dbus_service *service,
 
 static bool match_property(const void *a, const void *b)
 {
-	const struct l_dbus_service_property *property = a;
+	const struct _dbus_property *property = a;
 	const char *name = b;
 
 	if (!strcmp(property->metainfo, name))
@@ -455,7 +454,7 @@ static bool match_property(const void *a, const void *b)
 	return false;
 }
 
-struct l_dbus_service_property *_dbus_service_find_property(
+struct _dbus_property *_dbus_service_find_property(
 						struct l_dbus_service *service,
 						const char *property)
 {
