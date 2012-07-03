@@ -59,3 +59,11 @@ struct _dbus_property *_dbus_service_find_property(
 
 struct _dbus_object_tree *_dbus_object_tree_new();
 void _dbus_object_tree_free(struct _dbus_object_tree *tree);
+
+bool _dbus_object_tree_register(struct _dbus_object_tree *tree,
+				const char *path, const char *interface,
+				void (*setup_func)(struct l_dbus_service *),
+				void *user_data, void (*destroy) (void *));
+bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
+					const char *path,
+					const char *interface);
