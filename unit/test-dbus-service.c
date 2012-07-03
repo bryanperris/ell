@@ -170,6 +170,60 @@ static void test_introspect_interface(const void *test_data)
 	l_free(xml);
 }
 
+static void test_dbus_object_tree(const void *test_data)
+{
+	struct _dbus_object_tree *tree;
+	struct object_node *leaf1, *leaf2, *leaf3;
+	struct object_node *tmp;
+
+	tree = _dbus_object_tree_new();
+	assert(tree);
+
+	leaf1 = _dbus_object_tree_makepath(tree, "/foo/bar/baz");
+	leaf2 = _dbus_object_tree_makepath(tree, "/foo/bar/ble");
+	leaf3 = _dbus_object_tree_makepath(tree, "/foo/bee/boo");
+
+	tmp = _dbus_object_tree_lookup(tree, "/foo");
+	assert(tmp);
+
+	tmp = _dbus_object_tree_lookup(tree, "/foo/bar/baz");
+	assert(tmp);
+	assert(tmp == leaf1);
+
+	tmp = _dbus_object_tree_lookup(tree, "/foo/bar/ble");
+	assert(tmp);
+	assert(tmp == leaf2);
+
+	tmp = _dbus_object_tree_lookup(tree, "/foo/bee/boo");
+	assert(tmp);
+	assert(tmp == leaf3);
+
+	tmp = _dbus_object_tree_lookup(tree, "/foobar");
+	assert(!tmp);
+
+	tmp = _dbus_object_tree_lookup(tree, "/foo/bee");
+	assert(tmp);
+	_dbus_object_tree_prune_node(leaf3);
+	tmp = _dbus_object_tree_lookup(tree, "/foo/bee");
+	assert(!tmp);
+
+	tmp = _dbus_object_tree_lookup(tree, "/foo/bar");
+	assert(tmp);
+	_dbus_object_tree_prune_node(leaf2);
+	tmp = _dbus_object_tree_lookup(tree, "/foo/bar");
+	assert(tmp);
+	_dbus_object_tree_prune_node(leaf1);
+	tmp = _dbus_object_tree_lookup(tree, "/foo/bar");
+	assert(!tmp);
+	tmp = _dbus_object_tree_lookup(tree, "/foo");
+	assert(!tmp);
+
+	tmp = _dbus_object_tree_lookup(tree, "/");
+	assert(tmp);
+
+	_dbus_object_tree_free(tree);
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -205,6 +259,9 @@ int main(int argc, char *argv[])
 
 	l_test_add("Test Interface Introspection", test_introspect_interface,
 			&interface_test);
+
+	l_test_add("_dbus_object_tree Sanity Tests",
+					test_dbus_object_tree, NULL);
 
 	ret = l_test_run();
 
