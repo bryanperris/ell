@@ -568,6 +568,38 @@ struct object_node *_dbus_object_tree_makepath(struct _dbus_object_tree *tree,
 	return makepath_recurse(tree->root, path);
 }
 
+static struct object_node *lookup_recurse(struct object_node *node,
+						const char *path)
+{
+	const char *end;
+	struct child_node *child;
+
+	if (*path == '\0')
+		return node;
+
+	path += 1;
+	end = strchrnul(path, '/');
+	child = node->children;
+
+	while (child) {
+		if (!strncmp(child->subpath, path, end - path))
+			return lookup_recurse(child->node, end);
+
+		child = child->next;
+	}
+
+	return NULL;
+}
+
+struct object_node *_dbus_object_tree_lookup(struct _dbus_object_tree *tree,
+						const char *path)
+{
+	if (path[0] == '/' && path[1] == '\0')
+		return tree->root;
+
+	return lookup_recurse(tree->root, path);
+}
+
 bool _dbus_object_tree_register(struct _dbus_object_tree *tree,
 				const char *path, const char *interface,
 				void (*setup_func)(struct l_dbus_interface *),
