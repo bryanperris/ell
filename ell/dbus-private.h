@@ -58,6 +58,9 @@ struct _dbus_property *_dbus_interface_find_property(struct l_dbus_interface *i,
 struct _dbus_object_tree *_dbus_object_tree_new();
 void _dbus_object_tree_free(struct _dbus_object_tree *tree);
 
+struct object_node *_dbus_object_tree_makepath(struct _dbus_object_tree *tree,
+						const char *path);
+
 bool _dbus_object_tree_register(struct _dbus_object_tree *tree,
 				const char *path, const char *interface,
 				void (*setup_func)(struct l_dbus_interface *),

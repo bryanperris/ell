@@ -527,6 +527,47 @@ void _dbus_object_tree_free(struct _dbus_object_tree *tree)
 	l_free(tree);
 }
 
+static struct object_node *makepath_recurse(struct object_node *node,
+						const char *path)
+{
+	const char *end;
+	struct child_node *child;
+
+	if (*path == '\0')
+		return node;
+
+	path += 1;
+	end = strchrnul(path, '/');
+	child = node->children;
+
+	while (child) {
+		if (!strncmp(child->subpath, path, end - path))
+			goto done;
+
+		child = child->next;
+	}
+
+	child = l_malloc(sizeof(*child) + end - path + 1);
+	child->node = l_new(struct object_node, 1);
+	child->node->parent = node;
+	memcpy(child->subpath, path, end - path);
+	child->subpath[end-path] = '\0';
+	child->next = node->children;
+	node->children = child;
+
+done:
+	return makepath_recurse(child->node, end);
+}
+
+struct object_node *_dbus_object_tree_makepath(struct _dbus_object_tree *tree,
+						const char *path)
+{
+	if (path[0] == '/' && path[1] == '\0')
+		return tree->root;
+
+	return makepath_recurse(tree->root, path);
+}
+
 bool _dbus_object_tree_register(struct _dbus_object_tree *tree,
 				const char *path, const char *interface,
 				void (*setup_func)(struct l_dbus_interface *),
