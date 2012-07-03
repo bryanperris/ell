@@ -67,8 +67,15 @@ struct child_node {
 	char subpath[];
 };
 
+struct interface_instance {
+	struct l_dbus_interface *interface;
+	void *user_data;
+	void (*user_destroy) (void *);
+};
+
 struct object_node {
-	struct l_queue *interfaces;
+	struct object_node *parent;
+	struct l_queue *instances;
 	struct child_node *children;
 };
 
@@ -468,6 +475,14 @@ struct _dbus_property *_dbus_interface_find_property(struct l_dbus_interface *i,
 	return l_queue_find(i->properties, match_property, property);
 }
 
+static void interface_instance_free(struct interface_instance *instance)
+{
+	if (instance->user_destroy)
+		instance->user_destroy(instance->user_data);
+
+	l_free(instance);
+}
+
 struct _dbus_object_tree *_dbus_object_tree_new()
 {
 	struct _dbus_object_tree *tree;
@@ -479,13 +494,35 @@ struct _dbus_object_tree *_dbus_object_tree_new()
 	l_hashmap_set_compare_function(tree->interfaces,
 					(l_hashmap_compare_func_t)strcmp);
 
+	tree->root = l_new(struct object_node, 1);
+
 	return tree;
+}
+
+static void subtree_free(struct object_node *node)
+{
+	struct child_node *child;
+
+	while (node->children) {
+		child = node->children;
+		node->children = child->next;
+
+		subtree_free(child->node);
+		l_free(child);
+	}
+
+	l_queue_destroy(node->instances,
+			(l_queue_destroy_func_t) interface_instance_free);
+
+	l_free(node);
 }
 
 void _dbus_object_tree_free(struct _dbus_object_tree *tree)
 {
 	l_hashmap_destroy(tree->interfaces,
 			(l_hashmap_destroy_func_t) _dbus_interface_free);
+
+	subtree_free(tree->root);
 
 	l_free(tree);
 }
