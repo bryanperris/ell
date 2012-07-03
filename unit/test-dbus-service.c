@@ -30,7 +30,7 @@
 #include <ell/dbus-service.h>
 #include "ell/dbus-private.h"
 
-struct l_dbus_service *service;
+struct l_dbus_interface *interface;
 
 struct introspect_test {
 	const char *name;
@@ -109,7 +109,7 @@ static void test_introspect_method(const void *test_data)
 	struct l_string *buf;
 	char *xml;
 
-	method = _dbus_service_find_method(service, test->name);
+	method = _dbus_interface_find_method(interface, test->name);
 	assert(method);
 
 	buf = l_string_new(0);
@@ -127,7 +127,7 @@ static void test_introspect_signal(const void *test_data)
 	struct l_string *buf;
 	char *xml;
 
-	signal = _dbus_service_find_signal(service, test->name);
+	signal = _dbus_interface_find_signal(interface, test->name);
 	assert(signal);
 
 	buf = l_string_new(0);
@@ -145,7 +145,7 @@ static void test_introspect_property(const void *test_data)
 	struct l_string *buf;
 	char *xml;
 
-	property = _dbus_service_find_property(service, test->name);
+	property = _dbus_interface_find_property(interface, test->name);
 	assert(property);
 
 	buf = l_string_new(0);
@@ -163,7 +163,7 @@ static void test_introspect_interface(const void *test_data)
 	char *xml;
 
 	buf = l_string_new(0);
-	_dbus_service_introspection(service, buf);
+	_dbus_interface_introspection(interface, buf);
 	xml = l_string_free(buf, false);
 
 	assert(!strcmp(test->expected_xml, xml));
@@ -174,21 +174,21 @@ int main(int argc, char *argv[])
 {
 	int ret;
 
-	service = _dbus_service_new("org.freedesktop.SampleInterface",
-					NULL, NULL);
+	interface = _dbus_interface_new("org.freedesktop.SampleInterface");
 
 	l_test_init(&argc, &argv);
 
-	l_dbus_service_method(service, "Frobate",
-				L_DBUS_SERVICE_METHOD_FLAG_DEPRECATED,
+	l_dbus_interface_method(interface, "Frobate",
+				L_DBUS_METHOD_FLAG_DEPRECATED,
 				NULL, "sa{us}", "i", "bar", "baz", "foo");
-	l_dbus_service_method(service, "Bazify", 0, NULL, "v", "(iiu)",
+	l_dbus_interface_method(interface, "Bazify", 0, NULL, "v", "(iiu)",
 				"bar", "bar");
-	l_dbus_service_method(service, "Mogrify", 0, NULL, "", "(iiav)", "bar");
+	l_dbus_interface_method(interface, "Mogrify", 0, NULL, "",
+				"(iiav)", "bar");
 
-	l_dbus_service_signal(service, "Changed", 0, "b", "new_value");
+	l_dbus_interface_signal(interface, "Changed", 0, "b", "new_value");
 
-	l_dbus_service_rw_property(service, "Bar", "y");
+	l_dbus_interface_rw_property(interface, "Bar", "y");
 
 	l_test_add("Test Frobate Introspection", test_introspect_method,
 			&frobate_test);
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 
 	ret = l_test_run();
 
-	_dbus_service_free(service);
+	_dbus_interface_free(interface);
 
 	return ret;
 }
