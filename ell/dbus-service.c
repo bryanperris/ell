@@ -55,10 +55,10 @@ struct _dbus_property {
 };
 
 struct l_dbus_interface {
-	char *name;
 	struct l_queue *methods;
 	struct l_queue *signals;
 	struct l_queue *properties;
+	char name[];
 };
 
 struct child_node {
@@ -397,12 +397,13 @@ struct l_dbus_interface *_dbus_interface_new(const char *name)
 {
 	struct l_dbus_interface *interface;
 
-	interface = l_new(struct l_dbus_interface, 1);
+	interface = l_malloc(sizeof(*interface) + strlen(name) + 1);
 
-	interface->name = l_strdup(name);
 	interface->methods = l_queue_new();
 	interface->signals = l_queue_new();
 	interface->properties = l_queue_new();
+
+	strcpy(interface->name, name);
 
 	return interface;
 }
