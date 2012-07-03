@@ -62,6 +62,7 @@ struct object_node *_dbus_object_tree_makepath(struct _dbus_object_tree *tree,
 						const char *path);
 struct object_node *_dbus_object_tree_lookup(struct _dbus_object_tree *tree,
 						const char *path);
+void _dbus_object_tree_prune_node(struct object_node *node);
 
 bool _dbus_object_tree_register(struct _dbus_object_tree *tree,
 				const char *path, const char *interface,

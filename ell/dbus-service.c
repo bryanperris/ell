@@ -600,6 +600,35 @@ struct object_node *_dbus_object_tree_lookup(struct _dbus_object_tree *tree,
 	return lookup_recurse(tree->root, path);
 }
 
+void _dbus_object_tree_prune_node(struct object_node *node)
+{
+	struct object_node *parent = node->parent;
+	struct child_node *p = NULL, *c;
+
+	while (parent) {
+		for (c = parent->children, p = NULL; c; p = c, c = c->next) {
+			if (c->node != node)
+				continue;
+
+			if (p)
+				p->next = c->next;
+			else
+				parent->children = c->next;
+
+			subtree_free(c->node);
+			l_free(c);
+
+			break;
+		}
+
+		if (parent->children != NULL)
+			return;
+
+		node = parent;
+		parent = node->parent;
+	}
+}
+
 bool _dbus_object_tree_register(struct _dbus_object_tree *tree,
 				const char *path, const char *interface,
 				void (*setup_func)(struct l_dbus_interface *),
