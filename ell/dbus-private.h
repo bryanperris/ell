@@ -20,7 +20,7 @@
  */
 
 struct l_string;
-struct l_dbus_service;
+struct l_dbus_interface;
 struct _dbus_method;
 struct _dbus_signal;
 struct _dbus_property;
@@ -42,19 +42,17 @@ void _dbus_signal_introspection(struct _dbus_signal *info,
 					struct l_string *buf);
 void _dbus_property_introspection(struct _dbus_property *info,
 						struct l_string *buf);
-void _dbus_service_introspection(struct l_dbus_service *service,
+void _dbus_interface_introspection(struct l_dbus_interface *interface,
 						struct l_string *buf);
 
-struct l_dbus_service *_dbus_service_new(const char *interface, void *user_data,
-					void (*destroy) (void *));
-void _dbus_service_free(struct l_dbus_service *service);
+struct l_dbus_interface *_dbus_interface_new(const char *interface);
+void _dbus_interface_free(struct l_dbus_interface *interface);
 
-struct _dbus_method *_dbus_service_find_method(struct l_dbus_service *service,
-						const char *method);
-struct _dbus_signal *_dbus_service_find_signal(struct l_dbus_service *service,
-						const char *signal);
-struct _dbus_property *_dbus_service_find_property(
-						struct l_dbus_service *service,
+struct _dbus_method *_dbus_interface_find_method(struct l_dbus_interface *i,
+							const char *method);
+struct _dbus_signal *_dbus_interface_find_signal(struct l_dbus_interface *i,
+							const char *signal);
+struct _dbus_property *_dbus_interface_find_property(struct l_dbus_interface *i,
 						const char *property);
 
 struct _dbus_object_tree *_dbus_object_tree_new();
@@ -62,7 +60,7 @@ void _dbus_object_tree_free(struct _dbus_object_tree *tree);
 
 bool _dbus_object_tree_register(struct _dbus_object_tree *tree,
 				const char *path, const char *interface,
-				void (*setup_func)(struct l_dbus_service *),
+				void (*setup_func)(struct l_dbus_interface *),
 				void *user_data, void (*destroy) (void *));
 bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
 					const char *path,

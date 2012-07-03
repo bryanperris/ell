@@ -30,42 +30,45 @@ extern "C" {
 #endif
 
 struct l_dbus;
-struct l_dbus_service;
+struct l_dbus_interface;
 struct l_dbus_message;
 
-enum l_dbus_service_method_flag {
-	L_DBUS_SERVICE_METHOD_FLAG_DEPRECATED =	1,
-	L_DBUS_SERVICE_METHOD_FLAG_NOREPLY =	2,
-	L_DBUS_SERVICE_METHOD_FLAG_ASYNC =	4,
+enum l_dbus_method_flag {
+	L_DBUS_METHOD_FLAG_DEPRECATED =	1,
+	L_DBUS_METHOD_FLAG_NOREPLY =	2,
+	L_DBUS_METHOD_FLAG_ASYNC =	4,
 };
 
-enum l_dbus_service_signal_flag {
-	L_DBUS_SERVICE_SIGNAL_FLAG_DEPRECATED =	1,
+enum l_dbus_signal_flag {
+	L_DBUS_SIGNAL_FLAG_DEPRECATED =	1,
 };
 
-enum l_dbus_service_property_flag {
-	L_DBUS_SERVICE_PROPERTY_FLAG_DEPRECATED = 1,
-	L_DBUS_SERVICE_PROPERTY_FLAG_WRITABLE	= 2,
+enum l_dbus_property_flag {
+	L_DBUS_PROPERTY_FLAG_DEPRECATED = 1,
+	L_DBUS_PROPERTY_FLAG_WRITABLE	= 2,
 };
 
-typedef void (*l_dbus_service_method_cb_t) (struct l_dbus *,
+typedef void (*l_dbus_interface_method_cb_t) (struct l_dbus *,
 						struct l_dbus_message *message,
 						void *user_data);
 
-bool l_dbus_service_method(struct l_dbus_service *service, const char *name,
-				uint32_t flags, l_dbus_service_method_cb_t cb,
+bool l_dbus_interface_method(struct l_dbus_interface *interface,
+				const char *name, uint32_t flags,
+				l_dbus_interface_method_cb_t cb,
 				const char *return_sig, const char *param_sig,
 				...);
 
-bool l_dbus_service_signal(struct l_dbus_service *service, const char *name,
-				uint32_t flags, const char *signature, ...);
+bool l_dbus_interface_signal(struct l_dbus_interface *interface,
+				const char *name, uint32_t flags,
+				const char *signature, ...);
 
-bool l_dbus_service_property(struct l_dbus_service *service, const char *name,
-				uint32_t flags, const char *signature);
-bool l_dbus_service_ro_property(struct l_dbus_service *service,
+bool l_dbus_interface_property(struct l_dbus_interface *interface,
+				const char *name, uint32_t flags,
+				const char *signature);
+bool l_dbus_interface_ro_property(struct l_dbus_interface *interface,
 					const char *name,
 					const char *signature);
-bool l_dbus_service_rw_property(struct l_dbus_service *service,
+bool l_dbus_interface_rw_property(struct l_dbus_interface *interface,
 					const char *name,
 					const char *signature);
 

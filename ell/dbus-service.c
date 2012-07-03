@@ -36,7 +36,7 @@
 #include "private.h"
 
 struct _dbus_method {
-	l_dbus_service_method_cb_t cb;
+	l_dbus_interface_method_cb_t cb;
 	uint32_t flags;
 	unsigned char name_len;
 	char metainfo[];
@@ -54,13 +54,11 @@ struct _dbus_property {
 	char metainfo[];
 };
 
-struct l_dbus_service {
-	char *interface;
+struct l_dbus_interface {
+	char *name;
 	struct l_queue *methods;
 	struct l_queue *signals;
 	struct l_queue *properties;
-	void *user_data;
-	void (*user_destroy) (void *data);
 };
 
 struct child_node {
@@ -118,12 +116,12 @@ void _dbus_method_introspection(struct _dbus_method *info,
 		offset += strlen(pname) + 1;
 	}
 
-	if (info->flags & L_DBUS_SERVICE_METHOD_FLAG_DEPRECATED)
+	if (info->flags & L_DBUS_METHOD_FLAG_DEPRECATED)
 		l_string_append(buf, "\t\t\t<annotation name=\""
 				"org.freedesktop.DBus.Deprecated\" "
 				"value=\"true\"/>\n");
 
-	if (info->flags & L_DBUS_SERVICE_METHOD_FLAG_NOREPLY)
+	if (info->flags & L_DBUS_METHOD_FLAG_NOREPLY)
 		l_string_append(buf, "\t\t\t<annotation name=\""
 				"org.freedesktop.DBus.Method.NoReply\" "
 				"value=\"true\"/>\n");
@@ -156,7 +154,7 @@ void _dbus_signal_introspection(struct _dbus_signal *info,
 		offset += strlen(pname) + 1;
 	}
 
-	if (info->flags & L_DBUS_SERVICE_SIGNAL_FLAG_DEPRECATED)
+	if (info->flags & L_DBUS_SIGNAL_FLAG_DEPRECATED)
 		l_string_append(buf, "\t\t\t<annotation name=\""
 				"org.freedesktop.DBus.Deprecated\" "
 				"value=\"true\"/>\n");
@@ -173,12 +171,12 @@ void _dbus_property_introspection(struct _dbus_property *info,
 	l_string_append_printf(buf, "\t\t<property name=\"%s\" type=\"%s\" ",
 				info->metainfo, signature);
 
-	if (info->flags & L_DBUS_SERVICE_PROPERTY_FLAG_WRITABLE)
+	if (info->flags & L_DBUS_PROPERTY_FLAG_WRITABLE)
 		l_string_append(buf, "access=\"readwrite\"");
 	else
 		l_string_append(buf, "access=\"read\"");
 
-	if (info->flags & L_DBUS_SERVICE_METHOD_FLAG_DEPRECATED) {
+	if (info->flags & L_DBUS_METHOD_FLAG_DEPRECATED) {
 		l_string_append(buf, ">\n");
 		l_string_append(buf, "\t\t\t<annotation name=\""
 				"org.freedesktop.DBus.Deprecated\" "
@@ -188,17 +186,17 @@ void _dbus_property_introspection(struct _dbus_property *info,
 		l_string_append(buf, "/>\n");
 }
 
-void _dbus_service_introspection(struct l_dbus_service *service,
+void _dbus_interface_introspection(struct l_dbus_interface *interface,
 						struct l_string *buf)
 {
 	l_string_append_printf(buf, "\t<interface name=\"%s\">\n",
-				service->interface);
+				interface->name);
 
-	l_queue_foreach(service->methods,
+	l_queue_foreach(interface->methods,
 		(l_queue_foreach_func_t) _dbus_method_introspection, buf);
-	l_queue_foreach(service->signals,
+	l_queue_foreach(interface->signals,
 		(l_queue_foreach_func_t) _dbus_signal_introspection, buf);
-	l_queue_foreach(service->properties,
+	l_queue_foreach(interface->properties,
 		(l_queue_foreach_func_t) _dbus_property_introspection, buf);
 
 	l_string_append(buf, "\t</interface>\n");
@@ -238,9 +236,9 @@ static bool size_params(const char *signature, va_list args, unsigned int *len)
 	return true;
 }
 
-LIB_EXPORT bool l_dbus_service_method(struct l_dbus_service *service,
+LIB_EXPORT bool l_dbus_interface_method(struct l_dbus_interface *interface,
 					const char *name, uint32_t flags,
-					l_dbus_service_method_cb_t cb,
+					l_dbus_interface_method_cb_t cb,
 					const char *return_sig,
 					const char *param_sig, ...)
 {
@@ -290,7 +288,7 @@ LIB_EXPORT bool l_dbus_service_method(struct l_dbus_service *service,
 	p = copy_params(p, param_sig, args);
 	va_end(args);
 
-	l_queue_push_tail(service->methods, info);
+	l_queue_push_tail(interface->methods, info);
 
 	return true;
 
@@ -299,7 +297,7 @@ error:
 	return false;
 }
 
-LIB_EXPORT bool l_dbus_service_signal(struct l_dbus_service *service,
+LIB_EXPORT bool l_dbus_interface_signal(struct l_dbus_interface *interface,
 					const char *name, uint32_t flags,
 					const char *signature, ...)
 {
@@ -341,12 +339,12 @@ LIB_EXPORT bool l_dbus_service_signal(struct l_dbus_service *service,
 	p = copy_params(p, signature, args);
 	va_end(args);
 
-	l_queue_push_tail(service->signals, info);
+	l_queue_push_tail(interface->signals, info);
 
 	return true;
 }
 
-LIB_EXPORT bool l_dbus_service_property(struct l_dbus_service *service,
+LIB_EXPORT bool l_dbus_interface_property(struct l_dbus_interface *interface,
 					const char *name, uint32_t flags,
 					const char *signature)
 {
@@ -374,56 +372,48 @@ LIB_EXPORT bool l_dbus_service_property(struct l_dbus_service *service,
 	p = stpcpy(info->metainfo, name) + 1;
 	strcpy(p, signature);
 
-	l_queue_push_tail(service->properties, info);
+	l_queue_push_tail(interface->properties, info);
 
 	return true;
 }
 
-LIB_EXPORT bool l_dbus_service_ro_property(struct l_dbus_service *service,
+LIB_EXPORT bool l_dbus_interface_ro_property(struct l_dbus_interface *interface,
 						const char *name,
 						const char *signature)
 {
-	return l_dbus_service_property(service, name, 0, signature);
+	return l_dbus_interface_property(interface, name, 0, signature);
 }
 
-LIB_EXPORT bool l_dbus_service_rw_property(struct l_dbus_service *service,
+LIB_EXPORT bool l_dbus_interface_rw_property(struct l_dbus_interface *interface,
 						const char *name,
 						const char *signature)
 {
-	return l_dbus_service_property(service, name,
-					L_DBUS_SERVICE_PROPERTY_FLAG_WRITABLE,
+	return l_dbus_interface_property(interface, name,
+					L_DBUS_PROPERTY_FLAG_WRITABLE,
 					signature);
 }
 
-struct l_dbus_service *_dbus_service_new(const char *interface, void *user_data,
-					void (*destroy) (void *))
+struct l_dbus_interface *_dbus_interface_new(const char *name)
 {
-	struct l_dbus_service *service;
+	struct l_dbus_interface *interface;
 
-	service = l_new(struct l_dbus_service, 1);
+	interface = l_new(struct l_dbus_interface, 1);
 
-	service->interface = l_strdup(interface);
+	interface->name = l_strdup(name);
+	interface->methods = l_queue_new();
+	interface->signals = l_queue_new();
+	interface->properties = l_queue_new();
 
-	service->methods = l_queue_new();
-	service->signals = l_queue_new();
-	service->properties = l_queue_new();
-
-	service->user_data = user_data;
-	service->user_destroy = destroy;
-
-	return service;
+	return interface;
 }
 
-void _dbus_service_free(struct l_dbus_service *service)
+void _dbus_interface_free(struct l_dbus_interface *interface)
 {
-	if (service->user_destroy)
-		service->user_destroy(service->user_data);
+	l_queue_destroy(interface->methods, l_free);
+	l_queue_destroy(interface->signals, l_free);
+	l_queue_destroy(interface->properties, l_free);
 
-	l_queue_destroy(service->methods, l_free);
-	l_queue_destroy(service->signals, l_free);
-	l_queue_destroy(service->properties, l_free);
-
-	l_free(service);
+	l_free(interface);
 }
 
 static bool match_method(const void *a, const void *b)
@@ -437,10 +427,10 @@ static bool match_method(const void *a, const void *b)
 	return false;
 }
 
-struct _dbus_method *_dbus_service_find_method(struct l_dbus_service *service,
-						const char *method)
+struct _dbus_method *_dbus_interface_find_method(struct l_dbus_interface *i,
+							const char *method)
 {
-	return l_queue_find(service->methods, match_method, method);
+	return l_queue_find(i->methods, match_method, method);
 }
 
 static bool match_signal(const void *a, const void *b)
@@ -454,10 +444,10 @@ static bool match_signal(const void *a, const void *b)
 	return false;
 }
 
-struct _dbus_signal *_dbus_service_find_signal(struct l_dbus_service *service,
-						const char *signal)
+struct _dbus_signal *_dbus_interface_find_signal(struct l_dbus_interface *i,
+							const char *signal)
 {
-	return l_queue_find(service->signals, match_signal, signal);
+	return l_queue_find(i->signals, match_signal, signal);
 }
 
 static bool match_property(const void *a, const void *b)
@@ -471,11 +461,10 @@ static bool match_property(const void *a, const void *b)
 	return false;
 }
 
-struct _dbus_property *_dbus_service_find_property(
-						struct l_dbus_service *service,
-						const char *property)
+struct _dbus_property *_dbus_interface_find_property(struct l_dbus_interface *i,
+							const char *property)
 {
-	return l_queue_find(service->properties, match_property, property);
+	return l_queue_find(i->properties, match_property, property);
 }
 
 struct _dbus_object_tree *_dbus_object_tree_new()
@@ -495,14 +484,14 @@ struct _dbus_object_tree *_dbus_object_tree_new()
 void _dbus_object_tree_free(struct _dbus_object_tree *tree)
 {
 	l_hashmap_destroy(tree->interfaces,
-				(l_hashmap_destroy_func_t) _dbus_service_free);
+			(l_hashmap_destroy_func_t) _dbus_interface_free);
 
 	l_free(tree);
 }
 
 bool _dbus_object_tree_register(struct _dbus_object_tree *tree,
 				const char *path, const char *interface,
-				void (*setup_func)(struct l_dbus_service *),
+				void (*setup_func)(struct l_dbus_interface *),
 				void *user_data, void (*destroy) (void *))
 {
 	return false;
