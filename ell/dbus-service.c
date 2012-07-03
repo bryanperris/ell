@@ -81,6 +81,7 @@ struct object_node {
 
 struct _dbus_object_tree {
 	struct l_hashmap *interfaces;
+	struct l_hashmap *objects;
 	struct object_node *root;
 };
 
@@ -494,6 +495,8 @@ struct _dbus_object_tree *_dbus_object_tree_new()
 	l_hashmap_set_compare_function(tree->interfaces,
 					(l_hashmap_compare_func_t)strcmp);
 
+	tree->objects = l_hashmap_string_new();
+
 	tree->root = l_new(struct object_node, 1);
 
 	return tree;
@@ -521,6 +524,7 @@ void _dbus_object_tree_free(struct _dbus_object_tree *tree)
 {
 	l_hashmap_destroy(tree->interfaces,
 			(l_hashmap_destroy_func_t) _dbus_interface_free);
+	l_hashmap_destroy(tree->objects, l_free);
 
 	subtree_free(tree->root);
 
