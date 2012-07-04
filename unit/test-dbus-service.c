@@ -27,10 +27,13 @@
 #include <stdbool.h>
 
 #include <ell/ell.h>
+#include <ell/dbus.h>
 #include <ell/dbus-service.h>
 #include "ell/dbus-private.h"
 
 struct l_dbus_interface *interface;
+static bool callback_called = false;
+static char *dummy_data = "Foobar";
 
 struct introspect_test {
 	const char *name;
@@ -224,9 +227,17 @@ static void test_dbus_object_tree(const void *test_data)
 	_dbus_object_tree_free(tree);
 }
 
+static void get_modems_callback(struct l_dbus *dbus,
+					struct l_dbus_message *message,
+					void *user_data)
+{
+	assert(user_data == dummy_data);
+	callback_called = true;
+}
+
 static void build_manager_interface(struct l_dbus_interface *interface)
 {
-	l_dbus_interface_method(interface, "GetModems", 0, NULL,
+	l_dbus_interface_method(interface, "GetModems", 0, get_modems_callback,
 				"a(oa{sv})", "", "modems");
 	l_dbus_interface_signal(interface, "ModemAdded", 0,
 				"oa{sv}", "path", "properties");
@@ -279,6 +290,28 @@ static void test_dbus_object_tree_introspection(const void *test_data)
 	_dbus_object_tree_free(tree);
 }
 
+static void test_dbus_object_tree_dispatch(const void *test_data)
+{
+	struct _dbus_object_tree *tree;
+	struct l_dbus_message *message;
+
+	tree = _dbus_object_tree_new();
+
+	_dbus_object_tree_register(tree, "/", "org.ofono.Manager",
+					build_manager_interface,
+					dummy_data, NULL);
+
+	message = l_dbus_message_new_method_call("org.ofono", "/",
+						"org.ofono.Manager",
+						"GetModems");
+	l_dbus_message_set_arguments(message, "");
+
+	_dbus_object_tree_dispatch(tree, NULL, message);
+	assert(callback_called);
+
+	_dbus_object_tree_free(tree);
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -320,6 +353,10 @@ int main(int argc, char *argv[])
 
 	l_test_add("_dbus_object_tree Introspection",
 					test_dbus_object_tree_introspection,
+					NULL);
+
+	l_test_add("_dbus_object_tree Dispatcher",
+					test_dbus_object_tree_dispatch,
 					NULL);
 
 	ret = l_test_run();
