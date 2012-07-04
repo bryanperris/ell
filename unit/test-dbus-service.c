@@ -40,9 +40,9 @@ struct introspect_test {
 static const struct introspect_test frobate_test = {
 	.name = "Frobate",
 	.expected_xml = "\t\t<method name=\"Frobate\">\n"
+		"\t\t\t<arg name=\"foo\" type=\"i\" direction=\"in\"/>\n"
 		"\t\t\t<arg name=\"bar\" type=\"s\" direction=\"out\"/>\n"
 		"\t\t\t<arg name=\"baz\" type=\"a{us}\" direction=\"out\"/>\n"
-		"\t\t\t<arg name=\"foo\" type=\"i\" direction=\"in\"/>\n"
 		"\t\t\t<annotation name=\"org.freedesktop.DBus.Deprecated\" "
 		"value=\"true\"/>\n"
 		"\t\t</method>\n",
@@ -51,8 +51,8 @@ static const struct introspect_test frobate_test = {
 static const struct introspect_test bazify_test = {
 	.name = "Bazify",
 	.expected_xml = "\t\t<method name=\"Bazify\">\n"
-		"\t\t\t<arg name=\"bar\" type=\"v\" direction=\"out\"/>\n"
 		"\t\t\t<arg name=\"bar\" type=\"(iiu)\" direction=\"in\"/>\n"
+		"\t\t\t<arg name=\"bar\" type=\"v\" direction=\"out\"/>\n"
 		"\t\t</method>\n",
 };
 
@@ -81,15 +81,15 @@ static const struct introspect_test interface_test = {
 	.expected_xml =
 		"\t<interface name=\"org.freedesktop.SampleInterface\">\n"
 		"\t\t<method name=\"Frobate\">\n"
+		"\t\t\t<arg name=\"foo\" type=\"i\" direction=\"in\"/>\n"
 		"\t\t\t<arg name=\"bar\" type=\"s\" direction=\"out\"/>\n"
 		"\t\t\t<arg name=\"baz\" type=\"a{us}\" direction=\"out\"/>\n"
-		"\t\t\t<arg name=\"foo\" type=\"i\" direction=\"in\"/>\n"
 		"\t\t\t<annotation name=\"org.freedesktop.DBus.Deprecated\" "
 		"value=\"true\"/>\n"
 		"\t\t</method>\n"
 		"\t\t<method name=\"Bazify\">\n"
-		"\t\t\t<arg name=\"bar\" type=\"v\" direction=\"out\"/>\n"
 		"\t\t\t<arg name=\"bar\" type=\"(iiu)\" direction=\"in\"/>\n"
+		"\t\t\t<arg name=\"bar\" type=\"v\" direction=\"out\"/>\n"
 		"\t\t</method>\n"
 		"\t\t<method name=\"Mogrify\">\n"
 		"\t\t\t<arg name=\"bar\" type=\"(iiav)\" direction=\"in\"/>\n"
