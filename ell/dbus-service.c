@@ -638,7 +638,55 @@ bool _dbus_object_tree_register(struct _dbus_object_tree *tree,
 				void (*setup_func)(struct l_dbus_interface *),
 				void *user_data, void (*destroy) (void *))
 {
-	return false;
+	struct object_node *object;
+	struct l_dbus_interface *dbi;
+	const struct l_queue_entry *entry;
+	struct interface_instance *instance;
+
+	if (!_dbus_valid_interface(interface))
+		return false;
+
+	if (!_dbus_valid_object_path(path))
+		return false;
+
+	object = l_hashmap_lookup(tree->objects, path);
+	if (!object) {
+		object = _dbus_object_tree_makepath(tree, path);
+		l_hashmap_insert(tree->objects, path, object);
+	}
+
+	/*
+	 * Check to make sure we do not have this interface already
+	 * registered for this object
+	 */
+	entry = l_queue_get_entries(object->instances);
+	while (entry) {
+		instance = entry->data;
+
+		if (!strcmp(instance->interface->name, interface))
+			return false;
+
+		entry = entry->next;
+	}
+
+	dbi = l_hashmap_lookup(tree->interfaces, interface);
+	if (!dbi) {
+		dbi = _dbus_interface_new(interface);
+		setup_func(dbi);
+		l_hashmap_insert(tree->interfaces, dbi->name, dbi);
+	}
+
+	instance = l_new(struct interface_instance, 1);
+	instance->interface = dbi;
+	instance->user_destroy = destroy;
+	instance->user_data = user_data;
+
+	if (!object->instances)
+		object->instances = l_queue_new();
+
+	l_queue_push_tail(object->instances, instance);
+
+	return true;
 }
 
 bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
