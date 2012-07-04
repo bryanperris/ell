@@ -78,6 +78,7 @@ const char *l_dbus_message_get_interface(struct l_dbus_message *message);
 const char *l_dbus_message_get_member(struct l_dbus_message *message);
 const char *l_dbus_message_get_destination(struct l_dbus_message *message);
 const char *l_dbus_message_get_sender(struct l_dbus_message *message);
+const char *l_dbus_message_get_signature(struct l_dbus_message *message);
 
 typedef void (*l_dbus_message_func_t) (struct l_dbus_message *message,
 							void *user_data);
