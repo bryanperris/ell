@@ -31,6 +31,7 @@
 #include "queue.h"
 #include "string.h"
 #include "hashmap.h"
+#include "dbus.h"
 #include "dbus-service.h"
 #include "dbus-private.h"
 #include "private.h"
@@ -772,4 +773,47 @@ void _dbus_object_tree_introspect(struct _dbus_object_tree *tree,
 	}
 
 	l_string_append(buf, "</node>\n");
+}
+
+bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
+					struct l_dbus *dbus,
+					struct l_dbus_message *message)
+{
+	const char *path;
+	const char *interface;
+	const char *member;
+	const char *msg_sig;
+	const char *sig;
+	struct object_node *node;
+	struct interface_instance *instance;
+	struct _dbus_method *method;
+
+	path = l_dbus_message_get_path(message);
+
+	node = l_hashmap_lookup(tree->objects, path);
+	if (!node)
+		return false;
+
+	interface = l_dbus_message_get_interface(message);
+
+	instance = l_queue_find(node->instances,
+					match_interface_instance, interface);
+	if (!instance)
+		return false;
+
+	member = l_dbus_message_get_member(message);
+
+	method = _dbus_interface_find_method(instance->interface, member);
+	if (!method)
+		return false;
+
+	msg_sig = l_dbus_message_get_signature(message);
+	sig = method->metainfo + method->name_len + 1;
+
+	if (strcmp(msg_sig, sig))
+		return false;
+
+	method->cb(dbus, message, instance->user_data);
+
+	return true;
 }

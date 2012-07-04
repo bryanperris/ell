@@ -24,6 +24,7 @@ struct l_dbus_interface;
 struct _dbus_method;
 struct _dbus_signal;
 struct _dbus_property;
+struct l_dbus;
 
 struct l_dbus_message *dbus_message_build(const void *data, size_t size);
 bool dbus_message_compare(struct l_dbus_message *message,
@@ -74,3 +75,6 @@ bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
 
 void _dbus_object_tree_introspect(struct _dbus_object_tree *tree,
 					const char *path, struct l_string *buf);
+bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
+					struct l_dbus *dbus,
+					struct l_dbus_message *message);
