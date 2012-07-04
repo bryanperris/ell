@@ -114,7 +114,7 @@ void _dbus_method_introspection(struct _dbus_method *info,
 		pname = info->metainfo + offset;
 
 		l_string_append_printf(buf, "\t\t\t<arg name=\"%s\" "
-					"type=\"%.*s\" direction=\"out\"/>\n",
+					"type=\"%.*s\" direction=\"in\"/>\n",
 					pname, (int) (end - sig + 1), sig);
 		sig = end;
 		offset += strlen(pname) + 1;
@@ -128,7 +128,7 @@ void _dbus_method_introspection(struct _dbus_method *info,
 		pname = info->metainfo + offset;
 
 		l_string_append_printf(buf, "\t\t\t<arg name=\"%s\" "
-					"type=\"%.*s\" direction=\"in\"/>\n",
+					"type=\"%.*s\" direction=\"out\"/>\n",
 					pname, (int) (end - sig + 1), sig);
 		sig = end;
 		offset += strlen(pname) + 1;
@@ -261,7 +261,8 @@ LIB_EXPORT bool l_dbus_interface_method(struct l_dbus_interface *interface,
 					const char *param_sig, ...)
 {
 	va_list args;
-	unsigned int metainfo_len;
+	unsigned int return_info_len;
+	unsigned int param_info_len;
 	struct _dbus_method *info;
 	char *p;
 
@@ -278,32 +279,40 @@ LIB_EXPORT bool l_dbus_interface_method(struct l_dbus_interface *interface,
 		return false;
 
 	/* Pre-calculate the needed meta-info length */
-	metainfo_len = strlen(name) + 1;
-	metainfo_len += strlen(return_sig) + 1;
-	metainfo_len += strlen(param_sig) + 1;
+	return_info_len = strlen(return_sig) + 1;
+	param_info_len = strlen(param_sig) + 1;
 
 	va_start(args, param_sig);
 
-	if (!size_params(return_sig, args, &metainfo_len))
+	if (!size_params(return_sig, args, &return_info_len))
 		goto error;
 
-	if (!size_params(param_sig, args, &metainfo_len))
+	if (!size_params(param_sig, args, &param_info_len))
 		goto error;
 
 	va_end(args);
 
-	info = l_malloc(sizeof(*info) + metainfo_len);
+	info = l_malloc(sizeof(*info) + return_info_len +
+					param_info_len + strlen(name) + 1);
 	info->cb = cb;
 	info->flags = flags;
 	info->name_len = strlen(name);
-
-	p = stpcpy(info->metainfo, name) + 1;
+	strcpy(info->metainfo, name);
 
 	va_start(args, param_sig);
+
+	/*
+	 * We store param signature + parameter names first, to speed up
+	 * lookups during the message dispatch procedures.
+	 */
+	p = info->metainfo + info->name_len + param_info_len + 1;
 	p = stpcpy(p, return_sig) + 1;
 	p = copy_params(p, return_sig, args);
+
+	p = info->metainfo + info->name_len + 1;
 	p = stpcpy(p, param_sig) + 1;
 	p = copy_params(p, param_sig, args);
+
 	va_end(args);
 
 	l_queue_push_tail(interface->methods, info);
