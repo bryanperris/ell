@@ -494,6 +494,17 @@ static void interface_instance_free(struct interface_instance *instance)
 	l_free(instance);
 }
 
+static bool match_interface_instance(const void *a, const void *b)
+{
+	const struct interface_instance *instance = a;
+	const char *name = b;
+
+	if (!strcmp(instance->interface->name, name))
+		return true;
+
+	return false;
+}
+
 struct _dbus_object_tree *_dbus_object_tree_new()
 {
 	struct _dbus_object_tree *tree;
@@ -703,7 +714,21 @@ bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
 					const char *path,
 					const char *interface)
 {
-	return false;
+	struct object_node *node;
+	bool r;
+
+	node = l_hashmap_lookup(tree->objects, path);
+	if (!node)
+		return false;
+
+	r = l_queue_remove_if(node->instances,
+			match_interface_instance, interface,
+			(l_queue_destroy_func_t) interface_instance_free);
+
+	if (l_queue_isempty(node->instances) && !node->children)
+		_dbus_object_tree_prune_node(node);
+
+	return r;
 }
 
 static void generate_interface_instance(void *data, void *user)
