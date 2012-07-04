@@ -35,6 +35,16 @@
 #include "dbus-private.h"
 #include "private.h"
 
+#define XML_ID "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+#define XML_DTD "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd"
+#define XML_HEAD "<!DOCTYPE node PUBLIC \""XML_ID"\"\n\""XML_DTD"\">\n"
+
+static const char *static_introspectable =
+		"\t<interface name=\"org.freedesktop.DBus.Introspectable\">\n"
+		"\t\t<method name=\"Introspect\">\n"
+		"\t\t\t<arg name=\"xml\" type=\"s\" direction=\"out\"/>\n"
+		"\t\t</method>\n\t</interface>\n";
+
 struct _dbus_method {
 	l_dbus_interface_method_cb_t cb;
 	uint32_t flags;
@@ -694,4 +704,38 @@ bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
 					const char *interface)
 {
 	return false;
+}
+
+static void generate_interface_instance(void *data, void *user)
+{
+	struct interface_instance *instance = data;
+	struct l_string *buf = user;
+
+	_dbus_interface_introspection(instance->interface, buf);
+}
+
+void _dbus_object_tree_introspect(struct _dbus_object_tree *tree,
+					const char *path, struct l_string *buf)
+{
+	struct object_node *node;
+	struct child_node *child;
+
+	node = l_hashmap_lookup(tree->objects, path);
+	if (!node)
+		node = _dbus_object_tree_lookup(tree, path);
+
+	l_string_append(buf, XML_HEAD);
+	l_string_append(buf, "<node>\n");
+
+	if (node) {
+		l_string_append(buf, static_introspectable);
+		l_queue_foreach(node->instances,
+					generate_interface_instance, buf);
+
+		for (child = node->children; child; child = child->next)
+			l_string_append_printf(buf, "\t<node name=\"%s\"/>\n",
+						child->subpath);
+	}
+
+	l_string_append(buf, "</node>\n");
 }

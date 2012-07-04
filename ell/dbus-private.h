@@ -71,3 +71,6 @@ bool _dbus_object_tree_register(struct _dbus_object_tree *tree,
 bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
 					const char *path,
 					const char *interface);
+
+void _dbus_object_tree_introspect(struct _dbus_object_tree *tree,
+					const char *path, struct l_string *buf);
