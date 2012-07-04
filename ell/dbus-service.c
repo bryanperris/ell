@@ -789,25 +789,40 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 	struct _dbus_method *method;
 
 	path = l_dbus_message_get_path(message);
+	interface = l_dbus_message_get_interface(message);
+	member = l_dbus_message_get_member(message);
+	msg_sig = l_dbus_message_get_signature(message);
+
+	if (!strcmp(interface, "org.freedesktop.DBus.Introspectable") &&
+			!strcmp(member, "Introspect") &&
+			!strcmp(msg_sig, "s")) {
+		struct l_string *buf;
+		char *xml;
+
+		buf = l_string_new(0);
+		_dbus_object_tree_introspect(tree, path, buf);
+		xml = l_string_free(buf, false);
+
+		/* TODO: Build the method return message */
+
+		l_free(xml);
+
+		return true;
+	}
 
 	node = l_hashmap_lookup(tree->objects, path);
 	if (!node)
 		return false;
-
-	interface = l_dbus_message_get_interface(message);
 
 	instance = l_queue_find(node->instances,
 					match_interface_instance, interface);
 	if (!instance)
 		return false;
 
-	member = l_dbus_message_get_member(message);
-
 	method = _dbus_interface_find_method(instance->interface, member);
 	if (!method)
 		return false;
 
-	msg_sig = l_dbus_message_get_signature(message);
 	sig = method->metainfo + method->name_len + 1;
 
 	if (strcmp(msg_sig, sig))
