@@ -224,6 +224,61 @@ static void test_dbus_object_tree(const void *test_data)
 	_dbus_object_tree_free(tree);
 }
 
+static void build_manager_interface(struct l_dbus_interface *interface)
+{
+	l_dbus_interface_method(interface, "GetModems", 0, NULL,
+				"a(oa{sv})", "", "modems");
+	l_dbus_interface_signal(interface, "ModemAdded", 0,
+				"oa{sv}", "path", "properties");
+	l_dbus_interface_signal(interface, "ModemRemoved", 0,
+				"o", "path");
+}
+
+static const char *ofono_manager_introspection =
+	"<!DOCTYPE node PUBLIC \""
+	"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
+	"\"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
+	"<node>\n"
+	"\t<interface name=\"org.freedesktop.DBus.Introspectable\">\n"
+	"\t\t<method name=\"Introspect\">\n"
+	"\t\t\t<arg name=\"xml\" type=\"s\" direction=\"out\"/>\n"
+	"\t\t</method>\n\t</interface>\n"
+	"\t<interface name=\"org.ofono.Manager\">\n"
+	"\t\t<method name=\"GetModems\">\n"
+	"\t\t\t<arg name=\"modems\" type=\"a(oa{sv})\" direction=\"out\"/>\n"
+	"\t\t</method>\n"
+	"\t\t<signal name=\"ModemAdded\">\n"
+	"\t\t\t<arg name=\"path\" type=\"o\"/>\n"
+	"\t\t\t<arg name=\"properties\" type=\"a{sv}\"/>\n"
+	"\t\t</signal>\n"
+	"\t\t<signal name=\"ModemRemoved\">\n"						"\t\t\t<arg name=\"path\" type=\"o\"/>\n"
+	"\t\t</signal>\n\t</interface>\n"
+	"\t<node name=\"phonesim\"/>\n"
+	"</node>\n";
+
+static void test_dbus_object_tree_introspection(const void *test_data)
+{
+	struct _dbus_object_tree *tree;
+	struct l_string *buf;
+	char *xml;
+
+	tree = _dbus_object_tree_new();
+
+	_dbus_object_tree_register(tree, "/", "org.ofono.Manager",
+					build_manager_interface,
+					NULL, NULL);
+
+	_dbus_object_tree_makepath(tree, "/phonesim");
+
+	buf = l_string_new(1024);
+	_dbus_object_tree_introspect(tree, "/", buf);
+	xml = l_string_free(buf, false);
+	assert(!strcmp(ofono_manager_introspection, xml));
+	l_free(xml);
+
+	_dbus_object_tree_free(tree);
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -262,6 +317,10 @@ int main(int argc, char *argv[])
 
 	l_test_add("_dbus_object_tree Sanity Tests",
 					test_dbus_object_tree, NULL);
+
+	l_test_add("_dbus_object_tree Introspection",
+					test_dbus_object_tree_introspection,
+					NULL);
 
 	ret = l_test_run();
 
