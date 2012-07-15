@@ -235,13 +235,13 @@ static void get_modems_callback(struct l_dbus *dbus,
 	callback_called = true;
 }
 
-static void build_manager_interface(struct l_dbus_interface *interface)
+static void build_manager_interface(struct l_dbus_interface *iface)
 {
-	l_dbus_interface_method(interface, "GetModems", 0, get_modems_callback,
+	l_dbus_interface_method(iface, "GetModems", 0, get_modems_callback,
 				"a(oa{sv})", "", "modems");
-	l_dbus_interface_signal(interface, "ModemAdded", 0,
+	l_dbus_interface_signal(iface, "ModemAdded", 0,
 				"oa{sv}", "path", "properties");
-	l_dbus_interface_signal(interface, "ModemRemoved", 0,
+	l_dbus_interface_signal(iface, "ModemRemoved", 0,
 				"o", "path");
 }
 
