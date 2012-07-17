@@ -39,10 +39,7 @@
  * Utility functions
  */
 
-#define STRINGIFY(val) STRINGIFY_ARG(val)
-#define STRINGIFY_ARG(contents) #contents
-
-#define STRLOC __FILE__ ":" STRINGIFY(__LINE__)
+#define STRLOC __FILE__ ":" L_STRINGIFY(__LINE__)
 
 /**
  * l_malloc:

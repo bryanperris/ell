@@ -30,6 +30,9 @@
 extern "C" {
 #endif
 
+#define L_STRINGIFY(val) L_STRINGIFY_ARG(val)
+#define L_STRINGIFY_ARG(contents) #contents
+
 #define L_PTR_TO_UINT(p) ((unsigned int) ((uintptr_t) (p)))
 #define L_UINT_TO_PTR(u) ((void *) ((uintptr_t) (u)))
 
