@@ -33,6 +33,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+#include "util.h"
 #include "log.h"
 #include "private.h"
 
@@ -49,7 +50,8 @@
  * Debug descriptor.
  */
 
-static void log_null(int priority, const char *format, va_list ap)
+static void log_null(int priority, const char *file, const char *line,
+			const char *func, const char *format, va_list ap)
 {
 }
 
@@ -109,7 +111,8 @@ LIB_EXPORT void l_log_set_null(void)
 	log_func = log_null;
 }
 
-static void log_stderr(int priority, const char *format, va_list ap)
+static void log_stderr(int priority, const char *file, const char *line,
+			const char *func, const char *format, va_list ap)
 {
         vfprintf(stderr, format, ap);
 }
@@ -126,7 +129,8 @@ LIB_EXPORT void l_log_set_stderr(void)
 	log_func = log_stderr;
 }
 
-static void log_syslog(int priority, const char *format, va_list ap)
+static void log_syslog(int priority, const char *file, const char *line,
+			const char *func, const char *format, va_list ap)
 {
 	struct msghdr msg;
 	struct iovec iov[2];
@@ -187,19 +191,24 @@ LIB_EXPORT void l_log_set_syslog(void)
 }
 
 /**
- * l_log:
+ * l_log_with_location:
  * @priority: priority level
+ * @file: source file
+ * @line: source line
+ * @func: source function
  * @format: format string
  * @...: format arguments
  *
  * Log information.
  **/
-LIB_EXPORT void l_log(int priority, const char *format, ...)
+LIB_EXPORT void l_log_with_location(int priority,
+				const char *file, const char *line,
+				const char *func, const char *format, ...)
 {
 	va_list ap;
 
 	va_start(ap, format);
-	log_func(priority, format, ap);
+	log_func(priority, file, line, func, format, ap);
 	va_end(ap);
 }
 

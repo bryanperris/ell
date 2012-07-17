@@ -34,7 +34,8 @@ extern "C" {
 #define L_LOG_INFO	6
 #define L_LOG_DEBUG	7
 
-typedef void (*l_log_func_t) (int priority, const char *format, va_list ap);
+typedef void (*l_log_func_t) (int priority, const char *file, const char *line,
+			const char *func, const char *format, va_list ap);
 
 void l_log_set_ident(const char *ident);
 void l_log_set_handler(l_log_func_t function);
@@ -42,8 +43,13 @@ void l_log_set_null(void);
 void l_log_set_stderr(void);
 void l_log_set_syslog(void);
 
-void l_log(int priority, const char *format, ...)
-				__attribute__((format(printf, 2, 3)));
+void l_log_with_location(int priority, const char *file, const char *line,
+				const char *func, const char *format, ...)
+				__attribute__((format(printf, 5, 6)));
+
+#define l_log(priority, format, args...)  l_log_with_location(priority, \
+					__FILE__, L_STRINGIFY(__LINE__), \
+					__func__, format "\n", ## args)
 
 struct l_debug_desc {
 	const char *file;
