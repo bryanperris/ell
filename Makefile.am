@@ -3,6 +3,15 @@ SUBDIRS = . doc
 
 AM_MAKEFLAGS = --no-print-directory
 
+# Library code modified:	REVISION++
+# Interfaces changed:		CURRENT++ REVISION=0
+# Interfaces added:		CURRENT++ REVISION=0 AGE++
+# Interfaces removed:		CURRENT++ REVISION=0 AGE=0
+
+ELL_CURRENT = 0
+ELL_REVISION = 0
+ELL_AGE = 0
+
 pkginclude_HEADERS = ell/ell.h ell/util.h \
 				ell/test.h \
 				ell/queue.h \
@@ -44,7 +53,8 @@ ell_libell_la_SOURCES = $(include_HEADERS) ell/private.h \
 						ell/dbus-service.c \
 						ell/idle.c
 
-ell_libell_la_LDFLAGS = -version-info 0:0:0
+ell_libell_la_LDFLAGS = -no-undefined \
+			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)
 
 noinst_LTLIBRARIES = ell/libell-private.la
 
