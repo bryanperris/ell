@@ -57,14 +57,14 @@ static void log_null(int priority, const char *file, const char *line,
 
 static l_log_func_t log_func = log_null;
 static const char *log_ident = "";
-static int syslog_fd = -1;
-static unsigned long syslog_pid;
+static int log_fd = -1;
+static unsigned long log_pid;
 
-static inline void close_syslog(void)
+static inline void close_log(void)
 {
-	if (syslog_fd > 0) {
-		close(syslog_fd);
-		syslog_fd = -1;
+	if (log_fd > 0) {
+		close(log_fd);
+		log_fd = -1;
 	}
 }
 
@@ -89,7 +89,7 @@ LIB_EXPORT void l_log_set_handler(l_log_func_t function)
 {
 	L_DEBUG_SYMBOL(__debug_intern, "");
 
-	close_syslog();
+	close_log();
 
 	if (!function) {
 		log_func = log_null;
@@ -106,7 +106,7 @@ LIB_EXPORT void l_log_set_handler(l_log_func_t function)
  **/
 LIB_EXPORT void l_log_set_null(void)
 {
-	close_syslog();
+	close_log();
 
 	log_func = log_null;
 }
@@ -124,7 +124,7 @@ static void log_stderr(int priority, const char *file, const char *line,
  **/
 LIB_EXPORT void l_log_set_stderr(void)
 {
-	close_syslog();
+	close_log();
 
 	log_func = log_stderr;
 }
@@ -142,7 +142,7 @@ static void log_syslog(int priority, const char *file, const char *line,
 		return;
 
 	hdr_len = snprintf(hdr, sizeof(hdr), "<%i>%s[%lu]: ", priority,
-				log_ident, (unsigned long) syslog_pid);
+					log_ident, (unsigned long) log_pid);
 
 	iov[0].iov_base = hdr;
 	iov[0].iov_len  = hdr_len;
@@ -153,7 +153,7 @@ static void log_syslog(int priority, const char *file, const char *line,
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 2;
 
-	sendmsg(syslog_fd, &msg, 0);
+	sendmsg(log_fd, &msg, 0);
 
 	free(str);
 }
@@ -167,10 +167,10 @@ LIB_EXPORT void l_log_set_syslog(void)
 {
 	struct sockaddr_un addr;
 
-	close_syslog();
+	close_log();
 
-	syslog_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-	if (syslog_fd < 0) {
+	log_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+	if (log_fd < 0) {
 		log_func = log_null;
 		return;
 	}
@@ -179,13 +179,13 @@ LIB_EXPORT void l_log_set_syslog(void)
 	addr.sun_family = AF_UNIX;
 	strncpy(addr.sun_path, "/dev/log", sizeof(addr.sun_path));
 
-	if (connect(syslog_fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		close_syslog();
+	if (connect(log_fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+		close_log();
 		log_func = log_null;
 		return;
 	}
 
-	syslog_pid = getpid();
+	log_pid = getpid();
 
 	log_func = log_syslog;
 }
