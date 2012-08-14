@@ -236,6 +236,7 @@ LIB_EXPORT bool l_io_set_read_handler(struct l_io *io, l_io_read_cb_t callback,
 				void *user_data, l_io_destroy_cb_t destroy)
 {
 	uint32_t events;
+	int err;
 
 	if (unlikely(!io || io->fd < 0))
 		return false;
@@ -258,7 +259,9 @@ LIB_EXPORT bool l_io_set_read_handler(struct l_io *io, l_io_read_cb_t callback,
 	if (events == io->events)
 		return true;
 
-	watch_modify(io->fd, events);
+	err = watch_modify(io->fd, events);
+	if (err)
+		return false;
 
 	io->events = events;
 
@@ -280,6 +283,7 @@ LIB_EXPORT bool l_io_set_write_handler(struct l_io *io, l_io_write_cb_t callback
 				void *user_data, l_io_destroy_cb_t destroy)
 {
 	uint32_t events;
+	int err;
 
 	if (unlikely(!io || io->fd < 0))
 		return false;
@@ -306,7 +310,9 @@ LIB_EXPORT bool l_io_set_write_handler(struct l_io *io, l_io_write_cb_t callback
 	if (events == io->events)
 		return true;
 
-	watch_modify(io->fd, events);
+	err = watch_modify(io->fd, events);
+	if (err)
+		return false;
 
 	io->events = events;
 
