@@ -149,6 +149,7 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 LIB_EXPORT struct l_io *l_io_new(int fd)
 {
 	struct l_io *io;
+	int err;
 
 	if (unlikely(fd < 0))
 		return NULL;
@@ -159,7 +160,11 @@ LIB_EXPORT struct l_io *l_io_new(int fd)
 	io->events = 0;
 	io->close_on_destroy = false;
 
-	watch_add(io->fd, io->events, io_callback, io, io_cleanup);
+	err = watch_add(io->fd, io->events, io_callback, io, io_cleanup);
+	if (err) {
+		l_free(io);
+		return NULL;
+	}
 
 	return io;
 }
