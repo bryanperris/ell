@@ -51,7 +51,9 @@ ell_libell_la_SOURCES = $(include_HEADERS) ell/private.h \
 						ell/dbus.c \
 						ell/dbus-util.c \
 						ell/dbus-service.c \
-						ell/idle.c
+						ell/idle.c \
+						ell/gvariant-private.h \
+						ell/gvariant-util.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)
