@@ -90,3 +90,68 @@ static int get_basic_fixed_size(const char type)
 		return 0;
 	}
 }
+
+static const char *validate_next_type(const char *sig)
+{
+	static const char *simple_types = "sogybnqiuxtdh";
+	char s = *sig;
+
+	if (s == '\0')
+		return NULL;
+
+	if (strchr(simple_types, s) || s == 'v')
+		return sig + 1;
+
+	switch (s) {
+	case 'a':
+		return validate_next_type(++sig);
+
+	case '{':
+		s = *++sig;
+
+		/* Dictionary keys can only be simple types */
+		if (!strchr(simple_types, s))
+			return NULL;
+
+		sig = validate_next_type(sig + 1);
+
+		if (!sig)
+			return NULL;
+
+		if (*sig != '}')
+			return NULL;
+
+		return sig + 1;
+
+	case '(':
+		sig++;
+
+		do
+			sig = validate_next_type(sig);
+		while (sig && *sig != ')');
+
+		if (!sig)
+			return NULL;
+
+		if (*sig != ')')
+			return NULL;
+
+		return sig + 1;
+	}
+
+	return NULL;
+}
+
+bool _gvariant_valid_signature(const char *sig)
+{
+	const char *s = sig;
+
+	do {
+		s = validate_next_type(s);
+
+		if (!s)
+			return false;
+	} while (*s);
+
+	return true;
+}
