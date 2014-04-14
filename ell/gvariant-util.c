@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "private.h"
 #include "gvariant-private.h"
 
 static const char *simple_types = "sogybnqiuxtdh";
@@ -205,4 +206,60 @@ bool _gvariant_is_fixed_size(const char *sig)
 	}
 
 	return true;
+}
+
+int _gvariant_get_fixed_size(const char *sig)
+{
+	const char *s = sig;
+	const char *p;
+	int size = 0;
+	int alignment;
+	int max_alignment = 1;
+	int r;
+
+	while (*s) {
+		if (strchr(variable_types, *s))
+			return 0;
+
+		if (strchr(fixed_types, *s)) {
+			alignment = get_basic_alignment(*s);
+
+			if (alignment > max_alignment)
+				max_alignment = alignment;
+
+			size = align_len(size, alignment);
+			size += get_basic_fixed_size(*s);
+			s++;
+			continue;
+		}
+
+		if (*s == '}' || *s == ')')
+			break;
+
+		p = validate_next_type(s, &alignment);
+
+		if (!p)
+			return 0;
+
+		if (alignment > max_alignment)
+			max_alignment = alignment;
+
+		size = align_len(size, alignment);
+
+		/* Handle special case of unit type */
+		if (s[0] == '(' && s[1] == ')')
+			r = 1;
+		else
+			r = _gvariant_get_fixed_size(s + 1);
+
+		if (r == 0)
+			return 0;
+
+		size += r;
+		s = p;
+	}
+
+	size = align_len(size, max_alignment);
+
+	return size;
 }
