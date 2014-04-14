@@ -136,6 +136,11 @@ struct is_fixed_size_test {
 	const char *signature;
 };
 
+struct get_fixed_size_test {
+	int size;
+	const char *signature;
+};
+
 #define IS_FIXED_SIZE_TEST(sig, v, i)					\
 	static struct is_fixed_size_test is_fixed_size_test##i = {	\
 		.fixed_size = v,					\
@@ -173,6 +178,52 @@ static void test_is_fixed_size(const void *test_data)
 	fixed_size = _gvariant_is_fixed_size(test->signature);
 
 	assert(fixed_size == test->fixed_size);
+}
+
+#define GET_FIXED_SIZE_TEST(sig, n, i)				\
+	static struct get_fixed_size_test size_test##i = {	\
+		.size = n,					\
+		.signature = sig,				\
+	}
+
+GET_FIXED_SIZE_TEST("", 0, 1);
+GET_FIXED_SIZE_TEST("()", 1, 2);
+GET_FIXED_SIZE_TEST("y", 1, 3);
+GET_FIXED_SIZE_TEST("u", 4, 4);
+GET_FIXED_SIZE_TEST("b", 1, 5);
+GET_FIXED_SIZE_TEST("n", 2, 6);
+GET_FIXED_SIZE_TEST("q", 2, 7);
+GET_FIXED_SIZE_TEST("i", 4, 8);
+GET_FIXED_SIZE_TEST("t", 8, 9);
+GET_FIXED_SIZE_TEST("d", 8, 10);
+GET_FIXED_SIZE_TEST("s", 0, 11);
+GET_FIXED_SIZE_TEST("o", 0, 12);
+GET_FIXED_SIZE_TEST("g", 0, 13);
+GET_FIXED_SIZE_TEST("h", 4, 14);
+GET_FIXED_SIZE_TEST("ay", 0, 15);
+GET_FIXED_SIZE_TEST("v", 0, 16);
+GET_FIXED_SIZE_TEST("(u)", 4, 17);
+GET_FIXED_SIZE_TEST("(uuuuy)", 20, 18);
+GET_FIXED_SIZE_TEST("(uusuuy)", 0, 19);
+GET_FIXED_SIZE_TEST("a{ss}", 0, 20);
+GET_FIXED_SIZE_TEST("((u)yyy(b(iiii)))", 28, 21);
+GET_FIXED_SIZE_TEST("((u)yyy(b(iiivi)))", 0, 22);
+GET_FIXED_SIZE_TEST("((b)(t))", 16, 23);
+GET_FIXED_SIZE_TEST("((b)(b)(t))", 16, 24);
+GET_FIXED_SIZE_TEST("(bt)", 16, 25);
+GET_FIXED_SIZE_TEST("((t)(b))", 16, 26);
+GET_FIXED_SIZE_TEST("(tb)", 16, 27);
+GET_FIXED_SIZE_TEST("((b)(b))", 2, 28);
+GET_FIXED_SIZE_TEST("((t)(t))", 16, 29);
+
+static void test_get_fixed_size(const void *test_data)
+{
+	const struct get_fixed_size_test *test = test_data;
+	int size;
+
+	size = _gvariant_get_fixed_size(test->signature);
+
+	assert(size == test->size);
 }
 
 int main(int argc, char *argv[])
@@ -286,6 +337,36 @@ int main(int argc, char *argv[])
 			&is_fixed_size_test21);
 	l_test_add("Is Fixed Size test 22", test_is_fixed_size,
 			&is_fixed_size_test22);
+
+	l_test_add("Get Fixed Size test 1", test_get_fixed_size, &size_test1);
+	l_test_add("Get Fixed Size test 2", test_get_fixed_size, &size_test2);
+	l_test_add("Get Fixed Size test 3", test_get_fixed_size, &size_test3);
+	l_test_add("Get Fixed Size test 4", test_get_fixed_size, &size_test4);
+	l_test_add("Get Fixed Size test 5", test_get_fixed_size, &size_test5);
+	l_test_add("Get Fixed Size test 6", test_get_fixed_size, &size_test6);
+	l_test_add("Get Fixed Size test 7", test_get_fixed_size, &size_test7);
+	l_test_add("Get Fixed Size test 8", test_get_fixed_size, &size_test8);
+	l_test_add("Get Fixed Size test 9", test_get_fixed_size, &size_test9);
+	l_test_add("Get Fixed Size test 10", test_get_fixed_size, &size_test10);
+	l_test_add("Get Fixed Size test 11", test_get_fixed_size, &size_test11);
+	l_test_add("Get Fixed Size test 12", test_get_fixed_size, &size_test12);
+	l_test_add("Get Fixed Size test 13", test_get_fixed_size, &size_test13);
+	l_test_add("Get Fixed Size test 14", test_get_fixed_size, &size_test14);
+	l_test_add("Get Fixed Size test 15", test_get_fixed_size, &size_test15);
+	l_test_add("Get Fixed Size test 16", test_get_fixed_size, &size_test16);
+	l_test_add("Get Fixed Size test 17", test_get_fixed_size, &size_test17);
+	l_test_add("Get Fixed Size test 18", test_get_fixed_size, &size_test18);
+	l_test_add("Get Fixed Size test 19", test_get_fixed_size, &size_test19);
+	l_test_add("Get Fixed Size test 20", test_get_fixed_size, &size_test20);
+	l_test_add("Get Fixed Size test 21", test_get_fixed_size, &size_test21);
+	l_test_add("Get Fixed Size test 22", test_get_fixed_size, &size_test22);
+	l_test_add("Get Fixed Size test 23", test_get_fixed_size, &size_test23);
+	l_test_add("Get Fixed Size test 24", test_get_fixed_size, &size_test24);
+	l_test_add("Get Fixed Size test 25", test_get_fixed_size, &size_test25);
+	l_test_add("Get Fixed Size test 26", test_get_fixed_size, &size_test26);
+	l_test_add("Get Fixed Size test 27", test_get_fixed_size, &size_test27);
+	l_test_add("Get Fixed Size test 28", test_get_fixed_size, &size_test28);
+	l_test_add("Get Fixed Size test 29", test_get_fixed_size, &size_test29);
 
 	return l_test_run();
 }
