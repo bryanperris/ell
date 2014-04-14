@@ -60,6 +60,7 @@ SIGNATURE_TEST(false, "{vu}", 18);
 SIGNATURE_TEST(false, "{uv", 19);
 SIGNATURE_TEST(false, "(ss", 20);
 SIGNATURE_TEST(false, "aaaaa", 21);
+SIGNATURE_TEST(true, "()", 22);
 
 static void test_signature(const void *test_data)
 {
@@ -69,6 +70,65 @@ static void test_signature(const void *test_data)
 	valid = _gvariant_valid_signature(test->signature);
 
 	assert(valid == test->valid);
+}
+
+struct alignment_test {
+	int alignment;
+	const char *signature;
+};
+
+#define ALIGNMENT_TEST(sig, a, i)				\
+	static struct alignment_test align_test##i = {		\
+		.alignment = a,					\
+		.signature = sig,				\
+	}
+
+ALIGNMENT_TEST("()", 1, 1);
+ALIGNMENT_TEST("y", 1, 2);
+ALIGNMENT_TEST("b", 1, 3);
+ALIGNMENT_TEST("s", 1, 4);
+ALIGNMENT_TEST("o", 1, 5);
+ALIGNMENT_TEST("g", 1, 6);
+ALIGNMENT_TEST("q", 2, 7);
+ALIGNMENT_TEST("n", 2, 8);
+ALIGNMENT_TEST("u", 4, 9);
+ALIGNMENT_TEST("h", 4, 10);
+ALIGNMENT_TEST("i", 4, 11);
+ALIGNMENT_TEST("v", 8, 12);
+ALIGNMENT_TEST("t", 8, 13);
+ALIGNMENT_TEST("x", 8, 14);
+ALIGNMENT_TEST("d", 8, 15);
+ALIGNMENT_TEST("ay", 1, 16);
+ALIGNMENT_TEST("as", 1, 17);
+ALIGNMENT_TEST("au", 4, 18);
+ALIGNMENT_TEST("an", 2, 19);
+ALIGNMENT_TEST("ans", 2, 20);
+ALIGNMENT_TEST("ant", 8, 21);
+ALIGNMENT_TEST("(ss)", 1, 22);
+ALIGNMENT_TEST("(ssu)", 4, 23);
+ALIGNMENT_TEST("a(ssu)", 4, 24);
+ALIGNMENT_TEST("(u)", 4, 25);
+ALIGNMENT_TEST("(uuuuy)", 4, 26);
+ALIGNMENT_TEST("(uusuuy)", 4, 27);
+ALIGNMENT_TEST("a{ss}", 1, 28);
+ALIGNMENT_TEST("((u)yyy(b(iiii)))", 4, 29);
+ALIGNMENT_TEST("((u)yyy(b(iiivi)))", 8, 30);
+ALIGNMENT_TEST("((b)(t))", 8, 31);
+ALIGNMENT_TEST("((b)(b)(t))", 8, 32);
+ALIGNMENT_TEST("(bt)", 8, 33);
+ALIGNMENT_TEST("((t)(b))", 8, 34);
+ALIGNMENT_TEST("(tb)", 8, 35);
+ALIGNMENT_TEST("((b)(b))", 1, 36);
+ALIGNMENT_TEST("((t)(t))", 8, 37);
+
+static void test_alignment(const void *test_data)
+{
+	const struct alignment_test *test = test_data;
+	int alignment;
+
+	alignment = _gvariant_get_alignment(test->signature);
+
+	assert(alignment == test->alignment);
 }
 
 int main(int argc, char *argv[])
@@ -96,6 +156,45 @@ int main(int argc, char *argv[])
 	l_test_add("Signature test 19", test_signature, &sig_test19);
 	l_test_add("Signature test 20", test_signature, &sig_test20);
 	l_test_add("Signature test 21", test_signature, &sig_test21);
+	l_test_add("Signature test 22", test_signature, &sig_test22);
+
+	l_test_add("Alignment test 1", test_alignment, &align_test1);
+	l_test_add("Alignment test 2", test_alignment, &align_test2);
+	l_test_add("Alignment test 3", test_alignment, &align_test3);
+	l_test_add("Alignment test 4", test_alignment, &align_test4);
+	l_test_add("Alignment test 5", test_alignment, &align_test5);
+	l_test_add("Alignment test 6", test_alignment, &align_test6);
+	l_test_add("Alignment test 7", test_alignment, &align_test7);
+	l_test_add("Alignment test 8", test_alignment, &align_test8);
+	l_test_add("Alignment test 9", test_alignment, &align_test9);
+	l_test_add("Alignment test 10", test_alignment, &align_test10);
+	l_test_add("Alignment test 11", test_alignment, &align_test11);
+	l_test_add("Alignment test 12", test_alignment, &align_test12);
+	l_test_add("Alignment test 13", test_alignment, &align_test13);
+	l_test_add("Alignment test 14", test_alignment, &align_test14);
+	l_test_add("Alignment test 15", test_alignment, &align_test15);
+	l_test_add("Alignment test 16", test_alignment, &align_test16);
+	l_test_add("Alignment test 17", test_alignment, &align_test17);
+	l_test_add("Alignment test 18", test_alignment, &align_test18);
+	l_test_add("Alignment test 19", test_alignment, &align_test19);
+	l_test_add("Alignment test 20", test_alignment, &align_test20);
+	l_test_add("Alignment test 21", test_alignment, &align_test21);
+	l_test_add("Alignment test 22", test_alignment, &align_test22);
+	l_test_add("Alignment test 23", test_alignment, &align_test23);
+	l_test_add("Alignment test 24", test_alignment, &align_test24);
+	l_test_add("Alignment test 25", test_alignment, &align_test25);
+	l_test_add("Alignment test 26", test_alignment, &align_test26);
+	l_test_add("Alignment test 27", test_alignment, &align_test27);
+	l_test_add("Alignment test 28", test_alignment, &align_test28);
+	l_test_add("Alignment test 29", test_alignment, &align_test29);
+	l_test_add("Alignment test 30", test_alignment, &align_test30);
+	l_test_add("Alignment test 31", test_alignment, &align_test31);
+	l_test_add("Alignment test 32", test_alignment, &align_test32);
+	l_test_add("Alignment test 33", test_alignment, &align_test33);
+	l_test_add("Alignment test 34", test_alignment, &align_test34);
+	l_test_add("Alignment test 35", test_alignment, &align_test35);
+	l_test_add("Alignment test 36", test_alignment, &align_test36);
+	l_test_add("Alignment test 37", test_alignment, &align_test37);
 
 	return l_test_run();
 }
