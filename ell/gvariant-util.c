@@ -91,20 +91,23 @@ static int get_basic_fixed_size(const char type)
 	}
 }
 
-static const char *validate_next_type(const char *sig)
+static const char *validate_next_type(const char *sig, int *out_alignment)
 {
 	static const char *simple_types = "sogybnqiuxtdh";
 	char s = *sig;
+	int alignment;
 
 	if (s == '\0')
 		return NULL;
 
-	if (strchr(simple_types, s) || s == 'v')
+	if (strchr(simple_types, s) || s == 'v') {
+		*out_alignment = get_basic_alignment(s);
 		return sig + 1;
+	}
 
 	switch (s) {
 	case 'a':
-		return validate_next_type(++sig);
+		return validate_next_type(++sig, out_alignment);
 
 	case '{':
 		s = *++sig;
@@ -113,7 +116,9 @@ static const char *validate_next_type(const char *sig)
 		if (!strchr(simple_types, s))
 			return NULL;
 
-		sig = validate_next_type(sig + 1);
+		alignment = get_basic_alignment(s);
+
+		sig = validate_next_type(sig + 1, out_alignment);
 
 		if (!sig)
 			return NULL;
@@ -121,14 +126,23 @@ static const char *validate_next_type(const char *sig)
 		if (*sig != '}')
 			return NULL;
 
+		if (alignment > *out_alignment)
+			*out_alignment = alignment;
+
 		return sig + 1;
 
 	case '(':
+	{
+		int max_alignment = 1, alignment;
+
 		sig++;
 
-		do
-			sig = validate_next_type(sig);
-		while (sig && *sig != ')');
+		while (sig && *sig != ')') {
+			sig = validate_next_type(sig, &alignment);
+
+			if (alignment > max_alignment)
+				max_alignment = alignment;
+		}
 
 		if (!sig)
 			return NULL;
@@ -136,7 +150,10 @@ static const char *validate_next_type(const char *sig)
 		if (*sig != ')')
 			return NULL;
 
+		*out_alignment = max_alignment;
+
 		return sig + 1;
+	}
 	}
 
 	return NULL;
@@ -145,13 +162,32 @@ static const char *validate_next_type(const char *sig)
 bool _gvariant_valid_signature(const char *sig)
 {
 	const char *s = sig;
+	int a;
 
 	do {
-		s = validate_next_type(s);
+		s = validate_next_type(s, &a);
 
 		if (!s)
 			return false;
 	} while (*s);
 
 	return true;
+}
+
+int _gvariant_get_alignment(const char *sig)
+{
+	int max_alignment = 1, alignment;
+	const char *s = sig;
+
+	/* 8 is the largest alignment possible, so quit if we reach it */
+	while (*s && max_alignment != 8) {
+		s = validate_next_type(s, &alignment);
+		if (!s)
+			return 0;
+
+		if (alignment > max_alignment)
+			max_alignment = alignment;
+	}
+
+	return max_alignment;
 }
