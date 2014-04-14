@@ -30,6 +30,10 @@
 
 #include "gvariant-private.h"
 
+static const char *simple_types = "sogybnqiuxtdh";
+static const char *variable_types = "sogav";
+static const char *fixed_types = "bynqhiuxtd";
+
 /* The alignment of a container type is equal to the largest alignment of
  * any potential child of that container. This means that, even if an array
  * of 32-bit integers is empty, it still must be aligned to the nearest
@@ -93,7 +97,6 @@ static int get_basic_fixed_size(const char type)
 
 static const char *validate_next_type(const char *sig, int *out_alignment)
 {
-	static const char *simple_types = "sogybnqiuxtdh";
 	char s = *sig;
 	int alignment;
 
@@ -190,4 +193,16 @@ int _gvariant_get_alignment(const char *sig)
 	}
 
 	return max_alignment;
+}
+
+bool _gvariant_is_fixed_size(const char *sig)
+{
+	while (*sig != 0) {
+		if (strchr(variable_types, sig[0]))
+			return false;
+
+		sig += 1;
+	}
+
+	return true;
 }
