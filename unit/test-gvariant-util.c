@@ -131,6 +131,50 @@ static void test_alignment(const void *test_data)
 	assert(alignment == test->alignment);
 }
 
+struct is_fixed_size_test {
+	bool fixed_size;
+	const char *signature;
+};
+
+#define IS_FIXED_SIZE_TEST(sig, v, i)					\
+	static struct is_fixed_size_test is_fixed_size_test##i = {	\
+		.fixed_size = v,					\
+		.signature = sig,					\
+	}
+
+IS_FIXED_SIZE_TEST("", true, 1);
+IS_FIXED_SIZE_TEST("()", true, 2);
+IS_FIXED_SIZE_TEST("y", true, 3);
+IS_FIXED_SIZE_TEST("u", true, 4);
+IS_FIXED_SIZE_TEST("b", true, 5);
+IS_FIXED_SIZE_TEST("n", true, 6);
+IS_FIXED_SIZE_TEST("q", true, 7);
+IS_FIXED_SIZE_TEST("i", true, 8);
+IS_FIXED_SIZE_TEST("t", true, 9);
+IS_FIXED_SIZE_TEST("d", true, 10);
+IS_FIXED_SIZE_TEST("s", false, 11);
+IS_FIXED_SIZE_TEST("o", false, 12);
+IS_FIXED_SIZE_TEST("g", false, 13);
+IS_FIXED_SIZE_TEST("h", true, 14);
+IS_FIXED_SIZE_TEST("ay", false, 15);
+IS_FIXED_SIZE_TEST("v", false, 16);
+IS_FIXED_SIZE_TEST("(u)", true, 17);
+IS_FIXED_SIZE_TEST("(uuuuy)", true, 18);
+IS_FIXED_SIZE_TEST("(uusuuy)", false, 19);
+IS_FIXED_SIZE_TEST("a{ss}", false, 20);
+IS_FIXED_SIZE_TEST("((u)yyy(b(iiii)))", true, 21);
+IS_FIXED_SIZE_TEST("((u)yyy(b(iiivi)))", false, 22);
+
+static void test_is_fixed_size(const void *test_data)
+{
+	const struct is_fixed_size_test *test = test_data;
+	bool fixed_size;
+
+	fixed_size = _gvariant_is_fixed_size(test->signature);
+
+	assert(fixed_size == test->fixed_size);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -195,6 +239,53 @@ int main(int argc, char *argv[])
 	l_test_add("Alignment test 35", test_alignment, &align_test35);
 	l_test_add("Alignment test 36", test_alignment, &align_test36);
 	l_test_add("Alignment test 37", test_alignment, &align_test37);
+
+	l_test_add("Is Fixed Size test 1", test_is_fixed_size,
+			&is_fixed_size_test1);
+	l_test_add("Is Fixed Size test 2", test_is_fixed_size,
+			&is_fixed_size_test2);
+	l_test_add("Is Fixed Size test 3", test_is_fixed_size,
+			&is_fixed_size_test3);
+	l_test_add("Is Fixed Size test 4", test_is_fixed_size,
+			&is_fixed_size_test4);
+	l_test_add("Is Fixed Size test 4", test_is_fixed_size,
+			&is_fixed_size_test4);
+	l_test_add("Is Fixed Size test 5", test_is_fixed_size,
+			&is_fixed_size_test5);
+	l_test_add("Is Fixed Size test 6", test_is_fixed_size,
+			&is_fixed_size_test6);
+	l_test_add("Is Fixed Size test 7", test_is_fixed_size,
+			&is_fixed_size_test7);
+	l_test_add("Is Fixed Size test 8", test_is_fixed_size,
+			&is_fixed_size_test8);
+	l_test_add("Is Fixed Size test 9", test_is_fixed_size,
+			&is_fixed_size_test9);
+	l_test_add("Is Fixed Size test 10", test_is_fixed_size,
+			&is_fixed_size_test10);
+	l_test_add("Is Fixed Size test 11", test_is_fixed_size,
+			&is_fixed_size_test11);
+	l_test_add("Is Fixed Size test 12", test_is_fixed_size,
+			&is_fixed_size_test12);
+	l_test_add("Is Fixed Size test 13", test_is_fixed_size,
+			&is_fixed_size_test13);
+	l_test_add("Is Fixed Size test 14", test_is_fixed_size,
+			&is_fixed_size_test14);
+	l_test_add("Is Fixed Size test 15", test_is_fixed_size,
+			&is_fixed_size_test15);
+	l_test_add("Is Fixed Size test 16", test_is_fixed_size,
+			&is_fixed_size_test16);
+	l_test_add("Is Fixed Size test 17", test_is_fixed_size,
+			&is_fixed_size_test17);
+	l_test_add("Is Fixed Size test 18", test_is_fixed_size,
+			&is_fixed_size_test18);
+	l_test_add("Is Fixed Size test 19", test_is_fixed_size,
+			&is_fixed_size_test19);
+	l_test_add("Is Fixed Size test 20", test_is_fixed_size,
+			&is_fixed_size_test20);
+	l_test_add("Is Fixed Size test 21", test_is_fixed_size,
+			&is_fixed_size_test21);
+	l_test_add("Is Fixed Size test 22", test_is_fixed_size,
+			&is_fixed_size_test22);
 
 	return l_test_run();
 }
