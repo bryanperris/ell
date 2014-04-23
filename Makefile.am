@@ -79,7 +79,8 @@ noinst_PROGRAMS = unit/test-unit unit/test-queue \
 				unit/test-settings unit/test-netlink \
 				unit/test-dbus unit/test-dbus-message \
 				unit/test-dbus-util unit/test-dbus-service \
-				unit/test-gvariant-util
+				unit/test-gvariant-util \
+				unit/test-gvariant-message
 
 unit_test_unit_LDADD = ell/libell-private.la
 
@@ -112,6 +113,8 @@ unit_test_dbus_util_LDADD = ell/libell-private.la
 unit_test_dbus_service_LDADD = ell/libell-private.la
 
 unit_test_gvariant_util_LDADD = ell/libell-private.la
+
+unit_test_gvariant_message_LDADD = ell/libell-private.la
 
 noinst_LTLIBRARIES += unit/example-plugin.la
 
