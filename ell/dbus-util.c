@@ -25,6 +25,8 @@
 
 #define _GNU_SOURCE
 #include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <string.h>
 

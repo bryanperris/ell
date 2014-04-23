@@ -1309,7 +1309,7 @@ static struct l_dbus_message *check_message(const struct message_data *msg_data)
 {
 	struct l_dbus_message *msg;
 
-	msg = dbus_message_build(msg_data->binary, msg_data->binary_len);
+	msg = dbus_message_from_blob(msg_data->binary, msg_data->binary_len);
 	assert(msg);
 
 	if (do_print)

@@ -19,14 +19,42 @@
  *
  */
 
+enum dbus_message_type {
+	DBUS_MESSAGE_TYPE_METHOD_CALL	= 1,
+	DBUS_MESSAGE_TYPE_METHOD_RETURN	= 2,
+	DBUS_MESSAGE_TYPE_ERROR		= 3,
+	DBUS_MESSAGE_TYPE_SIGNAL	= 4,
+};
+
+struct dbus_header {
+	uint8_t  endian;
+	uint8_t  message_type;
+	uint8_t  flags;
+	uint8_t  version;
+	uint32_t body_length;
+	uint32_t serial;
+	uint32_t field_length;
+} __attribute__ ((packed));
+#define DBUS_HEADER_SIZE 16
+
 struct l_string;
 struct l_dbus_interface;
 struct _dbus_method;
 struct _dbus_signal;
 struct _dbus_property;
+struct l_dbus_message;
 struct l_dbus;
 
-struct l_dbus_message *dbus_message_build(const void *data, size_t size);
+void *_dbus_message_get_body(struct l_dbus_message *msg, size_t *out_size);
+void *_dbus_message_get_header(struct l_dbus_message *msg, size_t *out_size);
+void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial);
+uint32_t _dbus_message_get_reply_serial(struct l_dbus_message *message);
+enum dbus_message_type _dbus_message_get_type(struct l_dbus_message *message);
+
+struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size);
+struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
+						void *body, size_t body_size,
+						int fds[], uint32_t num_fds);
 bool dbus_message_compare(struct l_dbus_message *message,
 					const void *data, size_t size);
 

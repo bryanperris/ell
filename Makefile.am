@@ -49,6 +49,7 @@ ell_libell_la_SOURCES = $(include_HEADERS) ell/private.h \
 						ell/checksum.c \
 						ell/netlink.c \
 						ell/dbus.c \
+						ell/dbus-message.c \
 						ell/dbus-util.c \
 						ell/dbus-service.c \
 						ell/idle.c \
