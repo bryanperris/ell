@@ -534,6 +534,9 @@ struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size)
 	const struct dbus_header *hdr = data;
 	struct l_dbus_message *message;
 
+	if (unlikely(size < DBUS_HEADER_SIZE))
+		return NULL;
+
 	message = l_new(struct l_dbus_message, 1);
 
 	message->refcount = 1;
