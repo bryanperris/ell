@@ -74,6 +74,13 @@ struct message_iter {
 	size_t pos;
 };
 
+static inline bool _dbus_message_is_gvariant(struct l_dbus_message *msg)
+{
+	struct dbus_header *hdr = msg->header;
+
+	return hdr->version == 2;
+}
+
 void *_dbus_message_get_header(struct l_dbus_message *msg, size_t *out_size)
 {
 	if (out_size)
