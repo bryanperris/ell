@@ -490,14 +490,18 @@ static inline bool message_iter_next_entry(struct message_iter *iter, ...)
 	return result;
 }
 
-static bool get_header_field_from_iter_valist(struct message_iter *header,
+static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 						uint8_t type, va_list args)
 {
+	struct message_iter header;
 	struct message_iter array, iter;
 	uint8_t endian, message_type, flags, version, field_type;
 	uint32_t body_length, serial;
 
-	if (!message_iter_next_entry(header, &endian,
+	message_iter_init(&header, message, "yyyyuua(yv)",
+				message->header, message->header_size, 0);
+
+	if (!message_iter_next_entry(&header, &endian,
 					&message_type, &flags, &version,
 					&body_length, &serial, &array))
 		return false;
@@ -515,15 +519,11 @@ static bool get_header_field_from_iter_valist(struct message_iter *header,
 static inline bool get_header_field(struct l_dbus_message *message,
                                                 uint8_t type, ...)
 {
-	struct message_iter header;
 	va_list args;
 	bool result;
 
-	message_iter_init(&header, message, "yyyyuua(yv)",
-				message->header, message->header_size, 0);
-
 	va_start(args, type);
-	result = get_header_field_from_iter_valist(&header, type, args);
+	result = get_header_field_from_iter_valist(message, type, args);
 	va_end(args);
 
 	return result;
