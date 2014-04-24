@@ -512,19 +512,6 @@ static bool get_header_field_from_iter_valist(struct message_iter *header,
 	return false;
 }
 
-static bool get_header_field_from_iter(struct message_iter *header,
-						uint8_t type, ...)
-{
-	va_list args;
-	bool result;
-
-	va_start(args, type);
-	result = get_header_field_from_iter_valist(header, type, args);
-	va_end(args);
-
-	return result;
-}
-
 static inline bool get_header_field(struct l_dbus_message *message,
                                                 uint8_t type, ...)
 {
@@ -593,35 +580,28 @@ struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 bool dbus_message_compare(struct l_dbus_message *message,
 					const void *data, size_t size)
 {
-	const struct dbus_header *hdr = data;
-	struct message_iter header;
-	const char *signature;
-	size_t header_size;
-	bool result;
+	struct l_dbus_message *other;
 
-	header_size = align_len(DBUS_HEADER_SIZE + hdr->field_length, 8);
+	other = dbus_message_from_blob(data, size);
 
-	message_iter_init(&header, NULL, "yyyyuua(yv)", data, header_size, 0);
-
-	result = get_header_field_from_iter(&header,
-				DBUS_MESSAGE_FIELD_SIGNATURE, &signature);
-
-	if (result) {
-		if (!message->signature)
+	if (message->signature) {
+		if (!other->signature)
 			return false;
 
-		if (strcmp(signature, message->signature))
+		if (strcmp(message->signature, other->signature))
 			return false;
-	} else if (message->signature)
+	} else {
+		if (other->signature)
+			return false;
+	}
+
+	if (message->body_size != other->body_size)
 		return false;
 
-	if (message->body_size != size - header_size)
+	if (message->header_size != other->header_size)
 		return false;
 
-	if (!message->body_size)
-		return true;
-
-	return !memcmp(message->body, data + header_size, size - header_size);
+	return !memcmp(message->body, other->body, message->body_size);
 }
 
 static inline size_t body_realloc(struct l_dbus_message *message,
