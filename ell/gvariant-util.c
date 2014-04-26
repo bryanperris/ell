@@ -178,6 +178,24 @@ bool _gvariant_valid_signature(const char *sig)
 	return true;
 }
 
+int _gvariant_num_children(const char *sig)
+{
+	const char *s = sig;
+	int a;
+	int num_children = 0;
+
+	do {
+		s = validate_next_type(s, &a);
+
+		if (!s)
+			return -1;
+
+		num_children += 1;
+	} while (*s);
+
+	return num_children;
+}
+
 int _gvariant_get_alignment(const char *sig)
 {
 	int max_alignment = 1, alignment;

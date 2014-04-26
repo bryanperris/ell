@@ -23,3 +23,4 @@ bool _gvariant_valid_signature(const char *sig);
 int _gvariant_get_alignment(const char *signature);
 bool _gvariant_is_fixed_size(const char *signature);
 int _gvariant_get_fixed_size(const char *signature);
+int _gvariant_num_children(const char *sig);
