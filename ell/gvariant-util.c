@@ -522,7 +522,7 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 		break;
 	case 'd':
 		uint64_val = get_u64(start);
-		*(double *) out = (double) uint64_val;
+		*(uint64_t *) out = uint64_val;
 		break;
 	}
 

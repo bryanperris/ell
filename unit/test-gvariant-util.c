@@ -226,6 +226,68 @@ static void test_get_fixed_size(const void *test_data)
 	assert(size == test->size);
 }
 
+struct parser_data {
+	const char *data;
+	size_t len;
+	const char *signature;
+};
+
+static const unsigned char basic_data_1[] = {
+	0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x66, 0x6f, 0x6f, 0x62,
+	0x61, 0x72, 0x00, 0x00, 0x73, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
+	0x11, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x19,
+};
+
+static struct parser_data parser_data_1 = {
+	.data = basic_data_1,
+	.len = 33,
+	.signature = "(uvu)i",
+};
+
+static void test_iter_basic_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct gvariant_iter iter;
+
+	_gvariant_iter_init(&iter, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+	_gvariant_iter_free(&iter);
+}
+
+static const unsigned char basic_data_2[] = {
+	0x05, 0x00, 0x00, 0x00, 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72, 0x00,
+};
+
+static struct parser_data parser_data_2 = {
+	.data = basic_data_2,
+	.len = 11,
+	.signature = "is",
+};
+
+static void test_iter_basic_2(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct gvariant_iter iter;
+	const char *s;
+	int i;
+	bool ret;
+
+	_gvariant_iter_init(&iter, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'i', &i);
+	assert(ret);
+	assert(i == 5);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "foobar"));
+
+	_gvariant_iter_free(&iter);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -367,6 +429,9 @@ int main(int argc, char *argv[])
 	l_test_add("Get Fixed Size test 27", test_get_fixed_size, &size_test27);
 	l_test_add("Get Fixed Size test 28", test_get_fixed_size, &size_test28);
 	l_test_add("Get Fixed Size test 29", test_get_fixed_size, &size_test29);
+
+	l_test_add("Iter Test Basic 1", test_iter_basic_1, &parser_data_1);
+	l_test_add("Iter Test Basic 2", test_iter_basic_2, &parser_data_2);
 
 	return l_test_run();
 }
