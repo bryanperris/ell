@@ -40,6 +40,7 @@ unit/test-dbus-message
 unit/test-dbus-util
 unit/test-dbus-service
 unit/test-gvariant-util
+unit/test-gvariant-message
 
 doc/*.bak
 doc/*.stamp
