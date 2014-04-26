@@ -27,8 +27,13 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdarg.h>
+#include <endian.h>
 
 #include "private.h"
+#include "util.h"
+#include "log.h"
+#include "dbus-private.h"
 #include "gvariant-private.h"
 
 static const char *simple_types = "sogybnqiuxtdh";
@@ -280,4 +285,247 @@ int _gvariant_get_fixed_size(const char *sig)
 	size = align_len(size, max_alignment);
 
 	return size;
+}
+
+static inline size_t offset_length(size_t size)
+{
+	if (size <= 0xff)
+		return 1;
+	if (size <= 0xffff)
+		return 2;
+	if (size <= 0xffffffff)
+		return 4;
+	else
+		return 8;
+}
+
+static inline size_t read_word_le(const void *p, size_t sz) {
+	union {
+		uint16_t u16;
+		uint32_t u32;
+		uint64_t u64;
+	} x;
+
+	if (sz == 1)
+		return *(uint8_t*) p;
+
+	memcpy(&x, p, sz);
+
+	if (sz == 2)
+		return le16toh(x.u16);
+	else if (sz == 4)
+		return le32toh(x.u32);
+	else if (sz == 8)
+		return le64toh(x.u64);
+}
+
+bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
+				const char *sig_end, const void *data,
+				size_t len)
+{
+	const char *p;
+	int i;
+	char subsig[256];
+	unsigned int num_variable = 0;
+	unsigned int offset_len = offset_length(len);
+	size_t last_offset;
+
+	if (sig_end) {
+		size_t len = sig_end - sig_start;
+		memcpy(subsig, sig_start, len);
+		subsig[len] = '\0';
+	} else
+		strcpy(subsig, sig_start);
+
+	l_info("IterInit: '%s', '%s':'%s'", subsig, sig_start, sig_end);
+
+	iter->sig_start = sig_start;
+	iter->sig_end = sig_end;
+	iter->data = data;
+	iter->len = len;
+	iter->cur_child = 0;
+
+	iter->n_children = _gvariant_num_children(subsig);
+	iter->children = l_new(struct gvariant_type_info, iter->n_children);
+
+	l_info("Children: %d", iter->n_children);
+
+	for (p = sig_start, i = 0; i < iter->n_children; i++) {
+		int alignment;
+		size_t size;
+		size_t len;
+
+		iter->children[i].sig_start = p - sig_start;
+		p = validate_next_type(p, &alignment);
+		iter->children[i].sig_end = p - sig_start;
+
+		len = iter->children[i].sig_end - iter->children[i].sig_start;
+		memcpy(subsig, sig_start + iter->children[i].sig_start, len);
+		subsig[len] = '\0';
+
+		iter->children[i].alignment = alignment;
+		iter->children[i].fixed_size = _gvariant_is_fixed_size(subsig);
+
+		if (iter->children[i].fixed_size) {
+			size = _gvariant_get_fixed_size(subsig);
+			iter->children[i].end = size;
+		} else if (i + 1 < iter->n_children)
+			num_variable += 1;
+
+	}
+
+	if (len < num_variable * offset_len)
+		return false;
+
+	last_offset = len - num_variable * offset_len;
+
+	l_info("Variable Structs: %d, Offset Length: %d",
+		num_variable, offset_len);
+
+	for (i = 0; i < iter->n_children; i++) {
+		size_t o;
+
+		if (iter->children[i].fixed_size) {
+			if (i == 0)
+				continue;
+
+			o = align_len(iter->children[i-1].end,
+					iter->children[i].alignment);
+			iter->children[i].end += o;
+
+			if (iter->children[i].end > len)
+				goto fail;
+
+			continue;
+		}
+
+		if (num_variable == 0) {
+			iter->children[i].end = last_offset;
+			continue;
+		}
+
+		iter->children[i].end =
+			read_word_le(data + len - offset_len * num_variable,
+					offset_len);
+		num_variable -= 1;
+
+		if (iter->children[i].end > len)
+			goto fail;
+	}
+
+	for (i = 0; i < iter->n_children; i++) {
+		len = iter->children[i].sig_end - iter->children[i].sig_start;
+		memcpy(subsig, sig_start + iter->children[i].sig_start, len);
+		subsig[len] = '\0';
+
+		l_info("\tChild%d: Signature:'%s' Fixed:%s "
+			"Alignment:%u, End Offset: %zu",
+				i, subsig,
+				iter->children[i].fixed_size ? "True" : "False",
+				iter->children[i].alignment,
+				iter->children[i].end);
+	}
+
+	return true;
+
+fail:
+	_gvariant_iter_free(iter);
+	return false;
+}
+
+void _gvariant_iter_free(struct gvariant_iter *iter)
+{
+	l_free(iter->children);
+}
+
+#define get_u8(ptr)		(*(uint8_t *) (ptr))
+#define get_u16(ptr)		(*(uint16_t *) (ptr))
+#define get_u32(ptr)		(*(uint32_t *) (ptr))
+#define get_u64(ptr)		(*(uint64_t *) (ptr))
+#define get_s16(ptr)		(*(int16_t *) (ptr))
+#define get_s32(ptr)		(*(int32_t *) (ptr))
+#define get_s64(ptr)		(*(int64_t *) (ptr))
+
+bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
+					void *out)
+{
+	size_t c = iter->cur_child;
+	const void *start;
+	uint8_t uint8_val;
+	uint16_t uint16_val;
+	uint32_t uint32_val;
+	uint64_t uint64_val;
+	int16_t int16_val;
+	int32_t int32_val;
+	int64_t int64_val;
+
+	if (c >= iter->n_children)
+		return false;
+
+	if (iter->children[c].sig_end - iter->children[c].sig_start > 1)
+		return false;
+
+	if (iter->sig_start[iter->children[c].sig_start] != type)
+		return false;
+
+	start = iter->data;
+
+	if (c > 0)
+		start += align_len(iter->children[c-1].end,
+					iter->children[c].alignment);
+
+	switch (type) {
+	case 'o':
+	case 's':
+	case 'g':
+	{
+		const void *end = memchr(start, 0, iter->children[c].end);
+
+		if (!end)
+			return false;
+
+		*(const char**) out = start;
+		break;
+	}
+	case 'b':
+		uint8_val = get_u8(start);
+		*(bool *) out = !!uint8_val;
+		break;
+	case 'y':
+		uint8_val = get_u8(start);
+		*(uint8_t *) out = uint8_val;
+		break;
+	case 'n':
+		int16_val = get_s16(start);
+		*(int16_t *) out = int16_val;
+		break;
+	case 'q':
+		uint16_val = get_u16(start);
+		*(uint16_t *) out = uint16_val;
+		break;
+	case 'i':
+		int32_val = get_s32(start);
+		*(int32_t *) out = int32_val;
+		break;
+	case 'h':
+	case 'u':
+		uint32_val = get_u32(start);
+		*(uint32_t *) out = uint32_val;
+		break;
+	case 'x':
+		int64_val = get_s64(start);
+		*(int64_t *) out = int64_val;
+		break;
+	case 't':
+		uint64_val = get_u64(start);
+		*(uint64_t *) out = uint64_val;
+		break;
+	case 'd':
+		uint64_val = get_u64(start);
+		*(double *) out = (double) uint64_val;
+		break;
+	}
+
+	iter->cur_child += 1;
+	return true;
 }
