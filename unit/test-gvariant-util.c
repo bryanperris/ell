@@ -24,6 +24,9 @@
 #endif
 
 #include <assert.h>
+#include <math.h>
+#include <float.h>
+#include <stdio.h>
 
 #include <ell/ell.h>
 #include "ell/gvariant-private.h"
@@ -288,6 +291,88 @@ static void test_iter_basic_2(const void *test_data)
 	_gvariant_iter_free(&iter);
 }
 
+static const unsigned char basic_data_3[] = {
+	0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x14, 0x40, 0xdf, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x1c, 0xaf, 0x7d, 0x1a, 0x00, 0x00, 0x00, 0x00, 0x21, 0x7f, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0xe4, 0xd4, 0x59, 0xfd, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0x00, 0x00, 0x00, 0x02, 0xad, 0x31, 0x00, 0x66, 0x6f, 0x6f, 0x62,
+	0x61, 0x72, 0x00, 0x00, 0xfe, 0x52, 0xce, 0xff, 0x3f,
+};
+
+static struct parser_data parser_data_3 = {
+	.data = basic_data_3,
+	.len = 69,
+	.signature = "bdntqxyusi",
+};
+
+static void test_iter_basic_3(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct gvariant_iter iter;
+	bool b;
+	double d;
+	int16_t n;
+	uint64_t t;
+	uint16_t q;
+	int64_t x;
+	uint8_t y;
+	uint32_t u;
+	const char *s;
+	int32_t i;
+	bool ret;
+
+	_gvariant_iter_init(&iter, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'd', &b);
+	assert(ret == false);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'b', &b);
+	assert(ret);
+	assert(b == true);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'd', &d);
+	assert(ret);
+	assert(fabs(d - 5.0) < DBL_EPSILON);
+	assert(d == 5.0);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'n', &n);
+	assert(ret);
+	assert(n == -32545);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 't', &t);
+	assert(ret);
+	assert(t == 444444444LL);
+
+	ret == _gvariant_iter_next_entry_basic(&iter, 'q', &q);
+	assert(ret);
+	assert(q == 32545);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'x', &x);
+	assert(ret);
+	assert(x == -44444444LL);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'y', &y);
+	assert(ret);
+	assert(y == 255);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'u', &u);
+	assert(ret);
+	assert(u == 3255554);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "foobar"));
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'i', &i);
+	assert(ret);
+	assert(i == -3255554);
+
+	_gvariant_iter_free(&iter);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -432,6 +517,7 @@ int main(int argc, char *argv[])
 
 	l_test_add("Iter Test Basic 1", test_iter_basic_1, &parser_data_1);
 	l_test_add("Iter Test Basic 2", test_iter_basic_2, &parser_data_2);
+	l_test_add("Iter Test Basic 3", test_iter_basic_3, &parser_data_3);
 
 	return l_test_run();
 }
