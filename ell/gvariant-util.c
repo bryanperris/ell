@@ -529,3 +529,37 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 	iter->cur_child += 1;
 	return true;
 }
+
+bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
+					struct gvariant_iter *structure)
+{
+	size_t c = iter->cur_child;
+	const void *start;
+	bool ret;
+
+	if (c >= iter->n_children)
+		return false;
+
+	if (iter->sig_start[iter->children[c].sig_start] != '(' &&
+			iter->sig_start[iter->children[c].sig_start] != '{')
+		return false;
+
+	if (iter->children[c].sig_end - iter->children[c].sig_start <= 2)
+		return false;
+
+	start = iter->data;
+
+	if (c > 0)
+		start += align_len(iter->children[c-1].end,
+					iter->children[c].alignment);
+
+	ret = _gvariant_iter_init(structure,
+			iter->sig_start + iter->children[c].sig_start + 1,
+			iter->sig_start + iter->children[c].sig_end - 1,
+			start, iter->children[c].end);
+
+	if (ret)
+		iter->cur_child += 1;
+
+	return ret;
+}
