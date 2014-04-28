@@ -373,6 +373,48 @@ static void test_iter_basic_3(const void *test_data)
 	_gvariant_iter_free(&iter);
 }
 
+static const unsigned char fixed_struct_data_1[] = {
+	0x0a, 0x00, 0x00, 0x00, 0xff, 0x01, 0x00, 0x00,
+};
+
+static struct parser_data fixed_struct_1 = {
+	.data = fixed_struct_data_1,
+	.len = 8,
+	.signature = "i(yy)",
+};
+
+static void test_iter_fixed_struct_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct gvariant_iter iter;
+	int32_t i;
+	uint8_t y;
+	bool ret;
+	struct gvariant_iter structure;
+
+	_gvariant_iter_init(&iter, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'i', &i);
+	assert(ret);
+	assert(i == 10);
+
+	ret = _gvariant_iter_enter_struct(&iter, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
+	assert(ret);
+	assert(y == 255);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
+	assert(ret);
+	assert(y == 1);
+
+	_gvariant_iter_free(&structure);
+	_gvariant_iter_free(&iter);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -518,6 +560,8 @@ int main(int argc, char *argv[])
 	l_test_add("Iter Test Basic 1", test_iter_basic_1, &parser_data_1);
 	l_test_add("Iter Test Basic 2", test_iter_basic_2, &parser_data_2);
 	l_test_add("Iter Test Basic 3", test_iter_basic_3, &parser_data_3);
+	l_test_add("Iter Test Fixed Struct 1", test_iter_fixed_struct_1,
+			&fixed_struct_1);
 
 	return l_test_run();
 }
