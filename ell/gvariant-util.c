@@ -425,6 +425,8 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 				iter->children[i].end);
 	}
 
+	iter->container_type = DBUS_CONTAINER_TYPE_STRUCT;
+
 	return true;
 
 fail:
@@ -560,6 +562,9 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 	if (ret)
 		iter->cur_child += 1;
 
+	if (iter->sig_start[iter->children[c].sig_start] == '{')
+		structure->container_type = DBUS_CONTAINER_TYPE_DICT_ENTRY;
+
 	return ret;
 }
 
@@ -607,6 +612,8 @@ bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 
 	ret = _gvariant_iter_init(variant, nul + 1, end,
 					start, nul - start);
+
+	variant->container_type = DBUS_CONTAINER_TYPE_VARIANT;
 
 	if (ret)
 		iter->cur_child += 1;
