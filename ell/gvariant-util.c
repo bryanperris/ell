@@ -486,11 +486,12 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 	 * - Variable arrays, in which case we need to look up the end offset
 	 */
 	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY) {
-		if (iter->children[c].fixed_size)
-			start += iter->cur_child * iter->children[c].end;
+		if (iter->children[0].fixed_size) {
+			start += iter->cur_child * iter->children[0].end;
 
-		if (start >= iter->data + iter->len)
-			return false;
+			if (start >= iter->data + iter->len)
+				return false;
+		}
 	}
 
 	switch (type) {
