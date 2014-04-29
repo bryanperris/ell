@@ -517,6 +517,46 @@ static void test_iter_variant_2(const void *test_data)
 	_gvariant_iter_free(&iter);
 }
 
+static const unsigned char fixed_array_data_1[] = {
+	0x14, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
+};
+
+static struct parser_data fixed_array_1 = {
+	.data = fixed_array_data_1,
+	.len = 8,
+	.signature = "au",
+};
+
+static void test_iter_fixed_array_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct gvariant_iter iter;
+	struct gvariant_iter array;
+	uint32_t u;
+	bool ret;
+
+	_gvariant_iter_init(&iter, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_enter_array(&iter, &array);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&array, 'u', &u);
+	assert(ret);
+	assert(u == 20);
+
+	ret = _gvariant_iter_next_entry_basic(&array, 'u', &u);
+	assert(ret);
+	assert(u == 22);
+
+	ret = _gvariant_iter_next_entry_basic(&array, 'u', &u);
+	assert(!ret);
+
+	_gvariant_iter_free(&array);
+	_gvariant_iter_free(&iter);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -667,6 +707,9 @@ int main(int argc, char *argv[])
 
 	l_test_add("Iter Test Variant 1", test_iter_variant_1, &variant_1);
 	l_test_add("Iter Test Variant 2", test_iter_variant_2, &variant_2);
+
+	l_test_add("Iter Test Fixed Array 1", test_iter_fixed_array_1,
+					&fixed_array_1);
 
 	return l_test_run();
 }
