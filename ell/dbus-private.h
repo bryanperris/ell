@@ -26,6 +26,13 @@ enum dbus_message_type {
 	DBUS_MESSAGE_TYPE_SIGNAL	= 4,
 };
 
+enum dbus_container_type {
+	DBUS_CONTAINER_TYPE_ARRAY	= 'a',
+	DBUS_CONTAINER_TYPE_STRUCT	= 'r',
+	DBUS_CONTAINER_TYPE_VARIANT	= 'v',
+	DBUS_CONTAINER_TYPE_DICT_ENTRY	= 'e',
+};
+
 struct dbus_header {
 	uint8_t  endian;
 	uint8_t  message_type;
