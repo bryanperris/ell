@@ -469,6 +469,54 @@ static void test_iter_variant_1(const void *test_data)
 	_gvariant_iter_free(&iter);
 }
 
+static const unsigned char variant_data_2[] = {
+	0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+	0xff, 0x07, 0x00, 0x28, 0x73, 0x75, 0x79, 0x29,
+};
+
+static struct parser_data variant_2 = {
+	.data = variant_data_2,
+	.len = 20,
+	.signature = "v",
+};
+
+static void test_iter_variant_2(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct gvariant_iter iter;
+	struct gvariant_iter variant;
+	struct gvariant_iter structure;
+	uint8_t y;
+	uint32_t u;
+	const char *s;
+	bool ret;
+
+	_gvariant_iter_init(&iter, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_enter_variant(&iter, &variant);
+	assert(ret);
+
+	ret = _gvariant_iter_enter_struct(&variant, &structure);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "foobar"));
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'u', &u);
+	assert(ret);
+	assert(u == 20);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
+	assert(ret);
+	assert(y == 255);
+
+	_gvariant_iter_free(&structure);
+	_gvariant_iter_free(&variant);
+	_gvariant_iter_free(&iter);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -618,6 +666,7 @@ int main(int argc, char *argv[])
 			&fixed_struct_1);
 
 	l_test_add("Iter Test Variant 1", test_iter_variant_1, &variant_1);
+	l_test_add("Iter Test Variant 2", test_iter_variant_2, &variant_2);
 
 	return l_test_run();
 }
