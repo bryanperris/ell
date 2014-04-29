@@ -371,7 +371,6 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 			iter->children[i].end = size;
 		} else if (i + 1 < iter->n_children)
 			num_variable += 1;
-
 	}
 
 	if (len < num_variable * offset_len)
