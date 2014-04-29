@@ -620,3 +620,45 @@ bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 
 	return ret;
 }
+
+bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
+					struct gvariant_iter *array)
+{
+	size_t c = iter->cur_child;
+	const void *start;
+	unsigned char siglen;
+	bool ret;
+	char signature[256];
+
+	if (c >= iter->n_children)
+		return false;
+
+	if (iter->sig_start[iter->children[c].sig_start] != 'a')
+		return false;
+
+	siglen = iter->children[c].sig_end - iter->children[c].sig_start - 1;
+	memcpy(signature, iter->sig_start + iter->children[c].sig_start + 1,
+		siglen);
+	signature[siglen] = '\0';
+
+	if (_gvariant_num_children(signature) != 1)
+		return false;
+
+	start = iter->data;
+
+	if (c > 0)
+		start += align_len(iter->children[c-1].end,
+					iter->children[c].alignment);
+
+	ret = _gvariant_iter_init(array,
+			iter->sig_start + iter->children[c].sig_start + 1,
+			iter->sig_start + iter->children[c].sig_end,
+			start, iter->children[c].end);
+
+	array->container_type = DBUS_CONTAINER_TYPE_ARRAY;
+
+	if (ret)
+		iter->cur_child += 1;
+
+	return ret;
+}

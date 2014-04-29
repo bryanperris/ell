@@ -48,6 +48,8 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 					struct gvariant_iter *structure);
 bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 					struct gvariant_iter *variant);
+bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
+					struct gvariant_iter *array);
 
 bool _gvariant_valid_signature(const char *sig);
 int _gvariant_get_alignment(const char *signature);
