@@ -563,3 +563,54 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 
 	return ret;
 }
+
+bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
+					struct gvariant_iter *variant)
+{
+	size_t c = iter->cur_child;
+	const void *start, *end, *nul;
+	bool ret;
+	char signature[255];
+
+	if (c >= iter->n_children)
+		return false;
+
+	if (iter->children[c].sig_end - iter->children[c].sig_start != 1)
+		return false;
+
+	if (iter->sig_start[iter->children[c].sig_start] != 'v')
+		return false;
+
+	start = iter->data;
+
+	if (c > 0)
+		start += align_len(iter->children[c-1].end,
+					iter->children[c].alignment);
+
+	/* Find the signature */
+	end = iter->children[c].end + iter->data;
+	nul = memrchr(start, 0, end - start);
+
+	if (!nul)
+		return false;
+
+	if (end - nul - 1 > 255)
+		return false;
+
+	memcpy(signature, nul + 1, end - nul - 1);
+	signature[end - nul - 1] = '\0';
+
+	if (!_gvariant_valid_signature(signature))
+		return false;
+
+	if (_gvariant_num_children(signature) != 1)
+		return false;
+
+	ret = _gvariant_iter_init(variant, nul + 1, end,
+					start, nul - start);
+
+	if (ret)
+		iter->cur_child += 1;
+
+	return ret;
+}
