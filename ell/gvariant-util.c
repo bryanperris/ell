@@ -450,7 +450,7 @@ void _gvariant_iter_free(struct gvariant_iter *iter)
 bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 					void *out)
 {
-	size_t c = iter->cur_child;
+	size_t c;
 	const void *start;
 	uint8_t uint8_val;
 	uint16_t uint16_val;
@@ -459,6 +459,11 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 	int16_t int16_val;
 	int32_t int32_val;
 	int64_t int64_val;
+
+	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY)
+		c = 0;
+	else
+		c = iter->cur_child;
 
 	if (c >= iter->n_children)
 		return false;
@@ -474,6 +479,19 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 	if (c > 0)
 		start += align_len(iter->children[c-1].end,
 					iter->children[c].alignment);
+
+	/*
+	 * For arrays, we need to figure out the offset.  There are two cases:
+	 * - Fixed arrays, in which case we simply use the size of the item
+	 * - Variable arrays, in which case we need to look up the end offset
+	 */
+	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY) {
+		if (iter->children[c].fixed_size)
+			start += iter->cur_child * iter->children[c].end;
+
+		if (start >= iter->data + iter->len)
+			return false;
+	}
 
 	switch (type) {
 	case 'o':
