@@ -557,6 +557,51 @@ static void test_iter_fixed_array_1(const void *test_data)
 	_gvariant_iter_free(&iter);
 }
 
+static const unsigned char variable_array_data_1[] = {
+	0x66, 0x6f, 0x6f, 0x00, 0x62, 0x61, 0x72, 0x00, 0x66, 0x6f, 0x6f, 0x62,
+	0x61, 0x72, 0x00, 0x04, 0x08, 0x0f,
+};
+
+static struct parser_data variable_array_1 = {
+	.data = variable_array_data_1,
+	.len = 18,
+	.signature = "as",
+};
+
+static void test_iter_variable_array_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct gvariant_iter iter;
+	struct gvariant_iter array;
+	const char *s;
+	bool ret;
+
+	_gvariant_iter_init(&iter, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_enter_array(&iter, &array);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&array, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "foo"));
+
+	ret = _gvariant_iter_next_entry_basic(&array, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "bar"));
+
+	ret = _gvariant_iter_next_entry_basic(&array, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "foobar"));
+
+	ret = _gvariant_iter_next_entry_basic(&array, 's', &s);
+	assert(!ret);
+
+	_gvariant_iter_free(&array);
+	_gvariant_iter_free(&iter);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -710,6 +755,9 @@ int main(int argc, char *argv[])
 
 	l_test_add("Iter Test Fixed Array 1", test_iter_fixed_array_1,
 					&fixed_array_1);
+
+	l_test_add("Iter Test Variable Array 1", test_iter_variable_array_1,
+					&variable_array_1);
 
 	return l_test_run();
 }
