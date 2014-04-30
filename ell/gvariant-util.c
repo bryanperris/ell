@@ -439,6 +439,42 @@ void _gvariant_iter_free(struct gvariant_iter *iter)
 	l_free(iter->children);
 }
 
+static const void *find_nth(struct gvariant_iter *iter, size_t *out_item_size)
+{
+	const void *start = iter->data;
+	unsigned int offset_len = offset_length(iter->len);
+	/*
+	 * offset is effectively the end of the last element
+	 * and start of the offset array
+	 */
+	size_t offset = read_word_le(start + iter->len - offset_len,
+					offset_len);
+	size_t n_items = (iter->len - offset) / offset_len;
+	size_t item_end_offset;
+
+	if (iter->cur_child >= n_items)
+		return NULL;
+
+	if (n_items * offset_len > iter->len)
+		return NULL;
+
+	item_end_offset = offset + iter->cur_child * offset_len;
+	item_end_offset = read_word_le(start + item_end_offset, offset_len);
+
+	if (iter->cur_child > 0) {
+		offset += (iter->cur_child - 1) * offset_len;
+		offset = read_word_le(start + offset, offset_len);
+	} else
+		offset = 0;
+
+	offset = align_len(offset, iter->children[0].alignment);
+	start += offset;
+
+	*out_item_size = iter->data + item_end_offset - start;
+
+	return start;
+}
+
 #define get_u8(ptr)		(*(uint8_t *) (ptr))
 #define get_u16(ptr)		(*(uint16_t *) (ptr))
 #define get_u32(ptr)		(*(uint32_t *) (ptr))
@@ -451,6 +487,7 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 					void *out)
 {
 	size_t c;
+	size_t item_size;
 	const void *start;
 	uint8_t uint8_val;
 	uint16_t uint16_val;
@@ -491,15 +528,21 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 
 			if (start >= iter->data + iter->len)
 				return false;
+		} else {
+			start = find_nth(iter, &item_size);
+
+			if (!start)
+				return false;
 		}
-	}
+	} else
+		item_size = iter->data + iter->children[c].end - start;
 
 	switch (type) {
 	case 'o':
 	case 's':
 	case 'g':
 	{
-		const void *end = memchr(start, 0, iter->children[c].end);
+		const void *end = memchr(start, 0, item_size);
 
 		if (!end)
 			return false;
