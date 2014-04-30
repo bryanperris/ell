@@ -315,7 +315,7 @@ static inline size_t read_word_le(const void *p, size_t sz) {
 		return le16toh(x.u16);
 	else if (sz == 4)
 		return le32toh(x.u32);
-	else if (sz == 8)
+	else
 		return le64toh(x.u64);
 }
 
@@ -487,7 +487,7 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 					void *out)
 {
 	size_t c;
-	size_t item_size;
+	size_t item_size = 0;
 	const void *start;
 	uint8_t uint8_val;
 	uint16_t uint16_val;
