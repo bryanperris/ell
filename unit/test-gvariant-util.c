@@ -230,7 +230,7 @@ static void test_get_fixed_size(const void *test_data)
 }
 
 struct parser_data {
-	const char *data;
+	const unsigned char *data;
 	size_t len;
 	const char *signature;
 };
@@ -346,7 +346,7 @@ static void test_iter_basic_3(const void *test_data)
 	assert(ret);
 	assert(t == 444444444LL);
 
-	ret == _gvariant_iter_next_entry_basic(&iter, 'q', &q);
+	ret = _gvariant_iter_next_entry_basic(&iter, 'q', &q);
 	assert(ret);
 	assert(q == 32545);
 
