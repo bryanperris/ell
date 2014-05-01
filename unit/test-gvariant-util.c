@@ -821,22 +821,25 @@ int main(int argc, char *argv[])
 	l_test_add("Get Fixed Size test 28", test_get_fixed_size, &size_test28);
 	l_test_add("Get Fixed Size test 29", test_get_fixed_size, &size_test29);
 
-	l_test_add("Iter Test Basic 1", test_iter_basic_1, &parser_data_1);
-	l_test_add("Iter Test Basic 2", test_iter_basic_2, &parser_data_2);
-	l_test_add("Iter Test Basic 3", test_iter_basic_3, &parser_data_3);
-	l_test_add("Iter Test Fixed Struct 1", test_iter_fixed_struct_1,
+	l_test_add("Iter Test Basic 's'", test_iter_basic_1, &parser_data_1);
+	l_test_add("Iter Test Basic 'is'", test_iter_basic_2, &parser_data_2);
+	l_test_add("Iter Test Basic 'bdntqxyusi'",
+				test_iter_basic_3, &parser_data_3);
+
+	l_test_add("Iter Test Fixed Struct 'i(yy)'", test_iter_fixed_struct_1,
 			&fixed_struct_1);
 
-	l_test_add("Iter Test Variant 1", test_iter_variant_1, &variant_1);
-	l_test_add("Iter Test Variant 2", test_iter_variant_2, &variant_2);
+	l_test_add("Iter Test Variant '(uvu)i'", test_iter_variant_1,
+						&variant_1);
+	l_test_add("Iter Test Variant 'v'", test_iter_variant_2, &variant_2);
 
-	l_test_add("Iter Test Fixed Array 1", test_iter_fixed_array_1,
+	l_test_add("Iter Test Fixed Array 'au'", test_iter_fixed_array_1,
 					&fixed_array_1);
 
-	l_test_add("Iter Test Variable Array 1", test_iter_variable_array_1,
+	l_test_add("Iter Test Variable Array 'as'", test_iter_variable_array_1,
 					&variable_array_1);
-	l_test_add("Iter Test Variable Array 2", test_iter_variable_array_2,
-					&variable_array_2);
+	l_test_add("Iter Test Variable Array 'a(st)'",
+				test_iter_variable_array_2, &variable_array_2);
 
 	return l_test_run();
 }
