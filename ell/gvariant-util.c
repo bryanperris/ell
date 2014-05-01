@@ -439,7 +439,8 @@ void _gvariant_iter_free(struct gvariant_iter *iter)
 	l_free(iter->children);
 }
 
-static const void *find_nth(struct gvariant_iter *iter, size_t *out_item_size)
+static const void *vararray_find_nth(struct gvariant_iter *iter,
+							size_t *out_item_size)
 {
 	const void *start = iter->data;
 	unsigned int offset_len = offset_length(iter->len);
@@ -473,6 +474,40 @@ static const void *find_nth(struct gvariant_iter *iter, size_t *out_item_size)
 	*out_item_size = iter->data + item_end_offset - start;
 
 	return start;
+}
+
+static const void *next_item(struct gvariant_iter *iter, size_t *out_item_size)
+{
+	const void *start = iter->data;
+	size_t c = iter->cur_child;
+
+	switch (iter->container_type) {
+	case DBUS_CONTAINER_TYPE_DICT_ENTRY:
+	case DBUS_CONTAINER_TYPE_STRUCT:
+	case DBUS_CONTAINER_TYPE_VARIANT:
+		if (iter->cur_child == 0) {
+			*out_item_size = iter->children[0].end;
+			return start;
+		}
+
+		start += align_len(iter->children[c-1].end,
+					iter->children[c].alignment);
+		*out_item_size = iter->data + iter->children[c].end - start;
+		return start;
+	/*
+	 * For arrays, we need to figure out the offset.  There are two cases:
+	 * - Fixed arrays, in which case we simply use the size of the item
+	 * - Variable arrays, in which case we need to look up the end offset
+	 */
+	case DBUS_CONTAINER_TYPE_ARRAY:
+		if (iter->children[0].fixed_size) {
+			start += iter->cur_child * iter->children[0].end;
+			*out_item_size = iter->children[0].end;
+			return start;
+		}
+
+		return vararray_find_nth(iter, out_item_size);
+	}
 }
 
 #define get_u8(ptr)		(*(uint8_t *) (ptr))
@@ -511,31 +546,9 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 	if (iter->sig_start[iter->children[c].sig_start] != type)
 		return false;
 
-	start = iter->data;
-
-	if (c > 0)
-		start += align_len(iter->children[c-1].end,
-					iter->children[c].alignment);
-
-	/*
-	 * For arrays, we need to figure out the offset.  There are two cases:
-	 * - Fixed arrays, in which case we simply use the size of the item
-	 * - Variable arrays, in which case we need to look up the end offset
-	 */
-	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY) {
-		if (iter->children[0].fixed_size) {
-			start += iter->cur_child * iter->children[0].end;
-
-			if (start >= iter->data + iter->len)
-				return false;
-		} else {
-			start = find_nth(iter, &item_size);
-
-			if (!start)
-				return false;
-		}
-	} else
-		item_size = iter->data + iter->children[c].end - start;
+	start = next_item(iter, &item_size);
+	if (start >= iter->data + iter->len)
+		return false;
 
 	switch (type) {
 	case 'o':
@@ -596,9 +609,15 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 					struct gvariant_iter *structure)
 {
-	size_t c = iter->cur_child;
+	size_t c;
 	const void *start;
 	bool ret;
+	size_t item_size;
+
+	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY)
+		c = 0;
+	else
+		c = iter->cur_child;
 
 	if (c >= iter->n_children)
 		return false;
@@ -610,16 +629,14 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 	if (iter->children[c].sig_end - iter->children[c].sig_start <= 2)
 		return false;
 
-	start = iter->data;
-
-	if (c > 0)
-		start += align_len(iter->children[c-1].end,
-					iter->children[c].alignment);
+	start = next_item(iter, &item_size);
+	if (start >= iter->data + iter->len)
+		return false;
 
 	ret = _gvariant_iter_init(structure,
 			iter->sig_start + iter->children[c].sig_start + 1,
 			iter->sig_start + iter->children[c].sig_end - 1,
-			start, iter->children[c].end);
+			start, item_size);
 
 	if (ret)
 		iter->cur_child += 1;
