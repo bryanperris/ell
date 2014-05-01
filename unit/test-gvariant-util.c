@@ -602,6 +602,79 @@ static void test_iter_variable_array_1(const void *test_data)
 	_gvariant_iter_free(&iter);
 }
 
+static const unsigned char variable_array_data_2[] = {
+	0x66, 0x6f, 0x6f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x62, 0x61, 0x72, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72, 0x31, 0x32, 0x33, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x0a, 0x11, 0x29, 0x49,
+};
+
+static struct parser_data variable_array_2 = {
+	.data = variable_array_data_2,
+	.len = 76,
+	.signature = "a(st)",
+};
+
+static void test_iter_variable_array_2(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct gvariant_iter iter;
+	struct gvariant_iter array;
+	struct gvariant_iter structure;
+	const char *s;
+	uint64_t t;
+	bool ret;
+
+	_gvariant_iter_init(&iter, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_enter_array(&iter, &array);
+	assert(ret);
+
+	ret = _gvariant_iter_enter_struct(&array, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "foo"));
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 't', &t);
+	assert(ret);
+	assert(t == 15LL);
+
+	_gvariant_iter_free(&structure);
+	ret = _gvariant_iter_enter_struct(&array, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "bar"));
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 't', &t);
+	assert(ret);
+	assert(t == 16LL);
+
+	_gvariant_iter_free(&structure);
+	ret = _gvariant_iter_enter_struct(&array, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "foobar123"));
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 't', &t);
+	assert(ret);
+	assert(t == 31LL);
+
+	_gvariant_iter_free(&structure);
+	_gvariant_iter_free(&array);
+	_gvariant_iter_free(&iter);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -758,6 +831,8 @@ int main(int argc, char *argv[])
 
 	l_test_add("Iter Test Variable Array 1", test_iter_variable_array_1,
 					&variable_array_1);
+	l_test_add("Iter Test Variable Array 2", test_iter_variable_array_2,
+					&variable_array_2);
 
 	return l_test_run();
 }
