@@ -236,25 +236,29 @@ struct parser_data {
 };
 
 static const unsigned char basic_data_1[] = {
-	0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x66, 0x6f, 0x6f, 0x62,
-	0x61, 0x72, 0x00, 0x00, 0x73, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
-	0x11, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x19,
+	0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x57, 0x6f, 0x72, 0x6c, 0x64, 0x21,
+	0x00,
 };
 
 static struct parser_data parser_data_1 = {
 	.data = basic_data_1,
-	.len = 33,
-	.signature = "(uvu)i",
+	.len = 13,
+	.signature = "s",
 };
 
 static void test_iter_basic_1(const void *test_data)
 {
 	const struct parser_data *test = test_data;
 	struct gvariant_iter iter;
+	const char *s;
 
 	_gvariant_iter_init(&iter, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
+
+	_gvariant_iter_next_entry_basic(&iter, 's', &s);
+	assert(!strcmp(s, "Hello World!"));
+
 	_gvariant_iter_free(&iter);
 }
 
