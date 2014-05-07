@@ -657,9 +657,15 @@ bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 					struct gvariant_iter *variant)
 {
 	size_t c = iter->cur_child;
+	size_t item_size;
 	const void *start, *end, *nul;
 	bool ret;
 	char signature[255];
+
+	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY)
+		c = 0;
+	else
+		c = iter->cur_child;
 
 	if (c >= iter->n_children)
 		return false;
@@ -670,14 +676,15 @@ bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 	if (iter->sig_start[iter->children[c].sig_start] != 'v')
 		return false;
 
-	start = iter->data;
+	start = next_item(iter, &item_size);
+	if (!start)
+		return false;
 
-	if (c > 0)
-		start += align_len(iter->children[c-1].end,
-					iter->children[c].alignment);
+	if (start >= iter->data + iter->len)
+		return false;
 
 	/* Find the signature */
-	end = iter->children[c].end + iter->data;
+	end = start + item_size;
 	nul = memrchr(start, 0, end - start);
 
 	if (!nul)
