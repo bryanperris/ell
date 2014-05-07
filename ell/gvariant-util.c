@@ -704,10 +704,16 @@ bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
 					struct gvariant_iter *array)
 {
 	size_t c = iter->cur_child;
+	size_t item_size;
 	const void *start;
 	unsigned char siglen;
 	bool ret;
 	char signature[256];
+
+	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY)
+		c = 0;
+	else
+		c = iter->cur_child;
 
 	if (c >= iter->n_children)
 		return false;
@@ -723,16 +729,14 @@ bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
 	if (_gvariant_num_children(signature) != 1)
 		return false;
 
-	start = iter->data;
-
-	if (c > 0)
-		start += align_len(iter->children[c-1].end,
-					iter->children[c].alignment);
+	start = next_item(iter, &item_size);
+	if (start >= iter->data + iter->len)
+		return false;
 
 	ret = _gvariant_iter_init(array,
 			iter->sig_start + iter->children[c].sig_start + 1,
 			iter->sig_start + iter->children[c].sig_end,
-			start, iter->children[c].end);
+			start, item_size);
 
 	array->container_type = DBUS_CONTAINER_TYPE_ARRAY;
 
