@@ -547,6 +547,9 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 		return false;
 
 	start = next_item(iter, &item_size);
+	if (!start)
+		return false;
+
 	if (start >= iter->data + iter->len)
 		return false;
 
@@ -630,6 +633,9 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 		return false;
 
 	start = next_item(iter, &item_size);
+	if (!start)
+		return false;
+
 	if (start >= iter->data + iter->len)
 		return false;
 
