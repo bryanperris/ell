@@ -766,6 +766,59 @@ static void test_iter_aau_1(const void *test_data)
 	_gvariant_iter_free(&iter);
 }
 
+static const unsigned char av_data_1[] = {
+	0x46, 0x6f, 0x6f, 0x62, 0x61, 0x72, 0x00, 0x00, 0x73, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x75, 0x09, 0x16,
+};
+
+static struct parser_data av_1 = {
+	.data = av_data_1,
+	.len = 24,
+	.signature = "av",
+};
+
+static void test_iter_av_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct gvariant_iter iter;
+	struct gvariant_iter array;
+	struct gvariant_iter variant;
+	uint32_t u;
+	const char *s;
+	bool ret;
+
+	_gvariant_iter_init(&iter, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_enter_array(&iter, &array);
+	assert(ret);
+
+	ret = _gvariant_iter_enter_variant(&array, &variant);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&variant, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "Foobar"));
+
+	_gvariant_iter_free(&variant);
+
+	ret = _gvariant_iter_enter_variant(&array, &variant);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&variant, 'u', &u);
+	assert(ret);
+	assert(u == 10);
+
+	_gvariant_iter_free(&variant);
+
+	ret = _gvariant_iter_enter_variant(&array, &variant);
+	assert(!ret);
+
+	_gvariant_iter_free(&array);
+	_gvariant_iter_free(&iter);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -929,6 +982,8 @@ int main(int argc, char *argv[])
 				test_iter_variable_array_2, &variable_array_2);
 
 	l_test_add("Iter Test Array of Array 'aau'", test_iter_aau_1, &aau_1);
+
+	l_test_add("Iter Test Array of Variant 'av'", test_iter_av_1, &av_1);
 
 	return l_test_run();
 }
