@@ -679,6 +679,93 @@ static void test_iter_variable_array_2(const void *test_data)
 	_gvariant_iter_free(&iter);
 }
 
+static const unsigned char aau_data_1[] = {
+	0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+	0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+	0x0c, 0x14, 0x18, 0x18,
+};
+
+static struct parser_data aau_1 = {
+	.data = aau_data_1,
+	.len = 28,
+	.signature = "aau",
+};
+
+static void test_iter_aau_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct gvariant_iter iter;
+	struct gvariant_iter outer;
+	struct gvariant_iter inner;
+	uint32_t u;
+	bool ret;
+
+	_gvariant_iter_init(&iter, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_enter_array(&iter, &outer);
+	assert(ret);
+
+	ret = _gvariant_iter_enter_array(&outer, &inner);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
+	assert(ret);
+	assert(u == 1);
+
+	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
+	assert(ret);
+	assert(u == 2);
+
+	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
+	assert(ret);
+	assert(u == 3);
+
+	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
+	assert(!ret);
+
+	_gvariant_iter_free(&inner);
+
+	ret = _gvariant_iter_enter_array(&outer, &inner);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
+	assert(ret);
+	assert(u == 1);
+
+	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
+	assert(ret);
+	assert(u == 2);
+
+	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
+	assert(!ret);
+
+	_gvariant_iter_free(&inner);
+
+	ret = _gvariant_iter_enter_array(&outer, &inner);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
+	assert(ret);
+	assert(u == 1);
+
+	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
+	assert(!ret);
+
+	_gvariant_iter_free(&inner);
+
+	ret = _gvariant_iter_enter_array(&outer, &inner);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
+	assert(!ret);
+
+	_gvariant_iter_free(&inner);
+	_gvariant_iter_free(&outer);
+	_gvariant_iter_free(&iter);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -840,6 +927,8 @@ int main(int argc, char *argv[])
 					&variable_array_1);
 	l_test_add("Iter Test Variable Array 'a(st)'",
 				test_iter_variable_array_2, &variable_array_2);
+
+	l_test_add("Iter Test Array of Array 'aau'", test_iter_aau_1, &aau_1);
 
 	return l_test_run();
 }
