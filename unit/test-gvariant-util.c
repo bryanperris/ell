@@ -679,6 +679,62 @@ static void test_iter_variable_array_2(const void *test_data)
 	_gvariant_iter_free(&iter);
 }
 
+static const unsigned char dict_data_1[] = {
+	0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00,
+};
+
+static struct parser_data dict_1 = {
+	.data = dict_data_1,
+	.len = 16,
+	.signature = "a{ub}",
+};
+
+static void test_iter_dict_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct gvariant_iter iter;
+	struct gvariant_iter array;
+	struct gvariant_iter structure;
+	uint32_t u;
+	bool b;
+	bool ret;
+
+	_gvariant_iter_init(&iter, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_enter_array(&iter, &array);
+	assert(ret);
+
+	ret = _gvariant_iter_enter_struct(&array, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'u', &u);
+	assert(ret);
+	assert(u == 1);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'b', &b);
+	assert(ret);
+	assert(b == true);
+
+	_gvariant_iter_free(&structure);
+	ret = _gvariant_iter_enter_struct(&array, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'u', &u);
+	assert(ret);
+	assert(u == 2);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'b', &b);
+	assert(ret);
+	assert(b == false);
+
+	_gvariant_iter_free(&structure);
+	_gvariant_iter_free(&array);
+	_gvariant_iter_free(&iter);
+}
+
 static const unsigned char aau_data_1[] = {
 	0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
 	0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
@@ -975,6 +1031,7 @@ int main(int argc, char *argv[])
 
 	l_test_add("Iter Test Fixed Array 'au'", test_iter_fixed_array_1,
 					&fixed_array_1);
+	l_test_add("Iter Test Fixed Dict 'a{ub}'", test_iter_dict_1, &dict_1);
 
 	l_test_add("Iter Test Variable Array 'as'", test_iter_variable_array_1,
 					&variable_array_1);
