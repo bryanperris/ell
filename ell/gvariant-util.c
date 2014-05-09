@@ -613,6 +613,8 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 					struct gvariant_iter *structure)
 {
 	size_t c;
+	bool is_dict;
+	bool is_struct;
 	const void *start;
 	bool ret;
 	size_t item_size;
@@ -625,8 +627,10 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 	if (c >= iter->n_children)
 		return false;
 
-	if (iter->sig_start[iter->children[c].sig_start] != '(' &&
-			iter->sig_start[iter->children[c].sig_start] != '{')
+	is_struct = iter->sig_start[iter->children[c].sig_start] == '(';
+	is_dict = iter->sig_start[iter->children[c].sig_start] == '{';
+
+	if (!is_dict && !is_struct)
 		return false;
 
 	if (iter->children[c].sig_end - iter->children[c].sig_start <= 2)
@@ -647,7 +651,7 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 	if (ret)
 		iter->cur_child += 1;
 
-	if (iter->sig_start[iter->children[c].sig_start] == '{')
+	if (is_dict)
 		structure->container_type = DBUS_CONTAINER_TYPE_DICT_ENTRY;
 
 	return ret;
