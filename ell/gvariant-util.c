@@ -337,8 +337,6 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 	} else
 		strcpy(subsig, sig_start);
 
-	l_info("IterInit: '%s', '%s':'%s'", subsig, sig_start, sig_end);
-
 	iter->sig_start = sig_start;
 	iter->sig_end = sig_end;
 	iter->data = data;
@@ -347,8 +345,6 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 
 	iter->n_children = _gvariant_num_children(subsig);
 	iter->children = l_new(struct gvariant_type_info, iter->n_children);
-
-	l_info("Children: %d", iter->n_children);
 
 	for (p = sig_start, i = 0; i < iter->n_children; i++) {
 		int alignment;
@@ -377,9 +373,6 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 		return false;
 
 	last_offset = len - num_variable * offset_len;
-
-	l_info("Variable Structs: %d, Offset Length: %d",
-		num_variable, offset_len);
 
 	for (i = 0; i < iter->n_children; i++) {
 		size_t o;
@@ -410,19 +403,6 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 
 		if (iter->children[i].end > len)
 			goto fail;
-	}
-
-	for (i = 0; i < iter->n_children; i++) {
-		len = iter->children[i].sig_end - iter->children[i].sig_start;
-		memcpy(subsig, sig_start + iter->children[i].sig_start, len);
-		subsig[len] = '\0';
-
-		l_info("\tChild%d: Signature:'%s' Fixed:%s "
-			"Alignment:%u, End Offset: %zu",
-				i, subsig,
-				iter->children[i].fixed_size ? "True" : "False",
-				iter->children[i].alignment,
-				iter->children[i].end);
 	}
 
 	iter->container_type = DBUS_CONTAINER_TYPE_STRUCT;
