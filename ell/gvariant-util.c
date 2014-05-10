@@ -338,7 +338,6 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 		strcpy(subsig, sig_start);
 
 	iter->sig_start = sig_start;
-	iter->sig_end = sig_end;
 	iter->data = data;
 	iter->len = len;
 	iter->cur_child = 0;

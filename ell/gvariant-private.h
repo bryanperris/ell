@@ -29,7 +29,6 @@ struct gvariant_type_info {
 
 struct gvariant_iter {
 	const char *sig_start;
-	const char *sig_end;
 	const void *data;
 	size_t len;
 	char container_type;
