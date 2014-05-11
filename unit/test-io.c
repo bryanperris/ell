@@ -49,7 +49,7 @@ static bool write_handler(struct l_io *io, void *user_data)
 	return false;
 }
 
-static void read_handler(struct l_io *io, void *user_data)
+static bool read_handler(struct l_io *io, void *user_data)
 {
 	int fd = l_io_get_fd(io);
 	char str[32];
@@ -60,6 +60,8 @@ static void read_handler(struct l_io *io, void *user_data)
 	l_info("%zd bytes read", result);
 
 	l_main_quit();
+
+	return false;
 }
 
 static void disconnect_handler(struct l_io *io, void *user_data)
