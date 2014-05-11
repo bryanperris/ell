@@ -66,16 +66,16 @@ struct l_debug_desc {
 		.flags = L_DEBUG_FLAG_DEFAULT, \
 	}; \
 	if (symbol.flags & L_DEBUG_FLAG_PRINT) \
-		l_log(L_LOG_DEBUG, "%s:%s() " format "\n", __FILE__, \
+		l_log(L_LOG_DEBUG, "%s:%s() " format, __FILE__, \
 					__PRETTY_FUNCTION__ , ## args); \
 } while (0)
 
 void l_debug_enable(const char *pattern);
 void l_debug_disable(void);
 
-#define l_error(format, args...)  l_log(L_LOG_ERR, format "\n", ## args)
-#define l_warn(format, args...)   l_log(L_LOG_WARNING, format "\n", ## args)
-#define l_info(format, args...)   l_log(L_LOG_INFO, format "\n", ## args)
+#define l_error(format, args...)  l_log(L_LOG_ERR, format, ## args)
+#define l_warn(format, args...)   l_log(L_LOG_WARNING, format, ## args)
+#define l_info(format, args...)   l_log(L_LOG_INFO, format, ## args)
 #define l_debug(format, args...)  L_DEBUG_SYMBOL(__debug_desc, format, ## args)
 
 #ifdef __cplusplus
