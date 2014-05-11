@@ -180,6 +180,26 @@ LIB_EXPORT void l_checksum_free(struct l_checksum *checksum)
 }
 
 /**
+ * l_checksum_reset:
+ * @checksum: checksum object
+ *
+ * Resets the internal state of @checksum.
+ **/
+void l_checksum_reset(struct l_checksum *checksum)
+{
+	int sk;
+
+	if (unlikely(!checksum))
+		return;
+
+	sk = checksum->sk;
+
+	checksum->sk = create_alg(checksum->type);
+
+	free_alg(checksum->type, sk);
+}
+
+/**
  * l_checksum_update:
  * @checksum: checksum object
  * @data: data pointer

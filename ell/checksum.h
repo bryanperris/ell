@@ -36,6 +36,8 @@ enum l_checksum_type {
 struct l_checksum *l_checksum_new(enum l_checksum_type type);
 void l_checksum_free(struct l_checksum *checksum);
 
+void l_checksum_reset(struct l_checksum *checksum);
+
 void l_checksum_update(struct l_checksum *checksum,
 					const void *data, size_t len);
 void l_checksum_get_digest(struct l_checksum *checksum,
