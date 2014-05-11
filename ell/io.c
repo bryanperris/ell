@@ -116,7 +116,18 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 		l_util_debug(io->debug_handler, io->debug_data,
 						"read event <%p>", io);
 
-		io->read_handler(io, io->read_data);
+		if (!io->read_handler(io, io->read_data)) {
+			if (io->read_destroy)
+				io->read_destroy(io->read_data);
+
+			io->read_handler = NULL;
+			io->read_destroy = NULL;
+			io->read_data = NULL;
+
+			io->events &= ~EPOLLIN;
+
+			watch_modify(io->fd, io->events);
+		}
 	}
 
 	if ((events & EPOLLOUT) && io->write_handler) {

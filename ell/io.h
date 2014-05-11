@@ -32,7 +32,7 @@ struct l_io;
 
 typedef void (*l_io_debug_cb_t) (const char *str, void *user_data);
 
-typedef void (*l_io_read_cb_t) (struct l_io *io, void *user_data);
+typedef bool (*l_io_read_cb_t) (struct l_io *io, void *user_data);
 typedef bool (*l_io_write_cb_t) (struct l_io *io, void *user_data);
 typedef void (*l_io_disconnect_cb_t) (struct l_io *io, void *user_data);
 typedef void (*l_io_destroy_cb_t) (void *user_data);
