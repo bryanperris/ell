@@ -876,7 +876,7 @@ static void handle_signal(struct l_dbus *dbus, struct l_dbus_message *message)
 	l_hashmap_foreach(dbus->signal_list, process_signal, message);
 }
 
-static void message_read_handler(struct l_io *io, void *user_data)
+static bool message_read_handler(struct l_io *io, void *user_data)
 {
 	struct l_dbus *dbus = user_data;
 	struct l_dbus_message *message;
@@ -887,7 +887,7 @@ static void message_read_handler(struct l_io *io, void *user_data)
 
 	message = receive_message_from_fd(fd);
 	if (!message)
-		return;
+		return false;
 
 	l_util_hexdump_two(true, message->header, message->header_size,
 					message->body, message->body_size,
@@ -908,6 +908,8 @@ static void message_read_handler(struct l_io *io, void *user_data)
 	}
 
 	l_dbus_message_unref(message);
+
+	return true;
 }
 
 static uint32_t send_message(struct l_dbus *dbus, bool priority,
@@ -1001,7 +1003,7 @@ static bool auth_write_handler(struct l_io *io, void *user_data)
 	return false;
 }
 
-static void auth_read_handler(struct l_io *io, void *user_data)
+static bool auth_read_handler(struct l_io *io, void *user_data)
 {
 	struct l_dbus *dbus = user_data;
 	char buffer[64];
@@ -1026,14 +1028,14 @@ static void auth_read_handler(struct l_io *io, void *user_data)
 	len = offset;
 
 	if (!ptr || len < 3)
-		return;
+		return true;
 
 	end = strstr(ptr, "\r\n");
 	if (!end)
-		return;
+		return true;
 
 	if (end - ptr + 2 != len)
-		return;
+		return true;
 
 	l_util_hexdump(true, ptr, len, dbus->debug_handler, dbus->debug_data);
 
@@ -1093,6 +1095,8 @@ static void auth_read_handler(struct l_io *io, void *user_data)
 	}
 
 	l_io_set_write_handler(io, auth_write_handler, dbus, NULL);
+
+	return true;
 }
 
 static void disconnect_handler(struct l_io *io, void *user_data)
