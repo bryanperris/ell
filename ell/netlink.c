@@ -226,7 +226,7 @@ static void process_multi(struct l_netlink *netlink, struct nlmsghdr *nlmsg)
 	}
 }
 
-static void can_read_data(struct l_io *io, void *user_data)
+static bool can_read_data(struct l_io *io, void *user_data)
 {
 	struct l_netlink *netlink = user_data;
 	struct cmsghdr *cmsg;
@@ -252,7 +252,7 @@ static void can_read_data(struct l_io *io, void *user_data)
 
 	len = recvmsg(sk, &msg, 0);
 	if (len < 0)
-		return;
+		return false;
 
 	l_util_hexdump(true, buffer, len, netlink->debug_handler,
 						netlink->debug_data);
@@ -287,6 +287,8 @@ static void can_read_data(struct l_io *io, void *user_data)
 		else
 			process_message(netlink, nlmsg);
 	}
+
+	return true;
 }
 
 static int create_netlink_socket(int protocol, uint32_t *pid)
