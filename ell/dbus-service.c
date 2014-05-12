@@ -459,7 +459,7 @@ static bool match_method(const void *a, const void *b)
 struct _dbus_method *_dbus_interface_find_method(struct l_dbus_interface *i,
 							const char *method)
 {
-	return l_queue_find(i->methods, match_method, method);
+	return l_queue_find(i->methods, match_method, (char *) method);
 }
 
 static bool match_signal(const void *a, const void *b)
@@ -476,7 +476,7 @@ static bool match_signal(const void *a, const void *b)
 struct _dbus_signal *_dbus_interface_find_signal(struct l_dbus_interface *i,
 							const char *signal)
 {
-	return l_queue_find(i->signals, match_signal, signal);
+	return l_queue_find(i->signals, match_signal, (char *) signal);
 }
 
 static bool match_property(const void *a, const void *b)
@@ -493,7 +493,7 @@ static bool match_property(const void *a, const void *b)
 struct _dbus_property *_dbus_interface_find_property(struct l_dbus_interface *i,
 							const char *property)
 {
-	return l_queue_find(i->properties, match_property, property);
+	return l_queue_find(i->properties, match_property, (char *) property);
 }
 
 static void interface_instance_free(struct interface_instance *instance)
@@ -725,15 +725,17 @@ bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
 					const char *interface)
 {
 	struct object_node *node;
+	struct interface_instance *instance;
 	bool r;
 
 	node = l_hashmap_lookup(tree->objects, path);
 	if (!node)
 		return false;
 
-	r = l_queue_remove_if(node->instances,
-			match_interface_instance, interface,
-			(l_queue_destroy_func_t) interface_instance_free);
+	instance = l_queue_remove_if(node->instances,
+			match_interface_instance, (char *) interface);
+	if (instance)
+		interface_instance_free(instance);
 
 	if (l_queue_isempty(node->instances) && !node->children)
 		_dbus_object_tree_prune_node(node);
@@ -815,7 +817,7 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 		return false;
 
 	instance = l_queue_find(node->instances,
-					match_interface_instance, interface);
+				match_interface_instance, (char *) interface);
 	if (!instance)
 		return false;
 
