@@ -114,7 +114,7 @@ LIB_EXPORT void l_log_set_null(void)
 static void log_stderr(int priority, const char *file, const char *line,
 			const char *func, const char *format, va_list ap)
 {
-        vfprintf(stderr, format, ap);
+	vfprintf(stderr, format, ap);
 }
 
 /**
