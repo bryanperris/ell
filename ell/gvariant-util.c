@@ -487,6 +487,8 @@ static const void *next_item(struct gvariant_iter *iter, size_t *out_item_size)
 
 		return vararray_find_nth(iter, out_item_size);
 	}
+
+	return NULL;
 }
 
 #define get_u8(ptr)		(*(uint8_t *) (ptr))
