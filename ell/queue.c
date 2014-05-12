@@ -330,6 +330,7 @@ LIB_EXPORT void *l_queue_find(struct l_queue *queue,
 
 	return NULL;
 }
+
 /**
  * l_queue_remove:
  * @queue: queue object
@@ -521,6 +522,7 @@ LIB_EXPORT void *l_queue_remove_if(struct l_queue *queue,
 
 	return NULL;
 }
+
 /**
  * l_queue_length:
  * @queue: queue object
