@@ -734,13 +734,16 @@ bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
 
 	instance = l_queue_remove_if(node->instances,
 			match_interface_instance, (char *) interface);
+
+	r = instance ? true : false;
+
 	if (instance)
 		interface_instance_free(instance);
 
 	if (l_queue_isempty(node->instances) && !node->children)
 		_dbus_object_tree_prune_node(node);
 
-	return r;
+	return true;
 }
 
 static void generate_interface_instance(void *data, void *user)
