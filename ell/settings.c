@@ -544,9 +544,10 @@ LIB_EXPORT bool l_settings_has_group(struct l_settings *settings,
 	if (unlikely(!settings))
 		return false;
 
-	group = l_queue_find(settings->groups, group_match, group_name);
+	group = l_queue_find(settings->groups, group_match,
+						(char *) group_name);
 
-	return group != NULL;
+	return !!group;
 }
 
 static bool key_match(const void *a, const void *b)
@@ -575,8 +576,8 @@ LIB_EXPORT char **l_settings_get_keys(struct l_settings *settings,
 	if (unlikely(!settings))
 		return NULL;
 
-	group_data = l_queue_find(settings->groups, group_match, group_name);
-
+	group_data = l_queue_find(settings->groups, group_match,
+						(char *) group_name);
 	if (!group_data)
 		return NULL;
 
@@ -598,14 +599,14 @@ LIB_EXPORT bool l_settings_has_key(struct l_settings *settings,
 	if (unlikely(!settings))
 		return false;
 
-	group = l_queue_find(settings->groups, group_match, group_name);
-
+	group = l_queue_find(settings->groups, group_match,
+						(char *) group_name);
 	if (!group)
 		return false;
 
-	setting = l_queue_find(group->settings, key_match, key);
+	setting = l_queue_find(group->settings, key_match, (char *) key);
 
-	return setting != NULL;
+	return !!setting;
 }
 
 LIB_EXPORT const char *l_settings_get_value(struct l_settings *settings,
@@ -618,14 +619,13 @@ LIB_EXPORT const char *l_settings_get_value(struct l_settings *settings,
 	if (unlikely(!settings))
 		return NULL;
 
-	group = l_queue_find(settings->groups, group_match, group_name);
-
+	group = l_queue_find(settings->groups, group_match,
+						(char *) group_name);
 	if (!group)
 		return NULL;
 
-	setting = l_queue_find(group->settings, key_match, key);
-
-	if (setting == NULL)
+	setting = l_queue_find(group->settings, key_match, (char *) key);
+	if (!setting)
 		return NULL;
 
 	return setting->value;
@@ -685,7 +685,8 @@ static bool set_value(struct l_settings *settings, const char *group_name,
 		return false;
 	}
 
-	group = l_queue_find(settings->groups, group_match, group_name);
+	group = l_queue_find(settings->groups, group_match,
+						(char *) group_name);
 	if (!group) {
 		group = l_new(struct group_data, 1);
 		group->name = l_strdup(group_name);
@@ -695,7 +696,7 @@ static bool set_value(struct l_settings *settings, const char *group_name,
 		goto add_pair;
 	}
 
-	pair = l_queue_find(group->settings, key_match, key);
+	pair = l_queue_find(group->settings, key_match, (char *) key);
 	if (!pair) {
 add_pair:
 		pair = l_new(struct setting_data, 1);
@@ -726,8 +727,9 @@ LIB_EXPORT bool l_settings_get_bool(struct l_settings *settings,
 					const char *group_name, const char *key,
 					bool *out)
 {
-	const char *value = l_settings_get_value(settings, group_name, key);
+	const char *value;
 
+	value = l_settings_get_value(settings, group_name, key);
 	if (!value)
 		return false;
 
@@ -1112,11 +1114,19 @@ LIB_EXPORT bool l_settings_set_float(struct l_settings *settings,
 LIB_EXPORT bool l_settings_remove_group(struct l_settings *settings,
 					const char *group_name)
 {
+	struct group_data *group;
+
 	if (unlikely(!settings))
 		return false;
 
-	return l_queue_remove_if(settings->groups, group_match, group_name,
-					group_destroy);
+	group = l_queue_remove_if(settings->groups, group_match,
+						(char *) group_name);
+	if (!group)
+		return false;
+
+	group_destroy(group);
+
+	return true;
 }
 
 LIB_EXPORT bool l_settings_remove_key(struct l_settings *settings,
@@ -1124,15 +1134,21 @@ LIB_EXPORT bool l_settings_remove_key(struct l_settings *settings,
 					const char *key)
 {
 	struct group_data *group;
+	struct setting_data *setting;
 
 	if (unlikely(!settings))
 		return false;
 
-	group = l_queue_find(settings->groups, group_match, group_name);
-
+	group = l_queue_find(settings->groups, group_match,
+						(char *) group_name);
 	if (!group)
 		return false;
 
-	return l_queue_remove_if(group->settings, key_match, key,
-					setting_destroy);
+	setting = l_queue_remove_if(group->settings, key_match, (char *) key);
+	if (!setting)
+		return false;
+
+	setting_destroy(setting);
+
+	return true;
 }
