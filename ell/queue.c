@@ -317,8 +317,7 @@ done:
  * Returns: Matching entry or NULL if no entry can be found
  **/
 LIB_EXPORT void *l_queue_find(struct l_queue *queue,
-				l_queue_match_func_t function,
-				const void *user_data)
+				l_queue_match_func_t function, void *user_data)
 {
 	struct l_queue_entry *entry;
 
@@ -483,21 +482,20 @@ LIB_EXPORT unsigned int l_queue_foreach_remove(struct l_queue *queue,
  *
  * Returns: Whether an entry was removed or not.
  **/
-LIB_EXPORT bool l_queue_remove_if(struct l_queue *queue,
-					l_queue_match_func_t function,
-					const void *user_data,
-					l_queue_destroy_func_t destroy)
+LIB_EXPORT void *l_queue_remove_if(struct l_queue *queue,
+				l_queue_match_func_t function, void *user_data)
 {
 	struct l_queue_entry *entry, *prev = NULL;
 
 	if (unlikely(!queue || !function))
-		return false;
+		return NULL;
 
 	entry = queue->head;
 
 	while (entry) {
 		if (function(entry->data, user_data)) {
 			struct l_queue_entry *tmp = entry;
+			void *data;
 
 			if (prev)
 				prev->next = entry->next;
@@ -509,20 +507,19 @@ LIB_EXPORT bool l_queue_remove_if(struct l_queue *queue,
 
 			entry = entry->next;
 
-			if (destroy)
-				destroy(tmp->data);
+			data = tmp->data;
 
 			l_free(tmp);
-			queue->entries -= 1;
+			queue->entries--;
 
-			return true;
+			return data;
 		} else {
 			prev = entry;
 			entry = entry->next;
 		}
 	}
 
-	return false;
+	return NULL;
 }
 /**
  * l_queue_length:
