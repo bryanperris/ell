@@ -728,6 +728,9 @@ bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
 		return false;
 
 	start = next_item(iter, &item_size);
+	if (!start)
+		return false;
+
 	if (start >= iter->data + iter->len)
 		return false;
 
