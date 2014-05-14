@@ -579,41 +579,32 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 					struct gvariant_iter *structure)
 {
-	size_t c;
-	bool is_dict;
-	bool is_struct;
+	bool is_dict = iter->sig_start[iter->sig_pos] == '{';
+	bool is_struct = iter->sig_start[iter->sig_pos] == '(';
+	const char *sig_start = iter->sig_start + iter->sig_pos + 1;
+	const char *sig_end;
 	const void *start;
-	bool ret;
 	size_t item_size;
-
-	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY)
-		c = 0;
-	else
-		c = iter->cur_child;
-
-	if (c >= iter->n_children)
-		return false;
-
-	is_struct = iter->sig_start[iter->children[c].sig_start] == '(';
-	is_dict = iter->sig_start[iter->children[c].sig_start] == '{';
+	bool ret;
 
 	if (!is_dict && !is_struct)
-		return false;
-
-	if (iter->children[c].sig_end - iter->children[c].sig_start <= 2)
 		return false;
 
 	start = next_item(iter, &item_size);
 	if (!start)
 		return false;
 
+	/* For ARRAY containers the sig_pos is never incremented */
+	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY)
+		sig_end = iter->sig_start + iter->sig_len - 1;
+	else
+		sig_end = iter->sig_start + iter->sig_pos - 1;
+
 	if (start >= iter->data + iter->len)
 		return false;
 
-	ret = _gvariant_iter_init(structure,
-			iter->sig_start + iter->children[c].sig_start + 1,
-			iter->sig_start + iter->children[c].sig_end - 1,
-			start, item_size);
+	ret = _gvariant_iter_init(structure, sig_start, sig_end,
+							start, item_size);
 
 	if (!ret)
 		return false;
