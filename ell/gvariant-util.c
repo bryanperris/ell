@@ -343,7 +343,6 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 	iter->data = data;
 	iter->len = len;
 	iter->pos = 0;
-	iter->cur_child = 0;
 
 	iter->n_children = _gvariant_num_children(subsig);
 	iter->children = l_new(struct gvariant_type_info, iter->n_children);
@@ -570,7 +569,6 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 		break;
 	}
 
-	iter->cur_child += 1;
 	iter->pos += item_size;
 
 	return true;
@@ -609,7 +607,6 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 	if (!ret)
 		return false;
 
-	iter->cur_child += 1;
 	iter->pos += item_size;
 
 	if (is_dict)
@@ -662,7 +659,6 @@ bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 		return false;
 
 	variant->container_type = DBUS_CONTAINER_TYPE_VARIANT;
-	iter->cur_child += 1;
 	iter->pos += item_size;
 
 	return true;
@@ -702,7 +698,6 @@ bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
 		return false;
 
 	array->container_type = DBUS_CONTAINER_TYPE_ARRAY;
-	iter->cur_child += 1;
 	iter->pos += item_size;
 
 	if (!array->children[0].fixed_size) {
