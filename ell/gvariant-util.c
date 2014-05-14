@@ -428,7 +428,7 @@ void _gvariant_iter_free(struct gvariant_iter *iter)
 
 static const void *next_item(struct gvariant_iter *iter, size_t *out_item_size)
 {
-	const void *start = iter->data;
+	const void *start;
 	const char *p;
 	char sig[256];
 	int alignment;
@@ -480,7 +480,14 @@ static const void *next_item(struct gvariant_iter *iter, size_t *out_item_size)
 	iter->offsets += offset_len;
 
 done:
-	return iter->data + iter->pos;
+	start = iter->data + iter->pos;
+
+	if (start >= iter->data + iter->len)
+		return NULL;
+
+	iter->pos += *out_item_size;
+
+	return start;
 }
 
 #define get_u8(ptr)		(*(uint8_t *) (ptr))
@@ -513,9 +520,6 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 
 	start = next_item(iter, &item_size);
 	if (!start)
-		return false;
-
-	if (start >= iter->data + iter->len)
 		return false;
 
 	switch (type) {
@@ -570,8 +574,6 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 		break;
 	}
 
-	iter->pos += item_size;
-
 	return true;
 }
 
@@ -599,16 +601,11 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 	else
 		sig_end = iter->sig_start + iter->sig_pos - 1;
 
-	if (start >= iter->data + iter->len)
-		return false;
-
 	ret = _gvariant_iter_init(structure, sig_start, sig_end,
 							start, item_size);
 
 	if (!ret)
 		return false;
-
-	iter->pos += item_size;
 
 	if (is_dict)
 		structure->container_type = DBUS_CONTAINER_TYPE_DICT_ENTRY;
@@ -629,9 +626,6 @@ bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 
 	start = next_item(iter, &item_size);
 	if (!start)
-		return false;
-
-	if (start >= iter->data + iter->len)
 		return false;
 
 	/* Find the signature */
@@ -660,7 +654,6 @@ bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 		return false;
 
 	variant->container_type = DBUS_CONTAINER_TYPE_VARIANT;
-	iter->pos += item_size;
 
 	return true;
 }
@@ -689,9 +682,6 @@ bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
 	else
 		sig_end = iter->sig_start + iter->sig_pos;
 
-	if (start >= iter->data + iter->len)
-		return false;
-
 	ret = _gvariant_iter_init(array, sig_start, sig_end,
 						start, item_size);
 
@@ -699,7 +689,6 @@ bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
 		return false;
 
 	array->container_type = DBUS_CONTAINER_TYPE_ARRAY;
-	iter->pos += item_size;
 
 	if (!array->children[0].fixed_size) {
 		unsigned int offset_len = offset_length(array->len);
