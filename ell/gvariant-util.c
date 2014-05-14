@@ -508,20 +508,6 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 	if (iter->pos >= iter->len)
 		return false;
 
-	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY)
-		c = 0;
-	else
-		c = iter->cur_child;
-
-	if (c >= iter->n_children)
-		return false;
-
-	if (iter->children[c].sig_end - iter->children[c].sig_start > 1)
-		return false;
-
-	if (iter->sig_start[iter->children[c].sig_start] != type)
-		return false;
-
 	if (iter->sig_start[iter->sig_pos] != type)
 		return false;
 
