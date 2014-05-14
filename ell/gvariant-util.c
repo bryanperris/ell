@@ -671,33 +671,32 @@ bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
 					struct gvariant_iter *array)
 {
-	size_t c = iter->cur_child;
+	const char *sig_start;
+	const char *sig_end;
 	size_t item_size;
 	const void *start;
 	bool ret;
 
-	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY)
-		c = 0;
-	else
-		c = iter->cur_child;
-
-	if (c >= iter->n_children)
+	if (iter->sig_start[iter->sig_pos] != 'a')
 		return false;
 
-	if (iter->sig_start[iter->children[c].sig_start] != 'a')
-		return false;
+	sig_start = iter->sig_start + iter->sig_pos + 1;
 
 	start = next_item(iter, &item_size);
 	if (!start)
 		return false;
 
+	/* For ARRAY containers the sig_pos is never incremented */
+	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY)
+		sig_end = iter->sig_start + iter->sig_len;
+	else
+		sig_end = iter->sig_start + iter->sig_pos;
+
 	if (start >= iter->data + iter->len)
 		return false;
 
-	ret = _gvariant_iter_init(array,
-			iter->sig_start + iter->children[c].sig_start + 1,
-			iter->sig_start + iter->children[c].sig_end,
-			start, item_size);
+	ret = _gvariant_iter_init(array, sig_start, sig_end,
+						start, item_size);
 
 	if (!ret)
 		return false;
