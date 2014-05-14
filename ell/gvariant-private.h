@@ -37,7 +37,6 @@ struct gvariant_iter {
 	char container_type;
 	const void *offsets;
 	struct gvariant_type_info *children;
-	uint8_t n_children;
 };
 
 bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,

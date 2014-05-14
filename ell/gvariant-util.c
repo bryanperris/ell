@@ -329,6 +329,7 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 	unsigned int num_variable = 0;
 	unsigned int offset_len = offset_length(len);
 	size_t last_offset;
+	uint8_t n_children;
 
 	if (sig_end) {
 		size_t len = sig_end - sig_start;
@@ -344,10 +345,10 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 	iter->len = len;
 	iter->pos = 0;
 
-	iter->n_children = _gvariant_num_children(subsig);
-	iter->children = l_new(struct gvariant_type_info, iter->n_children);
+	n_children = _gvariant_num_children(subsig);
+	iter->children = l_new(struct gvariant_type_info, n_children);
 
-	for (p = sig_start, i = 0; i < iter->n_children; i++) {
+	for (p = sig_start, i = 0; i < n_children; i++) {
 		int alignment;
 		size_t size;
 		size_t len;
@@ -366,7 +367,7 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 		if (iter->children[i].fixed_size) {
 			size = _gvariant_get_fixed_size(subsig);
 			iter->children[i].end = size;
-		} else if (i + 1 < iter->n_children)
+		} else if (i + 1 < n_children)
 			num_variable += 1;
 	}
 
@@ -380,7 +381,7 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 	else
 		iter->offsets = NULL;
 
-	for (i = 0; i < iter->n_children; i++) {
+	for (i = 0; i < n_children; i++) {
 		size_t o;
 
 		if (iter->children[i].fixed_size) {
