@@ -674,9 +674,7 @@ bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
 	size_t c = iter->cur_child;
 	size_t item_size;
 	const void *start;
-	unsigned char siglen;
 	bool ret;
-	char signature[256];
 
 	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY)
 		c = 0;
@@ -687,14 +685,6 @@ bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
 		return false;
 
 	if (iter->sig_start[iter->children[c].sig_start] != 'a')
-		return false;
-
-	siglen = iter->children[c].sig_end - iter->children[c].sig_start - 1;
-	memcpy(signature, iter->sig_start + iter->children[c].sig_start + 1,
-		siglen);
-	signature[siglen] = '\0';
-
-	if (_gvariant_num_children(signature) != 1)
 		return false;
 
 	start = next_item(iter, &item_size);
