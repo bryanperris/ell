@@ -29,9 +29,13 @@ struct gvariant_type_info {
 
 struct gvariant_iter {
 	const char *sig_start;
+	uint8_t sig_len;
+	uint8_t sig_pos;
 	const void *data;
 	size_t len;
+	size_t pos;
 	char container_type;
+	const void *offsets;
 	struct gvariant_type_info *children;
 	uint8_t n_children;
 	size_t cur_child;

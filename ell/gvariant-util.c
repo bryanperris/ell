@@ -338,8 +338,11 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 		strcpy(subsig, sig_start);
 
 	iter->sig_start = sig_start;
+	iter->sig_len = strlen(subsig);
+	iter->sig_pos = 0;
 	iter->data = data;
 	iter->len = len;
+	iter->pos = 0;
 	iter->cur_child = 0;
 
 	iter->n_children = _gvariant_num_children(subsig);
@@ -372,6 +375,11 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 		return false;
 
 	last_offset = len - num_variable * offset_len;
+
+	if (num_variable > 0)
+		iter->offsets = iter->data + last_offset;
+	else
+		iter->offsets = NULL;
 
 	for (i = 0; i < iter->n_children; i++) {
 		size_t o;
@@ -418,77 +426,61 @@ void _gvariant_iter_free(struct gvariant_iter *iter)
 	l_free(iter->children);
 }
 
-static const void *vararray_find_nth(struct gvariant_iter *iter,
-							size_t *out_item_size)
-{
-	const void *start = iter->data;
-	unsigned int offset_len = offset_length(iter->len);
-	/*
-	 * offset is effectively the end of the last element
-	 * and start of the offset array
-	 */
-	size_t offset = read_word_le(start + iter->len - offset_len,
-					offset_len);
-	size_t n_items = (iter->len - offset) / offset_len;
-	size_t item_end_offset;
-
-	if (iter->cur_child >= n_items)
-		return NULL;
-
-	if (n_items * offset_len > iter->len)
-		return NULL;
-
-	item_end_offset = offset + iter->cur_child * offset_len;
-	item_end_offset = read_word_le(start + item_end_offset, offset_len);
-
-	if (iter->cur_child > 0) {
-		offset += (iter->cur_child - 1) * offset_len;
-		offset = read_word_le(start + offset, offset_len);
-	} else
-		offset = 0;
-
-	offset = align_len(offset, iter->children[0].alignment);
-	start += offset;
-
-	*out_item_size = iter->data + item_end_offset - start;
-
-	return start;
-}
-
 static const void *next_item(struct gvariant_iter *iter, size_t *out_item_size)
 {
 	const void *start = iter->data;
-	size_t c = iter->cur_child;
+	const char *p;
+	char sig[256];
+	int alignment;
+	bool fixed_size;
+	bool last_member;
+	unsigned int sig_len;
+	unsigned int offset_len;
 
-	switch (iter->container_type) {
-	case DBUS_CONTAINER_TYPE_DICT_ENTRY:
-	case DBUS_CONTAINER_TYPE_STRUCT:
-	case DBUS_CONTAINER_TYPE_VARIANT:
-		if (iter->cur_child == 0) {
-			*out_item_size = iter->children[0].end;
-			return start;
-		}
+	memcpy(sig, iter->sig_start + iter->sig_pos,
+			iter->sig_len - iter->sig_pos);
+	sig[iter->sig_len - iter->sig_pos] = '\0';
 
-		start += align_len(iter->children[c-1].end,
-					iter->children[c].alignment);
-		*out_item_size = iter->data + iter->children[c].end - start;
-		return start;
 	/*
-	 * For arrays, we need to figure out the offset.  There are two cases:
-	 * - Fixed arrays, in which case we simply use the size of the item
-	 * - Variable arrays, in which case we need to look up the end offset
+	 * Find the next type and make a note whether it is the last in the
+	 * structure.  Arrays will always have a single complete type, so
+	 * last_member will always be true.
 	 */
-	case DBUS_CONTAINER_TYPE_ARRAY:
-		if (iter->children[0].fixed_size) {
-			start += iter->cur_child * iter->children[0].end;
-			*out_item_size = iter->children[0].end;
-			return start;
-		}
+	p = validate_next_type(sig, &alignment);
+	if (!p)
+		return NULL;
 
-		return vararray_find_nth(iter, out_item_size);
+	sig_len = p - sig;
+
+	last_member = *p == '\0';
+	sig[sig_len] = '\0';
+
+	fixed_size = _gvariant_is_fixed_size(sig);
+
+	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
+		iter->sig_pos += sig_len;
+
+	iter->pos = align_len(iter->pos, alignment);
+
+	if (fixed_size) {
+		*out_item_size = _gvariant_get_fixed_size(sig);
+		goto done;
 	}
 
-	return NULL;
+	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY && last_member) {
+		*out_item_size = iter->len - iter->pos;
+		goto done;
+	}
+
+	if (iter->offsets >= iter->data + iter->len)
+			return NULL;
+
+	offset_len  = offset_length(iter->len);
+	*out_item_size = read_word_le(iter->offsets, offset_len) - iter->pos;
+	iter->offsets += offset_len;
+
+done:
+	return iter->data + iter->pos;
 }
 
 #define get_u8(ptr)		(*(uint8_t *) (ptr))
@@ -513,6 +505,9 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 	int32_t int32_val;
 	int64_t int64_val;
 
+	if (iter->pos >= iter->len)
+		return false;
+
 	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY)
 		c = 0;
 	else
@@ -525,6 +520,9 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 		return false;
 
 	if (iter->sig_start[iter->children[c].sig_start] != type)
+		return false;
+
+	if (iter->sig_start[iter->sig_pos] != type)
 		return false;
 
 	start = next_item(iter, &item_size);
@@ -587,6 +585,8 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 	}
 
 	iter->cur_child += 1;
+	iter->pos += item_size;
+
 	return true;
 }
 
@@ -629,13 +629,16 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 			iter->sig_start + iter->children[c].sig_end - 1,
 			start, item_size);
 
-	if (ret)
-		iter->cur_child += 1;
+	if (!ret)
+		return false;
+
+	iter->cur_child += 1;
+	iter->pos += item_size;
 
 	if (is_dict)
 		structure->container_type = DBUS_CONTAINER_TYPE_DICT_ENTRY;
 
-	return ret;
+	return true;
 }
 
 bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
@@ -690,12 +693,14 @@ bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 	ret = _gvariant_iter_init(variant, nul + 1, end,
 					start, nul - start);
 
+	if (!ret)
+		return false;
+
 	variant->container_type = DBUS_CONTAINER_TYPE_VARIANT;
+	iter->cur_child += 1;
+	iter->pos += item_size;
 
-	if (ret)
-		iter->cur_child += 1;
-
-	return ret;
+	return true;
 }
 
 bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
@@ -739,10 +744,19 @@ bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
 			iter->sig_start + iter->children[c].sig_end,
 			start, item_size);
 
-	array->container_type = DBUS_CONTAINER_TYPE_ARRAY;
+	if (!ret)
+		return false;
 
-	if (ret)
-		iter->cur_child += 1;
+	array->container_type = DBUS_CONTAINER_TYPE_ARRAY;
+	iter->cur_child += 1;
+	iter->pos += item_size;
+
+	if (!array->children[0].fixed_size) {
+		unsigned int offset_len = offset_length(array->len);
+		size_t offset = read_word_le(array->data + array->len -
+						offset_len, offset_len);
+		array->offsets = array->data + offset;
+	}
 
 	return ret;
 }
