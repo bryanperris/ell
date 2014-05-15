@@ -258,8 +258,6 @@ static void test_iter_basic_1(const void *test_data)
 
 	_gvariant_iter_next_entry_basic(&iter, 's', &s);
 	assert(!strcmp(s, "Hello World!"));
-
-	_gvariant_iter_free(&iter);
 }
 
 static const unsigned char basic_data_2[] = {
@@ -291,8 +289,6 @@ static void test_iter_basic_2(const void *test_data)
 	ret = _gvariant_iter_next_entry_basic(&iter, 's', &s);
 	assert(ret);
 	assert(!strcmp(s, "foobar"));
-
-	_gvariant_iter_free(&iter);
 }
 
 static const unsigned char basic_data_3[] = {
@@ -373,8 +369,6 @@ static void test_iter_basic_3(const void *test_data)
 	ret = _gvariant_iter_next_entry_basic(&iter, 'i', &i);
 	assert(ret);
 	assert(i == -3255554);
-
-	_gvariant_iter_free(&iter);
 }
 
 static const unsigned char fixed_struct_data_1[] = {
@@ -414,9 +408,6 @@ static void test_iter_fixed_struct_1(const void *test_data)
 	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
 	assert(ret);
 	assert(y == 1);
-
-	_gvariant_iter_free(&structure);
-	_gvariant_iter_free(&iter);
 }
 
 static const unsigned char variant_data_1[] = {
@@ -467,10 +458,6 @@ static void test_iter_variant_1(const void *test_data)
 	ret = _gvariant_iter_next_entry_basic(&iter, 'i', &i);
 	assert(ret);
 	assert(i == 5);
-
-	_gvariant_iter_free(&variant);
-	_gvariant_iter_free(&structure);
-	_gvariant_iter_free(&iter);
 }
 
 static const unsigned char variant_data_2[] = {
@@ -515,10 +502,6 @@ static void test_iter_variant_2(const void *test_data)
 	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
 	assert(ret);
 	assert(y == 255);
-
-	_gvariant_iter_free(&structure);
-	_gvariant_iter_free(&variant);
-	_gvariant_iter_free(&iter);
 }
 
 static const unsigned char fixed_array_data_1[] = {
@@ -556,9 +539,6 @@ static void test_iter_fixed_array_1(const void *test_data)
 
 	ret = _gvariant_iter_next_entry_basic(&array, 'u', &u);
 	assert(!ret);
-
-	_gvariant_iter_free(&array);
-	_gvariant_iter_free(&iter);
 }
 
 static const unsigned char variable_array_data_1[] = {
@@ -601,9 +581,6 @@ static void test_iter_variable_array_1(const void *test_data)
 
 	ret = _gvariant_iter_next_entry_basic(&array, 's', &s);
 	assert(!ret);
-
-	_gvariant_iter_free(&array);
-	_gvariant_iter_free(&iter);
 }
 
 static const unsigned char variable_array_data_2[] = {
@@ -650,7 +627,6 @@ static void test_iter_variable_array_2(const void *test_data)
 	assert(ret);
 	assert(t == 15LL);
 
-	_gvariant_iter_free(&structure);
 	ret = _gvariant_iter_enter_struct(&array, &structure);
 	assert(ret);
 
@@ -662,7 +638,6 @@ static void test_iter_variable_array_2(const void *test_data)
 	assert(ret);
 	assert(t == 16LL);
 
-	_gvariant_iter_free(&structure);
 	ret = _gvariant_iter_enter_struct(&array, &structure);
 	assert(ret);
 
@@ -673,10 +648,6 @@ static void test_iter_variable_array_2(const void *test_data)
 	ret = _gvariant_iter_next_entry_basic(&structure, 't', &t);
 	assert(ret);
 	assert(t == 31LL);
-
-	_gvariant_iter_free(&structure);
-	_gvariant_iter_free(&array);
-	_gvariant_iter_free(&iter);
 }
 
 static const unsigned char dict_data_1[] = {
@@ -718,7 +689,6 @@ static void test_iter_dict_1(const void *test_data)
 	assert(ret);
 	assert(b == true);
 
-	_gvariant_iter_free(&structure);
 	ret = _gvariant_iter_enter_struct(&array, &structure);
 	assert(ret);
 
@@ -729,10 +699,6 @@ static void test_iter_dict_1(const void *test_data)
 	ret = _gvariant_iter_next_entry_basic(&structure, 'b', &b);
 	assert(ret);
 	assert(b == false);
-
-	_gvariant_iter_free(&structure);
-	_gvariant_iter_free(&array);
-	_gvariant_iter_free(&iter);
 }
 
 static const unsigned char aau_data_1[] = {
@@ -781,8 +747,6 @@ static void test_iter_aau_1(const void *test_data)
 	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
 	assert(!ret);
 
-	_gvariant_iter_free(&inner);
-
 	ret = _gvariant_iter_enter_array(&outer, &inner);
 	assert(ret);
 
@@ -797,8 +761,6 @@ static void test_iter_aau_1(const void *test_data)
 	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
 	assert(!ret);
 
-	_gvariant_iter_free(&inner);
-
 	ret = _gvariant_iter_enter_array(&outer, &inner);
 	assert(ret);
 
@@ -809,17 +771,11 @@ static void test_iter_aau_1(const void *test_data)
 	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
 	assert(!ret);
 
-	_gvariant_iter_free(&inner);
-
 	ret = _gvariant_iter_enter_array(&outer, &inner);
 	assert(ret);
 
 	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
 	assert(!ret);
-
-	_gvariant_iter_free(&inner);
-	_gvariant_iter_free(&outer);
-	_gvariant_iter_free(&iter);
 }
 
 static const unsigned char av_data_1[] = {
@@ -857,8 +813,6 @@ static void test_iter_av_1(const void *test_data)
 	assert(ret);
 	assert(!strcmp(s, "Foobar"));
 
-	_gvariant_iter_free(&variant);
-
 	ret = _gvariant_iter_enter_variant(&array, &variant);
 	assert(ret);
 
@@ -866,13 +820,8 @@ static void test_iter_av_1(const void *test_data)
 	assert(ret);
 	assert(u == 10);
 
-	_gvariant_iter_free(&variant);
-
 	ret = _gvariant_iter_enter_variant(&array, &variant);
 	assert(!ret);
-
-	_gvariant_iter_free(&array);
-	_gvariant_iter_free(&iter);
 }
 
 int main(int argc, char *argv[])
