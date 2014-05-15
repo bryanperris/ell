@@ -382,7 +382,7 @@ static bool gvariant_iter_init_internal(struct gvariant_iter *iter,
 	}
 
 	if (len < num_variable * offset_len)
-		return false;
+		goto fail;
 
 	last_offset = len - num_variable * offset_len;
 
@@ -436,7 +436,7 @@ static bool gvariant_iter_init_internal(struct gvariant_iter *iter,
 	return true;
 
 fail:
-	_gvariant_iter_free(iter);
+	l_free(children);
 	return false;
 }
 
@@ -446,10 +446,6 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 {
 	return gvariant_iter_init_internal(iter, DBUS_CONTAINER_TYPE_STRUCT,
 						sig_start, sig_end, data, len);
-}
-
-void _gvariant_iter_free(struct gvariant_iter *iter)
-{
 }
 
 static const void *next_item(struct gvariant_iter *iter, size_t *out_item_size)

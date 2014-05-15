@@ -33,7 +33,6 @@ struct gvariant_iter {
 bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 				const char *sig_end,
 				const void *data, size_t len);
-void _gvariant_iter_free(struct gvariant_iter *iter);
 bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 					void *out_p);
 bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
