@@ -319,9 +319,11 @@ static inline size_t read_word_le(const void *p, size_t sz) {
 		return le64toh(x.u64);
 }
 
-bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
-				const char *sig_end, const void *data,
-				size_t len)
+static bool gvariant_iter_init_internal(struct gvariant_iter *iter,
+					enum dbus_container_type type,
+					const char *sig_start,
+					const char *sig_end, const void *data,
+					size_t len)
 {
 	const char *p;
 	int i;
@@ -412,13 +414,28 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 			goto fail;
 	}
 
-	iter->container_type = DBUS_CONTAINER_TYPE_STRUCT;
+	iter->container_type = type;
+
+	if (type == DBUS_CONTAINER_TYPE_ARRAY &&
+			!iter->children[0].fixed_size) {
+		size_t offset = read_word_le(iter->data + iter->len -
+						offset_len, offset_len);
+		iter->offsets = iter->data + offset;
+	}
 
 	return true;
 
 fail:
 	_gvariant_iter_free(iter);
 	return false;
+}
+
+bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
+				const char *sig_end, const void *data,
+				size_t len)
+{
+	return gvariant_iter_init_internal(iter, DBUS_CONTAINER_TYPE_STRUCT,
+						sig_start, sig_end, data, len);
 }
 
 void _gvariant_iter_free(struct gvariant_iter *iter)
@@ -586,7 +603,7 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 	const char *sig_end;
 	const void *start;
 	size_t item_size;
-	bool ret;
+	enum dbus_container_type type;
 
 	if (!is_dict && !is_struct)
 		return false;
@@ -601,16 +618,11 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 	else
 		sig_end = iter->sig_start + iter->sig_pos - 1;
 
-	ret = _gvariant_iter_init(structure, sig_start, sig_end,
-							start, item_size);
+	type = is_dict ? DBUS_CONTAINER_TYPE_DICT_ENTRY :
+			DBUS_CONTAINER_TYPE_STRUCT;
 
-	if (!ret)
-		return false;
-
-	if (is_dict)
-		structure->container_type = DBUS_CONTAINER_TYPE_DICT_ENTRY;
-
-	return true;
+	return gvariant_iter_init_internal(structure, type, sig_start, sig_end,
+						start, item_size);
 }
 
 bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
@@ -618,7 +630,6 @@ bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 {
 	size_t item_size;
 	const void *start, *end, *nul;
-	bool ret;
 	char signature[255];
 
 	if (iter->sig_start[iter->sig_pos] != 'v')
@@ -647,15 +658,9 @@ bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 	if (_gvariant_num_children(signature) != 1)
 		return false;
 
-	ret = _gvariant_iter_init(variant, nul + 1, end,
-					start, nul - start);
-
-	if (!ret)
-		return false;
-
-	variant->container_type = DBUS_CONTAINER_TYPE_VARIANT;
-
-	return true;
+	return gvariant_iter_init_internal(variant, DBUS_CONTAINER_TYPE_VARIANT,
+						nul + 1, end,
+						start, nul - start);
 }
 
 bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
@@ -665,7 +670,6 @@ bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
 	const char *sig_end;
 	size_t item_size;
 	const void *start;
-	bool ret;
 
 	if (iter->sig_start[iter->sig_pos] != 'a')
 		return false;
@@ -682,20 +686,7 @@ bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
 	else
 		sig_end = iter->sig_start + iter->sig_pos;
 
-	ret = _gvariant_iter_init(array, sig_start, sig_end,
+	return gvariant_iter_init_internal(array, DBUS_CONTAINER_TYPE_ARRAY,
+						sig_start, sig_end,
 						start, item_size);
-
-	if (!ret)
-		return false;
-
-	array->container_type = DBUS_CONTAINER_TYPE_ARRAY;
-
-	if (!array->children[0].fixed_size) {
-		unsigned int offset_len = offset_length(array->len);
-		size_t offset = read_word_le(array->data + array->len -
-						offset_len, offset_len);
-		array->offsets = array->data + offset;
-	}
-
-	return ret;
 }
