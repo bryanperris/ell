@@ -19,14 +19,6 @@
  *
  */
 
-struct gvariant_type_info {
-	uint8_t sig_start;
-	uint8_t sig_end;
-	bool fixed_size : 1;
-	unsigned int alignment : 4;
-	size_t end;		/* Index past the end of the type */
-};
-
 struct gvariant_iter {
 	const char *sig_start;
 	uint8_t sig_len;
@@ -36,7 +28,6 @@ struct gvariant_iter {
 	size_t pos;
 	char container_type;
 	const void *offsets;
-	struct gvariant_type_info *children;
 };
 
 bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,

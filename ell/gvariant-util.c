@@ -319,6 +319,7 @@ static inline size_t read_word_le(const void *p, size_t sz) {
 		return le64toh(x.u64);
 }
 
+
 static bool gvariant_iter_init_internal(struct gvariant_iter *iter,
 					enum dbus_container_type type,
 					const char *sig_start,
@@ -331,6 +332,13 @@ static bool gvariant_iter_init_internal(struct gvariant_iter *iter,
 	unsigned int num_variable = 0;
 	unsigned int offset_len = offset_length(len);
 	size_t last_offset;
+	struct gvariant_type_info {
+		uint8_t sig_start;
+		uint8_t sig_end;
+		bool fixed_size : 1;
+		unsigned int alignment : 4;
+		size_t end;		/* Index past the end of the type */
+	} *children;
 	uint8_t n_children;
 
 	if (sig_end) {
@@ -348,27 +356,27 @@ static bool gvariant_iter_init_internal(struct gvariant_iter *iter,
 	iter->pos = 0;
 
 	n_children = _gvariant_num_children(subsig);
-	iter->children = l_new(struct gvariant_type_info, n_children);
+	children = l_new(struct gvariant_type_info, n_children);
 
 	for (p = sig_start, i = 0; i < n_children; i++) {
 		int alignment;
 		size_t size;
 		size_t len;
 
-		iter->children[i].sig_start = p - sig_start;
+		children[i].sig_start = p - sig_start;
 		p = validate_next_type(p, &alignment);
-		iter->children[i].sig_end = p - sig_start;
+		children[i].sig_end = p - sig_start;
 
-		len = iter->children[i].sig_end - iter->children[i].sig_start;
-		memcpy(subsig, sig_start + iter->children[i].sig_start, len);
+		len = children[i].sig_end - children[i].sig_start;
+		memcpy(subsig, sig_start + children[i].sig_start, len);
 		subsig[len] = '\0';
 
-		iter->children[i].alignment = alignment;
-		iter->children[i].fixed_size = _gvariant_is_fixed_size(subsig);
+		children[i].alignment = alignment;
+		children[i].fixed_size = _gvariant_is_fixed_size(subsig);
 
-		if (iter->children[i].fixed_size) {
+		if (children[i].fixed_size) {
 			size = _gvariant_get_fixed_size(subsig);
-			iter->children[i].end = size;
+			children[i].end = size;
 		} else if (i + 1 < n_children)
 			num_variable += 1;
 	}
@@ -386,42 +394,44 @@ static bool gvariant_iter_init_internal(struct gvariant_iter *iter,
 	for (i = 0; i < n_children; i++) {
 		size_t o;
 
-		if (iter->children[i].fixed_size) {
+		if (children[i].fixed_size) {
 			if (i == 0)
 				continue;
 
-			o = align_len(iter->children[i-1].end,
-					iter->children[i].alignment);
-			iter->children[i].end += o;
+			o = align_len(children[i-1].end,
+					children[i].alignment);
+			children[i].end += o;
 
-			if (iter->children[i].end > len)
+			if (children[i].end > len)
 				goto fail;
 
 			continue;
 		}
 
 		if (num_variable == 0) {
-			iter->children[i].end = last_offset;
+			children[i].end = last_offset;
 			continue;
 		}
 
-		iter->children[i].end =
+		children[i].end =
 			read_word_le(data + len - offset_len * num_variable,
 					offset_len);
 		num_variable -= 1;
 
-		if (iter->children[i].end > len)
+		if (children[i].end > len)
 			goto fail;
 	}
 
 	iter->container_type = type;
 
 	if (type == DBUS_CONTAINER_TYPE_ARRAY &&
-			!iter->children[0].fixed_size) {
+			!children[0].fixed_size) {
 		size_t offset = read_word_le(iter->data + iter->len -
 						offset_len, offset_len);
 		iter->offsets = iter->data + offset;
 	}
+
+	l_free(children);
 
 	return true;
 
@@ -440,7 +450,6 @@ bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
 
 void _gvariant_iter_free(struct gvariant_iter *iter)
 {
-	l_free(iter->children);
 }
 
 static const void *next_item(struct gvariant_iter *iter, size_t *out_item_size)
