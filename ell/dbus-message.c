@@ -67,8 +67,9 @@ struct l_dbus_message {
 struct message_iter {
 	struct l_dbus_message *message;
 	void *dummy2;
-	const char *signature;
-	const char *end;
+	const char *sig_start;
+	uint8_t sig_len;
+	uint8_t sig_pos;
 	const void *data;
 	size_t len;
 	size_t pos;
@@ -226,12 +227,22 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 #define put_s64(ptr, val)	(*((int64_t *) (ptr)) = (val))
 
 static inline void message_iter_init(struct message_iter *iter,
-			struct l_dbus_message *message, const char *signature,
+			struct l_dbus_message *message,
+			const char *sig_start, const char *sig_end,
 			const void *data, size_t len, size_t pos)
 {
+	size_t sig_len;
+
 	iter->message = message;
-	iter->signature = signature;
-	iter->end = NULL;
+
+	if (sig_end)
+		sig_len = sig_end - sig_start;
+	else
+		sig_len = strlen(sig_start);
+
+	iter->sig_start = sig_start;
+	iter->sig_len = sig_len;
+	iter->sig_pos = 0;
 	iter->data = data;
 	iter->len = pos + len;
 	iter->pos = pos;
@@ -314,7 +325,8 @@ static inline size_t calc_len(const char *signature,
 static bool dbus1_message_iter_next_entry_valist(struct message_iter *iter,
 							va_list args)
 {
-	const char *signature = iter->signature;
+	const char *signature = iter->sig_start + iter->sig_pos;
+	const char *end;
 
 	while (*signature) {
 		struct message_iter *sub_iter;
@@ -449,14 +461,16 @@ static bool dbus1_message_iter_next_entry_valist(struct message_iter *iter,
 			pos = align_len(iter->pos, 4);
 			if (pos + 4 > iter->len)
 				return false;
+
+			end = _dbus_signature_end(signature + 1);
 			uint32_val = get_u32(iter->data + pos);
 			sub_iter = va_arg(args, void *);
 			message_iter_init(sub_iter, iter->message,
-						signature + 1, iter->data,
+						signature + 1, end + 1,
+						iter->data,
 						uint32_val, pos + 4);
+			signature = end;
 			iter->pos = pos + uint32_val + 4;
-			signature = _dbus_signature_end(signature + 1);
-			sub_iter->end = signature;
 			break;
 		case 'v':
 			pos = align_len(iter->pos, 1);
@@ -468,7 +482,7 @@ static bool dbus1_message_iter_next_entry_valist(struct message_iter *iter,
 						pos + uint8_val + 2);
 			sub_iter = va_arg(args, void *);
 			message_iter_init(sub_iter, iter->message,
-						str_val, iter->data,
+						str_val, NULL, iter->data,
 						len, pos + uint8_val + 2);
 			iter->pos = pos + uint8_val + 2 + len;
 			break;
@@ -476,10 +490,10 @@ static bool dbus1_message_iter_next_entry_valist(struct message_iter *iter,
 			return false;
 		}
 
-		if (signature == iter->end)
-			break;
+		signature += 1;
 
-		signature++;
+		if (signature >= iter->sig_start + iter->sig_len)
+			break;
 	}
 
 	return true;
@@ -505,7 +519,7 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 	uint8_t endian, message_type, flags, version, field_type;
 	uint32_t body_length, serial;
 
-	message_iter_init(&header, message, "yyyyuua(yv)",
+	message_iter_init(&header, message, "yyyyuua(yv)", NULL,
 				message->header, message->header_size, 0);
 
 	if (!message_iter_next_entry(&header, &endian,
@@ -767,7 +781,7 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 	if (strcmp(message->signature, "s"))
 		return false;
 
-	message_iter_init(&iter, message, message->signature,
+	message_iter_init(&iter, message, message->signature, NULL,
 				message->body, message->body_size, 0);
 
 	if (!message_iter_next_entry(&iter, &str))
@@ -803,7 +817,7 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 	if (!signature || strcmp(message->signature, signature))
 		return false;
 
-	message_iter_init(&iter, message, message->signature,
+	message_iter_init(&iter, message, message->signature, NULL,
 				message->body, message->body_size, 0);
 
 	va_start(args, signature);
@@ -939,10 +953,10 @@ LIB_EXPORT char l_dbus_message_iter_get_type(struct l_dbus_message_iter *iter)
 
 	real_iter = (struct message_iter *) iter;
 
-	if (!real_iter->signature)
+	if (!real_iter->sig_start)
 		return '\0';
 
-	return *real_iter->signature;
+	return real_iter->sig_start[real_iter->sig_pos];
 }
 
 LIB_EXPORT bool l_dbus_message_iter_is_valid(struct l_dbus_message_iter *iter)
@@ -954,7 +968,10 @@ LIB_EXPORT bool l_dbus_message_iter_is_valid(struct l_dbus_message_iter *iter)
 
 	real_iter = (struct message_iter *) iter;
 
-	if (!real_iter->signature || *real_iter->signature == '\0')
+	if (!real_iter->sig_start)
+		return false;
+
+	if (real_iter->sig_pos >= real_iter->sig_len)
 		return false;
 
 	return true;
@@ -991,7 +1008,7 @@ LIB_EXPORT bool l_dbus_message_iter_get_variant(struct l_dbus_message_iter *iter
 
 	real_iter = (struct message_iter *) iter;
 
-	if (!real_iter->signature || strcmp(real_iter->signature, signature))
+	if (!real_iter->sig_start || strcmp(real_iter->sig_start, signature))
 		return false;
 
 	va_start(args, signature);
