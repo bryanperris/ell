@@ -330,7 +330,6 @@ static bool dbus1_message_iter_next_entry_valist(struct message_iter *iter,
 
 	while (*signature) {
 		struct message_iter *sub_iter;
-		unsigned char indent = 0;
 		size_t pos, len;
 		const char *str_val;
 		uint8_t uint8_val;
@@ -449,13 +448,11 @@ static bool dbus1_message_iter_next_entry_valist(struct message_iter *iter,
 			break;
 		case '(':
 		case '{':
-			indent++;
 			pos = align_len(iter->pos, 8);
 			iter->pos = pos;
 			break;
 		case ')':
 		case '}':
-			indent--;
 			break;
 		case 'a':
 			pos = align_len(iter->pos, 4);
