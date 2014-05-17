@@ -479,6 +479,10 @@ static bool dbus1_message_iter_next_entry_valist(struct message_iter *iter,
 						signature + 1, end + 1,
 						iter->data,
 						uint32_val, pos + 4);
+
+			if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
+				iter->sig_pos += end - signature;
+
 			signature = end;
 			iter->pos = pos + uint32_val + 4;
 			break;
@@ -502,6 +506,9 @@ static bool dbus1_message_iter_next_entry_valist(struct message_iter *iter,
 		}
 
 		signature += 1;
+
+		if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
+			iter->sig_pos += 1;
 
 		if (signature >= iter->sig_start + iter->sig_len)
 			break;
