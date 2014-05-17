@@ -73,6 +73,7 @@ struct message_iter {
 	const void *data;
 	size_t len;
 	size_t pos;
+	char container_type;
 };
 
 static inline bool _dbus_message_is_gvariant(struct l_dbus_message *msg)
@@ -226,8 +227,9 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 #define put_s32(ptr, val)	(*((int32_t *) (ptr)) = (val))
 #define put_s64(ptr, val)	(*((int64_t *) (ptr)) = (val))
 
-static inline void message_iter_init(struct message_iter *iter,
+static inline void message_iter_init_internal(struct message_iter *iter,
 			struct l_dbus_message *message,
+			enum dbus_container_type type,
 			const char *sig_start, const char *sig_end,
 			const void *data, size_t len, size_t pos)
 {
@@ -246,6 +248,16 @@ static inline void message_iter_init(struct message_iter *iter,
 	iter->data = data;
 	iter->len = pos + len;
 	iter->pos = pos;
+	iter->container_type = type;
+}
+
+static inline void message_iter_init(struct message_iter *iter,
+			struct l_dbus_message *message,
+			const char *sig_start, const char *sig_end,
+			const void *data, size_t len, size_t pos)
+{
+	message_iter_init_internal(iter, message, DBUS_CONTAINER_TYPE_STRUCT,
+					sig_start, sig_end, data, len, pos);
 }
 
 static inline size_t calc_len_one(const char signature,
@@ -462,7 +474,8 @@ static bool dbus1_message_iter_next_entry_valist(struct message_iter *iter,
 			end = _dbus_signature_end(signature + 1);
 			uint32_val = get_u32(iter->data + pos);
 			sub_iter = va_arg(args, void *);
-			message_iter_init(sub_iter, iter->message,
+			message_iter_init_internal(sub_iter, iter->message,
+						DBUS_CONTAINER_TYPE_ARRAY,
 						signature + 1, end + 1,
 						iter->data,
 						uint32_val, pos + 4);
@@ -478,7 +491,8 @@ static bool dbus1_message_iter_next_entry_valist(struct message_iter *iter,
 			len = calc_len(str_val, iter->data,
 						pos + uint8_val + 2);
 			sub_iter = va_arg(args, void *);
-			message_iter_init(sub_iter, iter->message,
+			message_iter_init_internal(sub_iter, iter->message,
+						DBUS_CONTAINER_TYPE_VARIANT,
 						str_val, NULL, iter->data,
 						len, pos + uint8_val + 2);
 			iter->pos = pos + uint8_val + 2 + len;
