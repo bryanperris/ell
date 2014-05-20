@@ -315,6 +315,42 @@ static inline size_t calc_len(const char *signature,
 	return len;
 }
 
+static bool _dbus1_iter_enter_struct(struct dbus1_iter *iter,
+					struct dbus1_iter *structure)
+{
+	size_t len;
+	size_t pos;
+	const char *sig_start;
+	const char *sig_end;
+	bool is_dict = iter->sig_start[iter->sig_pos] == '{';
+	bool is_struct = iter->sig_start[iter->sig_pos] == '(';
+	char sig[256];
+
+	if (!is_dict && !is_struct)
+		return false;
+
+	pos = align_len(iter->pos, 8);
+	if (pos >= iter->len)
+		return false;
+
+	sig_start = iter->sig_start + iter->sig_pos + 1;
+	sig_end = _dbus_signature_end(iter->sig_start + iter->sig_pos);
+
+	len = calc_len(iter->sig_start + iter->sig_pos, iter->data, pos);
+
+	dbus1_iter_init_internal(structure, iter->message,
+					DBUS_CONTAINER_TYPE_STRUCT,
+					sig_start, sig_end, iter->data,
+					len, pos);
+
+	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
+		iter->sig_pos += sig_end - sig_start + 2;
+
+	iter->pos = pos + len;
+
+	return true;
+}
+
 static bool _dbus1_iter_enter_variant(struct dbus1_iter *iter,
 					struct dbus1_iter *variant)
 {
