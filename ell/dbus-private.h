@@ -33,6 +33,17 @@ enum dbus_container_type {
 	DBUS_CONTAINER_TYPE_DICT_ENTRY	= 'e',
 };
 
+struct dbus1_iter {
+	struct l_dbus_message *message;
+	const char *sig_start;
+	uint8_t sig_len;
+	uint8_t sig_pos;
+	const void *data;
+	size_t len;
+	size_t pos;
+	char container_type;
+};
+
 struct dbus_header {
 	uint8_t  endian;
 	uint8_t  message_type;
