@@ -40,7 +40,8 @@ static const char *simple_types = "sogybnqiuxtdh";
 static const char *variable_types = "sogav";
 static const char *fixed_types = "bynqhiuxtd";
 
-/* The alignment of a container type is equal to the largest alignment of
+/*
+ * The alignment of a container type is equal to the largest alignment of
  * any potential child of that container. This means that, even if an array
  * of 32-bit integers is empty, it still must be aligned to the nearest
  * multiple of 4 bytes. It also means that the variant type (described below)
