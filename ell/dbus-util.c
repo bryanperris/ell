@@ -586,15 +586,18 @@ bool _dbus1_iter_enter_array(struct dbus1_iter *iter,
 		return false;
 
 	len = get_u32(iter->data + pos);
+	pos += 4;
+
+	pos = align_len(pos, get_alignment(*sig_start));
 	dbus1_iter_init_internal(array, iter->message,
 					DBUS_CONTAINER_TYPE_ARRAY,
 					sig_start, sig_end,
-					iter->data, len, pos + 4);
+					iter->data, len, pos);
 
 	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
 		iter->sig_pos += sig_end - sig_start + 1;
 
-	iter->pos = pos + len + 4;
+	iter->pos = pos + len;
 
 	return true;
 }
