@@ -315,6 +315,38 @@ static inline size_t calc_len(const char *signature,
 	return len;
 }
 
+static bool _dbus1_iter_enter_array(struct dbus1_iter *iter,
+					struct dbus1_iter *array)
+{
+	size_t pos;
+	size_t len;
+	const char *sig_start;
+	const char *sig_end;
+
+	if (iter->sig_start[iter->sig_pos] != 'a')
+		return false;
+
+	sig_start = iter->sig_start + iter->sig_pos + 1;
+	sig_end = _dbus_signature_end(sig_start) + 1;
+
+	pos = align_len(iter->pos, 4);
+	if (pos + 4 > iter->len)
+		return false;
+
+	len = get_u32(iter->data + pos);
+	dbus1_iter_init_internal(array, iter->message,
+					DBUS_CONTAINER_TYPE_ARRAY,
+					sig_start, sig_end,
+					iter->data, len, pos + 4);
+
+	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
+		iter->sig_pos += sig_end - sig_start + 1;
+
+	iter->pos = pos + len + 4;
+
+	return true;
+}
+
 static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *iter,
 							va_list args)
 {
@@ -368,25 +400,13 @@ static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *iter,
 			signature += 1;
 			break;
 		case 'a':
-			pos = align_len(iter->pos, 4);
-			if (pos + 4 > iter->len)
+			sub_iter = va_arg(args, void *);
+
+			if (!_dbus1_iter_enter_array(iter, sub_iter))
 				return false;
 
 			end = _dbus_signature_end(signature + 1);
-			uint32_val = get_u32(iter->data + pos);
-			sub_iter = va_arg(args, void *);
-			dbus1_iter_init_internal(sub_iter, iter->message,
-						DBUS_CONTAINER_TYPE_ARRAY,
-						signature + 1, end + 1,
-						iter->data,
-						uint32_val, pos + 4);
-
-			if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
-				iter->sig_pos += end - signature + 1;
-
 			signature = end + 1;
-
-			iter->pos = pos + uint32_val + 4;
 			break;
 		case 'v':
 			pos = align_len(iter->pos, 1);
