@@ -63,8 +63,17 @@ struct _dbus_property;
 struct l_dbus_message;
 struct l_dbus;
 
+void _dbus1_iter_init(struct dbus1_iter *iter, struct l_dbus_message *message,
+			const char *sig_start, const char *sig_end,
+			const void *data, size_t len);
 bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type,
 					void *out);
+bool _dbus1_iter_enter_struct(struct dbus1_iter *iter,
+					struct dbus1_iter *structure);
+bool _dbus1_iter_enter_variant(struct dbus1_iter *iter,
+					struct dbus1_iter *variant);
+bool _dbus1_iter_enter_array(struct dbus1_iter *iter,
+					struct dbus1_iter *array);
 
 void *_dbus_message_get_body(struct l_dbus_message *msg, size_t *out_size);
 void *_dbus_message_get_header(struct l_dbus_message *msg, size_t *out_size);

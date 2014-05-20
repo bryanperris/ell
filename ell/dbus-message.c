@@ -208,213 +208,6 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 #define put_s32(ptr, val)	(*((int32_t *) (ptr)) = (val))
 #define put_s64(ptr, val)	(*((int64_t *) (ptr)) = (val))
 
-static inline void dbus1_iter_init_internal(struct dbus1_iter *iter,
-			struct l_dbus_message *message,
-			enum dbus_container_type type,
-			const char *sig_start, const char *sig_end,
-			const void *data, size_t len, size_t pos)
-{
-	size_t sig_len;
-
-	iter->message = message;
-
-	if (sig_end)
-		sig_len = sig_end - sig_start;
-	else
-		sig_len = strlen(sig_start);
-
-	iter->sig_start = sig_start;
-	iter->sig_len = sig_len;
-	iter->sig_pos = 0;
-	iter->data = data;
-	iter->len = pos + len;
-	iter->pos = pos;
-	iter->container_type = type;
-}
-
-static inline void dbus1_iter_init(struct dbus1_iter *iter,
-			struct l_dbus_message *message,
-			const char *sig_start, const char *sig_end,
-			const void *data, size_t len)
-{
-	dbus1_iter_init_internal(iter, message, DBUS_CONTAINER_TYPE_STRUCT,
-					sig_start, sig_end, data, len, 0);
-}
-
-static inline size_t calc_len_one(const char signature,
-					const void *data, size_t pos)
-{
-	switch (signature) {
-	case 'o':
-	case 's':
-		return align_len(pos, 4) - pos +
-				get_u32(data + align_len(pos, 4)) + 5;
-	case 'g':
-		return align_len(pos, 1) - pos +
-				get_u8(data + align_len(pos, 1)) + 2;
-	case 'y':
-		return align_len(pos, 1) + 1 - pos;
-	case 'n':
-	case 'q':
-		return align_len(pos, 2) + 2 - pos;
-	case 'b':
-	case 'i':
-	case 'u':
-	case 'h':
-		return align_len(pos, 4) + 4 - pos;
-	case 'x':
-	case 't':
-	case 'd':
-		return align_len(pos, 8) + 8 - pos;
-	case 'a':
-		return get_u32(data + align_len(pos, 4)) + 4;
-	case '(':
-	case '{':
-		return align_len(pos, 8) - pos;
-	}
-
-	return 0;
-}
-
-static inline size_t calc_len(const char *signature,
-					const void *data, size_t pos)
-{
-	const char *ptr = signature;
-	unsigned int indent = 0;
-	size_t len = 0;
-	char expect;
-
-	switch (*signature) {
-	case '(':
-		expect = ')';
-		break;
-	case '{':
-		expect = '}';
-		break;
-	case 'v':
-		len = calc_len_one('g', data, pos);
-		return len + calc_len(data + pos + 1, data, pos + len);
-	default:
-		return calc_len_one(*signature, data, pos);
-	}
-
-	for (ptr = signature; *ptr != '\0'; ptr++) {
-		if (*ptr == *signature)
-			indent++;
-		else if (*ptr == expect)
-			if (!--indent)
-				break;
-		if (*ptr == 'v') {
-			size_t siglen = calc_len_one('g', data, pos + len);
-			len += calc_len(data + pos + len + 1, data,
-							pos + len + siglen);
-		} else
-			len += calc_len_one(*ptr, data, pos + len);
-        }
-
-	return len;
-}
-
-static bool _dbus1_iter_enter_struct(struct dbus1_iter *iter,
-					struct dbus1_iter *structure)
-{
-	size_t len;
-	size_t pos;
-	const char *sig_start;
-	const char *sig_end;
-	bool is_dict = iter->sig_start[iter->sig_pos] == '{';
-	bool is_struct = iter->sig_start[iter->sig_pos] == '(';
-	char sig[256];
-
-	if (!is_dict && !is_struct)
-		return false;
-
-	pos = align_len(iter->pos, 8);
-	if (pos >= iter->len)
-		return false;
-
-	sig_start = iter->sig_start + iter->sig_pos + 1;
-	sig_end = _dbus_signature_end(iter->sig_start + iter->sig_pos);
-
-	len = calc_len(iter->sig_start + iter->sig_pos, iter->data, pos);
-
-	dbus1_iter_init_internal(structure, iter->message,
-					DBUS_CONTAINER_TYPE_STRUCT,
-					sig_start, sig_end, iter->data,
-					len, pos);
-
-	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
-		iter->sig_pos += sig_end - sig_start + 2;
-
-	iter->pos = pos + len;
-
-	return true;
-}
-
-static bool _dbus1_iter_enter_variant(struct dbus1_iter *iter,
-					struct dbus1_iter *variant)
-{
-	size_t pos;
-	uint8_t sig_len;
-	size_t len;
-	const char *sig_start;
-
-	if (iter->sig_start[iter->sig_pos] != 'v')
-		return false;
-
-	pos = align_len(iter->pos, 1);
-	if (pos + 2 > iter->len)
-		return false;
-
-	sig_len = get_u8(iter->data + pos);
-	sig_start = iter->data + pos + 1;
-	len = calc_len(sig_start, iter->data, pos + sig_len + 2);
-
-	dbus1_iter_init_internal(variant, iter->message,
-					DBUS_CONTAINER_TYPE_VARIANT,
-					sig_start, NULL, iter->data,
-					len, pos + sig_len + 2);
-
-	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
-		iter->sig_pos += 1;
-
-	iter->pos = pos + sig_len + 2 + len;
-
-	return true;
-}
-
-static bool _dbus1_iter_enter_array(struct dbus1_iter *iter,
-					struct dbus1_iter *array)
-{
-	size_t pos;
-	size_t len;
-	const char *sig_start;
-	const char *sig_end;
-
-	if (iter->sig_start[iter->sig_pos] != 'a')
-		return false;
-
-	sig_start = iter->sig_start + iter->sig_pos + 1;
-	sig_end = _dbus_signature_end(sig_start) + 1;
-
-	pos = align_len(iter->pos, 4);
-	if (pos + 4 > iter->len)
-		return false;
-
-	len = get_u32(iter->data + pos);
-	dbus1_iter_init_internal(array, iter->message,
-					DBUS_CONTAINER_TYPE_ARRAY,
-					sig_start, sig_end,
-					iter->data, len, pos + 4);
-
-	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
-		iter->sig_pos += sig_end - sig_start + 1;
-
-	iter->pos = pos + len + 4;
-
-	return true;
-}
-
 static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *orig,
 							va_list args)
 {
@@ -523,7 +316,7 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 	uint8_t endian, message_type, flags, version, field_type;
 	uint32_t body_length, serial;
 
-	dbus1_iter_init(&header, message, "yyyyuua(yv)", NULL,
+	_dbus1_iter_init(&header, message, "yyyyuua(yv)", NULL,
 				message->header, message->header_size);
 
 	if (!dbus1_iter_next_entry(&header, &endian,
@@ -785,7 +578,7 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 	if (strcmp(message->signature, "s"))
 		return false;
 
-	dbus1_iter_init(&iter, message, message->signature, NULL,
+	_dbus1_iter_init(&iter, message, message->signature, NULL,
 				message->body, message->body_size);
 
 	if (!dbus1_iter_next_entry(&iter, &str))
@@ -821,7 +614,7 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 	if (!signature || strcmp(message->signature, signature))
 		return false;
 
-	dbus1_iter_init(&iter, message, message->signature, NULL,
+	_dbus1_iter_init(&iter, message, message->signature, NULL,
 				message->body, message->body_size);
 
 	va_start(args, signature);
