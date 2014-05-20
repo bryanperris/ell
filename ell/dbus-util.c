@@ -36,6 +36,42 @@
 #define DBUS_MAX_INTERFACE_LEN 255
 #define DBUS_MAX_METHOD_LEN 255
 
+static int get_alignment(const char type)
+{
+	switch (type) {
+	case 'b':
+		return 4;
+	case 'y':
+		return 1;
+	case 'n':
+	case 'q':
+		return 2;
+	case 'u':
+	case 'i':
+		return 4;
+	case 'x':
+	case 't':
+	case 'd':
+		return 8;
+	case 's':
+	case 'o':
+		return 4;
+	case 'g':
+		return 1;
+	case 'a':
+		return 4;
+	case '(':
+	case '{':
+		return 8;
+	case 'v':
+		return 1;
+	case 'h':
+		return 4;
+	default:
+		return 0;
+	}
+}
+
 static inline bool is_valid_character(const char c)
 {
 	if (c >= 'a' && c <= 'z')
@@ -295,10 +331,11 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 	if (iter->pos >= iter->len)
 		return false;
 
+	pos = align_len(iter->pos, get_alignment(type));
+
 	switch (type) {
 	case 'o':
 	case 's':
-		pos = align_len(iter->pos, 4);
 		if (pos + 5 > iter->len)
 			return false;
 		uint32_val = get_u32(iter->data + pos);
@@ -307,7 +344,6 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 		iter->pos = pos + uint32_val + 5;
 		break;
 	case 'g':
-		pos = align_len(iter->pos, 1);
 		if (pos + 2 > iter->len)
 			return false;
 		uint8_val = get_u8(iter->data + pos);
@@ -316,7 +352,6 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 		iter->pos = pos + uint8_val + 2;
 		break;
 	case 'b':
-		pos = align_len(iter->pos, 4);
 		if (pos + 4 > iter->len)
 			return false;
 		uint32_val = get_u32(iter->data + pos);
@@ -324,7 +359,6 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 		iter->pos = pos + 4;
 		break;
 	case 'y':
-		pos = align_len(iter->pos, 1);
 		if (pos + 1 > iter->len)
 			return false;
 		uint8_val = get_u8(iter->data + pos);
@@ -332,7 +366,6 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 		iter->pos = pos + 1;
 		break;
 	case 'n':
-		pos = align_len(iter->pos, 2);
 		if (pos + 2 > iter->len)
 			return false;
 		int16_val = get_s16(iter->data + pos);
@@ -340,7 +373,6 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 		iter->pos = pos + 2;
 		break;
 	case 'q':
-		pos = align_len(iter->pos, 2);
 		if (pos + 2 > iter->len)
 			return false;
 		uint16_val = get_u16(iter->data + pos);
@@ -348,7 +380,6 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 		iter->pos = pos + 2;
 		break;
 	case 'i':
-		pos = align_len(iter->pos, 4);
 		if (pos + 4 > iter->len)
 			return false;
 		int32_val = get_s32(iter->data + pos);
@@ -357,7 +388,6 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 		break;
 	case 'u':
 	case 'h':
-		pos = align_len(iter->pos, 4);
 		if (pos + 4 > iter->len)
 			return false;
 		uint32_val = get_u32(iter->data + pos);
@@ -365,7 +395,6 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 		iter->pos = pos + 4;
 		break;
 	case 'x':
-		pos = align_len(iter->pos, 8);
 		if (pos + 8 > iter->len)
 			return false;
 		int64_val = get_s64(iter->data + pos);
@@ -373,7 +402,6 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 		iter->pos = pos + 8;
 		break;
 	case 't':
-		pos = align_len(iter->pos, 8);
 		if (pos + 8 > iter->len)
 			return false;
 		uint64_val = get_u64(iter->data + pos);
@@ -381,7 +409,6 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 		iter->pos = pos + 8;
 		break;
 	case 'd':
-		pos = align_len(iter->pos, 8);
 		if (pos + 8 > iter->len)
 			return false;
 		uint64_val = get_u64(iter->data + pos);
