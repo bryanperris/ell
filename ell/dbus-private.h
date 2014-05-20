@@ -63,6 +63,9 @@ struct _dbus_property;
 struct l_dbus_message;
 struct l_dbus;
 
+bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type,
+					void *out);
+
 void *_dbus_message_get_body(struct l_dbus_message *msg, size_t *out_size);
 void *_dbus_message_get_header(struct l_dbus_message *msg, size_t *out_size);
 void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial);

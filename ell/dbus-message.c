@@ -241,125 +241,6 @@ static inline void dbus1_iter_init(struct dbus1_iter *iter,
 					sig_start, sig_end, data, len, 0);
 }
 
-static bool dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type,
-					void *out)
-{
-	const char *str_val;
-	uint8_t uint8_val;
-	uint16_t uint16_val;
-	uint32_t uint32_val;
-	uint64_t uint64_val;
-	int16_t int16_val;
-	int32_t int32_val;
-	int64_t int64_val;
-	size_t pos;
-
-	if (iter->pos >= iter->len)
-		return false;
-
-	switch (type) {
-	case 'o':
-	case 's':
-		pos = align_len(iter->pos, 4);
-		if (pos + 5 > iter->len)
-			return false;
-		uint32_val = get_u32(iter->data + pos);
-		str_val = iter->data + pos + 4;
-		*(const void **) out = str_val;
-		iter->pos = pos + uint32_val + 5;
-		break;
-	case 'g':
-		pos = align_len(iter->pos, 1);
-		if (pos + 2 > iter->len)
-			return false;
-		uint8_val = get_u8(iter->data + pos);
-		str_val = iter->data + pos + 1;
-		*(const void **) out = str_val;
-		iter->pos = pos + uint8_val + 2;
-		break;
-	case 'b':
-		pos = align_len(iter->pos, 4);
-		if (pos + 4 > iter->len)
-			return false;
-		uint32_val = get_u32(iter->data + pos);
-		*(bool *) out = !!uint32_val;
-		iter->pos = pos + 4;
-		break;
-	case 'y':
-		pos = align_len(iter->pos, 1);
-		if (pos + 1 > iter->len)
-			return false;
-		uint8_val = get_u8(iter->data + pos);
-		*(uint8_t *) out = uint8_val;
-		iter->pos = pos + 1;
-		break;
-	case 'n':
-		pos = align_len(iter->pos, 2);
-		if (pos + 2 > iter->len)
-			return false;
-		int16_val = get_s16(iter->data + pos);
-		*(int16_t *) out = int16_val;
-		iter->pos = pos + 2;
-		break;
-	case 'q':
-		pos = align_len(iter->pos, 2);
-		if (pos + 2 > iter->len)
-			return false;
-		uint16_val = get_u16(iter->data + pos);
-		*(uint16_t *) out = uint16_val;
-		iter->pos = pos + 2;
-		break;
-	case 'i':
-		pos = align_len(iter->pos, 4);
-		if (pos + 4 > iter->len)
-			return false;
-		int32_val = get_s32(iter->data + pos);
-		*(int32_t *) out = int32_val;
-		iter->pos = pos + 4;
-		break;
-	case 'u':
-	case 'h':
-		pos = align_len(iter->pos, 4);
-		if (pos + 4 > iter->len)
-			return false;
-		uint32_val = get_u32(iter->data + pos);
-		*(uint32_t *) out = uint32_val;
-		iter->pos = pos + 4;
-		break;
-	case 'x':
-		pos = align_len(iter->pos, 8);
-		if (pos + 8 > iter->len)
-			return false;
-		int64_val = get_s64(iter->data + pos);
-		*(int64_t *) out= int64_val;
-		iter->pos = pos + 8;
-		break;
-	case 't':
-		pos = align_len(iter->pos, 8);
-		if (pos + 8 > iter->len)
-			return false;
-		uint64_val = get_u64(iter->data + pos);
-		*(uint64_t *) out = uint64_val;
-		iter->pos = pos + 8;
-		break;
-	case 'd':
-		pos = align_len(iter->pos, 8);
-		if (pos + 8 > iter->len)
-			return false;
-		uint64_val = get_u64(iter->data + pos);
-		*(double *) out = (double) uint64_val;
-		iter->pos = pos + 8;
-		break;
-	default:
-		return false;
-	}
-
-	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
-		iter->sig_pos += 1;
-
-	return true;
-}
-
 static inline size_t calc_len_one(const char signature,
 					const void *data, size_t pos)
 {
@@ -453,7 +334,8 @@ static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *iter,
 			signature < iter->sig_start + iter->sig_len) {
 		if (strchr(simple_types, *signature)) {
 			arg = va_arg(args, void *);
-			if (!dbus1_iter_next_entry_basic(iter, *signature, arg))
+			if (!_dbus1_iter_next_entry_basic(iter,
+							*signature, arg))
 				return false;
 
 			signature += 1;
@@ -462,8 +344,8 @@ static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *iter,
 
 		switch (*signature) {
 		case 'h':
-			if (!dbus1_iter_next_entry_basic(iter, 'h',
-					&uint32_val))
+			if (!_dbus1_iter_next_entry_basic(iter, 'h',
+								&uint32_val))
 				return false;
 
 			if (uint32_val < iter->message->num_fds)

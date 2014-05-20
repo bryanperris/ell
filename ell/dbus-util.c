@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "private.h"
 #include "dbus-private.h"
 
 #define DBUS_MAX_INTERFACE_LEN 255
@@ -245,4 +246,122 @@ const char *_dbus_signature_end(const char *signature)
 	}
 
 	return NULL;
+}
+
+bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
+{
+	const char *str_val;
+	uint8_t uint8_val;
+	uint16_t uint16_val;
+	uint32_t uint32_val;
+	uint64_t uint64_val;
+	int16_t int16_val;
+	int32_t int32_val;
+	int64_t int64_val;
+	size_t pos;
+
+	if (iter->pos >= iter->len)
+		return false;
+
+	switch (type) {
+	case 'o':
+	case 's':
+		pos = align_len(iter->pos, 4);
+		if (pos + 5 > iter->len)
+			return false;
+		uint32_val = get_u32(iter->data + pos);
+		str_val = iter->data + pos + 4;
+		*(const void **) out = str_val;
+		iter->pos = pos + uint32_val + 5;
+		break;
+	case 'g':
+		pos = align_len(iter->pos, 1);
+		if (pos + 2 > iter->len)
+			return false;
+		uint8_val = get_u8(iter->data + pos);
+		str_val = iter->data + pos + 1;
+		*(const void **) out = str_val;
+		iter->pos = pos + uint8_val + 2;
+		break;
+	case 'b':
+		pos = align_len(iter->pos, 4);
+		if (pos + 4 > iter->len)
+			return false;
+		uint32_val = get_u32(iter->data + pos);
+		*(bool *) out = !!uint32_val;
+		iter->pos = pos + 4;
+		break;
+	case 'y':
+		pos = align_len(iter->pos, 1);
+		if (pos + 1 > iter->len)
+			return false;
+		uint8_val = get_u8(iter->data + pos);
+		*(uint8_t *) out = uint8_val;
+		iter->pos = pos + 1;
+		break;
+	case 'n':
+		pos = align_len(iter->pos, 2);
+		if (pos + 2 > iter->len)
+			return false;
+		int16_val = get_s16(iter->data + pos);
+		*(int16_t *) out = int16_val;
+		iter->pos = pos + 2;
+		break;
+	case 'q':
+		pos = align_len(iter->pos, 2);
+		if (pos + 2 > iter->len)
+			return false;
+		uint16_val = get_u16(iter->data + pos);
+		*(uint16_t *) out = uint16_val;
+		iter->pos = pos + 2;
+		break;
+	case 'i':
+		pos = align_len(iter->pos, 4);
+		if (pos + 4 > iter->len)
+			return false;
+		int32_val = get_s32(iter->data + pos);
+		*(int32_t *) out = int32_val;
+		iter->pos = pos + 4;
+		break;
+	case 'u':
+	case 'h':
+		pos = align_len(iter->pos, 4);
+		if (pos + 4 > iter->len)
+			return false;
+		uint32_val = get_u32(iter->data + pos);
+		*(uint32_t *) out = uint32_val;
+		iter->pos = pos + 4;
+		break;
+	case 'x':
+		pos = align_len(iter->pos, 8);
+		if (pos + 8 > iter->len)
+			return false;
+		int64_val = get_s64(iter->data + pos);
+		*(int64_t *) out= int64_val;
+		iter->pos = pos + 8;
+		break;
+	case 't':
+		pos = align_len(iter->pos, 8);
+		if (pos + 8 > iter->len)
+			return false;
+		uint64_val = get_u64(iter->data + pos);
+		*(uint64_t *) out = uint64_val;
+		iter->pos = pos + 8;
+		break;
+	case 'd':
+		pos = align_len(iter->pos, 8);
+		if (pos + 8 > iter->len)
+			return false;
+		uint64_val = get_u64(iter->data + pos);
+		*(double *) out = (double) uint64_val;
+		iter->pos = pos + 8;
+		break;
+	default:
+		return false;
+	}
+
+	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
+		iter->sig_pos += 1;
+
+	return true;
 }
