@@ -200,13 +200,6 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 	l_free(message);
 }
 
-#define get_u8(ptr)		(*(uint8_t *) (ptr))
-#define get_u16(ptr)		(*(uint16_t *) (ptr))
-#define get_u32(ptr)		(*(uint32_t *) (ptr))
-#define get_u64(ptr)		(*(uint64_t *) (ptr))
-#define get_s16(ptr)		(*(int16_t *) (ptr))
-#define get_s32(ptr)		(*(int32_t *) (ptr))
-#define get_s64(ptr)		(*(int64_t *) (ptr))
 #define put_u8(ptr,val)		(*((uint8_t *) (ptr)) = (val))
 #define put_u16(ptr,val)	(*((uint16_t *) (ptr)) = (val))
 #define put_u32(ptr, val)	(*((uint32_t *) (ptr)) = (val))

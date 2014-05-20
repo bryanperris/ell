@@ -28,6 +28,14 @@
 
 #define LIB_EXPORT __attribute__ ((visibility("default")))
 
+#define get_u8(ptr)		(*(uint8_t *) (ptr))
+#define get_u16(ptr)		(*(uint16_t *) (ptr))
+#define get_u32(ptr)		(*(uint32_t *) (ptr))
+#define get_u64(ptr)		(*(uint64_t *) (ptr))
+#define get_s16(ptr)		(*(int16_t *) (ptr))
+#define get_s32(ptr)		(*(int32_t *) (ptr))
+#define get_s64(ptr)		(*(int64_t *) (ptr))
+
 struct l_debug_desc;
 
 void debug_enable(struct l_debug_desc *start, struct l_debug_desc *stop);

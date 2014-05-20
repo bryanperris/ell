@@ -513,14 +513,6 @@ done:
 	return start;
 }
 
-#define get_u8(ptr)		(*(uint8_t *) (ptr))
-#define get_u16(ptr)		(*(uint16_t *) (ptr))
-#define get_u32(ptr)		(*(uint32_t *) (ptr))
-#define get_u64(ptr)		(*(uint64_t *) (ptr))
-#define get_s16(ptr)		(*(int16_t *) (ptr))
-#define get_s32(ptr)		(*(int32_t *) (ptr))
-#define get_s64(ptr)		(*(int64_t *) (ptr))
-
 bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 					void *out)
 {
