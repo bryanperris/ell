@@ -315,6 +315,38 @@ static inline size_t calc_len(const char *signature,
 	return len;
 }
 
+static bool _dbus1_iter_enter_variant(struct dbus1_iter *iter,
+					struct dbus1_iter *variant)
+{
+	size_t pos;
+	uint8_t sig_len;
+	size_t len;
+	const char *sig_start;
+
+	if (iter->sig_start[iter->sig_pos] != 'v')
+		return false;
+
+	pos = align_len(iter->pos, 1);
+	if (pos + 2 > iter->len)
+		return false;
+
+	sig_len = get_u8(iter->data + pos);
+	sig_start = iter->data + pos + 1;
+	len = calc_len(sig_start, iter->data, pos + sig_len + 2);
+
+	dbus1_iter_init_internal(variant, iter->message,
+					DBUS_CONTAINER_TYPE_VARIANT,
+					sig_start, NULL, iter->data,
+					len, pos + sig_len + 2);
+
+	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
+		iter->sig_pos += 1;
+
+	iter->pos = pos + sig_len + 2 + len;
+
+	return true;
+}
+
 static bool _dbus1_iter_enter_array(struct dbus1_iter *iter,
 					struct dbus1_iter *array)
 {
@@ -354,12 +386,9 @@ static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *iter,
 	const char *signature = iter->sig_start + iter->sig_pos;
 	const char *end;
 	struct dbus1_iter *sub_iter;
-	const char *str_val;
-	uint8_t uint8_val;
 	uint32_t uint32_val;
 	int fd;
 	void *arg;
-	size_t len;
 	size_t pos;
 
 	while (iter->sig_pos < iter->sig_len &&
@@ -409,25 +438,12 @@ static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *iter,
 			signature = end + 1;
 			break;
 		case 'v':
-			pos = align_len(iter->pos, 1);
-			if (pos + 2 > iter->len)
-				return false;
-			uint8_val = get_u8(iter->data + pos);
-			str_val = iter->data + pos + 1;
-			len = calc_len(str_val, iter->data,
-						pos + uint8_val + 2);
 			sub_iter = va_arg(args, void *);
-			dbus1_iter_init_internal(sub_iter, iter->message,
-						DBUS_CONTAINER_TYPE_VARIANT,
-						str_val, NULL, iter->data,
-						len, pos + uint8_val + 2);
 
-			if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
-				iter->sig_pos += 1;
+			if (!_dbus1_iter_enter_variant(iter, sub_iter))
+				return false;
 
 			signature += 1;
-
-			iter->pos = pos + uint8_val + 2 + len;
 			break;
 		default:
 			return false;
