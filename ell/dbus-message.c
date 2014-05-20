@@ -254,10 +254,10 @@ static inline void message_iter_init_internal(struct message_iter *iter,
 static inline void message_iter_init(struct message_iter *iter,
 			struct l_dbus_message *message,
 			const char *sig_start, const char *sig_end,
-			const void *data, size_t len, size_t pos)
+			const void *data, size_t len)
 {
 	message_iter_init_internal(iter, message, DBUS_CONTAINER_TYPE_STRUCT,
-					sig_start, sig_end, data, len, pos);
+					sig_start, sig_end, data, len, 0);
 }
 
 static bool dbus1_iter_next_entry_basic(struct message_iter *iter, char type,
@@ -575,7 +575,7 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 	uint32_t body_length, serial;
 
 	message_iter_init(&header, message, "yyyyuua(yv)", NULL,
-				message->header, message->header_size, 0);
+				message->header, message->header_size);
 
 	if (!message_iter_next_entry(&header, &endian,
 					&message_type, &flags, &version,
@@ -837,7 +837,7 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 		return false;
 
 	message_iter_init(&iter, message, message->signature, NULL,
-				message->body, message->body_size, 0);
+				message->body, message->body_size);
 
 	if (!message_iter_next_entry(&iter, &str))
 		return false;
@@ -873,7 +873,7 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 		return false;
 
 	message_iter_init(&iter, message, message->signature, NULL,
-				message->body, message->body_size, 0);
+				message->body, message->body_size);
 
 	va_start(args, signature);
 	result = dbus1_message_iter_next_entry_valist(&iter, args);
