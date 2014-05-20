@@ -227,7 +227,7 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 #define put_s32(ptr, val)	(*((int32_t *) (ptr)) = (val))
 #define put_s64(ptr, val)	(*((int64_t *) (ptr)) = (val))
 
-static inline void message_iter_init_internal(struct message_iter *iter,
+static inline void dbus1_iter_init_internal(struct message_iter *iter,
 			struct l_dbus_message *message,
 			enum dbus_container_type type,
 			const char *sig_start, const char *sig_end,
@@ -251,12 +251,12 @@ static inline void message_iter_init_internal(struct message_iter *iter,
 	iter->container_type = type;
 }
 
-static inline void message_iter_init(struct message_iter *iter,
+static inline void dbus1_iter_init(struct message_iter *iter,
 			struct l_dbus_message *message,
 			const char *sig_start, const char *sig_end,
 			const void *data, size_t len)
 {
-	message_iter_init_internal(iter, message, DBUS_CONTAINER_TYPE_STRUCT,
+	dbus1_iter_init_internal(iter, message, DBUS_CONTAINER_TYPE_STRUCT,
 					sig_start, sig_end, data, len, 0);
 }
 
@@ -512,7 +512,7 @@ static bool dbus1_message_iter_next_entry_valist(struct message_iter *iter,
 			end = _dbus_signature_end(signature + 1);
 			uint32_val = get_u32(iter->data + pos);
 			sub_iter = va_arg(args, void *);
-			message_iter_init_internal(sub_iter, iter->message,
+			dbus1_iter_init_internal(sub_iter, iter->message,
 						DBUS_CONTAINER_TYPE_ARRAY,
 						signature + 1, end + 1,
 						iter->data,
@@ -534,7 +534,7 @@ static bool dbus1_message_iter_next_entry_valist(struct message_iter *iter,
 			len = calc_len(str_val, iter->data,
 						pos + uint8_val + 2);
 			sub_iter = va_arg(args, void *);
-			message_iter_init_internal(sub_iter, iter->message,
+			dbus1_iter_init_internal(sub_iter, iter->message,
 						DBUS_CONTAINER_TYPE_VARIANT,
 						str_val, NULL, iter->data,
 						len, pos + uint8_val + 2);
@@ -574,7 +574,7 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 	uint8_t endian, message_type, flags, version, field_type;
 	uint32_t body_length, serial;
 
-	message_iter_init(&header, message, "yyyyuua(yv)", NULL,
+	dbus1_iter_init(&header, message, "yyyyuua(yv)", NULL,
 				message->header, message->header_size);
 
 	if (!message_iter_next_entry(&header, &endian,
@@ -836,7 +836,7 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 	if (strcmp(message->signature, "s"))
 		return false;
 
-	message_iter_init(&iter, message, message->signature, NULL,
+	dbus1_iter_init(&iter, message, message->signature, NULL,
 				message->body, message->body_size);
 
 	if (!message_iter_next_entry(&iter, &str))
@@ -872,7 +872,7 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 	if (!signature || strcmp(message->signature, signature))
 		return false;
 
-	message_iter_init(&iter, message, message->signature, NULL,
+	dbus1_iter_init(&iter, message, message->signature, NULL,
 				message->body, message->body_size);
 
 	va_start(args, signature);
