@@ -415,13 +415,16 @@ static bool _dbus1_iter_enter_array(struct dbus1_iter *iter,
 	return true;
 }
 
-static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *iter,
+static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *orig,
 							va_list args)
 {
 	static const char *simple_types = "sogybnqiuxtd";
+	struct dbus1_iter *iter = orig;
 	const char *signature = iter->sig_start + iter->sig_pos;
 	const char *end;
 	struct dbus1_iter *sub_iter;
+	struct dbus1_iter stack[32];
+	unsigned int indent = 0;
 	uint32_t uint32_val;
 	int fd;
 	void *arg;
@@ -456,13 +459,24 @@ static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *iter,
 			break;
 		case '(':
 		case '{':
-			pos = align_len(iter->pos, 8);
-			iter->pos = pos;
 			signature += 1;
+			indent += 1;
+
+			if (!_dbus1_iter_enter_struct(iter, &stack[indent - 1]))
+				return false;
+
+			iter = &stack[indent - 1];
+
 			break;
 		case ')':
 		case '}':
 			signature += 1;
+			indent -= 1;
+
+			if (indent == 0)
+				iter = orig;
+			else
+				iter = &stack[indent - 1];
 			break;
 		case 'a':
 			sub_iter = va_arg(args, void *);
