@@ -516,7 +516,6 @@ done:
 bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 					void *out)
 {
-	size_t c;
 	size_t item_size = 0;
 	const void *start;
 	uint8_t uint8_val;
