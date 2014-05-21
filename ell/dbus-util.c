@@ -316,6 +316,128 @@ void _dbus1_iter_init(struct dbus1_iter *iter, struct l_dbus_message *message,
 					sig_start, sig_end, data, len, 0);
 }
 
+static const char *calc_len_next_item(const char *signature, const void *data,
+					size_t data_pos, size_t data_len,
+					size_t *out_len)
+{
+	unsigned int alignment;
+	size_t pos;
+	size_t len;
+	const char *sig_end;
+	const char *var_sig;
+
+	alignment = get_alignment(*signature);
+	if (alignment == 0)
+		return NULL;
+
+	pos = align_len(data_pos, alignment);
+	if (pos > data_len)
+		return NULL;
+
+	switch (*signature) {
+	case 'o':
+	case 's':
+		if (pos + 5 > data_len)
+			return NULL;
+
+		pos += get_u32(data + pos) + 5;
+		break;
+	case 'g':
+		if (pos + 2 > data_len)
+			return NULL;
+
+		pos += get_u8(data + pos) + 2;
+		break;
+	case 'y':
+		pos += 1;
+		break;
+	case 'n':
+	case 'q':
+		pos += 2;
+		break;
+	case 'b':
+	case 'i':
+	case 'u':
+	case 'h':
+		pos += 4;
+		break;
+	case 'x':
+	case 't':
+	case 'd':
+		pos += 8;
+		break;
+	case 'a':
+		if (pos + 4 > data_len)
+			return NULL;
+
+		len = get_u32(data + pos);
+		pos += 4;
+
+		alignment = get_alignment(signature[1]);
+		pos = align_len(pos, alignment);
+		pos += len;
+
+		sig_end = _dbus_signature_end(signature) + 1;
+		goto done;
+	case '(':
+		sig_end = signature + 1;
+
+		while (*sig_end != ')') {
+			sig_end = calc_len_next_item(sig_end, data, pos,
+							data_len, &len);
+
+			if (!sig_end)
+				return NULL;
+
+			pos += len;
+		}
+
+		sig_end += 1;
+		goto done;
+	case '{':
+		sig_end = calc_len_next_item(signature + 1, data, pos,
+						data_len, &len);
+
+		if (!sig_end)
+			return NULL;
+
+		pos += len;
+
+		sig_end = calc_len_next_item(sig_end, data, pos,
+						data_len, &len);
+
+		if (!sig_end)
+			return NULL;
+
+		pos += len;
+		sig_end += 1;
+		goto done;
+	case 'v':
+		if (!calc_len_next_item("g", data, pos, data_len, &len))
+			return NULL;
+
+		var_sig = data + pos + 1;
+		pos += len;
+
+		if (!calc_len_next_item(var_sig, data, pos, data_len, &len))
+			return NULL;
+
+		pos += len;
+		break;
+	default:
+		return NULL;
+	}
+
+	sig_end = signature + 1;
+
+done:
+	if (pos > data_len)
+		return NULL;
+
+	*out_len = pos - data_pos;
+	return sig_end;
+}
+
 bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 {
 	const char *str_val;
@@ -425,80 +547,6 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 	return true;
 }
 
-static inline size_t calc_len_one(const char signature,
-					const void *data, size_t pos)
-{
-	switch (signature) {
-	case 'o':
-	case 's':
-		return align_len(pos, 4) - pos +
-				get_u32(data + align_len(pos, 4)) + 5;
-	case 'g':
-		return align_len(pos, 1) - pos +
-				get_u8(data + align_len(pos, 1)) + 2;
-	case 'y':
-		return align_len(pos, 1) + 1 - pos;
-	case 'n':
-	case 'q':
-		return align_len(pos, 2) + 2 - pos;
-	case 'b':
-	case 'i':
-	case 'u':
-	case 'h':
-		return align_len(pos, 4) + 4 - pos;
-	case 'x':
-	case 't':
-	case 'd':
-		return align_len(pos, 8) + 8 - pos;
-	case 'a':
-		return get_u32(data + align_len(pos, 4)) + 4;
-	case '(':
-	case '{':
-		return align_len(pos, 8) - pos;
-	}
-
-	return 0;
-}
-
-static inline size_t calc_len(const char *signature,
-					const void *data, size_t pos)
-{
-	const char *ptr = signature;
-	unsigned int indent = 0;
-	size_t len = 0;
-	char expect;
-
-	switch (*signature) {
-	case '(':
-		expect = ')';
-		break;
-	case '{':
-		expect = '}';
-		break;
-	case 'v':
-		len = calc_len_one('g', data, pos);
-		return len + calc_len(data + pos + 1, data, pos + len);
-	default:
-		return calc_len_one(*signature, data, pos);
-	}
-
-	for (ptr = signature; *ptr != '\0'; ptr++) {
-		if (*ptr == *signature)
-			indent++;
-		else if (*ptr == expect)
-			if (!--indent)
-				break;
-		if (*ptr == 'v') {
-			size_t siglen = calc_len_one('g', data, pos + len);
-			len += calc_len(data + pos + len + 1, data,
-							pos + len + siglen);
-		} else
-			len += calc_len_one(*ptr, data, pos + len);
-        }
-
-	return len;
-}
-
 bool _dbus1_iter_enter_struct(struct dbus1_iter *iter,
 					struct dbus1_iter *structure)
 {
@@ -520,7 +568,8 @@ bool _dbus1_iter_enter_struct(struct dbus1_iter *iter,
 	sig_start = iter->sig_start + iter->sig_pos + 1;
 	sig_end = _dbus_signature_end(iter->sig_start + iter->sig_pos);
 
-	len = calc_len(iter->sig_start + iter->sig_pos, iter->data, pos);
+	calc_len_next_item(iter->sig_start + iter->sig_pos,
+				iter->data, pos, iter->len, &len);
 
 	dbus1_iter_init_internal(structure, iter->message,
 					DBUS_CONTAINER_TYPE_STRUCT,
@@ -552,7 +601,8 @@ bool _dbus1_iter_enter_variant(struct dbus1_iter *iter,
 
 	sig_len = get_u8(iter->data + pos);
 	sig_start = iter->data + pos + 1;
-	len = calc_len(sig_start, iter->data, pos + sig_len + 2);
+	calc_len_next_item(sig_start, iter->data, pos + sig_len + 2,
+					iter->len, &len);
 
 	dbus1_iter_init_internal(variant, iter->message,
 					DBUS_CONTAINER_TYPE_VARIANT,
