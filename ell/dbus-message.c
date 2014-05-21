@@ -401,6 +401,7 @@ bool dbus_message_compare(struct l_dbus_message *message,
 					const void *data, size_t size)
 {
 	struct l_dbus_message *other;
+	bool ret;
 
 	other = dbus_message_from_blob(data, size);
 
@@ -421,7 +422,11 @@ bool dbus_message_compare(struct l_dbus_message *message,
 	if (message->header_size != other->header_size)
 		return false;
 
-	return !memcmp(message->body, other->body, message->body_size);
+	ret = !memcmp(message->body, other->body, message->body_size);
+
+	l_dbus_message_unref(other);
+
+	return ret;
 }
 
 static inline size_t body_realloc(struct l_dbus_message *message,
