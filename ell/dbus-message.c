@@ -213,7 +213,7 @@ static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *orig,
 {
 	static const char *simple_types = "sogybnqiuxtd";
 	struct dbus1_iter *iter = orig;
-	const char *signature = iter->sig_start + iter->sig_pos;
+	const char *signature = orig->sig_start + orig->sig_pos;
 	const char *end;
 	struct dbus1_iter *sub_iter;
 	struct dbus1_iter stack[32];
@@ -223,8 +223,7 @@ static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *orig,
 	void *arg;
 	size_t pos;
 
-	while (iter->sig_pos < iter->sig_len &&
-			signature < iter->sig_start + iter->sig_len) {
+	while (signature < orig->sig_start + orig->sig_len) {
 		if (strchr(simple_types, *signature)) {
 			arg = va_arg(args, void *);
 			if (!_dbus1_iter_next_entry_basic(iter,
