@@ -4,12 +4,7 @@ if [ -f config.status ]; then
 	make maintainer-clean
 fi
 
-if [ ! -f doc/gtk-doc.make ]; then
-	gtkdocize --copy --docdir doc --flavour no-tmpl-flat
-fi
-
 ./bootstrap && \
     ./configure --enable-maintainer-mode \
 		--enable-debug \
-		--enable-gtk-doc \
 		--prefix=/usr $*

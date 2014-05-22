@@ -1,7 +1,7 @@
 
-SUBDIRS = . doc
-
 AM_MAKEFLAGS = --no-print-directory
+
+ACLOCAL_AMFLAGS = -I build-aux
 
 # Library code modified:	REVISION++
 # Interfaces changed:		CURRENT++ REVISION=0
@@ -124,8 +124,7 @@ unit_example_plugin_la_LDFLAGS = -no-undefined -module -avoid-version \
 
 TESTS = $(noinst_PROGRAMS)
 
-DISTCHECK_CONFIGURE_FLAGS = --disable-gtk-doc
+MAINTAINERCLEANFILES = Makefile.in configure config.h.in aclocal.m4
 
-MAINTAINERCLEANFILES = Makefile.in \
-	aclocal.m4 configure config.h.in config.sub config.guess \
-	ltmain.sh depcomp compile missing install-sh mkinstalldirs
+maintainer-clean-local:
+	-rm -rf build-aux

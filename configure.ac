@@ -1,8 +1,12 @@
 AC_PREREQ(2.60)
 AC_INIT(ell, 0.0)
 
-AM_INIT_AUTOMAKE([foreign subdir-objects color-tests])
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS(config.h)
+AC_CONFIG_AUX_DIR(build-aux)
+AC_CONFIG_MACRO_DIR(build-aux)
+
+AM_INIT_AUTOMAKE([foreign subdir-objects color-tests silent-rules
+					tar-pax no-dist-gzip dist-xz])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
@@ -18,7 +22,8 @@ AC_PROG_CC
 AC_PROG_CC_PIE
 AC_PROG_INSTALL
 
-LT_INIT
+LT_PREREQ(2.2)
+LT_INIT([disable-static])
 
 AC_ARG_ENABLE(optimization, AC_HELP_STRING([--disable-optimization],
 			[disable code optimization through compiler]), [
@@ -56,6 +61,6 @@ AC_CHECK_FUNC(epoll_create, dummy=yes,
 AC_CHECK_LIB(dl, dlopen, dummy=yes,
 			AC_MSG_ERROR(dynamic linking loader is required))
 
-GTK_DOC_CHECK(1.10)
+AC_CONFIG_FILES(Makefile ell/ell.pc)
 
-AC_OUTPUT(Makefile doc/Makefile doc/version.xml ell/ell.pc)
+AC_OUTPUT
