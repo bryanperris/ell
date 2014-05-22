@@ -68,6 +68,26 @@ static inline void close_log(void)
 	}
 }
 
+static int open_log(const char *path)
+{
+	struct sockaddr_un addr;
+
+	log_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+	if (log_fd < 0)
+		return -1;
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, path, sizeof(addr.sun_path));
+
+	if (connect(log_fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+		close_log();
+		return -1;
+	}
+
+	return 0;
+}
+
 /**
  * l_log_set_ident:
  * @ident: string identifier
@@ -165,22 +185,9 @@ static void log_syslog(int priority, const char *file, const char *line,
  **/
 LIB_EXPORT void l_log_set_syslog(void)
 {
-	struct sockaddr_un addr;
-
 	close_log();
 
-	log_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-	if (log_fd < 0) {
-		log_func = log_null;
-		return;
-	}
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, "/dev/log", sizeof(addr.sun_path));
-
-	if (connect(log_fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		close_log();
+	if (open_log("/dev/log") < 0) {
 		log_func = log_null;
 		return;
 	}
@@ -188,6 +195,73 @@ LIB_EXPORT void l_log_set_syslog(void)
 	log_pid = getpid();
 
 	log_func = log_syslog;
+}
+
+static void log_journal(int priority, const char *file, const char *line,
+			const char *func, const char *format, va_list ap)
+{
+	struct msghdr msg;
+	struct iovec iov[12];
+	char prio[16], *str;
+	int prio_len, str_len;
+
+	str_len = vasprintf(&str, format, ap);
+	if (str_len < 0)
+		return;
+
+	prio_len = snprintf(prio, sizeof(prio), "PRIORITY=%u\n", priority);
+
+	iov[0].iov_base = "MESSAGE=";
+	iov[0].iov_len  = 8;
+	iov[1].iov_base = str;
+	iov[1].iov_len  = str_len - 1;
+	iov[2].iov_base = prio;
+	iov[2].iov_len  = prio_len;
+	iov[3].iov_base = "CODE_FILE=";
+	iov[3].iov_len  = 10;
+	iov[4].iov_base = (char *) file;
+	iov[4].iov_len  = strlen(file);
+	iov[5].iov_base = "\n";
+	iov[5].iov_len  = 1;
+	iov[6].iov_base = "CODE_LINE=";
+	iov[6].iov_len  = 10;
+	iov[7].iov_base = (char *) line;
+	iov[7].iov_len  = strlen(line);
+	iov[8].iov_base = "\n";
+	iov[8].iov_len  = 1;
+	iov[9].iov_base = "CODE_FUNC=";
+	iov[9].iov_len  = 10;
+	iov[10].iov_base = (char *) func;
+	iov[10].iov_len  = strlen(func);
+	iov[11].iov_base = "\n";
+	iov[11].iov_len  = 1;
+
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 12;
+
+	sendmsg(log_fd, &msg, 0);
+
+	free(str);
+}
+
+/**
+ * l_log_set_journal:
+ *
+ * Enable logging to journal.
+ **/
+LIB_EXPORT void l_log_set_journal(void)
+{
+	close_log();
+
+	if (open_log("/run/systemd/journal/socket") < 0) {
+		log_func = log_null;
+		return;
+	}
+
+	log_pid = getpid();
+
+	log_func = log_journal;
 }
 
 /**

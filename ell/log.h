@@ -42,6 +42,7 @@ void l_log_set_handler(l_log_func_t function);
 void l_log_set_null(void);
 void l_log_set_stderr(void);
 void l_log_set_syslog(void);
+void l_log_set_journal(void);
 
 void l_log_with_location(int priority, const char *file, const char *line,
 				const char *func, const char *format, ...)
