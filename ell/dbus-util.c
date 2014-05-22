@@ -568,8 +568,9 @@ bool _dbus1_iter_enter_struct(struct dbus1_iter *iter,
 	sig_start = iter->sig_start + iter->sig_pos + 1;
 	sig_end = _dbus_signature_end(iter->sig_start + iter->sig_pos);
 
-	calc_len_next_item(iter->sig_start + iter->sig_pos,
-				iter->data, pos, iter->len, &len);
+	if (!calc_len_next_item(iter->sig_start + iter->sig_pos,
+				iter->data, pos, iter->len, &len))
+		return false;
 
 	dbus1_iter_init_internal(structure, iter->message,
 					DBUS_CONTAINER_TYPE_STRUCT,
@@ -601,8 +602,10 @@ bool _dbus1_iter_enter_variant(struct dbus1_iter *iter,
 
 	sig_len = get_u8(iter->data + pos);
 	sig_start = iter->data + pos + 1;
-	calc_len_next_item(sig_start, iter->data, pos + sig_len + 2,
-					iter->len, &len);
+
+	if (!calc_len_next_item(sig_start, iter->data, pos + sig_len + 2,
+					iter->len, &len))
+		return false;
 
 	dbus1_iter_init_internal(variant, iter->message,
 					DBUS_CONTAINER_TYPE_VARIANT,
