@@ -29,7 +29,7 @@
 #include <ell/dbus.h>
 #include "ell/dbus-private.h"
 
-static bool do_print = false;
+static bool do_print = true;
 
 struct message_data {
 	const char *type;
@@ -79,15 +79,48 @@ static struct l_dbus_message *check_message(const struct message_data *msg_data)
 	msg = dbus_message_from_blob(msg_data->binary, msg_data->binary_len);
 	assert(msg);
 
-	if (msg_data->destination) {
-		const char *destination;
+	if (msg_data->path) {
+		const char *path = l_dbus_message_get_path(msg);
+		assert(path);
+		assert(!strcmp(msg_data->path, path));
 
-		destination = l_dbus_message_get_destination(msg);
+		if (do_print)
+			l_info("path=%s", path);
+	}
+
+	if (msg_data->interface) {
+		const char *interface = l_dbus_message_get_interface(msg);
+		assert(interface);
+		assert(!strcmp(msg_data->interface, interface));
+
+		if (do_print)
+			l_info("interface=%s", interface);
+	}
+
+	if (msg_data->member) {
+		const char *member = l_dbus_message_get_member(msg);
+		assert(member);
+		assert(!strcmp(msg_data->member, member));
+
+		if (do_print)
+			l_info("member=%s", member);
+	}
+	if (msg_data->destination) {
+		const char *destination = l_dbus_message_get_destination(msg);
 		assert(destination);
 		assert(!strcmp(msg_data->destination, destination));
 
 		if (do_print)
 			l_info("destination=%s", destination);
+	}
+
+	if (msg_data->signature) {
+		const char *signature = l_dbus_message_get_signature(msg);
+		assert(signature);
+		assert(!strcmp(msg_data->signature, signature));
+
+		if (do_print)
+			l_info("signature=%s", signature);
 	}
 
 	return msg;
@@ -96,6 +129,30 @@ static struct l_dbus_message *check_message(const struct message_data *msg_data)
 static void parse_basic_1(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
+	bool result;
+	bool b;
+	uint8_t y;
+	uint16_t q;
+	int16_t n;
+	uint32_t u;
+	int32_t i;
+	uint64_t t;
+	int64_t x;
+	double d;
+
+	result = l_dbus_message_get_arguments(msg, "bynqiuxtd", &b, &y, &n, &q,
+						&i, &u, &x, &t, &d);
+	assert(result);
+
+	assert(b == true);
+	assert(y == 255);
+	assert(n == -32);
+	assert(q == 32);
+	assert(i == -24);
+	assert(u == 24);
+	assert(x == 140179142606749);
+	assert(t == 99);
+	assert(d > 0);
 
 	l_dbus_message_unref(msg);
 }
