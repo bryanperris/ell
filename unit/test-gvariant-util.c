@@ -29,6 +29,7 @@
 #include <stdio.h>
 
 #include <ell/ell.h>
+#include <ell/dbus.h>
 #include "ell/gvariant-private.h"
 
 struct signature_test {
@@ -249,7 +250,7 @@ static struct parser_data parser_data_1 = {
 static void test_iter_basic_1(const void *test_data)
 {
 	const struct parser_data *test = test_data;
-	struct gvariant_iter iter;
+	struct l_dbus_message_iter iter;
 	const char *s;
 
 	_gvariant_iter_init(&iter, test->signature,
@@ -273,7 +274,7 @@ static struct parser_data parser_data_2 = {
 static void test_iter_basic_2(const void *test_data)
 {
 	const struct parser_data *test = test_data;
-	struct gvariant_iter iter;
+	struct l_dbus_message_iter iter;
 	const char *s;
 	int i;
 	bool ret;
@@ -309,7 +310,7 @@ static struct parser_data parser_data_3 = {
 static void test_iter_basic_3(const void *test_data)
 {
 	const struct parser_data *test = test_data;
-	struct gvariant_iter iter;
+	struct l_dbus_message_iter iter;
 	bool b;
 	double d;
 	int16_t n;
@@ -384,11 +385,11 @@ static struct parser_data fixed_struct_1 = {
 static void test_iter_fixed_struct_1(const void *test_data)
 {
 	const struct parser_data *test = test_data;
-	struct gvariant_iter iter;
+	struct l_dbus_message_iter iter;
 	int32_t i;
 	uint8_t y;
 	bool ret;
-	struct gvariant_iter structure;
+	struct l_dbus_message_iter structure;
 
 	_gvariant_iter_init(&iter, test->signature,
 				test->signature + strlen(test->signature),
@@ -425,9 +426,9 @@ static struct parser_data variant_1 = {
 static void test_iter_variant_1(const void *test_data)
 {
 	const struct parser_data *test = test_data;
-	struct gvariant_iter iter;
-	struct gvariant_iter structure;
-	struct gvariant_iter variant;
+	struct l_dbus_message_iter iter;
+	struct l_dbus_message_iter structure;
+	struct l_dbus_message_iter variant;
 	int32_t i;
 	uint32_t u;
 	const char *s;
@@ -474,9 +475,9 @@ static struct parser_data variant_2 = {
 static void test_iter_variant_2(const void *test_data)
 {
 	const struct parser_data *test = test_data;
-	struct gvariant_iter iter;
-	struct gvariant_iter variant;
-	struct gvariant_iter structure;
+	struct l_dbus_message_iter iter;
+	struct l_dbus_message_iter variant;
+	struct l_dbus_message_iter structure;
 	uint8_t y;
 	uint32_t u;
 	const char *s;
@@ -517,8 +518,8 @@ static struct parser_data fixed_array_1 = {
 static void test_iter_fixed_array_1(const void *test_data)
 {
 	const struct parser_data *test = test_data;
-	struct gvariant_iter iter;
-	struct gvariant_iter array;
+	struct l_dbus_message_iter iter;
+	struct l_dbus_message_iter array;
 	uint32_t u;
 	bool ret;
 
@@ -555,8 +556,8 @@ static struct parser_data variable_array_1 = {
 static void test_iter_variable_array_1(const void *test_data)
 {
 	const struct parser_data *test = test_data;
-	struct gvariant_iter iter;
-	struct gvariant_iter array;
+	struct l_dbus_message_iter iter;
+	struct l_dbus_message_iter array;
 	const char *s;
 	bool ret;
 
@@ -602,9 +603,9 @@ static struct parser_data variable_array_2 = {
 static void test_iter_variable_array_2(const void *test_data)
 {
 	const struct parser_data *test = test_data;
-	struct gvariant_iter iter;
-	struct gvariant_iter array;
-	struct gvariant_iter structure;
+	struct l_dbus_message_iter iter;
+	struct l_dbus_message_iter array;
+	struct l_dbus_message_iter structure;
 	const char *s;
 	uint64_t t;
 	bool ret;
@@ -664,9 +665,9 @@ static struct parser_data dict_1 = {
 static void test_iter_dict_1(const void *test_data)
 {
 	const struct parser_data *test = test_data;
-	struct gvariant_iter iter;
-	struct gvariant_iter array;
-	struct gvariant_iter structure;
+	struct l_dbus_message_iter iter;
+	struct l_dbus_message_iter array;
+	struct l_dbus_message_iter structure;
 	uint32_t u;
 	bool b;
 	bool ret;
@@ -716,9 +717,9 @@ static struct parser_data aau_1 = {
 static void test_iter_aau_1(const void *test_data)
 {
 	const struct parser_data *test = test_data;
-	struct gvariant_iter iter;
-	struct gvariant_iter outer;
-	struct gvariant_iter inner;
+	struct l_dbus_message_iter iter;
+	struct l_dbus_message_iter outer;
+	struct l_dbus_message_iter inner;
 	uint32_t u;
 	bool ret;
 
@@ -792,9 +793,9 @@ static struct parser_data av_1 = {
 static void test_iter_av_1(const void *test_data)
 {
 	const struct parser_data *test = test_data;
-	struct gvariant_iter iter;
-	struct gvariant_iter array;
-	struct gvariant_iter variant;
+	struct l_dbus_message_iter iter;
+	struct l_dbus_message_iter array;
+	struct l_dbus_message_iter variant;
 	uint32_t u;
 	const char *s;
 	bool ret;
