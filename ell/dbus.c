@@ -713,7 +713,15 @@ static struct l_dbus *setup_address(const char *address)
 	return dbus;
 }
 
-LIB_EXPORT struct l_dbus *l_dbus_new(enum l_dbus_bus bus)
+LIB_EXPORT struct l_dbus *l_dbus_new(const char *address)
+{
+	if (unlikely(!address))
+		return NULL;
+
+	return setup_address(address);
+}
+
+LIB_EXPORT struct l_dbus *l_dbus_new_default(enum l_dbus_bus bus)
 {
 	const char *address;
 

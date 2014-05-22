@@ -44,7 +44,8 @@ typedef void (*l_dbus_disconnect_func_t) (void *user_data);
 typedef void (*l_dbus_debug_func_t) (const char *str, void *user_data);
 typedef void (*l_dbus_destroy_func_t) (void *user_data);
 
-struct l_dbus *l_dbus_new(enum l_dbus_bus bus);
+struct l_dbus *l_dbus_new(const char *address);
+struct l_dbus *l_dbus_new_default(enum l_dbus_bus bus);
 void l_dbus_destroy(struct l_dbus *dbus);
 
 bool l_dbus_set_ready_handler(struct l_dbus *dbus, l_dbus_ready_func_t function,

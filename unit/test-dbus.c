@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 
 	l_log_set_stderr();
 
-	dbus = l_dbus_new(L_DBUS_SESSION_BUS);
+	dbus = l_dbus_new_default(L_DBUS_SESSION_BUS);
 
 	l_dbus_set_debug(dbus, do_debug, "[DBUS] ", NULL);
 
