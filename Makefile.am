@@ -69,10 +69,13 @@ pkgconfigdir = $(libdir)/pkgconfig
 
 pkgconfig_DATA = ell/ell.pc
 
+noinst_PROGRAMS =
+
 unit_test_data_files = unit/settings.test
+
 EXTRA_DIST = $(unit_test_data_files)
 
-noinst_PROGRAMS = unit/test-unit unit/test-queue \
+unit_tests = unit/test-unit unit/test-queue \
 				unit/test-hashmap unit/test-string \
 				unit/test-utf8 \
 				unit/test-main unit/test-io \
@@ -82,6 +85,10 @@ noinst_PROGRAMS = unit/test-unit unit/test-queue \
 				unit/test-dbus-util unit/test-dbus-service \
 				unit/test-gvariant-util \
 				unit/test-gvariant-message
+
+if MAINTAINER_MODE
+noinst_PROGRAMS += $(unit_tests)
+endif
 
 unit_test_unit_LDADD = ell/libell-private.la
 
@@ -117,12 +124,16 @@ unit_test_gvariant_util_LDADD = ell/libell-private.la
 
 unit_test_gvariant_message_LDADD = ell/libell-private.la
 
+if MAINTAINER_MODE
 noinst_LTLIBRARIES += unit/example-plugin.la
+endif
 
 unit_example_plugin_la_LDFLAGS = -no-undefined -module -avoid-version \
 							-rpath /dummy
 
-TESTS = $(noinst_PROGRAMS)
+TESTS = $(unit_tests)
+
+DISTCLEANFILES = $(unit_tests)
 
 MAINTAINERCLEANFILES = Makefile.in configure config.h.in aclocal.m4
 
