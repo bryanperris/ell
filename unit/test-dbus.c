@@ -24,8 +24,79 @@
 #include <config.h>
 #endif
 
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/wait.h>
+
 #include <ell/ell.h>
 #include <ell/dbus.h>
+
+#define TEST_BUS_ADDRESS "unix:path=/tmp/ell-test-bus"
+
+static pid_t dbus_daemon_pid = -1;
+
+static void start_dbus_daemon(void)
+{
+	char *prg_argv[6];
+	char *prg_envp[1];
+	pid_t pid;
+
+	prg_argv[0] = "/usr/bin/dbus-daemon";
+	prg_argv[1] = "--session";
+	prg_argv[2] = "--address=" TEST_BUS_ADDRESS;
+	prg_argv[3] = "--nopidfile";
+	prg_argv[4] = "--nofork";
+	prg_argv[5] = NULL;
+
+	prg_envp[0] = NULL;
+
+	l_info("launching dbus-daemon");
+
+	pid = fork();
+	if (pid < 0) {
+		l_error("failed to fork new process");
+		return;
+	}
+
+	if (pid == 0) {
+		execve(prg_argv[0], prg_argv, prg_envp);
+		exit(EXIT_SUCCESS);
+	}
+
+	l_info("dbus-daemon process %d created", pid);
+
+	dbus_daemon_pid = pid;
+}
+
+static void signal_handler(struct l_signal *signal, uint32_t signo,
+							void *user_data)
+{
+	switch (signo) {
+	case SIGINT:
+	case SIGTERM:
+		l_info("Terminate");
+		l_main_quit();
+		break;
+	case SIGCHLD:
+		while (1) {
+			pid_t pid;
+			int status;
+
+			pid = waitpid(WAIT_ANY, &status, WNOHANG);
+			if (pid < 0 || pid == 0)
+				break;
+
+			l_info("process %d terminated with status=%d\n",
+								pid, status);
+
+			if (pid == dbus_daemon_pid) {
+				dbus_daemon_pid = -1;
+				l_main_quit();
+			}
+		}
+		break;
+	}
+}
 
 static void do_debug(const char *str, void *user_data)
 {
@@ -128,10 +199,28 @@ static void disconnect_callback(void *user_data)
 int main(int argc, char *argv[])
 {
 	struct l_dbus *dbus;
+	struct l_signal *signal;
+	sigset_t mask;
+	int i;
+
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGINT);
+	sigaddset(&mask, SIGTERM);
+	sigaddset(&mask, SIGCHLD);
+
+	signal = l_signal_create(&mask, signal_handler, NULL, NULL);
 
 	l_log_set_stderr();
 
-	dbus = l_dbus_new_default(L_DBUS_SESSION_BUS);
+	start_dbus_daemon();
+
+	for (i = 0; i < 10; i++) {
+		usleep(200 * 1000);
+
+		dbus = l_dbus_new(TEST_BUS_ADDRESS);
+		if (dbus)
+			break;
+	}
 
 	l_dbus_set_debug(dbus, do_debug, "[DBUS] ", NULL);
 
@@ -155,6 +244,11 @@ int main(int argc, char *argv[])
 	l_main_run();
 
 	l_dbus_destroy(dbus);
+
+	if (dbus_daemon_pid > 0)
+		kill(dbus_daemon_pid, SIGKILL);
+
+	l_signal_remove(signal);
 
 	return 0;
 }
