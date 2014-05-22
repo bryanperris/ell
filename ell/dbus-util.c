@@ -556,7 +556,6 @@ bool _dbus1_iter_enter_struct(struct dbus1_iter *iter,
 	const char *sig_end;
 	bool is_dict = iter->sig_start[iter->sig_pos] == '{';
 	bool is_struct = iter->sig_start[iter->sig_pos] == '(';
-	char sig[256];
 
 	if (!is_dict && !is_struct)
 		return false;
