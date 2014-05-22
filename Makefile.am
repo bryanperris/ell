@@ -63,17 +63,13 @@ noinst_LTLIBRARIES = ell/libell-private.la
 
 ell_libell_private_la_SOURCES = $(ell_libell_la_SOURCES)
 
-AM_CFLAGS = -fvisibility=hidden
+AM_CFLAGS = -fvisibility=hidden -DTESTDATADIR=\""$(top_srcdir)/unit"\"
 
 pkgconfigdir = $(libdir)/pkgconfig
 
 pkgconfig_DATA = ell/ell.pc
 
 noinst_PROGRAMS =
-
-unit_test_data_files = unit/settings.test
-
-EXTRA_DIST = $(unit_test_data_files)
 
 unit_tests = unit/test-unit unit/test-queue \
 				unit/test-hashmap unit/test-string \
@@ -130,6 +126,10 @@ endif
 
 unit_example_plugin_la_LDFLAGS = -no-undefined -module -avoid-version \
 							-rpath /dummy
+
+unit_test_data_files = unit/settings.test
+
+EXTRA_DIST = $(unit_test_data_files)
 
 TESTS = $(unit_tests)
 
