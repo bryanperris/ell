@@ -34,6 +34,7 @@
 #include "util.h"
 #include "private.h"
 #include "dbus-private.h"
+#include "gvariant-private.h"
 
 #define DBUS_MESSAGE_LITTLE_ENDIAN	('l')
 #define DBUS_MESSAGE_BIG_ENDIAN		('B')
@@ -221,12 +222,30 @@ static bool message_iter_next_entry_valist(struct l_dbus_message_iter *orig,
 	uint32_t uint32_val;
 	int fd;
 	void *arg;
+	bool (*get_basic)(struct l_dbus_message_iter *, char ,void *);
+	bool (*enter_struct)(struct l_dbus_message_iter *,
+				struct l_dbus_message_iter *);
+	bool (*enter_array)(struct l_dbus_message_iter *,
+				struct l_dbus_message_iter *);
+	bool (*enter_variant)(struct l_dbus_message_iter *,
+				struct l_dbus_message_iter *);
+
+	if (_dbus_message_is_gvariant(orig->message)) {
+		get_basic = _gvariant_iter_next_entry_basic;
+		enter_struct = _gvariant_iter_enter_struct;
+		enter_array = _gvariant_iter_enter_array;
+		enter_variant = _gvariant_iter_enter_variant;
+	} else {
+		get_basic = _dbus1_iter_next_entry_basic;
+		enter_struct = _dbus1_iter_enter_struct;
+		enter_array = _dbus1_iter_enter_array;
+		enter_variant = _dbus1_iter_enter_variant;
+	}
 
 	while (signature < orig->sig_start + orig->sig_len) {
 		if (strchr(simple_types, *signature)) {
 			arg = va_arg(args, void *);
-			if (!_dbus1_iter_next_entry_basic(iter,
-							*signature, arg))
+			if (!get_basic(iter, *signature, arg))
 				return false;
 
 			signature += 1;
@@ -235,8 +254,7 @@ static bool message_iter_next_entry_valist(struct l_dbus_message_iter *orig,
 
 		switch (*signature) {
 		case 'h':
-			if (!_dbus1_iter_next_entry_basic(iter, 'h',
-								&uint32_val))
+			if (!get_basic(iter, 'h', &uint32_val))
 				return false;
 
 			if (uint32_val < iter->message->num_fds)
@@ -253,7 +271,7 @@ static bool message_iter_next_entry_valist(struct l_dbus_message_iter *orig,
 			signature += 1;
 			indent += 1;
 
-			if (!_dbus1_iter_enter_struct(iter, &stack[indent - 1]))
+			if (!enter_struct(iter, &stack[indent - 1]))
 				return false;
 
 			iter = &stack[indent - 1];
@@ -272,7 +290,7 @@ static bool message_iter_next_entry_valist(struct l_dbus_message_iter *orig,
 		case 'a':
 			sub_iter = va_arg(args, void *);
 
-			if (!_dbus1_iter_enter_array(iter, sub_iter))
+			if (!enter_array(iter, sub_iter))
 				return false;
 
 			end = _dbus_signature_end(signature + 1);
@@ -281,7 +299,7 @@ static bool message_iter_next_entry_valist(struct l_dbus_message_iter *orig,
 		case 'v':
 			sub_iter = va_arg(args, void *);
 
-			if (!_dbus1_iter_enter_variant(iter, sub_iter))
+			if (!enter_variant(iter, sub_iter))
 				return false;
 
 			signature += 1;
@@ -315,13 +333,28 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 	uint8_t endian, message_type, flags, version, field_type;
 	uint32_t body_length, serial;
 
-	_dbus1_iter_init(&header, message, "yyyyuua(yv)", NULL,
+	if (_dbus_message_is_gvariant(message)) {
+		uint32_t header_length;
+
+		_gvariant_iter_init(&header, message, "yyyyuuu", NULL,
+					message->header, message->header_size);
+		if (!message_iter_next_entry(&header, &endian, &message_type,
+						&flags, &version, &body_length,
+						&serial, &header_length))
+			return false;
+
+		_gvariant_iter_init(&header, message, "a(yv)", NULL,
+					message->header + 16, header_length);
+		_gvariant_iter_enter_array(&header, &array);
+	} else {
+		_dbus1_iter_init(&header, message, "yyyyuua(yv)", NULL,
 				message->header, message->header_size);
 
-	if (!message_iter_next_entry(&header, &endian,
-					&message_type, &flags, &version,
-					&body_length, &serial, &array))
-		return false;
+		if (!message_iter_next_entry(&header, &endian,
+						&message_type, &flags, &version,
+						&body_length, &serial, &array))
+			return false;
+	}
 
 	while (message_iter_next_entry(&array, &field_type, &iter)) {
 		if (field_type != type)
@@ -582,7 +615,11 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 	if (strcmp(message->signature, "s"))
 		return false;
 
-	_dbus1_iter_init(&iter, message, message->signature, NULL,
+	if (_dbus_message_is_gvariant(message))
+		_gvariant_iter_init(&iter, message, message->signature, NULL,
+					message->body, message->body_size);
+	else
+		_dbus1_iter_init(&iter, message, message->signature, NULL,
 				message->body, message->body_size);
 
 	if (!message_iter_next_entry(&iter, &str))
@@ -618,7 +655,11 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 	if (!signature || strcmp(message->signature, signature))
 		return false;
 
-	_dbus1_iter_init(&iter, message, message->signature, NULL,
+	if (_dbus_message_is_gvariant(message))
+		_gvariant_iter_init(&iter, message, message->signature, NULL,
+					message->body, message->body_size);
+	else
+		_dbus1_iter_init(&iter, message, message->signature, NULL,
 				message->body, message->body_size);
 
 	va_start(args, signature);
