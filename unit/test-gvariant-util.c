@@ -253,7 +253,7 @@ static void test_iter_basic_1(const void *test_data)
 	struct l_dbus_message_iter iter;
 	const char *s;
 
-	_gvariant_iter_init(&iter, test->signature,
+	_gvariant_iter_init(&iter, NULL, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
@@ -279,7 +279,7 @@ static void test_iter_basic_2(const void *test_data)
 	int i;
 	bool ret;
 
-	_gvariant_iter_init(&iter, test->signature,
+	_gvariant_iter_init(&iter, NULL, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
@@ -323,7 +323,7 @@ static void test_iter_basic_3(const void *test_data)
 	int32_t i;
 	bool ret;
 
-	_gvariant_iter_init(&iter, test->signature,
+	_gvariant_iter_init(&iter, NULL, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
@@ -391,7 +391,7 @@ static void test_iter_fixed_struct_1(const void *test_data)
 	bool ret;
 	struct l_dbus_message_iter structure;
 
-	_gvariant_iter_init(&iter, test->signature,
+	_gvariant_iter_init(&iter, NULL, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
@@ -434,7 +434,7 @@ static void test_iter_variant_1(const void *test_data)
 	const char *s;
 	bool ret;
 
-	_gvariant_iter_init(&iter, test->signature,
+	_gvariant_iter_init(&iter, NULL, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
@@ -483,7 +483,7 @@ static void test_iter_variant_2(const void *test_data)
 	const char *s;
 	bool ret;
 
-	_gvariant_iter_init(&iter, test->signature,
+	_gvariant_iter_init(&iter, NULL, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
@@ -523,7 +523,7 @@ static void test_iter_fixed_array_1(const void *test_data)
 	uint32_t u;
 	bool ret;
 
-	_gvariant_iter_init(&iter, test->signature,
+	_gvariant_iter_init(&iter, NULL, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
@@ -561,7 +561,7 @@ static void test_iter_variable_array_1(const void *test_data)
 	const char *s;
 	bool ret;
 
-	_gvariant_iter_init(&iter, test->signature,
+	_gvariant_iter_init(&iter, NULL, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
@@ -610,7 +610,7 @@ static void test_iter_variable_array_2(const void *test_data)
 	uint64_t t;
 	bool ret;
 
-	_gvariant_iter_init(&iter, test->signature,
+	_gvariant_iter_init(&iter, NULL, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
@@ -672,7 +672,7 @@ static void test_iter_dict_1(const void *test_data)
 	bool b;
 	bool ret;
 
-	_gvariant_iter_init(&iter, test->signature,
+	_gvariant_iter_init(&iter, NULL, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
@@ -723,7 +723,7 @@ static void test_iter_aau_1(const void *test_data)
 	uint32_t u;
 	bool ret;
 
-	_gvariant_iter_init(&iter, test->signature,
+	_gvariant_iter_init(&iter, NULL, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
@@ -800,7 +800,7 @@ static void test_iter_av_1(const void *test_data)
 	const char *s;
 	bool ret;
 
-	_gvariant_iter_init(&iter, test->signature,
+	_gvariant_iter_init(&iter, NULL, test->signature,
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
