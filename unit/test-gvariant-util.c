@@ -825,6 +825,149 @@ static void test_iter_av_1(const void *test_data)
 	assert(!ret);
 }
 
+static const unsigned char header_data_1[] = {
+	0x6c, 0x01, 0x00, 0x02, 0x28, 0x00, 0x00, 0x00, 0x57, 0x04, 0x00, 0x00,
+	0x79, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x2f, 0x66, 0x6f, 0x6f, 0x2f, 0x62, 0x61, 0x72, 0x00, 0x00, 0x6f, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x46, 0x6f, 0x6f, 0x62, 0x61, 0x72, 0x00, 0x00, 0x73, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x66, 0x6f, 0x6f, 0x2e, 0x62, 0x61, 0x72, 0x00, 0x00, 0x73, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x66, 0x6f, 0x6f, 0x2e, 0x62, 0x61, 0x72, 0x00, 0x00, 0x73, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x62, 0x79, 0x6e, 0x71, 0x69, 0x75, 0x78, 0x74, 0x64, 0x00, 0x00, 0x67,
+	0x13, 0x29, 0x42, 0x5a, 0x74,
+};
+
+static struct parser_data header_1 = {
+	.data = header_data_1,
+	.len = 137,
+	.signature = "a(yv)",
+};
+
+static void test_iter_header_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct l_dbus_message_iter iter;
+	struct l_dbus_message_iter array;
+	struct l_dbus_message_iter structure;
+	struct l_dbus_message_iter variant;
+	bool ret;
+	uint8_t y;
+	uint32_t u;
+	const char *o;
+	const char *s;
+	const char *g;
+
+	ret = _gvariant_iter_init(&iter, NULL, "yyyyuuu", NULL,
+					test->data, 16);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'y', &y);
+	assert(ret);
+	assert(y == 'l');
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'y', &y);
+	assert(ret);
+	assert(y == 1);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'y', &y);
+	assert(ret);
+	assert(y == 0);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'y', &y);
+	assert(ret);
+	assert(y == 2);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'u', &u);
+	assert(ret);
+	assert(u == 40);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'u', &u);
+	assert(ret);
+	assert(u == 1111);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 'u', &u);
+	assert(ret);
+	assert(u == 121);
+
+	ret = _gvariant_iter_init(&iter, NULL, "a(yv)", NULL,
+					test->data + 16, u);
+	ret = _gvariant_iter_enter_array(&iter, &array);
+	assert(ret);
+
+	ret = _gvariant_iter_enter_struct(&array, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
+	assert(ret);
+	assert(y == 1);
+
+	ret = _gvariant_iter_enter_variant(&structure, &variant);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&variant, 'o', &o);
+	assert(ret);
+	assert(!strcmp(o, "/foo/bar"));
+
+	ret = _gvariant_iter_enter_struct(&array, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
+	assert(ret);
+	assert(y == 3);
+
+	ret = _gvariant_iter_enter_variant(&structure, &variant);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&variant, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "Foobar"));
+
+	ret = _gvariant_iter_enter_struct(&array, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
+	assert(ret);
+	assert(y == 2);
+
+	ret = _gvariant_iter_enter_variant(&structure, &variant);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&variant, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "foo.bar"));
+
+	ret = _gvariant_iter_enter_struct(&array, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
+	assert(ret);
+	assert(y == 6);
+
+	ret = _gvariant_iter_enter_variant(&structure, &variant);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&variant, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "foo.bar"));
+
+	ret = _gvariant_iter_enter_struct(&array, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
+	assert(ret);
+	assert(y == 8);
+
+	ret = _gvariant_iter_enter_variant(&structure, &variant);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&variant, 'g', &g);
+	assert(ret);
+	assert(!strcmp(g, "bynqiuxtd"));
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -991,6 +1134,8 @@ int main(int argc, char *argv[])
 	l_test_add("Iter Test Array of Array 'aau'", test_iter_aau_1, &aau_1);
 
 	l_test_add("Iter Test Array of Variant 'av'", test_iter_av_1, &av_1);
+
+	l_test_add("Iter Test Header 'a(yv)'", test_iter_header_1, &header_1);
 
 	return l_test_run();
 }
