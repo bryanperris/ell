@@ -205,16 +205,16 @@ static void test_set_methods(const void *test_data)
 	assert(v);
 	assert(!strcmp(v, "15"));
 
-	assert(l_settings_set_int64(settings, "Main", "Integers", -2423492340));
+	assert(l_settings_set_int64(settings, "Main", "Integers", -2423492340ll));
 	assert(l_settings_get_int64(settings, "Main", "Integers", &int64));
-	assert(int64 == -2423492340);
+	assert(int64 == -2423492340ll);
 	v = l_settings_get_value(settings, "Main", "Integers");
 	assert(v);
 	assert(!strcmp(v, "-2423492340"));
 
-	assert(l_settings_set_uint64(settings, "Main", "Integers", 2423492340));
+	assert(l_settings_set_uint64(settings, "Main", "Integers", 2423492340ul));
 	assert(l_settings_get_uint64(settings, "Main", "Integers", &uint64));
-	assert(uint64 == 2423492340);
+	assert(uint64 == 2423492340ul);
 	v = l_settings_get_value(settings, "Main", "Integers");
 	assert(v);
 	assert(!strcmp(v, "2423492340"));
