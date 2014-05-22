@@ -208,9 +208,8 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 #define put_s32(ptr, val)	(*((int32_t *) (ptr)) = (val))
 #define put_s64(ptr, val)	(*((int64_t *) (ptr)) = (val))
 
-static bool dbus1_message_iter_next_entry_valist(
-					struct l_dbus_message_iter *orig,
-					va_list args)
+static bool message_iter_next_entry_valist(struct l_dbus_message_iter *orig,
+						va_list args)
 {
 	static const char *simple_types = "sogybnqiuxtd";
 	struct l_dbus_message_iter *iter = orig;
@@ -295,13 +294,14 @@ static bool dbus1_message_iter_next_entry_valist(
 	return true;
 }
 
-static inline bool dbus1_iter_next_entry(struct l_dbus_message_iter *iter, ...)
+static inline bool message_iter_next_entry(struct l_dbus_message_iter *iter,
+						...)
 {
 	va_list args;
 	bool result;
 
         va_start(args, iter);
-	result = dbus1_message_iter_next_entry_valist(iter, args);
+	result = message_iter_next_entry_valist(iter, args);
 	va_end(args);
 
 	return result;
@@ -318,16 +318,16 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 	_dbus1_iter_init(&header, message, "yyyyuua(yv)", NULL,
 				message->header, message->header_size);
 
-	if (!dbus1_iter_next_entry(&header, &endian,
+	if (!message_iter_next_entry(&header, &endian,
 					&message_type, &flags, &version,
 					&body_length, &serial, &array))
 		return false;
 
-	while (dbus1_iter_next_entry(&array, &field_type, &iter)) {
+	while (message_iter_next_entry(&array, &field_type, &iter)) {
 		if (field_type != type)
 			continue;
 
-		return dbus1_message_iter_next_entry_valist(&iter, args);
+		return message_iter_next_entry_valist(&iter, args);
 	}
 
 	return false;
@@ -585,7 +585,7 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 	_dbus1_iter_init(&iter, message, message->signature, NULL,
 				message->body, message->body_size);
 
-	if (!dbus1_iter_next_entry(&iter, &str))
+	if (!message_iter_next_entry(&iter, &str))
 		return false;
 
 	if (name)
@@ -622,7 +622,7 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 				message->body, message->body_size);
 
 	va_start(args, signature);
-	result = dbus1_message_iter_next_entry_valist(&iter, args);
+	result = message_iter_next_entry_valist(&iter, args);
 	va_end(args);
 
 	return result;
@@ -780,7 +780,7 @@ LIB_EXPORT bool l_dbus_message_iter_next_entry(struct l_dbus_message_iter *iter,
 		return false;
 
 	va_start(args, iter);
-	result = dbus1_message_iter_next_entry_valist(iter, args);
+	result = message_iter_next_entry_valist(iter, args);
 	va_end(args);
 
 	return result;
@@ -800,7 +800,7 @@ LIB_EXPORT bool l_dbus_message_iter_get_variant(
 		return false;
 
 	va_start(args, signature);
-	result = dbus1_message_iter_next_entry_valist(iter, args);
+	result = message_iter_next_entry_valist(iter, args);
 	va_end(args);
 
 	return result;
