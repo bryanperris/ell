@@ -41,6 +41,9 @@ unit/test-dbus-util
 unit/test-dbus-service
 unit/test-gvariant-util
 unit/test-gvariant-message
+unit/*.log
+unit/*.trs
+test-suite.log
 
 doc/*.bak
 doc/*.stamp
