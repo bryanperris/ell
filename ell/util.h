@@ -103,6 +103,8 @@ void l_util_hexdump_two(bool in, const void *buf1, size_t len1,
 void l_util_debug(l_util_hexdump_func_t function, void *user_data,
 						const char *format, ...);
 
+const char *l_util_get_debugfs_path(void);
+
 #ifdef __cplusplus
 }
 #endif

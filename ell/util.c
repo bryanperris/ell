@@ -28,6 +28,7 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include "util.h"
 #include "private.h"
@@ -464,4 +465,39 @@ LIB_EXPORT void l_util_debug(l_util_hexdump_func_t function, void *user_data,
 	function(str, user_data);
 
 	free(str);
+}
+
+/**
+ * l_util_get_debugfs_path:
+ *
+ * Returns: a pointer to mount point of debugfs
+ **/
+LIB_EXPORT const char *l_util_get_debugfs_path(void)
+{
+	static char path[PATH_MAX + 1];
+	static bool found = false;
+	char type[100];
+	FILE *fp;
+
+	if (found)
+		return path;
+
+	fp = fopen("/proc/mounts", "r");
+	if (!fp)
+		return NULL;
+
+	while (fscanf(fp, "%*s %" L_STRINGIFY(PATH_MAX) "s %99s %*s %*d %*d\n",
+							path, type) == 2) {
+		if (!strcmp(type, "debugfs")) {
+			found = true;
+			break;
+		}
+	}
+
+	fclose(fp);
+
+	if (!found)
+		return NULL;
+
+	return path;
 }
