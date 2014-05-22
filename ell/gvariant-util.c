@@ -35,6 +35,7 @@
 #include "log.h"
 #include "dbus-private.h"
 #include "gvariant-private.h"
+#include "dbus.h"
 
 static const char *simple_types = "sogybnqiuxtdh";
 static const char *variable_types = "sogav";
@@ -321,7 +322,7 @@ static inline size_t read_word_le(const void *p, size_t sz) {
 }
 
 
-static bool gvariant_iter_init_internal(struct gvariant_iter *iter,
+static bool gvariant_iter_init_internal(struct l_dbus_message_iter *iter,
 					enum dbus_container_type type,
 					const char *sig_start,
 					const char *sig_end, const void *data,
@@ -441,15 +442,16 @@ fail:
 	return false;
 }
 
-bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
-				const char *sig_end, const void *data,
-				size_t len)
+bool _gvariant_iter_init(struct l_dbus_message_iter *iter,
+				const char *sig_start, const char *sig_end,
+				const void *data, size_t len)
 {
 	return gvariant_iter_init_internal(iter, DBUS_CONTAINER_TYPE_STRUCT,
 						sig_start, sig_end, data, len);
 }
 
-static const void *next_item(struct gvariant_iter *iter, size_t *out_item_size)
+static const void *next_item(struct l_dbus_message_iter *iter,
+							size_t *out_item_size)
 {
 	const void *start;
 	const char *p;
@@ -513,8 +515,8 @@ done:
 	return start;
 }
 
-bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
-					void *out)
+bool _gvariant_iter_next_entry_basic(struct l_dbus_message_iter *iter,
+					char type, void *out)
 {
 	size_t item_size = 0;
 	const void *start;
@@ -591,8 +593,8 @@ bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
 	return true;
 }
 
-bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
-					struct gvariant_iter *structure)
+bool _gvariant_iter_enter_struct(struct l_dbus_message_iter *iter,
+					struct l_dbus_message_iter *structure)
 {
 	bool is_dict = iter->sig_start[iter->sig_pos] == '{';
 	bool is_struct = iter->sig_start[iter->sig_pos] == '(';
@@ -622,8 +624,8 @@ bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
 						start, item_size);
 }
 
-bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
-					struct gvariant_iter *variant)
+bool _gvariant_iter_enter_variant(struct l_dbus_message_iter *iter,
+					struct l_dbus_message_iter *variant)
 {
 	size_t item_size;
 	const void *start, *end, *nul;
@@ -660,8 +662,8 @@ bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
 						start, nul - start);
 }
 
-bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
-					struct gvariant_iter *array)
+bool _gvariant_iter_enter_array(struct l_dbus_message_iter *iter,
+					struct l_dbus_message_iter *array)
 {
 	const char *sig_start;
 	const char *sig_end;

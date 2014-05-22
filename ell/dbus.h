@@ -58,13 +58,15 @@ bool l_dbus_set_debug(struct l_dbus *dbus, l_dbus_debug_func_t function,
 struct l_dbus_message;
 
 struct l_dbus_message_iter {
-	const void *dummy1;
-	const void *dummy2;
-	const void *dummy3;
-	const void *dummy4;
-	const void *dummy5;
-	size_t dummy6;
-	size_t dummy7;
+	struct l_dbus_message *message;
+	const char *sig_start;
+	uint8_t sig_len;
+	uint8_t sig_pos;
+	const void *data;
+	size_t len;
+	size_t pos;
+	char container_type;
+	const void *offsets;
 };
 
 struct l_dbus_message *l_dbus_message_new_method_call(const char *destination,

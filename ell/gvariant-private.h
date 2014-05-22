@@ -19,28 +19,19 @@
  *
  */
 
-struct gvariant_iter {
-	const char *sig_start;
-	uint8_t sig_len;
-	uint8_t sig_pos;
-	const void *data;
-	size_t len;
-	size_t pos;
-	char container_type;
-	const void *offsets;
-};
+struct l_dbus_message_iter;
 
-bool _gvariant_iter_init(struct gvariant_iter *iter, const char *sig_start,
-				const char *sig_end,
+bool _gvariant_iter_init(struct l_dbus_message_iter *iter,
+				const char *sig_start, const char *sig_end,
 				const void *data, size_t len);
-bool _gvariant_iter_next_entry_basic(struct gvariant_iter *iter, char type,
-					void *out_p);
-bool _gvariant_iter_enter_struct(struct gvariant_iter *iter,
-					struct gvariant_iter *structure);
-bool _gvariant_iter_enter_variant(struct gvariant_iter *iter,
-					struct gvariant_iter *variant);
-bool _gvariant_iter_enter_array(struct gvariant_iter *iter,
-					struct gvariant_iter *array);
+bool _gvariant_iter_next_entry_basic(struct l_dbus_message_iter *iter,
+					char type, void *out_p);
+bool _gvariant_iter_enter_struct(struct l_dbus_message_iter *iter,
+					struct l_dbus_message_iter *structure);
+bool _gvariant_iter_enter_variant(struct l_dbus_message_iter *iter,
+					struct l_dbus_message_iter *variant);
+bool _gvariant_iter_enter_array(struct l_dbus_message_iter *iter,
+					struct l_dbus_message_iter *array);
 
 bool _gvariant_valid_signature(const char *sig);
 int _gvariant_get_alignment(const char *signature);
