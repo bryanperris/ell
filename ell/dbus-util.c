@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "dbus.h"
 #include "private.h"
 #include "dbus-private.h"
 
@@ -284,11 +285,13 @@ const char *_dbus_signature_end(const char *signature)
 	return NULL;
 }
 
-static inline void dbus1_iter_init_internal(struct dbus1_iter *iter,
-			struct l_dbus_message *message,
-			enum dbus_container_type type,
-			const char *sig_start, const char *sig_end,
-			const void *data, size_t len, size_t pos)
+static inline void dbus1_iter_init_internal(struct l_dbus_message_iter *iter,
+						struct l_dbus_message *message,
+						enum dbus_container_type type,
+						const char *sig_start,
+						const char *sig_end,
+						const void *data, size_t len,
+						size_t pos)
 {
 	size_t sig_len;
 
@@ -308,7 +311,8 @@ static inline void dbus1_iter_init_internal(struct dbus1_iter *iter,
 	iter->container_type = type;
 }
 
-void _dbus1_iter_init(struct dbus1_iter *iter, struct l_dbus_message *message,
+void _dbus1_iter_init(struct l_dbus_message_iter *iter,
+			struct l_dbus_message *message,
 			const char *sig_start, const char *sig_end,
 			const void *data, size_t len)
 {
@@ -438,7 +442,8 @@ done:
 	return sig_end;
 }
 
-bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
+bool _dbus1_iter_next_entry_basic(struct l_dbus_message_iter *iter,
+					char type, void *out)
 {
 	const char *str_val;
 	uint8_t uint8_val;
@@ -547,8 +552,8 @@ bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type, void *out)
 	return true;
 }
 
-bool _dbus1_iter_enter_struct(struct dbus1_iter *iter,
-					struct dbus1_iter *structure)
+bool _dbus1_iter_enter_struct(struct l_dbus_message_iter *iter,
+					struct l_dbus_message_iter *structure)
 {
 	size_t len;
 	size_t pos;
@@ -584,8 +589,8 @@ bool _dbus1_iter_enter_struct(struct dbus1_iter *iter,
 	return true;
 }
 
-bool _dbus1_iter_enter_variant(struct dbus1_iter *iter,
-					struct dbus1_iter *variant)
+bool _dbus1_iter_enter_variant(struct l_dbus_message_iter *iter,
+					struct l_dbus_message_iter *variant)
 {
 	size_t pos;
 	uint8_t sig_len;
@@ -619,8 +624,8 @@ bool _dbus1_iter_enter_variant(struct dbus1_iter *iter,
 	return true;
 }
 
-bool _dbus1_iter_enter_array(struct dbus1_iter *iter,
-					struct dbus1_iter *array)
+bool _dbus1_iter_enter_array(struct l_dbus_message_iter *iter,
+					struct l_dbus_message_iter *array)
 {
 	size_t pos;
 	size_t len;

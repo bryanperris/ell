@@ -208,15 +208,16 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 #define put_s32(ptr, val)	(*((int32_t *) (ptr)) = (val))
 #define put_s64(ptr, val)	(*((int64_t *) (ptr)) = (val))
 
-static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *orig,
-							va_list args)
+static bool dbus1_message_iter_next_entry_valist(
+					struct l_dbus_message_iter *orig,
+					va_list args)
 {
 	static const char *simple_types = "sogybnqiuxtd";
-	struct dbus1_iter *iter = orig;
+	struct l_dbus_message_iter *iter = orig;
 	const char *signature = orig->sig_start + orig->sig_pos;
 	const char *end;
-	struct dbus1_iter *sub_iter;
-	struct dbus1_iter stack[32];
+	struct l_dbus_message_iter *sub_iter;
+	struct l_dbus_message_iter stack[32];
 	unsigned int indent = 0;
 	uint32_t uint32_val;
 	int fd;
@@ -294,7 +295,7 @@ static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *orig,
 	return true;
 }
 
-static inline bool dbus1_iter_next_entry(struct dbus1_iter *iter, ...)
+static inline bool dbus1_iter_next_entry(struct l_dbus_message_iter *iter, ...)
 {
 	va_list args;
 	bool result;
@@ -309,8 +310,8 @@ static inline bool dbus1_iter_next_entry(struct dbus1_iter *iter, ...)
 static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 						uint8_t type, va_list args)
 {
-	struct dbus1_iter header;
-	struct dbus1_iter array, iter;
+	struct l_dbus_message_iter header;
+	struct l_dbus_message_iter array, iter;
 	uint8_t endian, message_type, flags, version, field_type;
 	uint32_t body_length, serial;
 
@@ -563,7 +564,7 @@ static bool append_arguments(struct l_dbus_message *message,
 LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 					const char **name, const char **text)
 {
-	struct dbus1_iter iter;
+	struct l_dbus_message_iter iter;
 	struct dbus_header *hdr;
 	const char *str;
 
@@ -599,7 +600,7 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 						const char *signature, ...)
 {
-	struct dbus1_iter iter;
+	struct l_dbus_message_iter iter;
 	va_list args;
 	bool result;
 
@@ -746,32 +747,24 @@ enum dbus_message_type _dbus_message_get_type(struct l_dbus_message *message)
 
 LIB_EXPORT char l_dbus_message_iter_get_type(struct l_dbus_message_iter *iter)
 {
-	struct dbus1_iter *real_iter;
-
 	if (unlikely(!iter))
 		return '\0';
 
-	real_iter = (struct dbus1_iter *) iter;
-
-	if (!real_iter->sig_start)
+	if (!iter->sig_start)
 		return '\0';
 
-	return real_iter->sig_start[real_iter->sig_pos];
+	return iter->sig_start[iter->sig_pos];
 }
 
 LIB_EXPORT bool l_dbus_message_iter_is_valid(struct l_dbus_message_iter *iter)
 {
-	struct dbus1_iter *real_iter;
-
 	if (unlikely(!iter))
 		return false;
 
-	real_iter = (struct dbus1_iter *) iter;
-
-	if (!real_iter->sig_start)
+	if (!iter->sig_start)
 		return false;
 
-	if (real_iter->sig_pos >= real_iter->sig_len)
+	if (iter->sig_pos >= iter->sig_len)
 		return false;
 
 	return true;
@@ -780,39 +773,34 @@ LIB_EXPORT bool l_dbus_message_iter_is_valid(struct l_dbus_message_iter *iter)
 LIB_EXPORT bool l_dbus_message_iter_next_entry(struct l_dbus_message_iter *iter,
 									...)
 {
-	struct dbus1_iter *real_iter;
 	va_list args;
 	bool result;
 
 	if (unlikely(!iter))
 		return false;
 
-	real_iter = (struct dbus1_iter *) iter;
-
 	va_start(args, iter);
-	result = dbus1_message_iter_next_entry_valist(real_iter, args);
+	result = dbus1_message_iter_next_entry_valist(iter, args);
 	va_end(args);
 
 	return result;
 }
 
-LIB_EXPORT bool l_dbus_message_iter_get_variant(struct l_dbus_message_iter *iter,
-						const char *signature, ...)
+LIB_EXPORT bool l_dbus_message_iter_get_variant(
+					struct l_dbus_message_iter *iter,
+					const char *signature, ...)
 {
-	struct dbus1_iter *real_iter;
 	va_list args;
 	bool result;
 
 	if (unlikely(!iter))
 		return false;
 
-	real_iter = (struct dbus1_iter *) iter;
-
-	if (!real_iter->sig_start || strcmp(real_iter->sig_start, signature))
+	if (!iter->sig_start || strcmp(iter->sig_start, signature))
 		return false;
 
 	va_start(args, signature);
-	result = dbus1_message_iter_next_entry_valist(real_iter, args);
+	result = dbus1_message_iter_next_entry_valist(iter, args);
 	va_end(args);
 
 	return result;

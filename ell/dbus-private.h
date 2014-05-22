@@ -33,17 +33,6 @@ enum dbus_container_type {
 	DBUS_CONTAINER_TYPE_DICT_ENTRY	= 'e',
 };
 
-struct dbus1_iter {
-	struct l_dbus_message *message;
-	const char *sig_start;
-	uint8_t sig_len;
-	uint8_t sig_pos;
-	const void *data;
-	size_t len;
-	size_t pos;
-	char container_type;
-};
-
 struct dbus_header {
 	uint8_t  endian;
 	uint8_t  message_type;
@@ -60,20 +49,22 @@ struct l_dbus_interface;
 struct _dbus_method;
 struct _dbus_signal;
 struct _dbus_property;
+struct l_dbus_message_iter;
 struct l_dbus_message;
 struct l_dbus;
 
-void _dbus1_iter_init(struct dbus1_iter *iter, struct l_dbus_message *message,
+void _dbus1_iter_init(struct l_dbus_message_iter *iter,
+			struct l_dbus_message *message,
 			const char *sig_start, const char *sig_end,
 			const void *data, size_t len);
-bool _dbus1_iter_next_entry_basic(struct dbus1_iter *iter, char type,
+bool _dbus1_iter_next_entry_basic(struct l_dbus_message_iter *iter, char type,
 					void *out);
-bool _dbus1_iter_enter_struct(struct dbus1_iter *iter,
-					struct dbus1_iter *structure);
-bool _dbus1_iter_enter_variant(struct dbus1_iter *iter,
-					struct dbus1_iter *variant);
-bool _dbus1_iter_enter_array(struct dbus1_iter *iter,
-					struct dbus1_iter *array);
+bool _dbus1_iter_enter_struct(struct l_dbus_message_iter *iter,
+					struct l_dbus_message_iter *structure);
+bool _dbus1_iter_enter_variant(struct l_dbus_message_iter *iter,
+					struct l_dbus_message_iter *variant);
+bool _dbus1_iter_enter_array(struct l_dbus_message_iter *iter,
+					struct l_dbus_message_iter *array);
 
 void *_dbus_message_get_body(struct l_dbus_message *msg, size_t *out_size);
 void *_dbus_message_get_header(struct l_dbus_message *msg, size_t *out_size);
