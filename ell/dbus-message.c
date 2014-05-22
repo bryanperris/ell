@@ -221,7 +221,6 @@ static bool dbus1_message_iter_next_entry_valist(struct dbus1_iter *orig,
 	uint32_t uint32_val;
 	int fd;
 	void *arg;
-	size_t pos;
 
 	while (signature < orig->sig_start + orig->sig_len) {
 		if (strchr(simple_types, *signature)) {
