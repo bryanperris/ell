@@ -323,6 +323,7 @@ static inline size_t read_word_le(const void *p, size_t sz) {
 
 
 static bool gvariant_iter_init_internal(struct l_dbus_message_iter *iter,
+					struct l_dbus_message *message,
 					enum dbus_container_type type,
 					const char *sig_start,
 					const char *sig_end, const void *data,
@@ -350,6 +351,7 @@ static bool gvariant_iter_init_internal(struct l_dbus_message_iter *iter,
 	} else
 		strcpy(subsig, sig_start);
 
+	iter->message = message;
 	iter->sig_start = sig_start;
 	iter->sig_len = strlen(subsig);
 	iter->sig_pos = 0;
@@ -443,10 +445,12 @@ fail:
 }
 
 bool _gvariant_iter_init(struct l_dbus_message_iter *iter,
+				struct l_dbus_message *message,
 				const char *sig_start, const char *sig_end,
 				const void *data, size_t len)
 {
-	return gvariant_iter_init_internal(iter, DBUS_CONTAINER_TYPE_STRUCT,
+	return gvariant_iter_init_internal(iter, message,
+						DBUS_CONTAINER_TYPE_STRUCT,
 						sig_start, sig_end, data, len);
 }
 
@@ -620,7 +624,8 @@ bool _gvariant_iter_enter_struct(struct l_dbus_message_iter *iter,
 	type = is_dict ? DBUS_CONTAINER_TYPE_DICT_ENTRY :
 			DBUS_CONTAINER_TYPE_STRUCT;
 
-	return gvariant_iter_init_internal(structure, type, sig_start, sig_end,
+	return gvariant_iter_init_internal(structure, iter->message,
+						type, sig_start, sig_end,
 						start, item_size);
 }
 
@@ -657,7 +662,8 @@ bool _gvariant_iter_enter_variant(struct l_dbus_message_iter *iter,
 	if (_gvariant_num_children(signature) != 1)
 		return false;
 
-	return gvariant_iter_init_internal(variant, DBUS_CONTAINER_TYPE_VARIANT,
+	return gvariant_iter_init_internal(variant, iter->message,
+						DBUS_CONTAINER_TYPE_VARIANT,
 						nul + 1, end,
 						start, nul - start);
 }
@@ -685,7 +691,8 @@ bool _gvariant_iter_enter_array(struct l_dbus_message_iter *iter,
 	else
 		sig_end = iter->sig_start + iter->sig_pos;
 
-	return gvariant_iter_init_internal(array, DBUS_CONTAINER_TYPE_ARRAY,
+	return gvariant_iter_init_internal(array, iter->message,
+						DBUS_CONTAINER_TYPE_ARRAY,
 						sig_start, sig_end,
 						start, item_size);
 }

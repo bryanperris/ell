@@ -22,6 +22,7 @@
 struct l_dbus_message_iter;
 
 bool _gvariant_iter_init(struct l_dbus_message_iter *iter,
+				struct l_dbus_message *message,
 				const char *sig_start, const char *sig_end,
 				const void *data, size_t len);
 bool _gvariant_iter_next_entry_basic(struct l_dbus_message_iter *iter,
