@@ -26,6 +26,7 @@
 #include <ell/hashmap.h>
 #include <ell/string.h>
 #include <ell/main.h>
+#include <ell/idle.h>
 #include <ell/signal.h>
 #include <ell/timeout.h>
 #include <ell/io.h>
@@ -33,4 +34,3 @@
 #include <ell/plugin.h>
 #include <ell/checksum.h>
 #include <ell/settings.h>
-#include <ell/idle.h>

@@ -32,29 +32,30 @@ pkginclude_HEADERS = ell/ell.h ell/util.h \
 
 lib_LTLIBRARIES = ell/libell.la
 
-ell_libell_la_SOURCES = $(include_HEADERS) ell/private.h \
-						ell/dbus-private.h \
-						ell/util.c \
-						ell/test.c \
-						ell/queue.c \
-						ell/hashmap.c \
-						ell/string.c \
-						ell/settings.c \
-						ell/main.c \
-						ell/signal.c \
-						ell/timeout.c \
-						ell/io.c \
-						ell/log.c \
-						ell/plugin.c \
-						ell/checksum.c \
-						ell/netlink.c \
-						ell/dbus.c \
-						ell/dbus-message.c \
-						ell/dbus-util.c \
-						ell/dbus-service.c \
-						ell/idle.c \
-						ell/gvariant-private.h \
-						ell/gvariant-util.c
+ell_libell_la_SOURCES = $(pkginclude_HEADERS) \
+					ell/private.h \
+					ell/util.c \
+					ell/test.c \
+					ell/queue.c \
+					ell/hashmap.c \
+					ell/string.c \
+					ell/settings.c \
+					ell/main.c \
+					ell/idle.c \
+					ell/signal.c \
+					ell/timeout.c \
+					ell/io.c \
+					ell/log.c \
+					ell/plugin.c \
+					ell/checksum.c \
+					ell/netlink.c \
+					ell/dbus-private.h \
+					ell/dbus.c \
+					ell/dbus-message.c \
+					ell/dbus-util.c \
+					ell/dbus-service.c \
+					ell/gvariant-private.h \
+					ell/gvariant-util.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)
