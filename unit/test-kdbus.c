@@ -26,6 +26,8 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <assert.h>
 
 #include <ell/ell.h>
 #include <ell/dbus.h>
@@ -57,11 +59,17 @@ int main(int argc, char *argv[])
 	snprintf(bus_name, sizeof(bus_name), "%u-ell-test", getuid());
 
 	bus_fd = _dbus_kernel_create_bus(bus_name);
+	if (bus_fd < 0) {
+		l_warn("kdbus not available");
+		return EXIT_SUCCESS;
+	}
 
 	snprintf(bus_address, sizeof(bus_address),
 				"kernel:path=/dev/kdbus/%s/bus", bus_name);
 
 	dbus = l_dbus_new(bus_address);
+
+	assert(dbus);
 
 	l_dbus_set_debug(dbus, do_debug, "[DBUS] ", NULL);
 
@@ -73,5 +81,5 @@ int main(int argc, char *argv[])
 
 	close(bus_fd);
 
-	return 0;
+	return EXIT_SUCCESS;
 }
