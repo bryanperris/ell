@@ -36,6 +36,7 @@
 
 #include "util.h"
 #include "io.h"
+#include "idle.h"
 #include "queue.h"
 #include "hashmap.h"
 #include "dbus.h"
@@ -685,6 +686,16 @@ static struct l_dbus *setup_unix(char *params)
 	return setup_dbus1(fd, guid);
 }
 
+static void kdbus_ready(void *user_data)
+{
+	struct l_dbus *dbus = user_data;
+
+	dbus->is_ready = true;
+
+	if (dbus->ready_handler)
+		dbus->ready_handler(dbus->ready_data);
+}
+
 static struct l_dbus *setup_kdbus(int fd)
 {
 	struct l_dbus *dbus;
@@ -694,6 +705,8 @@ static struct l_dbus *setup_kdbus(int fd)
 	dbus->io = l_io_new(fd);
 
 	l_io_set_close_on_destroy(dbus->io, true);
+
+	l_idle_oneshot(kdbus_ready, dbus, NULL);
 
 	return dbus;
 }
