@@ -38,3 +38,12 @@ Kernel configuration checklist:
 	CONFIG_CRYPTO_USER_API_HASH=y
 	CONFIG_CRYPTO_MD5=y
 	CONFIG_CRYPTO_SHA1=y
+
+For kernel D-Bus (kdbus) support, the appropriate kernel module is required
+and must be loaded. The development repositories can be found here:
+
+	https://github.com/gregkh/kdbus
+	https://code.google.com/p/d-bus/
+
+If /dev/kdbus/control device node is present, kernel D-Bus support can be
+used.
