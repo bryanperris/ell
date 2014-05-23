@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 	bus_fd = _dbus_kernel_create_bus(bus_name);
 
 	snprintf(bus_address, sizeof(bus_address),
-					"/dev/kdbus/%s/bus", bus_name);
+				"kernel:path=/dev/kdbus/%s/bus", bus_name);
 
 	dbus = l_dbus_new(bus_address);
 
