@@ -30,10 +30,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "dbus.h"
-
 #include "util.h"
 #include "private.h"
+#include "dbus.h"
 #include "dbus-private.h"
 #include "gvariant-private.h"
 
