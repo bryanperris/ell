@@ -12,23 +12,24 @@ ELL_CURRENT = 0
 ELL_REVISION = 0
 ELL_AGE = 0
 
-pkginclude_HEADERS = ell/ell.h ell/util.h \
-				ell/test.h \
-				ell/queue.h \
-				ell/hashmap.h \
-				ell/string.h \
-				ell/settings.h \
-				ell/main.h \
-				ell/signal.h \
-				ell/timeout.h \
-				ell/io.h \
-				ell/log.h \
-				ell/plugin.h \
-				ell/checksum.h \
-				ell/netlink.h \
-				ell/dbus.h \
-				ell/dbus-service.h \
-				ell/idle.h
+pkginclude_HEADERS = ell/ell.h \
+			ell/util.h \
+			ell/test.h \
+			ell/queue.h \
+			ell/hashmap.h \
+			ell/string.h \
+			ell/settings.h \
+			ell/main.h \
+			ell/idle.h \
+			ell/signal.h \
+			ell/timeout.h \
+			ell/io.h \
+			ell/log.h \
+			ell/plugin.h \
+			ell/checksum.h \
+			ell/netlink.h \
+			ell/dbus.h \
+			ell/dbus-service.h
 
 lib_LTLIBRARIES = ell/libell.la
 
