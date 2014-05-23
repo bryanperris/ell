@@ -549,7 +549,7 @@ static void disconnect_handler(struct l_io *io, void *user_data)
 		dbus->disconnect_handler(dbus->disconnect_data);
 }
 
-static struct l_dbus *setup_connection(int fd, const char *guid)
+static struct l_dbus *setup_dbus1(int fd, const char *guid)
 {
 	static const unsigned char creds = 0x00;
 	char uid[6], hexuid[12], *ptr = hexuid;
@@ -682,7 +682,52 @@ static struct l_dbus *setup_unix(char *params)
 		return NULL;
 	}
 
-	return setup_connection(fd, guid);
+	return setup_dbus1(fd, guid);
+}
+
+static struct l_dbus *setup_kdbus(int fd)
+{
+	struct l_dbus *dbus;
+
+	dbus = l_new(struct l_dbus, 1);
+
+	dbus->io = l_io_new(fd);
+
+	l_io_set_close_on_destroy(dbus->io, true);
+
+	return dbus;
+}
+
+static struct l_dbus *setup_kernel(char *params)
+{
+	char *path = NULL;
+	int fd;
+
+	while (params) {
+		char *key = strsep(&params, ",");
+		char *value;
+
+		if (!key)
+			break;
+
+		value = strchr(key, '=');
+		if (!value)
+			continue;
+
+		*value++ = '\0';
+
+		if (!strcmp(key, "path"))
+			path = value;
+	}
+
+	if (!path)
+		return NULL;
+
+	fd = open(path, O_RDWR | O_CLOEXEC);
+	if (fd < 0)
+		return NULL;
+
+	return setup_kdbus(fd);
 }
 
 static struct l_dbus *setup_address(const char *address)
@@ -703,7 +748,11 @@ static struct l_dbus *setup_address(const char *address)
 		if (params)
 			*params++ = '\0';
 
-		if (!strcmp(transport, "unix")) {
+		if (!strcmp(transport, "kernel")) {
+			/* Function will modify params string */
+			dbus = setup_kernel(params);
+			break;
+		} else if (!strcmp(transport, "unix")) {
 			/* Function will modify params string */
 			dbus = setup_unix(params);
 			break;
