@@ -55,6 +55,7 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/netlink.c \
 			ell/dbus-private.h \
 			ell/dbus.c \
+			ell/dbus-kernel.c \
 			ell/dbus-message.c \
 			ell/dbus-util.c \
 			ell/dbus-service.c \
