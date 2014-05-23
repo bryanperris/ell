@@ -72,16 +72,23 @@ pkgconfig_DATA = ell/ell.pc
 
 noinst_PROGRAMS =
 
-unit_tests = unit/test-unit unit/test-queue \
-				unit/test-hashmap unit/test-string \
-				unit/test-utf8 \
-				unit/test-main unit/test-io \
-				unit/test-plugin unit/test-checksum \
-				unit/test-settings unit/test-netlink \
-				unit/test-dbus unit/test-dbus-message \
-				unit/test-dbus-util unit/test-dbus-service \
-				unit/test-gvariant-util \
-				unit/test-gvariant-message
+unit_tests = unit/test-unit \
+			unit/test-queue \
+			unit/test-hashmap \
+			unit/test-string \
+			unit/test-utf8 \
+			unit/test-main \
+			unit/test-io \
+			unit/test-plugin \
+			unit/test-checksum \
+			unit/test-settings \
+			unit/test-netlink \
+			unit/test-dbus \
+			unit/test-dbus-util \
+			unit/test-dbus-message \
+			unit/test-dbus-service \
+			unit/test-gvariant-util \
+			unit/test-gvariant-message
 
 if MAINTAINER_MODE
 noinst_PROGRAMS += $(unit_tests)
