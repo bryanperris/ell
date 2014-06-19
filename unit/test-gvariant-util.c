@@ -373,6 +373,41 @@ static void test_iter_basic_3(const void *test_data)
 	assert(i == -3255554);
 }
 
+static const unsigned char basic_data_4[] = {
+	0x66, 0x6f, 0x6f, 0x00, 0x62, 0x61, 0x72, 0x00,
+	0x62, 0x61, 0x7a, 0x00, 0x08, 0x04,
+};
+
+static struct parser_data parser_data_4 = {
+	.data = basic_data_4,
+	.len = 14,
+	.signature = "sss",
+};
+
+static void test_iter_basic_4(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct l_dbus_message_iter iter;
+	const char *s;
+	bool ret;
+
+	_gvariant_iter_init(&iter, NULL, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 's', &s);
+	assert(ret == true);
+	assert(!strcmp(s, "foo"));
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 's', &s);
+	assert(ret == true);
+	assert(!strcmp(s, "bar"));
+
+	ret = _gvariant_iter_next_entry_basic(&iter, 's', &s);
+	assert(ret == true);
+	assert(!strcmp(s, "baz"));
+}
+
 static const unsigned char fixed_struct_data_1[] = {
 	0x0a, 0x00, 0x00, 0x00, 0xff, 0x01, 0x00, 0x00,
 };
@@ -1115,6 +1150,7 @@ int main(int argc, char *argv[])
 	l_test_add("Iter Test Basic 'is'", test_iter_basic_2, &parser_data_2);
 	l_test_add("Iter Test Basic 'bdntqxyusi'",
 				test_iter_basic_3, &parser_data_3);
+	l_test_add("Iter Test Basic 'sss'", test_iter_basic_4, &parser_data_4);
 
 	l_test_add("Iter Test Fixed Struct 'i(yy)'", test_iter_fixed_struct_1,
 			&fixed_struct_1);
