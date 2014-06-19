@@ -332,6 +332,7 @@ static bool gvariant_iter_init_internal(struct l_dbus_message_iter *iter,
 {
 	const char *p;
 	int i;
+	int v;
 	char subsig[256];
 	unsigned int num_variable = 0;
 	unsigned int offset_len = offset_length(len);
@@ -392,11 +393,11 @@ static bool gvariant_iter_init_internal(struct l_dbus_message_iter *iter,
 	last_offset = len - num_variable * offset_len;
 
 	if (num_variable > 0)
-		iter->offsets = iter->data + last_offset;
+		iter->offsets = iter->data + len - offset_len;
 	else
 		iter->offsets = NULL;
 
-	for (i = 0; i < n_children; i++) {
+	for (i = 0, v = 0; i < n_children; i++) {
 		size_t o;
 
 		if (children[i].fixed_size) {
@@ -418,9 +419,9 @@ static bool gvariant_iter_init_internal(struct l_dbus_message_iter *iter,
 			continue;
 		}
 
-		children[i].end =
-			read_word_le(data + len - offset_len * num_variable,
-					offset_len);
+		v += 1;
+		children[i].end = read_word_le(data + len - offset_len * v,
+						offset_len);
 		num_variable -= 1;
 
 		if (children[i].end > len)
@@ -505,9 +506,14 @@ static const void *next_item(struct l_dbus_message_iter *iter,
 	if (iter->offsets >= iter->data + iter->len)
 			return NULL;
 
-	offset_len  = offset_length(iter->len);
+	offset_len = offset_length(iter->len);
 	*out_item_size = read_word_le(iter->offsets, offset_len) - iter->pos;
-	iter->offsets += offset_len;
+
+	/* In structures the offsets are in reverse order */
+	if (iter->container_type == DBUS_CONTAINER_TYPE_ARRAY)
+		iter->offsets += offset_len;
+	else
+		iter->offsets -= offset_len;
 
 done:
 	start = iter->data + iter->pos;
