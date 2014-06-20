@@ -1036,6 +1036,27 @@ static void test_builder_basic_1(const void *test_data)
 	FINISH_AND_CHECK_BUILT_RESULT();
 }
 
+static void test_builder_basic_2(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	const char *s = "foobar";
+	int i = 5;
+	struct gvariant_builder *builder;
+	bool ret;
+	BUILDER_TEST_HEADER();
+
+	builder = _gvariant_builder_new();
+	assert(builder);
+
+	ret = _gvariant_builder_append_basic(builder, 'i', &i);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 's', s);
+	assert(ret);
+
+	FINISH_AND_CHECK_BUILT_RESULT();
+}
+
 static void test_builder_basic_3(const void *test_data)
 {
 	const struct parser_data *test = test_data;
@@ -1261,6 +1282,8 @@ int main(int argc, char *argv[])
 
 	l_test_add("Builder Test Basic 's'", test_builder_basic_1,
 					&parser_data_1);
+	l_test_add("Builder Test Basic 'is'", test_builder_basic_2,
+					&parser_data_2);
 	l_test_add("Builder Test Basic 'bdntqxyusi'", test_builder_basic_3,
 					&parser_data_3);
 
