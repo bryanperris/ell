@@ -290,13 +290,13 @@ int _gvariant_get_fixed_size(const char *sig)
 	return size;
 }
 
-static inline size_t offset_length(size_t size)
+static inline size_t offset_length(size_t size, size_t n_offsets)
 {
-	if (size <= 0xff)
+	if (size + n_offsets <= 0xff)
 		return 1;
-	if (size <= 0xffff)
+	if (size + n_offsets * 2 <= 0xffff)
 		return 2;
-	if (size <= 0xffffffff)
+	if (size + n_offsets * 4 <= 0xffffffff)
 		return 4;
 	else
 		return 8;
@@ -335,7 +335,7 @@ static bool gvariant_iter_init_internal(struct l_dbus_message_iter *iter,
 	int v;
 	char subsig[256];
 	unsigned int num_variable = 0;
-	unsigned int offset_len = offset_length(len);
+	unsigned int offset_len = offset_length(len, 0);
 	size_t last_offset;
 	struct gvariant_type_info {
 		uint8_t sig_start;
@@ -506,7 +506,7 @@ static const void *next_item(struct l_dbus_message_iter *iter,
 	if (iter->offsets >= iter->data + iter->len)
 			return NULL;
 
-	offset_len = offset_length(iter->len);
+	offset_len = offset_length(iter->len, 0);
 	*out_item_size = read_word_le(iter->offsets, offset_len) - iter->pos;
 
 	/* In structures the offsets are in reverse order */
