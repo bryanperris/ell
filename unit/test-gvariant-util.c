@@ -1004,6 +1004,70 @@ static void test_iter_header_1(const void *test_data)
 	assert(!strcmp(g, "bynqiuxtd"));
 }
 
+static void test_builder_basic_3(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	bool b = true;
+	double d = 5.0;
+	int16_t n = -32545;
+	uint64_t t = 444444444LL;
+	uint16_t q = 32545;
+	int64_t x = -44444444LL;
+	uint8_t y = 255;
+	uint32_t u = 3255554;
+	const char *s = "foobar";
+	int32_t i = -3255554;
+	struct gvariant_builder *builder;
+	bool ret;
+	void *body;
+	size_t body_size;
+	char *signature;
+
+	builder = _gvariant_builder_new();
+	assert(builder);
+
+	ret = _gvariant_builder_append_basic(builder, 'b', &b);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'd', &d);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'n', &n);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 't', &t);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'q', &q);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'x', &x);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'y', &y);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'u', &u);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 's', s);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'i', &i);
+	assert(ret);
+
+	signature = _gvariant_builder_finish(builder, &body, &body_size);
+	assert(signature);
+	assert(!strcmp(signature, test->signature));
+	assert(body);
+
+	assert(body_size == test->len);
+	assert(!memcmp(test->data, body, body_size));
+
+	l_free(signature);
+	_gvariant_builder_free(builder);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -1173,6 +1237,9 @@ int main(int argc, char *argv[])
 	l_test_add("Iter Test Array of Variant 'av'", test_iter_av_1, &av_1);
 
 	l_test_add("Iter Test Header 'a(yv)'", test_iter_header_1, &header_1);
+
+	l_test_add("Builder Test Basic 'bdntqxyusi'", test_builder_basic_3,
+					&parser_data_3);
 
 	return l_test_run();
 }
