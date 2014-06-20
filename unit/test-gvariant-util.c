@@ -1004,15 +1004,28 @@ static void test_iter_header_1(const void *test_data)
 	assert(!strcmp(g, "bynqiuxtd"));
 }
 
+#define BUILDER_TEST_HEADER()\
+	void *body;\
+	size_t body_size;\
+	char *signature\
+
+#define FINISH_AND_CHECK_BUILT_RESULT()\
+	signature = _gvariant_builder_finish(builder, &body, &body_size);\
+	assert(signature);\
+	assert(!strcmp(signature, test->signature));\
+	assert(body);\
+	assert(body_size == test->len);\
+	assert(!memcmp(test->data, body, body_size));\
+	l_free(signature);\
+	_gvariant_builder_free(builder)\
+
 static void test_builder_basic_1(const void *test_data)
 {
 	const struct parser_data *test = test_data;
 	const char *s = "Hello World!";
 	struct gvariant_builder *builder;
 	bool ret;
-	void *body;
-	size_t body_size;
-	char *signature;
+	BUILDER_TEST_HEADER();
 
 	builder = _gvariant_builder_new();
 	assert(builder);
@@ -1020,16 +1033,7 @@ static void test_builder_basic_1(const void *test_data)
 	ret = _gvariant_builder_append_basic(builder, 's', s);
 	assert(ret);
 
-	signature = _gvariant_builder_finish(builder, &body, &body_size);
-	assert(signature);
-	assert(!strcmp(signature, test->signature));
-	assert(body);
-
-	assert(body_size == test->len);
-	assert(!memcmp(test->data, body, body_size));
-
-	l_free(signature);
-	_gvariant_builder_free(builder);
+	FINISH_AND_CHECK_BUILT_RESULT();
 }
 
 static void test_builder_basic_3(const void *test_data)
@@ -1047,9 +1051,7 @@ static void test_builder_basic_3(const void *test_data)
 	int32_t i = -3255554;
 	struct gvariant_builder *builder;
 	bool ret;
-	void *body;
-	size_t body_size;
-	char *signature;
+	BUILDER_TEST_HEADER();
 
 	builder = _gvariant_builder_new();
 	assert(builder);
@@ -1084,16 +1086,7 @@ static void test_builder_basic_3(const void *test_data)
 	ret = _gvariant_builder_append_basic(builder, 'i', &i);
 	assert(ret);
 
-	signature = _gvariant_builder_finish(builder, &body, &body_size);
-	assert(signature);
-	assert(!strcmp(signature, test->signature));
-	assert(body);
-
-	assert(body_size == test->len);
-	assert(!memcmp(test->data, body, body_size));
-
-	l_free(signature);
-	_gvariant_builder_free(builder);
+	FINISH_AND_CHECK_BUILT_RESULT();
 }
 
 int main(int argc, char *argv[])
