@@ -310,7 +310,7 @@ static inline size_t read_word_le(const void *p, size_t sz) {
 	} x;
 
 	if (sz == 1)
-		return *(uint8_t*) p;
+		return *(uint8_t *) p;
 
 	memcpy(&x, p, sz);
 
