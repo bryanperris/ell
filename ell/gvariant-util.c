@@ -30,9 +30,11 @@
 #include <string.h>
 #include <stdarg.h>
 #include <endian.h>
+#include <limits.h>
 
 #include "private.h"
 #include "util.h"
+#include "string.h"
 #include "log.h"
 #include "dbus-private.h"
 #include "gvariant-private.h"
@@ -322,6 +324,27 @@ static inline size_t read_word_le(const void *p, size_t sz) {
 		return le64toh(x.u64);
 }
 
+static inline void write_word_le(void *p, size_t value, size_t sz) {
+	union {
+		uint16_t u16;
+		uint32_t u32;
+		uint64_t u64;
+	} x;
+
+	if (sz == 1) {
+		*(uint8_t *) p = value;
+		return;
+	}
+
+	if (sz == 2)
+		x.u16 = htole16((uint16_t) value);
+	else if (sz == 4)
+		x.u32 = htole32((uint32_t) value);
+	else
+		x.u64 = htole64((uint64_t) value);
+
+	memcpy(p, &x, sz);
+}
 
 static bool gvariant_iter_init_internal(struct l_dbus_message_iter *iter,
 					struct l_dbus_message *message,
@@ -702,4 +725,152 @@ bool _gvariant_iter_enter_array(struct l_dbus_message_iter *iter,
 						DBUS_CONTAINER_TYPE_ARRAY,
 						sig_start, sig_end,
 						start, item_size);
+}
+
+struct gvariant_builder {
+	struct l_string *signature;
+	void *body;
+	size_t body_size;
+	size_t *offsets;
+	size_t offsets_size;
+	size_t offset_index;
+	bool variable_is_last : 1;
+};
+
+static inline size_t grow_body(struct gvariant_builder *builder,
+					size_t len, unsigned int alignment)
+{
+	size_t size = align_len(builder->body_size, alignment);
+
+	if (size + len > builder->body_size) {
+		builder->body = l_realloc(builder->body, size + len);
+
+		if (size - builder->body_size > 0)
+			memset(builder->body + builder->body_size, 0,
+						size - builder->body_size);
+
+		builder->body_size = size + len;
+	}
+
+	return size;
+}
+
+static inline bool grow_offsets(struct gvariant_builder *builder)
+{
+	size_t needed;
+
+	if (builder->offset_index < builder->offsets_size)
+		return true;
+
+	needed = builder->offsets_size * 2;
+
+	if (needed > USHRT_MAX)
+		return false;
+
+	if (needed == 0)
+		needed = 8;
+
+	builder->offsets = l_realloc(builder->offsets, needed * sizeof(size_t));
+	builder->offsets_size = needed;
+
+	return true;
+}
+
+struct gvariant_builder *_gvariant_builder_new(void)
+{
+	struct gvariant_builder *builder;
+
+	builder = l_new(struct gvariant_builder, 1);
+	builder->signature = l_string_new(63);
+
+	return builder;
+}
+
+void _gvariant_builder_free(struct gvariant_builder *builder)
+{
+	if (unlikely(!builder))
+		return;
+
+	l_string_free(builder->signature, true);
+
+	l_free(builder->body);
+	l_free(builder->offsets);
+
+	l_free(builder);
+}
+
+bool _gvariant_builder_append_basic(struct gvariant_builder *builder,
+					char type, const void *value)
+{
+	size_t start;
+	unsigned int alignment;
+	size_t len;
+
+	if (unlikely(!builder))
+		return false;
+
+	if (unlikely(!strchr(simple_types, type)))
+		return false;
+
+	alignment = get_basic_alignment(type);
+	if (!alignment)
+		return false;
+
+	l_string_append_c(builder->signature, type);
+	len = get_basic_fixed_size(type);
+
+	if (len) {
+		start = grow_body(builder, len, alignment);
+		memcpy(builder->body + start, value, len);
+		builder->variable_is_last = false;
+		return true;
+	}
+
+	if (!grow_offsets(builder))
+		return false;
+
+	len = strlen(value) + 1;
+	start = grow_body(builder, len, alignment);
+	memcpy(builder->body + start, value, len);
+
+	builder->offsets[builder->offset_index++] = builder->body_size;
+	builder->variable_is_last = true;
+
+	return true;
+}
+
+char *_gvariant_builder_finish(struct gvariant_builder *builder,
+				void **body, size_t *body_size)
+{
+	char *signature;
+
+	if (unlikely(!builder))
+		return NULL;
+
+	signature = l_string_free(builder->signature, false);
+	builder->signature = NULL;
+
+	if (builder->variable_is_last)
+		builder->offset_index -= 1;
+
+	if (builder->offset_index > 0) {
+		size_t offset_size = offset_length(builder->body_size,
+							builder->offset_index);
+		int i = builder->offset_index - 1;
+		size_t start;
+
+		start = grow_body(builder,
+					offset_size * builder->offset_index, 1);
+
+		for (i = builder->offset_index - 1; i >= 0; i--) {
+			write_word_le(builder->body + start,
+					builder->offsets[i], offset_size);
+			start += offset_size;
+		}
+	}
+
+	*body = builder->body;
+	*body_size = builder->body_size;
+
+	return signature;
 }
