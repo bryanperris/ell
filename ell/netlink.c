@@ -28,14 +28,11 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 
-#ifndef SOL_NETLINK
-#define SOL_NETLINK 270
-#endif
-
 #include "util.h"
 #include "hashmap.h"
 #include "queue.h"
 #include "io.h"
+#include "netlink-private.h"
 #include "netlink.h"
 #include "private.h"
 

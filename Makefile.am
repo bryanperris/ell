@@ -52,6 +52,7 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/log.c \
 			ell/plugin.c \
 			ell/checksum.c \
+			ell/netlink-private.h \
 			ell/netlink.c \
 			ell/dbus-private.h \
 			ell/dbus.c \
