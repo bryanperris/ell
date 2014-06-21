@@ -34,3 +34,7 @@
 #include <ell/plugin.h>
 #include <ell/checksum.h>
 #include <ell/settings.h>
+
+#include <ell/netlink.h>
+#include <ell/genl.h>
+#include <ell/dbus.h>
