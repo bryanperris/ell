@@ -20,8 +20,15 @@
  *
  */
 
+#ifndef __ELL_GENL_H
+#define __ELL_GENL_H
+
 #include <stdbool.h>
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef void (*l_genl_destroy_func_t)(void *user_data);
 
@@ -104,3 +111,9 @@ unsigned int l_genl_family_register(struct l_genl_family *family,
 				const char *group, l_genl_msg_func_t callback,
 				void *user_data, l_genl_destroy_func_t destroy);
 bool l_genl_family_unregister(struct l_genl_family *family, unsigned int id);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_GENL_H */
