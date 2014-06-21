@@ -27,7 +27,6 @@
 #include <sys/socket.h>
 
 #include <ell/ell.h>
-#include <ell/genl.h>
 
 static void do_debug(const char *str, void *user_data)
 {

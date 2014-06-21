@@ -29,7 +29,6 @@
 #include <net/if.h>
 
 #include <ell/ell.h>
-#include <ell/netlink.h>
 
 static void do_debug(const char *str, void *user_data)
 {
