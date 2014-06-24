@@ -503,6 +503,56 @@ static void test_iter_fixed_struct_2(const void *test_data)
 	assert(u == 5555);
 }
 
+static const unsigned char nested_struct_data_1[] = {
+	0x01, 0x00, 0x00, 0x00, 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72, 0x00, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0x0b,
+};
+
+static struct parser_data nested_struct_1 = {
+	.data = nested_struct_data_1,
+	.len = 17,
+	.signature = "((us)yi)",
+};
+
+static void test_iter_nested_struct_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct l_dbus_message_iter iter;
+	uint32_t u;
+	uint8_t y;
+	int32_t i;
+	const char *s;
+	bool ret;
+	struct l_dbus_message_iter outer;
+	struct l_dbus_message_iter inner;
+
+	_gvariant_iter_init(&iter, NULL, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_enter_struct(&iter, &outer);
+	assert(ret);
+
+	ret = _gvariant_iter_enter_struct(&outer, &inner);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&inner, 'u', &u);
+	assert(ret);
+	assert(u == 1);
+
+	ret = _gvariant_iter_next_entry_basic(&inner, 's', &s);
+	assert(ret);
+	assert(!strcmp(s, "foobar"));
+
+	ret = _gvariant_iter_next_entry_basic(&outer, 'y', &y);
+	assert(ret);
+	assert(y == 255);
+
+	ret = _gvariant_iter_next_entry_basic(&outer, 'i', &i);
+	assert(ret);
+	assert(i == -1);
+}
+
 static const unsigned char variant_data_1[] = {
 	0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x66, 0x6f, 0x6f, 0x62,
 	0x61, 0x72, 0x00, 0x00, 0x73, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
@@ -1420,6 +1470,9 @@ int main(int argc, char *argv[])
 			&fixed_struct_1);
 	l_test_add("Iter Test Fixed Struct '(yyt)(yyu)'",
 			test_iter_fixed_struct_2, &fixed_struct_2);
+
+	l_test_add("Iter Test Nested Struct '((us)yi)'",
+			test_iter_nested_struct_1, &nested_struct_1);
 
 	l_test_add("Iter Test Variant '(uvu)i'", test_iter_variant_1,
 						&variant_1);
