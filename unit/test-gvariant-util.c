@@ -447,6 +447,62 @@ static void test_iter_fixed_struct_1(const void *test_data)
 	assert(y == 1);
 }
 
+static const unsigned char fixed_struct_data_2[] = {
+	0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xb3, 0x15, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x00, 0x00, 0xb3, 0x15, 0x00, 0x00,
+};
+
+static struct parser_data fixed_struct_2 = {
+	.data = fixed_struct_data_2,
+	.len = 24,
+	.signature = "(yyt)(yyu)",
+};
+
+static void test_iter_fixed_struct_2(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	struct l_dbus_message_iter iter;
+	uint64_t t;
+	uint32_t u;
+	uint8_t y;
+	bool ret;
+	struct l_dbus_message_iter structure;
+
+	_gvariant_iter_init(&iter, NULL, test->signature,
+				test->signature + strlen(test->signature),
+				test->data, test->len);
+
+	ret = _gvariant_iter_enter_struct(&iter, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
+	assert(ret);
+	assert(y == 1);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
+	assert(ret);
+	assert(y == 2);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 't', &t);
+	assert(ret);
+	assert(t == 5555);
+
+	ret = _gvariant_iter_enter_struct(&iter, &structure);
+	assert(ret);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
+	assert(ret);
+	assert(y == 1);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'y', &y);
+	assert(ret);
+	assert(y == 2);
+
+	ret = _gvariant_iter_next_entry_basic(&structure, 'u', &u);
+	assert(ret);
+	assert(u == 5555);
+}
+
 static const unsigned char variant_data_1[] = {
 	0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x66, 0x6f, 0x6f, 0x62,
 	0x61, 0x72, 0x00, 0x00, 0x73, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
@@ -1285,6 +1341,8 @@ int main(int argc, char *argv[])
 
 	l_test_add("Iter Test Fixed Struct 'i(yy)'", test_iter_fixed_struct_1,
 			&fixed_struct_1);
+	l_test_add("Iter Test Fixed Struct '(yyt)(yyu)'",
+			test_iter_fixed_struct_2, &fixed_struct_2);
 
 	l_test_add("Iter Test Variant '(uvu)i'", test_iter_variant_1,
 						&variant_1);
