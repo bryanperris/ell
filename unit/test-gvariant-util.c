@@ -1191,6 +1191,37 @@ static void test_builder_basic_4(const void *test_data)
 	FINISH_AND_CHECK_BUILT_RESULT();
 }
 
+static void test_builder_fixed_struct_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	uint32_t i = 10;
+	uint8_t y1 = 255;
+	uint8_t y2 = 1;
+	struct gvariant_builder *builder;
+	bool ret;
+	BUILDER_TEST_HEADER();
+
+	builder = _gvariant_builder_new();
+	assert(builder);
+
+	ret = _gvariant_builder_append_basic(builder, 'i', &i);
+	assert(ret);
+
+	ret = _gvariant_builder_enter_struct(builder, "yy");
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'y', &y1);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'y', &y2);
+	assert(ret);
+
+	ret = _gvariant_builder_leave_struct(builder);
+	assert(ret);
+
+	FINISH_AND_CHECK_BUILT_RESULT();
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -1371,6 +1402,9 @@ int main(int argc, char *argv[])
 					&parser_data_3);
 	l_test_add("Builder Test Basic 'sss'", test_builder_basic_4,
 					&parser_data_4);
+
+	l_test_add("Builder Test Fixed Struct 'i(yy)'",
+			test_builder_fixed_struct_1, &fixed_struct_1);
 
 	return l_test_run();
 }
