@@ -179,6 +179,9 @@ bool _gvariant_valid_signature(const char *sig)
 	const char *s = sig;
 	int a;
 
+	if (strlen(sig) > 255)
+		return false;
+
 	do {
 		s = validate_next_type(s, &a);
 
