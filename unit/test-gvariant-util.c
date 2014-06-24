@@ -1222,6 +1222,52 @@ static void test_builder_fixed_struct_1(const void *test_data)
 	FINISH_AND_CHECK_BUILT_RESULT();
 }
 
+static void test_builder_fixed_struct_2(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	uint32_t u = 5555;
+	uint8_t y1 = 1;
+	uint8_t y2 = 2;
+	uint64_t t = 5555;
+	struct gvariant_builder *builder;
+	bool ret;
+	BUILDER_TEST_HEADER();
+
+	builder = _gvariant_builder_new();
+	assert(builder);
+
+	ret = _gvariant_builder_enter_struct(builder, "yyt");
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'y', &y1);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'y', &y2);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 't', &t);
+
+	ret = _gvariant_builder_leave_struct(builder);
+	assert(ret);
+
+	ret = _gvariant_builder_enter_struct(builder, "yyu");
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'y', &y1);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'y', &y2);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'u', &u);
+	assert(ret);
+
+	ret = _gvariant_builder_leave_struct(builder);
+	assert(ret);
+
+	FINISH_AND_CHECK_BUILT_RESULT();
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -1405,6 +1451,8 @@ int main(int argc, char *argv[])
 
 	l_test_add("Builder Test Fixed Struct 'i(yy)'",
 			test_builder_fixed_struct_1, &fixed_struct_1);
+	l_test_add("Builder Test Fixed Struct '(yyt)(yyu)'",
+			test_builder_fixed_struct_2, &fixed_struct_2);
 
 	return l_test_run();
 }
