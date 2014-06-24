@@ -34,6 +34,7 @@
 
 #include "private.h"
 #include "util.h"
+#include "queue.h"
 #include "string.h"
 #include "log.h"
 #include "dbus-private.h"
@@ -731,10 +732,18 @@ struct gvariant_builder {
 	struct l_string *signature;
 	void *body;
 	size_t body_size;
+	struct l_queue *containers;
+};
+
+struct container {
 	size_t *offsets;
 	size_t offsets_size;
 	size_t offset_index;
+	size_t start;
 	bool variable_is_last : 1;
+	enum dbus_container_type type;
+	char signature[256];
+	uint8_t sigindex;
 };
 
 static inline size_t grow_body(struct gvariant_builder *builder,
@@ -755,14 +764,14 @@ static inline size_t grow_body(struct gvariant_builder *builder,
 	return size;
 }
 
-static inline bool grow_offsets(struct gvariant_builder *builder)
+static inline bool grow_offsets(struct container *container)
 {
 	size_t needed;
 
-	if (builder->offset_index < builder->offsets_size)
+	if (container->offset_index < container->offsets_size)
 		return true;
 
-	needed = builder->offsets_size * 2;
+	needed = container->offsets_size * 2;
 
 	if (needed > USHRT_MAX)
 		return false;
@@ -770,18 +779,70 @@ static inline bool grow_offsets(struct gvariant_builder *builder)
 	if (needed == 0)
 		needed = 8;
 
-	builder->offsets = l_realloc(builder->offsets, needed * sizeof(size_t));
-	builder->offsets_size = needed;
+	container->offsets = l_realloc(container->offsets,
+						needed * sizeof(size_t));
+	container->offsets_size = needed;
 
 	return true;
+}
+
+static struct container *container_new_struct(const char *signature,
+						size_t start)
+{
+	struct container *ret;
+
+	ret = l_new(struct container, 1);
+
+	ret->type = DBUS_CONTAINER_TYPE_STRUCT;
+	strcpy(ret->signature, signature);
+	ret->start = start;
+
+	return ret;
+}
+
+static void container_free(struct container *container)
+{
+	l_free(container->offsets);
+	l_free(container);
+}
+
+static void container_append_struct_offsets(struct container *container,
+					struct gvariant_builder *builder)
+{
+	size_t offset_size;
+	int i;
+	size_t start;
+
+	if (container->variable_is_last)
+		container->offset_index -= 1;
+
+	if (container->offset_index == 0)
+		return;
+
+	offset_size = offset_length(builder->body_size,
+						container->offset_index);
+	i = container->offset_index - 1;
+
+	start = grow_body(builder, offset_size * container->offset_index, 1);
+
+	for (i = container->offset_index - 1; i >= 0; i--) {
+		write_word_le(builder->body + start,
+				container->offsets[i], offset_size);
+		start += offset_size;
+	}
 }
 
 struct gvariant_builder *_gvariant_builder_new(void)
 {
 	struct gvariant_builder *builder;
+	struct container *root;
 
 	builder = l_new(struct gvariant_builder, 1);
 	builder->signature = l_string_new(63);
+
+	builder->containers = l_queue_new();
+	root = container_new_struct("", 0);
+	l_queue_push_head(builder->containers, root);
 
 	return builder;
 }
@@ -792,19 +853,106 @@ void _gvariant_builder_free(struct gvariant_builder *builder)
 		return;
 
 	l_string_free(builder->signature, true);
-
+	l_queue_destroy(builder->containers,
+				(l_queue_destroy_func_t) container_free);
 	l_free(builder->body);
-	l_free(builder->offsets);
 
 	l_free(builder);
+}
+
+bool _gvariant_builder_enter_struct(struct gvariant_builder *builder,
+					const char *signature)
+{
+	size_t qlen = l_queue_length(builder->containers);
+	struct container *container = l_queue_peek_head(builder->containers);
+	int alignment;
+	size_t start;
+
+	if (!_gvariant_valid_signature(signature))
+		return false;
+
+	if (qlen == 1) {
+		if (l_string_length(builder->signature) +
+				strlen(signature) + 2 > 255)
+			return false;
+	} else {
+		/* Verify Signatures Match */
+		char expect[256];
+		const char *start;
+		const char *end;
+
+		start = container->signature + container->sigindex;
+		end = validate_next_type(start, &alignment) - 1;
+
+		if (*start != '(' || *end != ')')
+			return false;
+
+		memcpy(expect, start + 1, end - start - 1);
+		expect[end - start - 1] = '\0';
+
+		if (strcmp(expect, signature))
+			return false;
+	}
+
+	alignment = _gvariant_get_alignment(signature);
+	start = grow_body(builder, 0, alignment);
+
+	container = container_new_struct(signature, start);
+	l_queue_push_head(builder->containers, container);
+
+	return true;
+}
+
+bool _gvariant_builder_leave_struct(struct gvariant_builder *builder)
+{
+	struct container *container = l_queue_peek_head(builder->containers);
+	size_t qlen = l_queue_length(builder->containers);
+	struct container *parent;
+
+	if (unlikely(qlen <= 1))
+		return false;
+
+	if (unlikely(container->type != DBUS_CONTAINER_TYPE_STRUCT))
+		return false;
+
+	l_queue_pop_head(builder->containers);
+	qlen -= 1;
+	parent = l_queue_peek_head(builder->containers);
+
+	if (_gvariant_is_fixed_size(container->signature)) {
+		int alignment = _gvariant_get_alignment(container->signature);
+		grow_body(builder, 0, alignment);
+	} else {
+		size_t offset;
+
+		if (!grow_offsets(parent))
+			return false;
+
+		container_append_struct_offsets(container, builder);
+		offset = builder->body_size - parent->start;
+		parent->offsets[parent->offset_index++] = offset;
+		parent->variable_is_last = true;
+	}
+
+	if (qlen == 1)
+		l_string_append_printf(builder->signature, "(%s)",
+						container->signature);
+	else
+		parent->sigindex += strlen(container->signature) + 2;
+
+	container_free(container);
+
+	return true;
 }
 
 bool _gvariant_builder_append_basic(struct gvariant_builder *builder,
 					char type, const void *value)
 {
+	struct container *container = l_queue_peek_head(builder->containers);
 	size_t start;
 	unsigned int alignment;
 	size_t len;
+	size_t offset;
 
 	if (unlikely(!builder))
 		return false;
@@ -816,25 +964,32 @@ bool _gvariant_builder_append_basic(struct gvariant_builder *builder,
 	if (!alignment)
 		return false;
 
-	l_string_append_c(builder->signature, type);
+	if (l_queue_length(builder->containers) == 1)
+		l_string_append_c(builder->signature, type);
+	else if (container->signature[container->sigindex] != type)
+		return false;
+
 	len = get_basic_fixed_size(type);
 
 	if (len) {
 		start = grow_body(builder, len, alignment);
 		memcpy(builder->body + start, value, len);
-		builder->variable_is_last = false;
+		container->variable_is_last = false;
+		container->sigindex += 1;
 		return true;
 	}
 
-	if (!grow_offsets(builder))
+	if (!grow_offsets(container))
 		return false;
 
 	len = strlen(value) + 1;
 	start = grow_body(builder, len, alignment);
 	memcpy(builder->body + start, value, len);
 
-	builder->offsets[builder->offset_index++] = builder->body_size;
-	builder->variable_is_last = true;
+	offset = builder->body_size - container->start;
+	container->offsets[container->offset_index++] = offset;
+	container->variable_is_last = true;
+	container->sigindex += 1;
 
 	return true;
 }
@@ -843,31 +998,24 @@ char *_gvariant_builder_finish(struct gvariant_builder *builder,
 				void **body, size_t *body_size)
 {
 	char *signature;
+	struct container *root;
 
 	if (unlikely(!builder))
 		return NULL;
 
+	if (unlikely(l_queue_length(builder->containers) != 1))
+		return NULL;
+
+	root = l_queue_peek_head(builder->containers);
+
 	signature = l_string_free(builder->signature, false);
 	builder->signature = NULL;
 
-	if (builder->variable_is_last)
-		builder->offset_index -= 1;
-
-	if (builder->offset_index > 0) {
-		size_t offset_size = offset_length(builder->body_size,
-							builder->offset_index);
-		int i = builder->offset_index - 1;
-		size_t start;
-
-		start = grow_body(builder,
-					offset_size * builder->offset_index, 1);
-
-		for (i = builder->offset_index - 1; i >= 0; i--) {
-			write_word_le(builder->body + start,
-					builder->offsets[i], offset_size);
-			start += offset_size;
-		}
-	}
+	if (_gvariant_is_fixed_size(signature)) {
+		int alignment = _gvariant_get_alignment(signature);
+		grow_body(builder, 0, alignment);
+	} else
+		container_append_struct_offsets(root, builder);
 
 	*body = builder->body;
 	*body_size = builder->body_size;

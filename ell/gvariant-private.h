@@ -48,3 +48,6 @@ bool _gvariant_builder_append_basic(struct gvariant_builder *builder,
 					char type, const void *value);
 char *_gvariant_builder_finish(struct gvariant_builder *builder,
 				void **body, size_t *body_size);
+bool _gvariant_builder_enter_struct(struct gvariant_builder *builder,
+					const char *signature);
+bool _gvariant_builder_leave_struct(struct gvariant_builder *builder);
