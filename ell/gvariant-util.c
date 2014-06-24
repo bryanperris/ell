@@ -665,7 +665,7 @@ bool _gvariant_iter_enter_variant(struct l_dbus_message_iter *iter,
 {
 	size_t item_size;
 	const void *start, *end, *nul;
-	char signature[255];
+	char signature[256];
 
 	if (iter->sig_start[iter->sig_pos] != 'v')
 		return false;
