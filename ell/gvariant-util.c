@@ -904,7 +904,6 @@ static bool enter_struct_dict_common(struct gvariant_builder *builder,
 	l_queue_push_head(builder->containers, container);
 
 	return true;
-
 }
 
 bool _gvariant_builder_enter_struct(struct gvariant_builder *builder,
@@ -934,7 +933,10 @@ bool _gvariant_builder_enter_dict(struct gvariant_builder *builder,
 					'{', '}');
 }
 
-bool _gvariant_builder_leave_struct(struct gvariant_builder *builder)
+static bool leave_struct_dict_common(struct gvariant_builder *builder,
+					enum dbus_container_type type,
+					const char open,
+					const char close)
 {
 	struct container *container = l_queue_peek_head(builder->containers);
 	size_t qlen = l_queue_length(builder->containers);
@@ -943,7 +945,7 @@ bool _gvariant_builder_leave_struct(struct gvariant_builder *builder)
 	if (unlikely(qlen <= 1))
 		return false;
 
-	if (unlikely(container->type != DBUS_CONTAINER_TYPE_STRUCT))
+	if (unlikely(container->type != type))
 		return false;
 
 	l_queue_pop_head(builder->containers);
@@ -966,14 +968,29 @@ bool _gvariant_builder_leave_struct(struct gvariant_builder *builder)
 	}
 
 	if (qlen == 1)
-		l_string_append_printf(builder->signature, "(%s)",
-						container->signature);
+		l_string_append_printf(builder->signature, "%c%s%c",
+						open,
+						container->signature,
+						close);
 	else
 		parent->sigindex += strlen(container->signature) + 2;
 
 	container_free(container);
 
 	return true;
+}
+
+bool _gvariant_builder_leave_struct(struct gvariant_builder *builder)
+{
+	return leave_struct_dict_common(builder, DBUS_CONTAINER_TYPE_STRUCT,
+					'(', ')');
+}
+
+bool _gvariant_builder_leave_dict(struct gvariant_builder *builder)
+{
+	return leave_struct_dict_common(builder,
+					DBUS_CONTAINER_TYPE_DICT_ENTRY,
+					'{', '}');
 }
 
 bool _gvariant_builder_enter_variant(struct gvariant_builder *builder,
