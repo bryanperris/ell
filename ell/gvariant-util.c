@@ -863,16 +863,16 @@ void _gvariant_builder_free(struct gvariant_builder *builder)
 	l_free(builder);
 }
 
-bool _gvariant_builder_enter_struct(struct gvariant_builder *builder,
-					const char *signature)
+static bool enter_struct_dict_common(struct gvariant_builder *builder,
+					const char *signature,
+					enum dbus_container_type type,
+					const char open,
+					const char close)
 {
 	size_t qlen = l_queue_length(builder->containers);
 	struct container *container = l_queue_peek_head(builder->containers);
 	int alignment;
 	size_t start;
-
-	if (!_gvariant_valid_signature(signature))
-		return false;
 
 	if (qlen == 1) {
 		if (l_string_length(builder->signature) +
@@ -887,7 +887,7 @@ bool _gvariant_builder_enter_struct(struct gvariant_builder *builder,
 		start = container->signature + container->sigindex;
 		end = validate_next_type(start, &alignment) - 1;
 
-		if (*start != '(' || *end != ')')
+		if (*start != open || *end != close)
 			return false;
 
 		memcpy(expect, start + 1, end - start - 1);
@@ -900,10 +900,38 @@ bool _gvariant_builder_enter_struct(struct gvariant_builder *builder,
 	alignment = _gvariant_get_alignment(signature);
 	start = grow_body(builder, 0, alignment);
 
-	container = container_new(DBUS_CONTAINER_TYPE_STRUCT, signature, start);
+	container = container_new(type, signature, start);
 	l_queue_push_head(builder->containers, container);
 
 	return true;
+
+}
+
+bool _gvariant_builder_enter_struct(struct gvariant_builder *builder,
+					const char *signature)
+{
+	if (!_gvariant_valid_signature(signature))
+		return false;
+
+	return enter_struct_dict_common(builder, signature,
+					DBUS_CONTAINER_TYPE_STRUCT, '(', ')');
+}
+
+bool _gvariant_builder_enter_dict(struct gvariant_builder *builder,
+					const char *signature)
+{
+	if (!_gvariant_valid_signature(signature))
+		return false;
+
+	if (_gvariant_num_children(signature) != 2)
+		return false;
+
+	if (!strchr(simple_types, signature[0]))
+		return false;
+
+	return enter_struct_dict_common(builder, signature,
+					DBUS_CONTAINER_TYPE_DICT_ENTRY,
+					'{', '}');
 }
 
 bool _gvariant_builder_leave_struct(struct gvariant_builder *builder)

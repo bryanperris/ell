@@ -51,6 +51,8 @@ char *_gvariant_builder_finish(struct gvariant_builder *builder,
 bool _gvariant_builder_enter_struct(struct gvariant_builder *builder,
 					const char *signature);
 bool _gvariant_builder_leave_struct(struct gvariant_builder *builder);
+bool _gvariant_builder_enter_dict(struct gvariant_builder *builder,
+					const char *signature);
 bool _gvariant_builder_enter_variant(struct gvariant_builder *builder,
 					const char *signature);
 bool _gvariant_builder_leave_variant(struct gvariant_builder *builder);
