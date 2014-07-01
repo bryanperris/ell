@@ -1359,6 +1359,46 @@ static void test_builder_nested_struct_1(const void *test_data)
 	FINISH_AND_CHECK_BUILT_RESULT();
 }
 
+static void test_builder_variant_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	uint32_t u = 5;
+	const char *s = "foobar";
+	int32_t i = 5;
+	struct gvariant_builder *builder;
+	bool ret;
+	BUILDER_TEST_HEADER();
+
+	builder = _gvariant_builder_new();
+	assert(builder);
+
+	ret = _gvariant_builder_enter_struct(builder, "uvu");
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'u', &u);
+	assert(ret);
+
+	ret = _gvariant_builder_enter_variant(builder, "s");
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 's', s);
+	assert(ret);
+
+	ret = _gvariant_builder_leave_variant(builder);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'u', &u);
+	assert(ret);
+
+	ret = _gvariant_builder_leave_struct(builder);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'i', &i);
+	assert(ret);
+
+	FINISH_AND_CHECK_BUILT_RESULT();
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -1550,6 +1590,9 @@ int main(int argc, char *argv[])
 
 	l_test_add("Builder Test Nested Struct '((us)yi)'",
 			test_builder_nested_struct_1, &nested_struct_1);
+
+	l_test_add("Builder Test Variant '(uvu)i'", test_builder_variant_1,
+						&variant_1);
 
 	return l_test_run();
 }
