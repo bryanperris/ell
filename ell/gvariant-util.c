@@ -789,14 +789,14 @@ static inline bool grow_offsets(struct container *container)
 	return true;
 }
 
-static struct container *container_new_struct(const char *signature,
-						size_t start)
+static struct container *container_new(enum dbus_container_type type,
+					const char *signature, size_t start)
 {
 	struct container *ret;
 
 	ret = l_new(struct container, 1);
 
-	ret->type = DBUS_CONTAINER_TYPE_STRUCT;
+	ret->type = type;
 	strcpy(ret->signature, signature);
 	ret->start = start;
 
@@ -844,7 +844,7 @@ struct gvariant_builder *_gvariant_builder_new(void)
 	builder->signature = l_string_new(63);
 
 	builder->containers = l_queue_new();
-	root = container_new_struct("", 0);
+	root = container_new(DBUS_CONTAINER_TYPE_STRUCT, "", 0);
 	l_queue_push_head(builder->containers, root);
 
 	return builder;
@@ -900,7 +900,7 @@ bool _gvariant_builder_enter_struct(struct gvariant_builder *builder,
 	alignment = _gvariant_get_alignment(signature);
 	start = grow_body(builder, 0, alignment);
 
-	container = container_new_struct(signature, start);
+	container = container_new(DBUS_CONTAINER_TYPE_STRUCT, signature, start);
 	l_queue_push_head(builder->containers, container);
 
 	return true;
