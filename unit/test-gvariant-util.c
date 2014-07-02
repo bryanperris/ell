@@ -1593,6 +1593,60 @@ static void test_builder_variable_array_2(const void *test_data)
 	FINISH_AND_CHECK_BUILT_RESULT();
 }
 
+static void test_builder_aau_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	uint32_t u1 = 1;
+	uint32_t u2 = 2;
+	uint32_t u3 = 3;
+	struct gvariant_builder *builder;
+	bool ret;
+	BUILDER_TEST_HEADER();
+
+	builder = _gvariant_builder_new();
+	assert(builder);
+
+	ret = _gvariant_builder_enter_array(builder, "au");
+	assert(ret);
+
+	ret = _gvariant_builder_enter_array(builder, "u");
+	assert(ret);
+	ret = _gvariant_builder_append_basic(builder, 'u', &u1);
+	assert(ret);
+	ret = _gvariant_builder_append_basic(builder, 'u', &u2);
+	assert(ret);
+	ret = _gvariant_builder_append_basic(builder, 'u', &u3);
+	assert(ret);
+	ret = _gvariant_builder_leave_array(builder);
+	assert(ret);
+
+	ret = _gvariant_builder_enter_array(builder, "u");
+	assert(ret);
+	ret = _gvariant_builder_append_basic(builder, 'u', &u1);
+	assert(ret);
+	ret = _gvariant_builder_append_basic(builder, 'u', &u2);
+	assert(ret);
+	ret = _gvariant_builder_leave_array(builder);
+	assert(ret);
+
+	ret = _gvariant_builder_enter_array(builder, "u");
+	assert(ret);
+	ret = _gvariant_builder_append_basic(builder, 'u', &u1);
+	assert(ret);
+	ret = _gvariant_builder_leave_array(builder);
+	assert(ret);
+
+	ret = _gvariant_builder_enter_array(builder, "u");
+	assert(ret);
+	ret = _gvariant_builder_leave_array(builder);
+	assert(ret);
+
+	ret = _gvariant_builder_leave_array(builder);
+	assert(ret);
+
+	FINISH_AND_CHECK_BUILT_RESULT();
+}
+
 static void test_builder_av_1(const void *test_data)
 {
 	const struct parser_data *test = test_data;
@@ -1835,6 +1889,9 @@ int main(int argc, char *argv[])
 	l_test_add("Builder Test Variable Array 'a(st)'",
 				test_builder_variable_array_2,
 				&variable_array_2);
+
+	l_test_add("Builder Test Array of Array 'aau'",
+				test_builder_aau_1, &aau_1);
 
 	l_test_add("Builder Test Array of Variant 'av'",
 				test_builder_av_1, &av_1);
