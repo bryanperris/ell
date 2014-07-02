@@ -1436,6 +1436,33 @@ static void test_builder_variant_2(const void *test_data)
 	FINISH_AND_CHECK_BUILT_RESULT();
 }
 
+static void test_builder_fixed_array_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	uint32_t u1 = 20;
+	uint32_t u2 = 22;
+	struct gvariant_builder *builder;
+	bool ret;
+	BUILDER_TEST_HEADER();
+
+	builder = _gvariant_builder_new();
+	assert(builder);
+
+	ret = _gvariant_builder_enter_array(builder, "u");
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'u', &u1);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'u', &u2);
+	assert(ret);
+
+	ret = _gvariant_builder_leave_array(builder);
+	assert(ret);
+
+	FINISH_AND_CHECK_BUILT_RESULT();
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -1632,6 +1659,9 @@ int main(int argc, char *argv[])
 						&variant_1);
 	l_test_add("Builder Test Variant 'v'", test_builder_variant_2,
 						&variant_2);
+
+	l_test_add("Builder Test Fixed Array 'au'", test_builder_fixed_array_1,
+					&fixed_array_1);
 
 	return l_test_run();
 }
