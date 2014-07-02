@@ -972,7 +972,7 @@ static bool leave_struct_dict_common(struct gvariant_builder *builder,
 						open,
 						container->signature,
 						close);
-	else
+	else if (parent->type != DBUS_CONTAINER_TYPE_ARRAY)
 		parent->sigindex += strlen(container->signature) + 2;
 
 	container_free(container);
@@ -1054,7 +1054,7 @@ bool _gvariant_builder_leave_variant(struct gvariant_builder *builder)
 
 	if (qlen == 1)
 		l_string_append_c(builder->signature, 'v');
-	else
+	else if (parent->type != DBUS_CONTAINER_TYPE_ARRAY)
 		parent->sigindex += 1;
 
 	container_free(container);
