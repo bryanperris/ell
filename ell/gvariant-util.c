@@ -1062,6 +1062,79 @@ bool _gvariant_builder_leave_variant(struct gvariant_builder *builder)
 	return true;
 }
 
+bool _gvariant_builder_enter_array(struct gvariant_builder *builder,
+					const char *signature)
+{
+	size_t qlen = l_queue_length(builder->containers);
+	struct container *container = l_queue_peek_head(builder->containers);
+	size_t start;
+	int alignment;
+
+	if (!_gvariant_valid_signature(signature))
+		return false;
+
+	if (_gvariant_num_children(signature) != 1)
+		return false;
+
+	if (qlen == 1) {
+		if (l_string_length(builder->signature) +
+				strlen(signature) + 1 > 255)
+			return false;
+	} else {
+		/* Verify Signatures Match */
+		char expect[256];
+		const char *start;
+		const char *end;
+
+		start = container->signature + container->sigindex;
+		end = validate_next_type(start, &alignment);
+
+		if (*start != 'a')
+			return false;
+
+		memcpy(expect, start + 1, end - start - 1);
+		expect[end - start - 1] = '\0';
+
+		if (strcmp(expect, signature))
+			return false;
+	}
+
+	alignment = _gvariant_get_alignment(signature);
+	start = grow_body(builder, 0, alignment);
+
+	container = container_new(DBUS_CONTAINER_TYPE_ARRAY, signature, start);
+	l_queue_push_head(builder->containers, container);
+
+	return true;
+}
+
+bool _gvariant_builder_leave_array(struct gvariant_builder *builder)
+{
+	struct container *container = l_queue_peek_head(builder->containers);
+	size_t qlen = l_queue_length(builder->containers);
+	struct container *parent;
+
+	if (unlikely(qlen <= 1))
+		return false;
+
+	if (unlikely(container->type != DBUS_CONTAINER_TYPE_ARRAY))
+		return false;
+
+	l_queue_pop_head(builder->containers);
+	qlen -= 1;
+	parent = l_queue_peek_head(builder->containers);
+
+	if (qlen == 1)
+		l_string_append_printf(builder->signature, "a%s",
+							container->signature);
+	else if (parent->type != DBUS_CONTAINER_TYPE_ARRAY)
+		parent->sigindex += strlen(container->signature) + 1;
+
+	container_free(container);
+
+	return true;
+}
+
 bool _gvariant_builder_append_basic(struct gvariant_builder *builder,
 					char type, const void *value)
 {
@@ -1092,7 +1165,10 @@ bool _gvariant_builder_append_basic(struct gvariant_builder *builder,
 		start = grow_body(builder, len, alignment);
 		memcpy(builder->body + start, value, len);
 		container->variable_is_last = false;
-		container->sigindex += 1;
+
+		if (container->type != DBUS_CONTAINER_TYPE_ARRAY)
+			container->sigindex += 1;
+
 		return true;
 	}
 
@@ -1106,7 +1182,9 @@ bool _gvariant_builder_append_basic(struct gvariant_builder *builder,
 	offset = builder->body_size - container->start;
 	container->offsets[container->offset_index++] = offset;
 	container->variable_is_last = true;
-	container->sigindex += 1;
+
+	if (container->type != DBUS_CONTAINER_TYPE_ARRAY)
+		container->sigindex += 1;
 
 	return true;
 }
