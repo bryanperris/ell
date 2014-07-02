@@ -1463,6 +1463,53 @@ static void test_builder_fixed_array_1(const void *test_data)
 	FINISH_AND_CHECK_BUILT_RESULT();
 }
 
+static void test_builder_dict_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	uint32_t u1 = 1;
+	bool b1 = true;
+	uint32_t u2 = 2;
+	bool b2 = false;
+	struct gvariant_builder *builder;
+	bool ret;
+	BUILDER_TEST_HEADER();
+
+	builder = _gvariant_builder_new();
+	assert(builder);
+
+	ret = _gvariant_builder_enter_array(builder, "{ub}");
+	assert(ret);
+
+	ret = _gvariant_builder_enter_dict(builder, "ub");
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'u', &u1);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'b', &b1);
+	assert(ret);
+
+	ret = _gvariant_builder_leave_dict(builder);
+	assert(ret);
+
+	ret = _gvariant_builder_enter_dict(builder, "ub");
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'u', &u2);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 'b', &b2);
+	assert(ret);
+
+	ret = _gvariant_builder_leave_dict(builder);
+	assert(ret);
+
+	ret = _gvariant_builder_leave_array(builder);
+	assert(ret);
+
+	FINISH_AND_CHECK_BUILT_RESULT();
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -1662,6 +1709,8 @@ int main(int argc, char *argv[])
 
 	l_test_add("Builder Test Fixed Array 'au'", test_builder_fixed_array_1,
 					&fixed_array_1);
+	l_test_add("Builder Test Fixed Dict 'a{ub}'", test_builder_dict_1,
+					&dict_1);
 
 	return l_test_run();
 }
