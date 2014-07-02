@@ -835,6 +835,27 @@ static void container_append_struct_offsets(struct container *container,
 	}
 }
 
+static void container_append_array_offsets(struct container *container,
+					struct gvariant_builder *builder)
+{
+	size_t offset_size;
+	unsigned int i;
+	size_t start;
+
+	if (container->offset_index == 0)
+		return;
+
+	offset_size = offset_length(builder->body_size,
+						container->offset_index);
+	start = grow_body(builder, offset_size * container->offset_index, 1);
+
+	for (i = 0; i < container->offset_index; i++) {
+		write_word_le(builder->body + start,
+				container->offsets[i], offset_size);
+		start += offset_size;
+	}
+}
+
 struct gvariant_builder *_gvariant_builder_new(void)
 {
 	struct gvariant_builder *builder;
@@ -1113,6 +1134,7 @@ bool _gvariant_builder_leave_array(struct gvariant_builder *builder)
 	struct container *container = l_queue_peek_head(builder->containers);
 	size_t qlen = l_queue_length(builder->containers);
 	struct container *parent;
+	size_t offset;
 
 	if (unlikely(qlen <= 1))
 		return false;
@@ -1123,6 +1145,16 @@ bool _gvariant_builder_leave_array(struct gvariant_builder *builder)
 	l_queue_pop_head(builder->containers);
 	qlen -= 1;
 	parent = l_queue_peek_head(builder->containers);
+
+	if (!_gvariant_is_fixed_size(container->signature))
+		container_append_array_offsets(container, builder);
+
+	if (!grow_offsets(parent))
+		return false;
+
+	offset = builder->body_size - parent->start;
+	parent->offsets[parent->offset_index++] = offset;
+	parent->variable_is_last = true;
 
 	if (qlen == 1)
 		l_string_append_printf(builder->signature, "a%s",
