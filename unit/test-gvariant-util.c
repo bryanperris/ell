@@ -1510,6 +1510,37 @@ static void test_builder_dict_1(const void *test_data)
 	FINISH_AND_CHECK_BUILT_RESULT();
 }
 
+static void test_builder_variable_array_1(const void *test_data)
+{
+	const struct parser_data *test = test_data;
+	const char *s1 = "foo";
+	const char *s2 = "bar";
+	const char *s3 = "foobar";
+	struct gvariant_builder *builder;
+	bool ret;
+	BUILDER_TEST_HEADER();
+
+	builder = _gvariant_builder_new();
+	assert(builder);
+
+	ret = _gvariant_builder_enter_array(builder, "s");
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 's', s1);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 's', s2);
+	assert(ret);
+
+	ret = _gvariant_builder_append_basic(builder, 's', s3);
+	assert(ret);
+
+	ret = _gvariant_builder_leave_array(builder);
+	assert(ret);
+
+	FINISH_AND_CHECK_BUILT_RESULT();
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -1711,6 +1742,9 @@ int main(int argc, char *argv[])
 					&fixed_array_1);
 	l_test_add("Builder Test Fixed Dict 'a{ub}'", test_builder_dict_1,
 					&dict_1);
+	l_test_add("Builder Test Variable Array 'as'",
+				test_builder_variable_array_1,
+				&variable_array_1);
 
 	return l_test_run();
 }
