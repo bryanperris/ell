@@ -34,9 +34,13 @@
 #include "dbus.h"
 #include "private.h"
 #include "dbus-private.h"
+#include "string.h"
+#include "queue.h"
 
 #define DBUS_MAX_INTERFACE_LEN 255
 #define DBUS_MAX_METHOD_LEN 255
+
+static const char *simple_types = "sogybnqiuxtdh";
 
 static int get_alignment(const char type)
 {
@@ -67,6 +71,31 @@ static int get_alignment(const char type)
 		return 8;
 	case 'v':
 		return 1;
+	case 'h':
+		return 4;
+	default:
+		return 0;
+	}
+}
+
+static int get_basic_size(const char type)
+{
+	switch (type) {
+	case 'b':
+		return 4;
+	case 'y':
+		return 1;
+	case 'n':
+	case 'q':
+		return 2;
+	case 'i':
+	case 'u':
+		return 4;
+	case 'x':
+	case 't':
+		return 8;
+	case 'd':
+		return 8;
 	case 'h':
 		return 4;
 	default:
@@ -128,7 +157,6 @@ bool _dbus_valid_object_path(const char *path)
 
 static const char *validate_next_type(const char *sig)
 {
-	static const char *simple_types = "sogybnqiuxtdh";
 	char s = *sig;
 
 	if (s == '\0')
@@ -658,4 +686,167 @@ bool _dbus1_iter_enter_array(struct l_dbus_message_iter *iter,
 	iter->pos = pos + len;
 
 	return true;
+}
+
+struct dbus1_builder {
+	struct l_string *signature;
+	void *body;
+	size_t body_size;
+	struct l_queue *containers;
+};
+
+struct container {
+	size_t start;
+	enum dbus_container_type type;
+	char signature[256];
+	uint8_t sigindex;
+};
+
+static struct container *container_new(enum dbus_container_type type,
+					const char *signature, size_t start)
+{
+	struct container *ret;
+
+	ret = l_new(struct container, 1);
+
+	ret->type = type;
+	strcpy(ret->signature, signature);
+	ret->start = start;
+
+	return ret;
+}
+
+static void container_free(struct container *container)
+{
+	l_free(container);
+}
+
+static inline size_t grow_body(struct dbus1_builder *builder,
+					size_t len, unsigned int alignment)
+{
+	size_t size = align_len(builder->body_size, alignment);
+
+	if (size + len > builder->body_size) {
+		builder->body = l_realloc(builder->body, size + len);
+
+		if (size - builder->body_size > 0)
+			memset(builder->body + builder->body_size, 0,
+						size - builder->body_size);
+
+		builder->body_size = size + len;
+	}
+
+	return size;
+}
+
+struct dbus1_builder *_dbus1_builder_new(void)
+{
+	struct dbus1_builder *builder;
+	struct container *root;
+
+	builder = l_new(struct dbus1_builder, 1);
+	builder->signature = l_string_new(63);
+
+	builder->containers = l_queue_new();
+	root = container_new(DBUS_CONTAINER_TYPE_STRUCT, "", 0);
+	l_queue_push_head(builder->containers, root);
+
+	return builder;
+}
+
+void _dbus1_builder_free(struct dbus1_builder *builder)
+{
+	if (unlikely(!builder))
+		return;
+
+	l_string_free(builder->signature, true);
+	l_queue_destroy(builder->containers,
+				(l_queue_destroy_func_t) container_free);
+	l_free(builder->body);
+
+	l_free(builder);
+}
+
+bool _dbus1_builder_append_basic(struct dbus1_builder *builder,
+					char type, const void *value)
+{
+	struct container *container = l_queue_peek_head(builder->containers);
+	size_t start;
+	unsigned int alignment;
+	size_t len;
+	size_t offset;
+
+	if (unlikely(!builder))
+		return false;
+
+	if (unlikely(!strchr(simple_types, type)))
+		return false;
+
+	alignment = get_alignment(type);
+	if (!alignment)
+		return false;
+
+	if (l_queue_length(builder->containers) == 1)
+		l_string_append_c(builder->signature, type);
+	else if (container->signature[container->sigindex] != type)
+		return false;
+
+	len = get_basic_size(type);
+
+	if (len) {
+		uint32_t b;
+
+		start = grow_body(builder, len, alignment);
+
+		if (type == 'b') {
+			b = *(bool *)value;
+			memcpy(builder->body + start, &b, len);
+		} else
+			memcpy(builder->body + start, value, len);
+
+		if (container->type != DBUS_CONTAINER_TYPE_ARRAY)
+			container->sigindex += 1;
+
+		return true;
+	}
+
+	len = strlen(value);
+
+	if (type == 'g') {
+		start = grow_body(builder, len + 2, 1);
+		put_u8(builder->body + start, len);
+		strcpy(builder->body + start + 1, value);
+	} else {
+		start = grow_body(builder, len + 5, 4);
+		put_u32(builder->body + start, len);
+		strcpy(builder->body + start + 4, value);
+	}
+
+	if (container->type != DBUS_CONTAINER_TYPE_ARRAY)
+		container->sigindex += 1;
+
+	return true;
+}
+
+char *_dbus1_builder_finish(struct dbus1_builder *builder,
+				void **body, size_t *body_size)
+{
+	char *signature;
+	struct container *root;
+
+	if (unlikely(!builder))
+		return NULL;
+
+	if (unlikely(l_queue_length(builder->containers) != 1))
+		return NULL;
+
+	root = l_queue_peek_head(builder->containers);
+
+	signature = l_string_free(builder->signature, false);
+	builder->signature = NULL;
+
+	*body = builder->body;
+	*body_size = builder->body_size;
+
+	return signature;
 }

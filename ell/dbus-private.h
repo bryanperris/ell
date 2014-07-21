@@ -67,6 +67,13 @@ bool _dbus1_iter_enter_variant(struct l_dbus_message_iter *iter,
 bool _dbus1_iter_enter_array(struct l_dbus_message_iter *iter,
 					struct l_dbus_message_iter *array);
 
+struct dbus1_builder *_dbus1_builder_new(void);
+void _dbus1_builder_free(struct dbus1_builder *builder);
+bool _dbus1_builder_append_basic(struct dbus1_builder *builder,
+					char type, const void *value);
+char *_dbus1_builder_finish(struct dbus1_builder *builder,
+				void **body, size_t *body_size);
+
 void *_dbus_message_get_body(struct l_dbus_message *msg, size_t *out_size);
 void *_dbus_message_get_header(struct l_dbus_message *msg, size_t *out_size);
 void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial);
