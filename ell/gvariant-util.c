@@ -1246,6 +1246,8 @@ char *_gvariant_builder_finish(struct gvariant_builder *builder,
 
 	*body = builder->body;
 	*body_size = builder->body_size;
+	builder->body = NULL;
+	builder->body_size = 0;
 
 	return signature;
 }
