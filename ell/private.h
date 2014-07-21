@@ -70,6 +70,14 @@
 #define get_s32(ptr)		(*(int32_t *) (ptr))
 #define get_s64(ptr)		(*(int64_t *) (ptr))
 
+#define put_u8(ptr,val)		(*((uint8_t *) (ptr)) = (val))
+#define put_u16(ptr,val)	(*((uint16_t *) (ptr)) = (val))
+#define put_u32(ptr, val)	(*((uint32_t *) (ptr)) = (val))
+#define put_u64(ptr, val)	(*((uint64_t *) (ptr)) = (val))
+#define put_s16(ptr, val)	(*((int16_t *) (ptr)) = (val))
+#define put_s32(ptr, val)	(*((int32_t *) (ptr)) = (val))
+#define put_s64(ptr, val)	(*((int64_t *) (ptr)) = (val))
+
 #define get_unaligned(ptr)	L_GET_UNALIGNED(ptr)
 #define put_unaligned(val, ptr)	L_PUT_UNALIGNED(val, ptr)
 

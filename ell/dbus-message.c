@@ -201,14 +201,6 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 	l_free(message);
 }
 
-#define put_u8(ptr,val)		(*((uint8_t *) (ptr)) = (val))
-#define put_u16(ptr,val)	(*((uint16_t *) (ptr)) = (val))
-#define put_u32(ptr, val)	(*((uint32_t *) (ptr)) = (val))
-#define put_u64(ptr, val)	(*((uint64_t *) (ptr)) = (val))
-#define put_s16(ptr, val)	(*((int16_t *) (ptr)) = (val))
-#define put_s32(ptr, val)	(*((int32_t *) (ptr)) = (val))
-#define put_s64(ptr, val)	(*((int64_t *) (ptr)) = (val))
-
 static bool message_iter_next_entry_valist(struct l_dbus_message_iter *orig,
 						va_list args)
 {
