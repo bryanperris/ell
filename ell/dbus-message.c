@@ -454,30 +454,14 @@ bool dbus_message_compare(struct l_dbus_message *message,
 	return ret;
 }
 
-static inline size_t body_realloc(struct l_dbus_message *message,
-					size_t len, unsigned int boundary)
-{
-	size_t size = align_len(message->body_size, boundary);
-
-	if (size + len > message->body_size) {
-		message->body = l_realloc(message->body, size + len);
-
-		if (size - message->body_size > 0)
-			memset(message->body + message->body_size, 0,
-						size - message->body_size);
-
-		message->body_size = size + len;
-	}
-
-	return size;
-}
-
 static bool append_arguments(struct l_dbus_message *message,
 					const char *signature, va_list args)
 {
 	struct dbus_header *hdr;
+	struct dbus1_builder *builder;
 	uint32_t size, slen;
 	size_t len, pos;
+	char *generated_signature;
 
 	slen = strlen(signature);
 
@@ -497,93 +481,59 @@ static bool append_arguments(struct l_dbus_message *message,
 
 	message->header_size = size;
 
+	builder = _dbus1_builder_new();
+
 	while (*signature) {
 		const char *str;
-		uint8_t uint8_val;
-		uint16_t uint16_val;
-		uint32_t uint32_val;
-		uint64_t uint64_val;
-		int16_t int16_val;
-		int32_t int32_val;
-		int64_t int64_val;
-		double double_val;
+		const void *value;
 
-		switch (*signature++) {
+		switch (*signature) {
 		case 'o':
 		case 's':
-			str = *va_arg(args, const char **);
-			len = strlen(str);
-			pos = body_realloc(message, len + 5, 4);
-			put_u32(message->body + pos, len);
-			strcpy(message->body + pos + 4, str);
-			break;
 		case 'g':
 			str = *va_arg(args, const char **);
-			len = strlen(str);
-			pos = body_realloc(message, len + 2, 1);
-			put_u8(message->body + pos, len);
-			strcpy(message->body + pos + 1, str);
+			if (!_dbus1_builder_append_basic(builder, *signature,
+								str))
+				goto error;
 			break;
 		case 'b':
-			uint32_val = *va_arg(args, bool *);
-			pos = body_realloc(message, 4, 4);
-			put_u32(message->body + pos, uint32_val);
-			break;
 		case 'y':
-			uint8_val = *va_arg(args, uint8_t *);
-			pos = body_realloc(message, 1, 1);
-			put_u8(message->body + pos, uint8_val);
-			break;
 		case 'n':
-			int16_val = *va_arg(args, int16_t *);
-			pos = body_realloc(message, 2, 2);
-			put_s16(message->body + pos, int16_val);
-			break;
 		case 'q':
-			uint16_val = *va_arg(args, uint16_t *);
-			pos = body_realloc(message, 2, 2);
-			put_u16(message->body + pos, uint16_val);
-			break;
 		case 'i':
-			int32_val = *va_arg(args, int32_t *);
-			pos = body_realloc(message, 4, 4);
-			put_s32(message->body + pos, int32_val);
-			break;
 		case 'u':
-			uint32_val = *va_arg(args, uint32_t *);
-			pos = body_realloc(message, 4, 4);
-			put_u32(message->body + pos, uint32_val);
-			break;
 		case 'x':
-			int64_val = *va_arg(args, int64_t *);
-			pos = body_realloc(message, 8, 8);
-			put_s64(message->body + pos, int64_val);
-			break;
 		case 't':
-			uint64_val = *va_arg(args, uint64_t *);
-			pos = body_realloc(message, 8, 8);
-			put_u64(message->body + pos, uint64_val);
-			break;
 		case 'd':
-			double_val = *va_arg(args, double *);
-			pos = body_realloc(message, 8, 8);
-			*((double *) (message->body + pos)) = double_val;
-			break;
-		case '(':
-		case '{':
-			pos = body_realloc(message, 0, 8);
-			break;
-		case ')':
-		case '}':
+		case 'h':
+			value = va_arg(args, void *);
+			if (!_dbus1_builder_append_basic(builder, *signature,
+								value))
+				goto error;
 			break;
 		default:
-			return false;
+			goto error;
 		}
+
+		signature += 1;
 	}
+
+	generated_signature = _dbus1_builder_finish(builder, &message->body,
+							&message->body_size);
+	_dbus1_builder_free(builder);
+
+	if (!strcmp(signature, generated_signature))
+		return false;
+
+	l_free(generated_signature);
 
 	hdr->body_length = message->body_size;
 
 	return true;
+
+error:
+	_dbus1_builder_free(builder);
+	return false;
 }
 
 LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
