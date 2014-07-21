@@ -460,12 +460,52 @@ bool dbus_message_compare(struct l_dbus_message *message,
 	return ret;
 }
 
+struct builder_driver {
+	bool (*append_basic)(struct dbus_builder *, char, const void *);
+	bool (*enter_struct)(struct dbus_builder *, const char *);
+	bool (*leave_struct)(struct dbus_builder *);
+	bool (*enter_dict)(struct dbus_builder *, const char *);
+	bool (*leave_dict)(struct dbus_builder *);
+	bool (*enter_array)(struct dbus_builder *, const char *);
+	bool (*leave_array)(struct dbus_builder *);
+	bool (*enter_variant)(struct dbus_builder *, const char *);
+	bool (*leave_variant)(struct dbus_builder *);
+	char *(*finish)(struct dbus_builder *, void **, size_t *);
+	struct dbus_builder *(*new)();
+	void (*free)(struct dbus_builder *);
+};
+
+static struct builder_driver dbus1_driver = {
+	.append_basic = _dbus1_builder_append_basic,
+	.enter_struct = _dbus1_builder_enter_struct,
+	.leave_struct = _dbus1_builder_leave_struct,
+	.finish = _dbus1_builder_finish,
+	.new = _dbus1_builder_new,
+	.free = _dbus1_builder_free,
+};
+
+static struct builder_driver gvariant_driver = {
+	.append_basic = _gvariant_builder_append_basic,
+	.enter_struct = _gvariant_builder_enter_struct,
+	.leave_struct = _gvariant_builder_leave_struct,
+	.enter_dict = _gvariant_builder_enter_dict,
+	.leave_dict = _gvariant_builder_leave_dict,
+	.enter_variant = _gvariant_builder_enter_variant,
+	.leave_variant = _gvariant_builder_leave_variant,
+	.enter_array = _gvariant_builder_enter_array,
+	.leave_array = _gvariant_builder_leave_array,
+	.finish = _gvariant_builder_finish,
+	.new = _gvariant_builder_new,
+	.free = _gvariant_builder_free,
+};
+
 static bool append_arguments(struct l_dbus_message *message,
 					const char *signature, va_list args)
 {
 	const char *s = signature;
 	struct dbus_header *hdr;
 	struct dbus_builder *builder;
+	struct builder_driver *driver;
 	uint32_t size, slen;
 	size_t len, pos;
 	char *generated_signature;
@@ -490,7 +530,12 @@ static bool append_arguments(struct l_dbus_message *message,
 
 	message->header_size = size;
 
-	builder = _dbus1_builder_new();
+	if (_dbus_message_is_gvariant(message))
+		driver = &gvariant_driver;
+	else
+		driver = &dbus1_driver;
+
+	builder = driver->new();
 
 	while (*s) {
 		const char *str;
@@ -501,7 +546,8 @@ static bool append_arguments(struct l_dbus_message *message,
 		case 's':
 		case 'g':
 			str = *va_arg(args, const char **);
-			if (!_dbus1_builder_append_basic(builder, *s, str))
+
+			if (!driver->append_basic(builder, *s, str))
 				goto error;
 			break;
 		case 'b':
@@ -515,7 +561,8 @@ static bool append_arguments(struct l_dbus_message *message,
 		case 'd':
 		case 'h':
 			value = va_arg(args, void *);
-			if (!_dbus1_builder_append_basic(builder, *s, value))
+
+			if (!driver->append_basic(builder, *s, value))
 				goto error;
 			break;
 		case '(':
@@ -523,12 +570,12 @@ static bool append_arguments(struct l_dbus_message *message,
 			memcpy(subsig, s + 1, sigend - s - 1);
 			subsig[sigend - s - 1] = '\0';
 
-			if (!_dbus1_builder_enter_struct(builder, subsig))
+			if (!driver->enter_struct(builder, subsig))
 				goto error;
 
 			break;
 		case ')':
-			if (!_dbus1_builder_leave_struct(builder))
+			if (!driver->leave_struct(builder))
 				goto error;
 
 			break;
@@ -539,9 +586,9 @@ static bool append_arguments(struct l_dbus_message *message,
 		s += 1;
 	}
 
-	generated_signature = _dbus1_builder_finish(builder, &message->body,
-							&message->body_size);
-	_dbus1_builder_free(builder);
+	generated_signature = driver->finish(builder, &message->body,
+						&message->body_size);
+	driver->free(builder);
 
 	if (strcmp(signature, generated_signature))
 		return false;
@@ -553,7 +600,7 @@ static bool append_arguments(struct l_dbus_message *message,
 	return true;
 
 error:
-	_dbus1_builder_free(builder);
+	driver->free(builder);
 	return false;
 }
 
