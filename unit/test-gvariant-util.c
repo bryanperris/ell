@@ -1130,7 +1130,7 @@ static void test_builder_basic_1(const void *test_data)
 {
 	const struct parser_data *test = test_data;
 	const char *s = "Hello World!";
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1148,7 +1148,7 @@ static void test_builder_basic_2(const void *test_data)
 	const struct parser_data *test = test_data;
 	const char *s = "foobar";
 	int i = 5;
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1177,7 +1177,7 @@ static void test_builder_basic_3(const void *test_data)
 	uint32_t u = 3255554;
 	const char *s = "foobar";
 	int32_t i = -3255554;
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1223,7 +1223,7 @@ static void test_builder_basic_4(const void *test_data)
 	const char *s1 = "foo";
 	const char *s2 = "bar";
 	const char *s3 = "baz";
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1248,7 +1248,7 @@ static void test_builder_fixed_struct_1(const void *test_data)
 	uint32_t i = 10;
 	uint8_t y1 = 255;
 	uint8_t y2 = 1;
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1280,7 +1280,7 @@ static void test_builder_fixed_struct_2(const void *test_data)
 	uint8_t y1 = 1;
 	uint8_t y2 = 2;
 	uint64_t t = 5555;
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1326,7 +1326,7 @@ static void test_builder_nested_struct_1(const void *test_data)
 	const char *s = "foobar";
 	uint8_t y = 255;
 	int32_t i = -1;
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1366,7 +1366,7 @@ static void test_builder_variant_1(const void *test_data)
 	uint32_t u = 5;
 	const char *s = "foobar";
 	int32_t i = 5;
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1406,7 +1406,7 @@ static void test_builder_variant_2(const void *test_data)
 	const char *s = "foobar";
 	uint32_t u = 20;
 	uint8_t y = 255;
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1442,7 +1442,7 @@ static void test_builder_fixed_array_1(const void *test_data)
 	const struct parser_data *test = test_data;
 	uint32_t u1 = 20;
 	uint32_t u2 = 22;
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1471,7 +1471,7 @@ static void test_builder_dict_1(const void *test_data)
 	bool b1 = true;
 	uint32_t u2 = 2;
 	bool b2 = false;
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1517,7 +1517,7 @@ static void test_builder_variable_array_1(const void *test_data)
 	const char *s1 = "foo";
 	const char *s2 = "bar";
 	const char *s3 = "foobar";
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1551,7 +1551,7 @@ static void test_builder_variable_array_2(const void *test_data)
 	uint64_t t2 = 16LL;
 	const char *s3 = "foobar123";
 	uint64_t t3 = 31LL;
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1600,7 +1600,7 @@ static void test_builder_aau_1(const void *test_data)
 	uint32_t u1 = 1;
 	uint32_t u2 = 2;
 	uint32_t u3 = 3;
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
@@ -1653,7 +1653,7 @@ static void test_builder_av_1(const void *test_data)
 	const struct parser_data *test = test_data;
 	const char *s = "Foobar";
 	uint32_t u = 10;
-	struct gvariant_builder *builder;
+	struct dbus_builder *builder;
 	bool ret;
 	BUILDER_TEST_HEADER();
 
