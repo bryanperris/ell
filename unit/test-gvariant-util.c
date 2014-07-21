@@ -1123,6 +1123,7 @@ static void test_iter_header_1(const void *test_data)
 	assert(body_size == test->len);\
 	assert(!memcmp(test->data, body, body_size));\
 	l_free(signature);\
+	l_free(body);\
 	_gvariant_builder_free(builder)\
 
 static void test_builder_basic_1(const void *test_data)
