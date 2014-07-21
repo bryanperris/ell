@@ -462,6 +462,8 @@ static bool append_arguments(struct l_dbus_message *message,
 	uint32_t size, slen;
 	size_t len, pos;
 	char *generated_signature;
+	char subsig[256];
+	const char *sigend;
 
 	slen = strlen(signature);
 
@@ -510,6 +512,20 @@ static bool append_arguments(struct l_dbus_message *message,
 			if (!_dbus1_builder_append_basic(builder, *signature,
 								value))
 				goto error;
+			break;
+		case '(':
+			sigend = _dbus_signature_end(signature);
+			memcpy(subsig, signature + 1, sigend - signature - 1);
+			subsig[sigend - signature - 1] = '\0';
+
+			if (!_dbus1_builder_enter_struct(builder, subsig))
+				goto error;
+
+			break;
+		case ')':
+			if (!_dbus1_builder_leave_struct(builder))
+				goto error;
+
 			break;
 		default:
 			goto error;
