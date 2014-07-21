@@ -219,6 +219,23 @@ bool _dbus_valid_signature(const char *sig)
 	return true;
 }
 
+static int _dbus_num_children(const char *sig)
+{
+	const char *s = sig;
+	int num_children = 0;
+
+	do {
+		s = validate_next_type(s);
+
+		if (!s)
+			return -1;
+
+		num_children += 1;
+	} while (*s);
+
+	return num_children;
+}
+
 static bool valid_member_name(const char *start, const char *end)
 {
 	const char *p;
@@ -826,6 +843,119 @@ bool _dbus1_builder_append_basic(struct dbus1_builder *builder,
 		container->sigindex += 1;
 
 	return true;
+}
+
+static bool enter_struct_dict_common(struct dbus1_builder *builder,
+					const char *signature,
+					enum dbus_container_type type,
+					const char open,
+					const char close)
+{
+	size_t qlen = l_queue_length(builder->containers);
+	struct container *container = l_queue_peek_head(builder->containers);
+	size_t start;
+
+	if (qlen == 1) {
+		if (l_string_length(builder->signature) +
+				strlen(signature) + 2 > 255)
+			return false;
+	} else {
+		/* Verify Signatures Match */
+		char expect[256];
+		const char *start;
+		const char *end;
+
+		start = container->signature + container->sigindex;
+		end = validate_next_type(start) - 1;
+
+		if (*start != open || *end != close)
+			return false;
+
+		memcpy(expect, start + 1, end - start - 1);
+		expect[end - start - 1] = '\0';
+
+		if (strcmp(expect, signature))
+			return false;
+	}
+
+	start = grow_body(builder, 0, 8);
+
+	container = container_new(type, signature, start);
+	l_queue_push_head(builder->containers, container);
+
+	return true;
+}
+
+bool _dbus1_builder_enter_struct(struct dbus1_builder *builder,
+					const char *signature)
+{
+	if (!_dbus_valid_signature(signature))
+		return false;
+
+	return enter_struct_dict_common(builder, signature,
+					DBUS_CONTAINER_TYPE_STRUCT, '(', ')');
+}
+
+bool _dbus1_builder_enter_dict(struct dbus1_builder *builder,
+					const char *signature)
+{
+	if (!_dbus_valid_signature(signature))
+		return false;
+
+	if (_dbus_num_children(signature) != 2)
+		return false;
+
+	if (!strchr(simple_types, signature[0]))
+		return false;
+
+	return enter_struct_dict_common(builder, signature,
+					DBUS_CONTAINER_TYPE_DICT_ENTRY,
+					'{', '}');
+}
+
+static bool leave_struct_dict_common(struct dbus1_builder *builder,
+					enum dbus_container_type type,
+					const char open,
+					const char close)
+{
+	struct container *container = l_queue_peek_head(builder->containers);
+	size_t qlen = l_queue_length(builder->containers);
+	struct container *parent;
+
+	if (unlikely(qlen <= 1))
+		return false;
+
+	if (unlikely(container->type != type))
+		return false;
+
+	l_queue_pop_head(builder->containers);
+	qlen -= 1;
+	parent = l_queue_peek_head(builder->containers);
+
+	if (qlen == 1)
+		l_string_append_printf(builder->signature, "%c%s%c",
+						open,
+						container->signature,
+						close);
+	else if (parent->type != DBUS_CONTAINER_TYPE_ARRAY)
+		parent->sigindex += strlen(container->signature) + 2;
+
+	container_free(container);
+
+	return true;
+}
+
+bool _dbus1_builder_leave_struct(struct dbus1_builder *builder)
+{
+	return leave_struct_dict_common(builder, DBUS_CONTAINER_TYPE_STRUCT,
+					'(', ')');
+}
+
+bool _dbus1_builder_leave_dict(struct dbus1_builder *builder)
+{
+	return leave_struct_dict_common(builder,
+					DBUS_CONTAINER_TYPE_DICT_ENTRY,
+					'{', '}');
 }
 
 char *_dbus1_builder_finish(struct dbus1_builder *builder,

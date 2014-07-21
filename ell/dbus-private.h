@@ -71,6 +71,12 @@ struct dbus1_builder *_dbus1_builder_new(void);
 void _dbus1_builder_free(struct dbus1_builder *builder);
 bool _dbus1_builder_append_basic(struct dbus1_builder *builder,
 					char type, const void *value);
+bool _dbus1_builder_enter_struct(struct dbus1_builder *builder,
+					const char *signature);
+bool _dbus1_builder_leave_struct(struct dbus1_builder *builder);
+bool _dbus1_builder_enter_dict(struct dbus1_builder *builder,
+					const char *signature);
+bool _dbus1_builder_leave_dict(struct dbus1_builder *builder);
 char *_dbus1_builder_finish(struct dbus1_builder *builder,
 				void **body, size_t *body_size);
 
