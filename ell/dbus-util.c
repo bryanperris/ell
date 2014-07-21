@@ -847,6 +847,8 @@ char *_dbus1_builder_finish(struct dbus1_builder *builder,
 
 	*body = builder->body;
 	*body_size = builder->body_size;
+	builder->body = NULL;
+	builder->body_size = 0;
 
 	return signature;
 }
