@@ -791,7 +791,6 @@ bool _dbus1_builder_append_basic(struct dbus1_builder *builder,
 	size_t start;
 	unsigned int alignment;
 	size_t len;
-	size_t offset;
 
 	if (unlikely(!builder))
 		return false;
