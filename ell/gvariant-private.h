@@ -21,7 +21,7 @@
  */
 
 struct l_dbus_message_iter;
-struct gvariant_builder;
+struct dbus_builder;
 
 bool _gvariant_iter_init(struct l_dbus_message_iter *iter,
 				struct l_dbus_message *message,
@@ -42,21 +42,21 @@ bool _gvariant_is_fixed_size(const char *signature);
 int _gvariant_get_fixed_size(const char *signature);
 int _gvariant_num_children(const char *sig);
 
-struct gvariant_builder *_gvariant_builder_new(void);
-void _gvariant_builder_free(struct gvariant_builder *builder);
-bool _gvariant_builder_append_basic(struct gvariant_builder *builder,
+struct dbus_builder *_gvariant_builder_new(void);
+void _gvariant_builder_free(struct dbus_builder *builder);
+bool _gvariant_builder_append_basic(struct dbus_builder *builder,
 					char type, const void *value);
-char *_gvariant_builder_finish(struct gvariant_builder *builder,
+char *_gvariant_builder_finish(struct dbus_builder *builder,
 				void **body, size_t *body_size);
-bool _gvariant_builder_enter_struct(struct gvariant_builder *builder,
+bool _gvariant_builder_enter_struct(struct dbus_builder *builder,
 					const char *signature);
-bool _gvariant_builder_leave_struct(struct gvariant_builder *builder);
-bool _gvariant_builder_enter_dict(struct gvariant_builder *builder,
+bool _gvariant_builder_leave_struct(struct dbus_builder *builder);
+bool _gvariant_builder_enter_dict(struct dbus_builder *builder,
 					const char *signature);
-bool _gvariant_builder_leave_dict(struct gvariant_builder *builder);
-bool _gvariant_builder_enter_variant(struct gvariant_builder *builder,
+bool _gvariant_builder_leave_dict(struct dbus_builder *builder);
+bool _gvariant_builder_enter_variant(struct dbus_builder *builder,
 					const char *signature);
-bool _gvariant_builder_leave_variant(struct gvariant_builder *builder);
-bool _gvariant_builder_enter_array(struct gvariant_builder *builder,
+bool _gvariant_builder_leave_variant(struct dbus_builder *builder);
+bool _gvariant_builder_enter_array(struct dbus_builder *builder,
 					const char *signature);
-bool _gvariant_builder_leave_array(struct gvariant_builder *builder);
+bool _gvariant_builder_leave_array(struct dbus_builder *builder);
