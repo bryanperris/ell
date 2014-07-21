@@ -961,15 +961,12 @@ char *_dbus1_builder_finish(struct dbus1_builder *builder,
 				void **body, size_t *body_size)
 {
 	char *signature;
-	struct container *root;
 
 	if (unlikely(!builder))
 		return NULL;
 
 	if (unlikely(l_queue_length(builder->containers) != 1))
 		return NULL;
-
-	root = l_queue_peek_head(builder->containers);
 
 	signature = l_string_free(builder->signature, false);
 	builder->signature = NULL;
