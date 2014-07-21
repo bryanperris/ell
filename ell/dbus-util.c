@@ -705,7 +705,7 @@ bool _dbus1_iter_enter_array(struct l_dbus_message_iter *iter,
 	return true;
 }
 
-struct dbus1_builder {
+struct dbus_builder {
 	struct l_string *signature;
 	void *body;
 	size_t body_size;
@@ -738,7 +738,7 @@ static void container_free(struct container *container)
 	l_free(container);
 }
 
-static inline size_t grow_body(struct dbus1_builder *builder,
+static inline size_t grow_body(struct dbus_builder *builder,
 					size_t len, unsigned int alignment)
 {
 	size_t size = align_len(builder->body_size, alignment);
@@ -756,12 +756,12 @@ static inline size_t grow_body(struct dbus1_builder *builder,
 	return size;
 }
 
-struct dbus1_builder *_dbus1_builder_new(void)
+struct dbus_builder *_dbus1_builder_new(void)
 {
-	struct dbus1_builder *builder;
+	struct dbus_builder *builder;
 	struct container *root;
 
-	builder = l_new(struct dbus1_builder, 1);
+	builder = l_new(struct dbus_builder, 1);
 	builder->signature = l_string_new(63);
 
 	builder->containers = l_queue_new();
@@ -771,7 +771,7 @@ struct dbus1_builder *_dbus1_builder_new(void)
 	return builder;
 }
 
-void _dbus1_builder_free(struct dbus1_builder *builder)
+void _dbus1_builder_free(struct dbus_builder *builder)
 {
 	if (unlikely(!builder))
 		return;
@@ -784,7 +784,7 @@ void _dbus1_builder_free(struct dbus1_builder *builder)
 	l_free(builder);
 }
 
-bool _dbus1_builder_append_basic(struct dbus1_builder *builder,
+bool _dbus1_builder_append_basic(struct dbus_builder *builder,
 					char type, const void *value)
 {
 	struct container *container = l_queue_peek_head(builder->containers);
@@ -844,7 +844,7 @@ bool _dbus1_builder_append_basic(struct dbus1_builder *builder,
 	return true;
 }
 
-static bool enter_struct_dict_common(struct dbus1_builder *builder,
+static bool enter_struct_dict_common(struct dbus_builder *builder,
 					const char *signature,
 					enum dbus_container_type type,
 					const char open,
@@ -885,7 +885,7 @@ static bool enter_struct_dict_common(struct dbus1_builder *builder,
 	return true;
 }
 
-bool _dbus1_builder_enter_struct(struct dbus1_builder *builder,
+bool _dbus1_builder_enter_struct(struct dbus_builder *builder,
 					const char *signature)
 {
 	if (!_dbus_valid_signature(signature))
@@ -895,7 +895,7 @@ bool _dbus1_builder_enter_struct(struct dbus1_builder *builder,
 					DBUS_CONTAINER_TYPE_STRUCT, '(', ')');
 }
 
-bool _dbus1_builder_enter_dict(struct dbus1_builder *builder,
+bool _dbus1_builder_enter_dict(struct dbus_builder *builder,
 					const char *signature)
 {
 	if (!_dbus_valid_signature(signature))
@@ -912,7 +912,7 @@ bool _dbus1_builder_enter_dict(struct dbus1_builder *builder,
 					'{', '}');
 }
 
-static bool leave_struct_dict_common(struct dbus1_builder *builder,
+static bool leave_struct_dict_common(struct dbus_builder *builder,
 					enum dbus_container_type type,
 					const char open,
 					const char close)
@@ -944,20 +944,20 @@ static bool leave_struct_dict_common(struct dbus1_builder *builder,
 	return true;
 }
 
-bool _dbus1_builder_leave_struct(struct dbus1_builder *builder)
+bool _dbus1_builder_leave_struct(struct dbus_builder *builder)
 {
 	return leave_struct_dict_common(builder, DBUS_CONTAINER_TYPE_STRUCT,
 					'(', ')');
 }
 
-bool _dbus1_builder_leave_dict(struct dbus1_builder *builder)
+bool _dbus1_builder_leave_dict(struct dbus_builder *builder)
 {
 	return leave_struct_dict_common(builder,
 					DBUS_CONTAINER_TYPE_DICT_ENTRY,
 					'{', '}');
 }
 
-char *_dbus1_builder_finish(struct dbus1_builder *builder,
+char *_dbus1_builder_finish(struct dbus_builder *builder,
 				void **body, size_t *body_size)
 {
 	char *signature;
