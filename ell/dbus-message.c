@@ -464,7 +464,7 @@ static bool append_arguments(struct l_dbus_message *message,
 					const char *signature, va_list args)
 {
 	struct dbus_header *hdr;
-	struct dbus1_builder *builder;
+	struct dbus_builder *builder;
 	uint32_t size, slen;
 	size_t len, pos;
 	char *generated_signature;
