@@ -463,6 +463,7 @@ bool dbus_message_compare(struct l_dbus_message *message,
 static bool append_arguments(struct l_dbus_message *message,
 					const char *signature, va_list args)
 {
+	const char *s = signature;
 	struct dbus_header *hdr;
 	struct dbus_builder *builder;
 	uint32_t size, slen;
@@ -491,17 +492,16 @@ static bool append_arguments(struct l_dbus_message *message,
 
 	builder = _dbus1_builder_new();
 
-	while (*signature) {
+	while (*s) {
 		const char *str;
 		const void *value;
 
-		switch (*signature) {
+		switch (*s) {
 		case 'o':
 		case 's':
 		case 'g':
 			str = *va_arg(args, const char **);
-			if (!_dbus1_builder_append_basic(builder, *signature,
-								str))
+			if (!_dbus1_builder_append_basic(builder, *s, str))
 				goto error;
 			break;
 		case 'b':
@@ -515,14 +515,13 @@ static bool append_arguments(struct l_dbus_message *message,
 		case 'd':
 		case 'h':
 			value = va_arg(args, void *);
-			if (!_dbus1_builder_append_basic(builder, *signature,
-								value))
+			if (!_dbus1_builder_append_basic(builder, *s, value))
 				goto error;
 			break;
 		case '(':
-			sigend = _dbus_signature_end(signature);
-			memcpy(subsig, signature + 1, sigend - signature - 1);
-			subsig[sigend - signature - 1] = '\0';
+			sigend = _dbus_signature_end(s);
+			memcpy(subsig, s + 1, sigend - s - 1);
+			subsig[sigend - s - 1] = '\0';
 
 			if (!_dbus1_builder_enter_struct(builder, subsig))
 				goto error;
@@ -537,14 +536,14 @@ static bool append_arguments(struct l_dbus_message *message,
 			goto error;
 		}
 
-		signature += 1;
+		s += 1;
 	}
 
 	generated_signature = _dbus1_builder_finish(builder, &message->body,
 							&message->body_size);
 	_dbus1_builder_free(builder);
 
-	if (!strcmp(signature, generated_signature))
+	if (strcmp(signature, generated_signature))
 		return false;
 
 	l_free(generated_signature);
