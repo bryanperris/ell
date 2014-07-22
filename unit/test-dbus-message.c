@@ -32,7 +32,7 @@
 
 #include "ell/dbus-private.h"
 
-static bool do_print = false;
+static bool do_print = true;
 
 struct message_data {
 	const char *type;
@@ -1358,9 +1358,25 @@ static void compare_message(struct l_dbus_message *msg,
 {
 	bool result;
 
-	if (do_print)
+	if (do_print) {
+		void *blob;
+		void *header, *body;
+		size_t header_size, body_size;
+
+		header = _dbus_message_get_header(msg, &header_size);
+		body = _dbus_message_get_body(msg, &body_size);
+		blob = l_malloc(header_size + body_size);
+		memcpy(blob, header, header_size);
+		memcpy(blob + header_size, body, body_size);
+
+		l_util_hexdump(true, blob, header_size + body_size,
+				do_debug, "[MSG] ");
+
+		l_free(blob);
+
 		l_util_hexdump(true, msg_data->binary, msg_data->binary_len,
 							do_debug, "[MSG] ");
+	}
 
 	result = dbus_message_compare(msg, msg_data->binary,
 						msg_data->binary_len);
