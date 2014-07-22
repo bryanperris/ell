@@ -310,6 +310,8 @@ static void test_dbus_object_tree_dispatch(const void *test_data)
 	_dbus_object_tree_dispatch(tree, NULL, message);
 	assert(callback_called);
 
+	l_dbus_message_unref(message);
+
 	_dbus_object_tree_free(tree);
 }
 
