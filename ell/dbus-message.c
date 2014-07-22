@@ -103,11 +103,8 @@ void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial)
 	hdr->serial = serial;
 }
 
-struct l_dbus_message *_dbus_message_new_method_call(uint8_t version,
-							const char *destination,
-							const char *path,
-							const char *interface,
-							const char *method)
+static struct l_dbus_message *message_new_common(uint8_t type, uint8_t flags,
+						uint8_t version)
 {
 	struct l_dbus_message *message;
 	struct dbus_header *hdr;
@@ -124,9 +121,22 @@ struct l_dbus_message *_dbus_message_new_method_call(uint8_t version,
 
 	hdr = message->header;
 	hdr->endian = DBUS_MESSAGE_LITTLE_ENDIAN;
-	hdr->message_type = DBUS_MESSAGE_TYPE_METHOD_CALL;
+	hdr->message_type = type;
 	hdr->flags = 0;
 	hdr->version = version;
+
+	return message;
+}
+
+struct l_dbus_message *_dbus_message_new_method_call(uint8_t version,
+							const char *destination,
+							const char *path,
+							const char *interface,
+							const char *method)
+{
+	struct l_dbus_message *message;
+
+	message = message_new_common(DBUS_MESSAGE_TYPE_METHOD_CALL, 0, version);
 
 	message->destination = l_strdup(destination);
 	message->path = l_strdup(path);
