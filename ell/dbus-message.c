@@ -63,6 +63,7 @@ struct l_dbus_message {
 	size_t body_size;
 	char *path;
 	char *interface;
+	char *member;
 	int fds[16];
 	uint32_t num_fds;
 };
@@ -674,15 +675,14 @@ LIB_EXPORT const char *l_dbus_message_get_interface(struct l_dbus_message *messa
 
 LIB_EXPORT const char *l_dbus_message_get_member(struct l_dbus_message *message)
 {
-	const char *member;
-
 	if (unlikely(!message))
 		return NULL;
 
-	if (get_header_field(message, DBUS_MESSAGE_FIELD_MEMBER, &member))
-		return member;
+	if (!message->member)
+		get_header_field(message, DBUS_MESSAGE_FIELD_MEMBER,
+					&message->member);
 
-	return NULL;
+	return message->member;
 }
 
 LIB_EXPORT const char *l_dbus_message_get_destination(struct l_dbus_message *message)
