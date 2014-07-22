@@ -895,6 +895,15 @@ LIB_EXPORT uint32_t l_dbus_send_with_reply(struct l_dbus *dbus,
 	return send_message(dbus, false, message, function, user_data, destroy);
 }
 
+LIB_EXPORT uint32_t l_dbus_send(struct l_dbus *dbus,
+				struct l_dbus_message *message)
+{
+	if (unlikely(!dbus || !message))
+		return 0;
+
+	return send_message(dbus, false, message, NULL, NULL, NULL);
+}
+
 static bool remove_entry(void *data, void *user_data)
 {
 	struct message_callback *callback = data;

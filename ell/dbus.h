@@ -93,6 +93,8 @@ uint32_t l_dbus_send_with_reply(struct l_dbus *dbus,
 				struct l_dbus_message *message,
 				l_dbus_message_func_t function,
 				void *user_data, l_dbus_destroy_func_t destroy);
+uint32_t l_dbus_send(struct l_dbus *dbus,
+				struct l_dbus_message *message);
 bool l_dbus_cancel(struct l_dbus *dbus, uint32_t serial);
 
 unsigned int l_dbus_register(struct l_dbus *dbus,
