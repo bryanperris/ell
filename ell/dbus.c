@@ -81,6 +81,7 @@ struct l_dbus {
 	l_dbus_debug_func_t debug_handler;
 	l_dbus_destroy_func_t debug_destroy;
 	void *debug_data;
+	struct _dbus_object_tree *tree;
 };
 
 struct message_callback {
@@ -346,6 +347,7 @@ static bool message_read_handler(struct l_io *io, void *user_data)
 		handle_signal(dbus, message);
 		break;
 	case DBUS_MESSAGE_TYPE_METHOD_CALL:
+		_dbus_object_tree_dispatch(dbus->tree, dbus, message);
 		break;
 	}
 
@@ -617,6 +619,8 @@ static struct l_dbus *setup_dbus1(int fd, const char *guid)
 	l_io_set_read_handler(dbus->io, auth_read_handler, dbus, NULL);
 	l_io_set_write_handler(dbus->io, auth_write_handler, dbus, NULL);
 
+	dbus->tree = _dbus_object_tree_new();
+
 	return dbus;
 }
 
@@ -830,6 +834,8 @@ LIB_EXPORT void l_dbus_destroy(struct l_dbus *dbus)
 		dbus->debug_destroy(dbus->debug_data);
 
 	l_free(dbus->guid);
+	_dbus_object_tree_free(dbus->tree);
+
 	l_free(dbus);
 }
 
