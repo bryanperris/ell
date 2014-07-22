@@ -431,6 +431,7 @@ static bool auth_write_handler(struct l_io *io, void *user_data)
 
 		message = l_dbus_message_new_method_call(DBUS_SERVICE_DBUS,
 				DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "Hello");
+		l_dbus_message_set_arguments(message, "");
 
 		send_message(dbus, true, message, hello_callback, dbus, NULL);
 
