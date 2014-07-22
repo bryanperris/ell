@@ -714,15 +714,10 @@ LIB_EXPORT const char *l_dbus_message_get_sender(struct l_dbus_message *message)
 LIB_EXPORT const char *l_dbus_message_get_signature(
 						struct l_dbus_message *message)
 {
-	const char *signature;
-
 	if (unlikely(!message))
 		return NULL;
 
-	if (get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, &signature))
-		return signature;
-
-	return NULL;
+	return message->signature;
 }
 
 uint32_t _dbus_message_get_reply_serial(struct l_dbus_message *message)
