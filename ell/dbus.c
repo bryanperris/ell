@@ -173,9 +173,15 @@ static bool message_write_handler(struct l_io *io, void *user_data)
 	l_util_hexdump_two(false, header, header_size, body, body_size,
 				dbus->debug_handler, dbus->debug_data);
 
+	if (callback->callback == NULL) {
+		message_queue_destroy(callback);
+		goto done;
+	}
+
 	l_hashmap_insert(dbus->message_list,
 				L_UINT_TO_PTR(callback->serial), callback);
 
+done:
 	if (l_queue_isempty(dbus->message_queue))
 		return false;
 
