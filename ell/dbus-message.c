@@ -154,6 +154,26 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_call(const char *des
 						interface, method);
 }
 
+LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_return(
+					struct l_dbus_message *method_call)
+{
+	struct l_dbus_message *message;
+	struct dbus_header *hdr = method_call->header;
+	const char *sender;
+
+	message = message_new_common(DBUS_MESSAGE_TYPE_METHOD_RETURN,
+					DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED,
+					hdr->version);
+
+	message->reply_serial = hdr->serial;
+
+	sender = l_dbus_message_get_sender(method_call);
+	if (sender)
+		message->destination = l_strdup(sender);
+
+	return message;
+}
+
 LIB_EXPORT struct l_dbus_message *l_dbus_message_ref(struct l_dbus_message *message)
 {
 	if (unlikely(!message))
@@ -554,6 +574,12 @@ static void build_header(struct l_dbus_message *message, const char *signature)
 					"s", message->destination);
 		l_free(message->destination);
 		message->destination = NULL;
+	}
+
+	if (message->reply_serial != 0) {
+		add_field(builder, driver, DBUS_MESSAGE_FIELD_REPLY_SERIAL,
+					"u", &message->reply_serial);
+		message->reply_serial = 0;
 	}
 
 	if (message->sender) {
