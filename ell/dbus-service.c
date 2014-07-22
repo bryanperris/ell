@@ -807,12 +807,15 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 			!strcmp(msg_sig, "")) {
 		struct l_string *buf;
 		char *xml;
+		struct l_dbus_message *reply;
 
 		buf = l_string_new(0);
 		_dbus_object_tree_introspect(tree, path, buf);
 		xml = l_string_free(buf, false);
 
-		/* TODO: Build the method return message */
+		reply = l_dbus_message_new_method_return(message);
+		l_dbus_message_set_arguments(reply, "s", &xml);
+		l_dbus_send(dbus, reply);
 
 		l_free(xml);
 
