@@ -1134,7 +1134,7 @@ static void test_builder_basic_1(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_append_basic(builder, 's', s);
@@ -1152,7 +1152,7 @@ static void test_builder_basic_2(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_append_basic(builder, 'i', &i);
@@ -1181,7 +1181,7 @@ static void test_builder_basic_3(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_append_basic(builder, 'b', &b);
@@ -1227,7 +1227,7 @@ static void test_builder_basic_4(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_append_basic(builder, 's', s1);
@@ -1252,7 +1252,7 @@ static void test_builder_fixed_struct_1(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_append_basic(builder, 'i', &i);
@@ -1284,7 +1284,7 @@ static void test_builder_fixed_struct_2(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_enter_struct(builder, "yyt");
@@ -1330,7 +1330,7 @@ static void test_builder_nested_struct_1(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_enter_struct(builder, "(us)yi");
@@ -1370,7 +1370,7 @@ static void test_builder_variant_1(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_enter_struct(builder, "uvu");
@@ -1410,7 +1410,7 @@ static void test_builder_variant_2(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_enter_variant(builder, "(suy)");
@@ -1446,7 +1446,7 @@ static void test_builder_fixed_array_1(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_enter_array(builder, "u");
@@ -1475,7 +1475,7 @@ static void test_builder_dict_1(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_enter_array(builder, "{ub}");
@@ -1521,7 +1521,7 @@ static void test_builder_variable_array_1(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_enter_array(builder, "s");
@@ -1555,7 +1555,7 @@ static void test_builder_variable_array_2(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_enter_array(builder, "(st)");
@@ -1604,7 +1604,7 @@ static void test_builder_aau_1(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_enter_array(builder, "au");
@@ -1657,7 +1657,7 @@ static void test_builder_av_1(const void *test_data)
 	bool ret;
 	BUILDER_TEST_HEADER();
 
-	builder = _gvariant_builder_new();
+	builder = _gvariant_builder_new(NULL, 0);
 	assert(builder);
 
 	ret = _gvariant_builder_enter_array(builder, "v");
