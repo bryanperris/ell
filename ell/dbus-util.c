@@ -1018,6 +1018,92 @@ bool _dbus1_builder_leave_variant(struct dbus_builder *builder)
 	return true;
 }
 
+bool _dbus1_builder_enter_array(struct dbus_builder *builder,
+					const char *signature)
+{
+	size_t qlen = l_queue_length(builder->containers);
+	struct container *container = l_queue_peek_head(builder->containers);
+	size_t start;
+	int alignment;
+
+	if (!_dbus_valid_signature(signature))
+		return false;
+
+	if (_dbus_num_children(signature) != 1)
+		return false;
+
+	if (qlen == 1) {
+		if (l_string_length(builder->signature) +
+				strlen(signature) + 1 > 255)
+			return false;
+	} else {
+		/* Verify Signatures Match */
+		char expect[256];
+		const char *start;
+		const char *end;
+
+		start = container->signature + container->sigindex;
+		end = validate_next_type(start);
+
+		if (*start != 'a')
+			return false;
+
+		memcpy(expect, start + 1, end - start - 1);
+		expect[end - start - 1] = '\0';
+
+		if (strcmp(expect, signature))
+			return false;
+	}
+
+	/* First grow the body enough to cover preceding length */
+	start = grow_body(builder, 4, 4);
+
+	/* Now align to element alignment */
+	alignment = get_alignment(*signature);
+	grow_body(builder, 0, alignment);
+
+	container = container_new(DBUS_CONTAINER_TYPE_ARRAY, signature, start);
+	l_queue_push_head(builder->containers, container);
+
+	return true;
+}
+
+bool _dbus1_builder_leave_array(struct dbus_builder *builder)
+{
+	struct container *container = l_queue_peek_head(builder->containers);
+	size_t qlen = l_queue_length(builder->containers);
+	struct container *parent;
+	size_t alignment;
+	size_t array_start;
+
+	if (unlikely(qlen <= 1))
+		return false;
+
+	if (unlikely(container->type != DBUS_CONTAINER_TYPE_ARRAY))
+		return false;
+
+	l_queue_pop_head(builder->containers);
+	qlen -= 1;
+	parent = l_queue_peek_head(builder->containers);
+
+	if (qlen == 1)
+		l_string_append_printf(builder->signature, "a%s",
+							container->signature);
+	else if (parent->type != DBUS_CONTAINER_TYPE_ARRAY)
+		parent->sigindex += strlen(container->signature) + 1;
+
+	/* Update array length */
+	alignment = get_alignment(container->signature[0]);
+	array_start = align_len(container->start + 4, alignment);
+
+	put_u32(builder->body + container->start,
+					builder->body_size - array_start);
+
+	container_free(container);
+
+	return true;
+}
+
 char *_dbus1_builder_finish(struct dbus_builder *builder,
 				void **body, size_t *body_size)
 {
