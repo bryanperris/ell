@@ -799,9 +799,12 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 	member = l_dbus_message_get_member(message);
 	msg_sig = l_dbus_message_get_signature(message);
 
+	if (!msg_sig)
+		msg_sig = "";
+
 	if (!strcmp(interface, "org.freedesktop.DBus.Introspectable") &&
 			!strcmp(member, "Introspect") &&
-			!strcmp(msg_sig, "s")) {
+			!strcmp(msg_sig, "")) {
 		struct l_string *buf;
 		char *xml;
 
