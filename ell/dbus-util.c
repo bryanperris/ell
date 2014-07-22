@@ -960,6 +960,64 @@ bool _dbus1_builder_leave_dict(struct dbus_builder *builder)
 					'{', '}');
 }
 
+bool _dbus1_builder_enter_variant(struct dbus_builder *builder,
+					const char *signature)
+{
+	size_t qlen = l_queue_length(builder->containers);
+	struct container *container = l_queue_peek_head(builder->containers);
+	size_t start;
+	size_t siglen;
+
+	if (!_dbus_valid_signature(signature))
+		return false;
+
+	if (_dbus_num_children(signature) != 1)
+		return false;
+
+	if (qlen == 1) {
+		if (l_string_length(builder->signature) + 1 > 255)
+			return false;
+	} else if (container->signature[container->sigindex] != 'v')
+		return false;
+
+	siglen = strlen(signature);
+	start = grow_body(builder, siglen + 2, 1);
+	put_u8(builder->body + start, siglen);
+	strcpy(builder->body + start + 1, signature);
+
+	container = container_new(DBUS_CONTAINER_TYPE_VARIANT,
+					signature, start);
+	l_queue_push_head(builder->containers, container);
+
+	return true;
+}
+
+bool _dbus1_builder_leave_variant(struct dbus_builder *builder)
+{
+	struct container *container = l_queue_peek_head(builder->containers);
+	size_t qlen = l_queue_length(builder->containers);
+	struct container *parent;
+
+	if (unlikely(qlen <= 1))
+		return false;
+
+	if (unlikely(container->type != DBUS_CONTAINER_TYPE_VARIANT))
+		return false;
+
+	l_queue_pop_head(builder->containers);
+	qlen -= 1;
+	parent = l_queue_peek_head(builder->containers);
+
+	if (qlen == 1)
+		l_string_append_c(builder->signature, 'v');
+	else if (parent->type != DBUS_CONTAINER_TYPE_ARRAY)
+		parent->sigindex += 1;
+
+	container_free(container);
+
+	return true;
+}
+
 char *_dbus1_builder_finish(struct dbus_builder *builder,
 				void **body, size_t *body_size)
 {

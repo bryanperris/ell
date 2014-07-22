@@ -78,6 +78,9 @@ bool _dbus1_builder_leave_struct(struct dbus_builder *builder);
 bool _dbus1_builder_enter_dict(struct dbus_builder *builder,
 					const char *signature);
 bool _dbus1_builder_leave_dict(struct dbus_builder *builder);
+bool _dbus1_builder_enter_variant(struct dbus_builder *builder,
+					const char *signature);
+bool _dbus1_builder_leave_variant(struct dbus_builder *builder);
 char *_dbus1_builder_finish(struct dbus_builder *builder,
 				void **body, size_t *body_size);
 
