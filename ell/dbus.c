@@ -883,10 +883,11 @@ LIB_EXPORT bool l_dbus_set_debug(struct l_dbus *dbus,
 	return true;
 }
 
-LIB_EXPORT uint32_t l_dbus_send(struct l_dbus *dbus,
-				struct l_dbus_message *message,
-				l_dbus_message_func_t function,
-				void *user_data, l_dbus_destroy_func_t destroy)
+LIB_EXPORT uint32_t l_dbus_send_with_reply(struct l_dbus *dbus,
+						struct l_dbus_message *message,
+						l_dbus_message_func_t function,
+						void *user_data,
+						l_dbus_destroy_func_t destroy)
 {
 	if (unlikely(!dbus || !message))
 		return 0;
