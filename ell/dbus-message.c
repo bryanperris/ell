@@ -65,6 +65,7 @@ struct l_dbus_message {
 	char *interface;
 	char *member;
 	char *destination;
+	char *sender;
 	int fds[16];
 	uint32_t num_fds;
 };
@@ -700,15 +701,14 @@ LIB_EXPORT const char *l_dbus_message_get_destination(struct l_dbus_message *mes
 
 LIB_EXPORT const char *l_dbus_message_get_sender(struct l_dbus_message *message)
 {
-	const char *sender;
-
 	if (unlikely(!message))
 		return NULL;
 
-	if (get_header_field(message, DBUS_MESSAGE_FIELD_SENDER, &sender))
-		return sender;
+	if (!message->sender)
+		get_header_field(message, DBUS_MESSAGE_FIELD_SENDER,
+					&message->sender);
 
-	return NULL;
+	return message->sender;
 }
 
 LIB_EXPORT const char *l_dbus_message_get_signature(
