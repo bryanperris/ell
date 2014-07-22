@@ -599,8 +599,9 @@ static void build_header(struct l_dbus_message *message, const char *signature)
 		message->sender = NULL;
 	}
 
-	add_field(builder, driver, DBUS_MESSAGE_FIELD_SIGNATURE,
-			"g", signature);
+	if (signature[0] != '\0')
+		add_field(builder, driver, DBUS_MESSAGE_FIELD_SIGNATURE,
+				"g", signature);
 
 	driver->leave_array(builder);
 
