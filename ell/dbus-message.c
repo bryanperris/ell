@@ -64,6 +64,7 @@ struct l_dbus_message {
 	char *path;
 	char *interface;
 	char *member;
+	uint32_t reply_serial;
 	char *destination;
 	char *sender;
 	int fds[16];
@@ -722,12 +723,14 @@ LIB_EXPORT const char *l_dbus_message_get_signature(
 
 uint32_t _dbus_message_get_reply_serial(struct l_dbus_message *message)
 {
-	uint32_t serial;
+	if (unlikely(!message))
+		return 0;
 
-	if (get_header_field(message, DBUS_MESSAGE_FIELD_REPLY_SERIAL, &serial))
-		return serial;
+	if (message->reply_serial == 0)
+		get_header_field(message, DBUS_MESSAGE_FIELD_REPLY_SERIAL,
+					&message->reply_serial);
 
-	return 0;
+	return message->reply_serial;
 }
 
 enum dbus_message_type _dbus_message_get_type(struct l_dbus_message *message)
