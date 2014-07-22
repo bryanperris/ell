@@ -162,6 +162,9 @@ static bool message_write_handler(struct l_io *io, void *user_data)
 		return false;
 
 	message = callback->message;
+	if (_dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL &&
+			callback->callback == NULL)
+		_dbus_message_set_no_reply_expected(message, true);
 
 	fd = l_io_get_fd(io);
 
