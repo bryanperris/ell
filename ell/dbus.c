@@ -276,9 +276,6 @@ static void handle_method_return(struct l_dbus *dbus,
 	if (callback->callback)
 		callback->callback(message, callback->user_data);
 
-	if (callback->destroy)
-		callback->destroy(callback->user_data);
-
 	message_queue_destroy(callback);
 }
 
@@ -298,9 +295,6 @@ static void handle_error(struct l_dbus *dbus, struct l_dbus_message *message)
 
 	if (callback->callback)
 		callback->callback(message, callback->user_data);
-
-	if (callback->destroy)
-		callback->destroy(callback->user_data);
 
 	message_queue_destroy(callback);
 }
