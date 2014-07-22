@@ -47,3 +47,9 @@ and must be loaded. The development repositories can be found here:
 
 If /dev/kdbus/control device node is present, kernel D-Bus support can be
 used.
+
+Information
+===========
+
+Mailing list:
+	ell@lists.01.org
