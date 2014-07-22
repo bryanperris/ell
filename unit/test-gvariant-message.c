@@ -32,6 +32,13 @@
 
 static bool do_print = true;
 
+static void do_debug(const char *str, void *user_data)
+{
+	const char *prefix = user_data;
+
+	l_info("%s%s", prefix, str);
+}
+
 struct message_data {
 	const char *type;
 	const char *path;
@@ -127,6 +134,38 @@ static struct l_dbus_message *check_message(const struct message_data *msg_data)
 	return msg;
 }
 
+static void compare_message(struct l_dbus_message *msg,
+					const struct message_data *msg_data)
+{
+	bool result;
+
+	if (do_print) {
+		void *blob;
+		void *header, *body;
+		size_t header_size, body_size;
+
+		header = _dbus_message_get_header(msg, &header_size);
+		body = _dbus_message_get_body(msg, &body_size);
+		blob = l_malloc(header_size + body_size);
+		memcpy(blob, header, header_size);
+		memcpy(blob + header_size, body, body_size);
+
+		l_util_hexdump(true, blob, header_size + body_size,
+				do_debug, "[MSG] ");
+
+		l_free(blob);
+
+		l_util_hexdump(true, msg_data->binary, msg_data->binary_len,
+							do_debug, "[MSG] ");
+	}
+
+	result = dbus_message_compare(msg, msg_data->binary,
+						msg_data->binary_len);
+	assert(result);
+
+	l_dbus_message_unref(msg);
+}
+
 static void parse_basic_1(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
@@ -158,11 +197,42 @@ static void parse_basic_1(const void *data)
 	l_dbus_message_unref(msg);
 }
 
+static void build_basic_1(const void *data)
+{
+	const struct message_data *msg_data = data;
+	struct l_dbus_message *msg;
+	bool result;
+	bool b = true;
+	uint8_t y = 255;
+	uint16_t q = 32;
+	int16_t n = -32;
+	uint32_t u = 24;
+	int32_t i = -24;
+	uint64_t t = 99;
+	int64_t x = 140179142606749;
+	double d = 5.0;
+
+	msg = _dbus_message_new_method_call(2, msg_data->destination,
+			msg_data->path, msg_data->interface, msg_data->member);
+	assert(msg);
+
+	result = l_dbus_message_set_arguments(msg, "bynqiuxtd", &b, &y, &n, &q,
+						&i, &u, &x, &t, &d);
+	assert(result);
+
+	_dbus_message_set_serial(msg, 1111);
+
+	compare_message(msg, data);
+
+	l_dbus_message_unref(msg);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
 	l_test_add("Basic 1 (parse)", parse_basic_1, &message_data_basic_1);
+	l_test_add("Basic 1 (build)", build_basic_1, &message_data_basic_1);
 
 	return l_test_run();
 }
