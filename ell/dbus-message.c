@@ -69,6 +69,8 @@ struct l_dbus_message {
 	char *sender;
 	int fds[16];
 	uint32_t num_fds;
+
+	bool sealed : 1;
 };
 
 static inline bool _dbus_message_is_gvariant(struct l_dbus_message *msg)
@@ -101,82 +103,45 @@ void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial)
 	hdr->serial = serial;
 }
 
-static unsigned int encode_header(unsigned char field, char type,
-			const char *value, uint32_t len, void *data)
+struct l_dbus_message *_dbus_message_new_method_call(uint8_t version,
+							const char *destination,
+							const char *path,
+							const char *interface,
+							const char *method)
 {
-	unsigned char *ptr = data;
+	struct l_dbus_message *message;
+	struct dbus_header *hdr;
 
-	ptr[0] = field;
-	ptr[1] = 0x01;
-	ptr[2] = (unsigned char) type;
-	ptr[3] = 0x00;
-	ptr[4] = (unsigned char) len;
+	message = l_new(struct l_dbus_message, 1);
+	message->refcount = 1;
 
-	if (type == 's' || type == 'o') {
-		ptr[5] = 0x00;
-		ptr[6] = 0x00;
-		ptr[7] = 0x00;
+	/*
+	 * We allocate the header with the initial 12 bytes (up to the field
+	 * length) so that we can store the basic information here
+	 */
+	message->header = l_realloc(NULL, 12);
+	message->header_size = 12;
 
-		strcpy(data + 8, value);
+	hdr = message->header;
+	hdr->endian = DBUS_MESSAGE_LITTLE_ENDIAN;
+	hdr->message_type = DBUS_MESSAGE_TYPE_METHOD_CALL;
+	hdr->flags = 0;
+	hdr->version = version;
 
-		return 4 + 4 + len + 1;
-	} else {
-		strcpy(data + 5, value);
+	message->destination = l_strdup(destination);
+	message->path = l_strdup(path);
+	message->interface = l_strdup(interface);
+	message->member = l_strdup(method);
 
-		return 4 + 1 + len + 1;
-	}
+	return message;
 }
 
 LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_call(const char *destination,
                 const char *path, const char *interface, const char *method)
 {
-	struct l_dbus_message *message;
-	struct dbus_header *hdr;
-	unsigned int len;
-	uint32_t dlen, plen, ilen, mlen;
-	uint32_t size;
-
-	message = l_new(struct l_dbus_message, 1);
-
-	message->refcount = 1;
-
-	dlen = strlen(destination);
-	plen = strlen(path);
-	ilen = strlen(interface);
-	mlen = strlen(method);
-
-	size = DBUS_HEADER_SIZE +
-			align_len(dlen + 9, 8) + align_len(plen + 9, 8) +
-			align_len(ilen + 9, 8) + align_len(mlen + 9, 8);
-
-	message->header = l_malloc(size);
-
-	memset(message->header, 0, size);
-
-	hdr = message->header;
-
-	hdr->endian = DBUS_MESSAGE_LITTLE_ENDIAN;
-	hdr->message_type = DBUS_MESSAGE_TYPE_METHOD_CALL;
-	hdr->flags = DBUS_MESSAGE_FLAG_NO_AUTO_START;
-	hdr->version = DBUS_MESSAGE_PROTOCOL_VERSION;
-	hdr->body_length = 0;
-	hdr->serial = 0x00;
-
-	len = DBUS_HEADER_SIZE;
-
-	len += encode_header(6, 's', destination, dlen, message->header + len);
-	len = align_len(len, 8);
-	len += encode_header(1, 'o', path, plen, message->header + len);
-	len = align_len(len, 8);
-	len += encode_header(2, 's', interface, ilen, message->header + len);
-	len = align_len(len, 8);
-	len += encode_header(3, 's', method, mlen, message->header + len);
-
-	message->header_size = size;
-
-	hdr->field_length = len - DBUS_HEADER_SIZE;
-
-	return message;
+	return _dbus_message_new_method_call(DBUS_MESSAGE_PROTOCOL_VERSION,
+						destination, path,
+						interface, method);
 }
 
 LIB_EXPORT struct l_dbus_message *l_dbus_message_ref(struct l_dbus_message *message)
@@ -201,6 +166,13 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 
 	for (i = 0; i < message->num_fds; i++)
 		close(message->fds[i]);
+
+	if (!message->sealed) {
+		l_free(message->destination);
+		l_free(message->path);
+		l_free(message->interface);
+		l_free(message->member);
+	}
 
 	l_free(message->header);
 	l_free(message->body);
@@ -331,6 +303,9 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 	uint8_t endian, message_type, flags, version, field_type;
 	uint32_t body_length, serial;
 
+	if (!message->sealed)
+		return false;
+
 	if (_dbus_message_is_gvariant(message)) {
 		uint32_t header_length;
 
@@ -399,6 +374,8 @@ struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size)
 	memcpy(message->header, data, message->header_size);
 	memcpy(message->body, data + message->header_size, message->body_size);
 
+	message->sealed = true;
+
 	get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE,
 						&message->signature);
 
@@ -421,6 +398,8 @@ struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 
 	message->num_fds = num_fds;
 	memcpy(message->fds, fds, num_fds * sizeof(int));
+
+	message->sealed = true;
 
 	get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE,
 						&message->signature);
@@ -471,7 +450,7 @@ struct builder_driver {
 	bool (*enter_variant)(struct dbus_builder *, const char *);
 	bool (*leave_variant)(struct dbus_builder *);
 	char *(*finish)(struct dbus_builder *, void **, size_t *);
-	struct dbus_builder *(*new)();
+	struct dbus_builder *(*new)(void *, size_t);
 	void (*free)(struct dbus_builder *);
 };
 
@@ -499,43 +478,116 @@ static struct builder_driver gvariant_driver = {
 	.free = _gvariant_builder_free,
 };
 
-static bool append_arguments(struct l_dbus_message *message,
-					const char *signature, va_list args)
+static void add_field(struct dbus_builder *builder,
+			struct builder_driver *driver,
+			uint8_t field, const char *type, const void *value)
 {
-	const char *s = signature;
-	struct dbus_header *hdr;
+	driver->enter_struct(builder, "yv");
+	driver->append_basic(builder, 'y', &field);
+	driver->enter_variant(builder, type);
+	driver->append_basic(builder, type[0], value);
+	driver->leave_variant(builder);
+	driver->leave_struct(builder);
+}
+
+static void build_header(struct l_dbus_message *message, const char *signature)
+{
 	struct dbus_builder *builder;
 	struct builder_driver *driver;
-	uint32_t size, slen;
-	size_t len, pos;
 	char *generated_signature;
-	char subsig[256];
-	const char *sigend;
-
-	slen = strlen(signature);
-
-	size = message->header_size + align_len(slen + 6, 8);
-
-	message->header = l_realloc(message->header, size);
-
-	hdr = message->header;
-
-	pos = DBUS_HEADER_SIZE + align_len(hdr->field_length, 8);
-	len = pos + encode_header(8, 'g', signature, slen,
-						message->header + pos);
-
-	message->signature = message->header + pos + 5;
-
-	hdr->field_length = len - DBUS_HEADER_SIZE;
-
-	message->header_size = size;
+	struct dbus_header *hdr;
+	size_t header_size;
 
 	if (_dbus_message_is_gvariant(message))
 		driver = &gvariant_driver;
 	else
 		driver = &dbus1_driver;
 
-	builder = driver->new();
+	builder = driver->new(message->header, message->header_size);
+
+	if (_dbus_message_is_gvariant(message)) {
+		uint32_t field_length = 0;
+		driver->append_basic(builder, 'u', &field_length);
+	}
+
+	driver->enter_array(builder, "(yv)");
+
+	if (message->path) {
+		add_field(builder, driver, DBUS_MESSAGE_FIELD_PATH,
+					"o", message->path);
+		l_free(message->path);
+		message->path = NULL;
+	}
+
+	if (message->member) {
+		add_field(builder, driver, DBUS_MESSAGE_FIELD_MEMBER,
+					"s", message->member);
+		l_free(message->member);
+		message->member = NULL;
+	}
+
+	if (message->interface) {
+		add_field(builder, driver, DBUS_MESSAGE_FIELD_INTERFACE,
+					"s", message->interface);
+		l_free(message->interface);
+		message->interface = NULL;
+	}
+
+	if (message->destination) {
+		add_field(builder, driver, DBUS_MESSAGE_FIELD_DESTINATION,
+					"s", message->destination);
+		l_free(message->destination);
+		message->destination = NULL;
+	}
+
+	if (message->sender) {
+		add_field(builder, driver, DBUS_MESSAGE_FIELD_SENDER,
+					"s", message->sender);
+		l_free(message->sender);
+		message->sender = NULL;
+	}
+
+	add_field(builder, driver, DBUS_MESSAGE_FIELD_SIGNATURE,
+			"g", signature);
+
+	driver->leave_array(builder);
+
+	generated_signature = driver->finish(builder, &message->header,
+						&header_size);
+	l_free(generated_signature);
+
+	driver->free(builder);
+
+	hdr = message->header;
+
+	if (_dbus_message_is_gvariant(message))
+		hdr->field_length = header_size - 16;
+
+	hdr->body_length = message->body_size;
+
+	/* We must align the end of the header to an 8-byte boundary */
+	message->header_size = align_len(header_size, 8);
+	message->header = l_realloc(message->header, message->header_size);
+	memset(message->header + header_size, 0,
+			message->header_size - header_size);
+}
+
+static bool append_arguments(struct l_dbus_message *message,
+					const char *signature, va_list args)
+{
+	const char *s = signature;
+	struct dbus_builder *builder;
+	struct builder_driver *driver;
+	char *generated_signature;
+	char subsig[256];
+	const char *sigend;
+
+	if (_dbus_message_is_gvariant(message))
+		driver = &gvariant_driver;
+	else
+		driver = &dbus1_driver;
+
+	builder = driver->new(NULL, 0);
 
 	while (*s) {
 		const char *str;
@@ -595,7 +647,11 @@ static bool append_arguments(struct l_dbus_message *message,
 
 	l_free(generated_signature);
 
-	hdr->body_length = message->body_size;
+	build_header(message, signature);
+	message->sealed = true;
+
+	get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE,
+						&message->signature);
 
 	return true;
 
@@ -612,6 +668,9 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 	const char *str;
 
 	if (unlikely(!message))
+		return false;
+
+	if (!message->sealed)
 		return false;
 
 	hdr = message->header;

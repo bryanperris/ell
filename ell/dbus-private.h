@@ -144,3 +144,9 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 					struct l_dbus_message *message);
 
 int _dbus_kernel_create_bus(const char *name);
+
+struct l_dbus_message *_dbus_message_new_method_call(uint8_t version,
+							const char *destination,
+							const char *path,
+							const char *interface,
+							const char *method);
