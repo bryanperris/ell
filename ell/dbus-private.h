@@ -68,7 +68,7 @@ bool _dbus1_iter_enter_variant(struct l_dbus_message_iter *iter,
 bool _dbus1_iter_enter_array(struct l_dbus_message_iter *iter,
 					struct l_dbus_message_iter *array);
 
-struct dbus_builder *_dbus1_builder_new(void);
+struct dbus_builder *_dbus1_builder_new(void *body, size_t body_size);
 void _dbus1_builder_free(struct dbus_builder *builder);
 bool _dbus1_builder_append_basic(struct dbus_builder *builder,
 					char type, const void *value);
