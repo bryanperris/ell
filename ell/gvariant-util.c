@@ -856,7 +856,7 @@ static void container_append_array_offsets(struct container *container,
 	}
 }
 
-struct dbus_builder *_gvariant_builder_new(void)
+struct dbus_builder *_gvariant_builder_new(void *body, size_t body_size)
 {
 	struct dbus_builder *builder;
 	struct container *root;
@@ -867,6 +867,9 @@ struct dbus_builder *_gvariant_builder_new(void)
 	builder->containers = l_queue_new();
 	root = container_new(DBUS_CONTAINER_TYPE_STRUCT, "", 0);
 	l_queue_push_head(builder->containers, root);
+
+	builder->body = body;
+	builder->body_size = body_size;
 
 	return builder;
 }

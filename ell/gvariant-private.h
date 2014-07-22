@@ -42,7 +42,7 @@ bool _gvariant_is_fixed_size(const char *signature);
 int _gvariant_get_fixed_size(const char *signature);
 int _gvariant_num_children(const char *sig);
 
-struct dbus_builder *_gvariant_builder_new(void);
+struct dbus_builder *_gvariant_builder_new(void *body, size_t body_size);
 void _gvariant_builder_free(struct dbus_builder *builder);
 bool _gvariant_builder_append_basic(struct dbus_builder *builder,
 					char type, const void *value);
