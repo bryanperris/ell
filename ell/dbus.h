@@ -131,6 +131,8 @@ bool l_dbus_register_interface(struct l_dbus *dbus,
 				l_dbus_interface_setup_func_t setup_func,
 				void *user_data,
 				l_dbus_destroy_func_t destroy);
+bool l_dbus_unregister_interface(struct l_dbus *dbus, const char *path,
+					const char *interface);
 #ifdef __cplusplus
 }
 #endif

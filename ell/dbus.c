@@ -1022,3 +1022,16 @@ LIB_EXPORT bool l_dbus_register_interface(struct l_dbus *dbus,
 	return _dbus_object_tree_register(dbus->tree, path, interface,
 						setup_func, user_data, destroy);
 }
+
+LIB_EXPORT bool l_dbus_unregister_interface(struct l_dbus *dbus,
+						const char *path,
+						const char *interface)
+{
+	if (unlikely(!dbus))
+		return false;
+
+	if (unlikely(!dbus->tree))
+		return false;
+
+	return _dbus_object_tree_unregister(dbus->tree, path, interface);
+}
