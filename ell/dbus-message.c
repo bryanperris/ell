@@ -196,6 +196,9 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_error_valist(
 	struct dbus_header *hdr = method_call->header;
 	const char *sender;
 
+	if (!_dbus_valid_interface(name))
+		return NULL;
+
 	vsnprintf(str, sizeof(str), format, args);
 	reply = message_new_common(DBUS_MESSAGE_TYPE_ERROR,
 					DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED,
