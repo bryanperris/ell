@@ -34,6 +34,12 @@ enum dbus_container_type {
 	DBUS_CONTAINER_TYPE_DICT_ENTRY	= 'e',
 };
 
+#if __BYTE_ORDER == __BIG_ENDIAN
+	#define DBUS_NATIVE_ENDIAN 'B'
+#else
+	#define DBUS_NATIVE_ENDIAN 'l'
+#endif
+
 struct dbus_header {
 	uint8_t  endian;
 	uint8_t  message_type;
