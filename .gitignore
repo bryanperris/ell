@@ -39,4 +39,5 @@ unit/test-gvariant-util
 unit/test-gvariant-message
 unit/*.log
 unit/*.trs
+examples/dbus-service
 test-suite.log
