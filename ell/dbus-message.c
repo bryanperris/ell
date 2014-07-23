@@ -464,6 +464,25 @@ static inline bool get_header_field(struct l_dbus_message *message,
 	return result;
 }
 
+static bool valid_header(const struct dbus_header *hdr)
+{
+	if (hdr->endian != DBUS_MESSAGE_LITTLE_ENDIAN &&
+			hdr->endian != DBUS_MESSAGE_BIG_ENDIAN)
+		return false;
+
+	if (hdr->message_type < DBUS_MESSAGE_TYPE_METHOD_CALL ||
+			hdr->message_type > DBUS_MESSAGE_TYPE_SIGNAL)
+		return false;
+
+	if (hdr->version != 1 && hdr->version != 2)
+		return false;
+
+	if (hdr->serial == 0)
+		return false;
+
+	return true;
+}
+
 struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size)
 {
 	const struct dbus_header *hdr = data;
@@ -498,7 +517,14 @@ struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 						void *body, size_t body_size,
 						int fds[], uint32_t num_fds)
 {
+	const struct dbus_header *hdr = header;
 	struct l_dbus_message *message;
+
+	if (unlikely(header_size < DBUS_HEADER_SIZE))
+		return NULL;
+
+	if (unlikely(!valid_header(hdr)))
+		return NULL;
 
 	message = l_new(struct l_dbus_message, 1);
 
