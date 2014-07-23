@@ -31,6 +31,7 @@
 
 #include <ell/ell.h>
 #include <ell/dbus.h>
+#include <ell/dbus-service.h>
 
 static void do_debug(const char *str, void *user_data)
 {
@@ -87,11 +88,111 @@ static void disconnect_callback(void *user_data)
 	l_main_quit();
 }
 
+struct test_data {
+	char *string;
+	uint32_t integer;
+};
+
+static void test_data_destroy(void *data)
+{
+	struct test_data *test = data;
+
+	l_free(test->string);
+	l_free(test);
+}
+
+static void test_set_property(struct l_dbus *dbus,
+				struct l_dbus_message *message,
+				void *user_data)
+{
+	struct test_data *test = user_data;
+	struct l_dbus_message *reply;
+	struct l_dbus_message_iter variant;
+	const char *property;
+
+	if (!l_dbus_message_get_arguments(message, "sv", &property, &variant)) {
+		reply = l_dbus_message_new_error(message,
+						"org.test.InvalidArguments",
+						"Invalid arguments");
+		goto done;
+	}
+
+	if (!strcmp(property, "String")) {
+		const char *strvalue;
+
+		if (!l_dbus_message_iter_get_variant(&variant, "s",
+							&strvalue)) {
+			reply = l_dbus_message_new_error(message,
+						"org.test.InvalidArguments",
+						"String value expected");
+			goto done;
+		}
+
+		l_info("New String value: %s", strvalue);
+		l_free(test->string);
+		test->string = l_strdup(strvalue);
+	} else if (!strcmp(property, "Integer")) {
+		uint32_t u;
+
+		if (!l_dbus_message_iter_get_variant(&variant, "u", &u)) {
+			reply = l_dbus_message_new_error(message,
+						"org.test.InvalidArguments",
+						"Integer value expected");
+			goto done;
+		}
+
+		l_info("New Integer value: %u", u);
+		test->integer = u;
+	} else {
+		reply = l_dbus_message_new_error(message,
+						"org.test.InvalidArguments",
+						"Unknown Property %s",
+						property);
+		goto done;
+	}
+
+	reply = l_dbus_message_new_method_return(message);
+	l_dbus_message_set_arguments(reply, "");
+
+done:
+	l_dbus_send(dbus, reply);
+}
+
+static void test_method_call(struct l_dbus *dbus,
+				struct l_dbus_message *message,
+				void *user_data)
+{
+	struct l_dbus_message *reply;
+
+	l_info("Method Call");
+
+	reply = l_dbus_message_new_method_return(message);
+
+	l_dbus_message_set_arguments(reply, "");
+	l_dbus_send(dbus, reply);
+}
+
+static void setup_test_interface(struct l_dbus_interface *interface)
+{
+	l_dbus_interface_method(interface, "SetProperty", 0,
+				test_set_property,
+				"", "sv", "name", "value");
+	l_dbus_interface_method(interface, "MethodCall", 0,
+				test_method_call, "", "");
+
+	l_dbus_interface_signal(interface, "PropertyChanged", 0,
+				"sv", "name", "value");
+
+	l_dbus_interface_rw_property(interface, "String", "s");
+	l_dbus_interface_rw_property(interface, "Integer", "u");
+}
+
 int main(int argc, char *argv[])
 {
 	struct l_dbus *dbus;
 	struct l_signal *signal;
 	sigset_t mask;
+	struct test_data *test;
 
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
@@ -111,10 +212,25 @@ int main(int argc, char *argv[])
 				request_name_setup,
 				request_name_callback, NULL, NULL);
 
+	test = l_new(struct test_data, 1);
+	test->string = l_strdup("Default");
+	test->integer = 42;
+
+	if (!l_dbus_register_interface(dbus, "/test", "org.test",
+					setup_test_interface, test,
+					test_data_destroy)) {
+		l_info("Unable to register interface");
+		test_data_destroy(test);
+		goto cleanup;
+	}
+
 	l_main_run();
 
+	l_dbus_unregister_interface(dbus, "/test", "org.test");
+
+cleanup:
 	l_dbus_destroy(dbus);
 	l_signal_remove(signal);
 
-	return EXIT_SUCCESS;
+	return 0;
 }
