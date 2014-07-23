@@ -1005,6 +1005,13 @@ enum dbus_message_type _dbus_message_get_type(struct l_dbus_message *message)
 	return header->message_type;
 }
 
+uint8_t _dbus_message_get_endian(struct l_dbus_message *message)
+{
+	struct dbus_header *header = message->header;
+
+	return header->endian;
+}
+
 uint8_t _dbus_message_get_version(struct l_dbus_message *message)
 {
 	struct dbus_header *header = message->header;

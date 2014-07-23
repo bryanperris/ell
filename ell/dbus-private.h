@@ -100,6 +100,7 @@ uint32_t _dbus_message_get_reply_serial(struct l_dbus_message *message);
 
 enum dbus_message_type _dbus_message_get_type(struct l_dbus_message *message);
 uint8_t _dbus_message_get_version(struct l_dbus_message *message);
+uint8_t _dbus_message_get_endian(struct l_dbus_message *message);
 
 void _dbus_message_set_no_reply_expected(struct l_dbus_message *msg, bool on);
 struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size);
