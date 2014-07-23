@@ -500,6 +500,7 @@ static bool auth_read_handler(struct l_io *io, void *user_data)
 				state = SETUP_DONE;
 			}
 
+			l_free(dbus->guid);
 			dbus->guid = l_strdup(ptr + 3);
 
 			dbus->auth_command = l_strdup(command);
