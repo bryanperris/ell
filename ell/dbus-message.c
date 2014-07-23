@@ -185,6 +185,38 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_return(
 	return message;
 }
 
+LIB_EXPORT struct l_dbus_message *l_dbus_message_new_error_valist(
+					struct l_dbus_message *method_call,
+					const char *name,
+					const char *format, va_list args)
+{
+	char str[1024];
+	const char *s = str;
+	struct l_dbus_message *reply;
+	struct dbus_header *hdr = method_call->header;
+	const char *sender;
+
+	vsnprintf(str, sizeof(str), format, args);
+	reply = message_new_common(DBUS_MESSAGE_TYPE_ERROR,
+					DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED,
+					hdr->version);
+
+	reply->reply_serial = hdr->serial;
+
+	sender = l_dbus_message_get_sender(method_call);
+	if (sender)
+		reply->destination = l_strdup(sender);
+
+	reply->error_name = l_strdup(name);
+
+	if (!l_dbus_message_set_arguments(reply, "s", &s)) {
+		l_dbus_message_unref(reply);
+		return NULL;
+	}
+
+	return reply;
+}
+
 LIB_EXPORT struct l_dbus_message *l_dbus_message_ref(struct l_dbus_message *message)
 {
 	if (unlikely(!message))
@@ -213,6 +245,7 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 		l_free(message->path);
 		l_free(message->interface);
 		l_free(message->member);
+		l_free(message->error_name);
 		l_free(message->destination);
 		l_free(message->sender);
 	}
@@ -587,6 +620,13 @@ static void build_header(struct l_dbus_message *message, const char *signature)
 					"s", message->destination);
 		l_free(message->destination);
 		message->destination = NULL;
+	}
+
+	if (message->error_name != 0) {
+		add_field(builder, driver, DBUS_MESSAGE_FIELD_ERROR_NAME,
+					"s", message->error_name);
+		l_free(message->error_name);
+		message->error_name = NULL;
 	}
 
 	if (message->reply_serial != 0) {
