@@ -132,7 +132,7 @@ static struct l_dbus_message *message_new_common(uint8_t type, uint8_t flags,
 	hdr = message->header;
 	hdr->endian = DBUS_MESSAGE_LITTLE_ENDIAN;
 	hdr->message_type = type;
-	hdr->flags = 0;
+	hdr->flags = flags;
 	hdr->version = version;
 
 	return message;
