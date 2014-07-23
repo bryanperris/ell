@@ -76,6 +76,11 @@ struct l_dbus_message_iter {
 
 struct l_dbus_message *l_dbus_message_new_method_call(const char *destination,
 		const char *path, const char *interface, const char *method);
+
+struct l_dbus_message *l_dbus_message_new_signal(const char *path,
+							const char *interface,
+							const char *name);
+
 struct l_dbus_message *l_dbus_message_new_method_return(
 					struct l_dbus_message *method_call);
 

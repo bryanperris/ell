@@ -165,6 +165,24 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_call(const char *des
 						interface, method);
 }
 
+LIB_EXPORT struct l_dbus_message *l_dbus_message_new_signal(const char *path,
+							const char *interface,
+							const char *name)
+{
+	struct l_dbus_message *message;
+
+	message = message_new_common(DBUS_MESSAGE_TYPE_SIGNAL,
+					DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED,
+					DBUS_MESSAGE_PROTOCOL_VERSION);
+
+	message->path = l_strdup(path);
+	message->interface = l_strdup(interface);
+	message->member = l_strdup(name);
+
+	return message;
+
+}
+
 LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_return(
 					struct l_dbus_message *method_call)
 {
