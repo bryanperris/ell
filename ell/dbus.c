@@ -366,7 +366,7 @@ static uint32_t send_message(struct l_dbus *dbus, bool priority,
 	callback = l_new(struct message_callback, 1);
 
 	callback->serial = dbus->next_serial++;
-	callback->message = l_dbus_message_ref(message);
+	callback->message = message;
 	callback->callback = function;
 	callback->destroy = destroy;
 	callback->user_data = user_data;
@@ -439,8 +439,6 @@ static bool auth_write_handler(struct l_io *io, void *user_data)
 		l_dbus_message_set_arguments(message, "");
 
 		send_message(dbus, true, message, hello_callback, dbus, NULL);
-
-		l_dbus_message_unref(message);
 
 		return true;
 	}
