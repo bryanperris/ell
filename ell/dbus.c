@@ -334,6 +334,18 @@ static bool message_read_handler(struct l_io *io, void *user_data)
 	l_util_hexdump_two(true, header, header_size, body, body_size,
 				dbus->debug_handler, dbus->debug_data);
 
+	if (_dbus_message_get_endian(message) != DBUS_NATIVE_ENDIAN) {
+		l_util_debug(dbus->debug_handler,
+				dbus->debug_data, "Endianness incorrect");
+		goto done;
+	}
+
+	if (_dbus_message_get_version(message) != 1) {
+		l_util_debug(dbus->debug_handler,
+				dbus->debug_data, "Protocol version incorrect");
+		goto done;
+	}
+
 	msgtype = _dbus_message_get_type(message);
 
 	switch (msgtype) {
@@ -351,6 +363,7 @@ static bool message_read_handler(struct l_io *io, void *user_data)
 		break;
 	}
 
+done:
 	l_dbus_message_unref(message);
 
 	return true;
