@@ -217,6 +217,22 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_error_valist(
 	return reply;
 }
 
+LIB_EXPORT struct l_dbus_message *l_dbus_message_new_error(
+					struct l_dbus_message *method_call,
+					const char *name,
+					const char *format, ...)
+{
+	va_list args;
+	struct l_dbus_message *reply;
+
+	va_start(args, format);
+	reply = l_dbus_message_new_error_valist(method_call, name,
+								format, args);
+	va_end(args);
+
+	return reply;
+}
+
 LIB_EXPORT struct l_dbus_message *l_dbus_message_ref(struct l_dbus_message *message)
 {
 	if (unlikely(!message))

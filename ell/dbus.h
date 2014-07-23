@@ -83,6 +83,11 @@ struct l_dbus_message *l_dbus_message_new_error_valist(
 					struct l_dbus_message *method_call,
 					const char *name,
 					const char *format, va_list args);
+struct l_dbus_message *l_dbus_message_new_error(
+					struct l_dbus_message *method_call,
+					const char *name,
+					const char *format, ...);
+
 struct l_dbus_message *l_dbus_message_ref(struct l_dbus_message *message);
 void l_dbus_message_unref(struct l_dbus_message *message);
 
