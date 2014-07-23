@@ -64,6 +64,7 @@ struct l_dbus_message {
 	char *path;
 	char *interface;
 	char *member;
+	char *error_name;
 	uint32_t reply_serial;
 	char *destination;
 	char *sender;
@@ -725,9 +726,6 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 	if (unlikely(!message))
 		return false;
 
-	if (!message->sealed)
-		return false;
-
 	hdr = message->header;
 
 	if (hdr->message_type != DBUS_MESSAGE_TYPE_ERROR)
@@ -749,8 +747,12 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 	if (!message_iter_next_entry(&iter, &str))
 		return false;
 
+	if (!message->error_name)
+		get_header_field(message, DBUS_MESSAGE_FIELD_ERROR_NAME,
+					&message->error_name);
+
 	if (name)
-		get_header_field(message, DBUS_MESSAGE_FIELD_ERROR_NAME, name);
+		*name = message->error_name;
 
 	if (text)
 		*text = str;
