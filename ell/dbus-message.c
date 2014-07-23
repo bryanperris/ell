@@ -212,6 +212,8 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 		l_free(message->path);
 		l_free(message->interface);
 		l_free(message->member);
+		l_free(message->destination);
+		l_free(message->sender);
 	}
 
 	l_free(message->header);
