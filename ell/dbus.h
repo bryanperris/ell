@@ -37,12 +37,14 @@ enum l_dbus_bus {
 };
 
 struct l_dbus;
+struct l_dbus_interface;
 
 typedef void (*l_dbus_ready_func_t) (void *user_data);
 typedef void (*l_dbus_disconnect_func_t) (void *user_data);
 
 typedef void (*l_dbus_debug_func_t) (const char *str, void *user_data);
 typedef void (*l_dbus_destroy_func_t) (void *user_data);
+typedef void (*l_dbus_interface_setup_func_t) (struct l_dbus_interface *);
 
 struct l_dbus *l_dbus_new(const char *address);
 struct l_dbus *l_dbus_new_default(enum l_dbus_bus bus);
@@ -124,6 +126,11 @@ bool l_dbus_message_iter_get_variant(struct l_dbus_message_iter *iter,
 bool l_dbus_message_set_arguments(struct l_dbus_message *message,
 						const char *signature, ...);
 
+bool l_dbus_register_interface(struct l_dbus *dbus,
+				const char *path, const char *interface,
+				l_dbus_interface_setup_func_t setup_func,
+				void *user_data,
+				l_dbus_destroy_func_t destroy);
 #ifdef __cplusplus
 }
 #endif
