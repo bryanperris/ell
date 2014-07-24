@@ -1358,6 +1358,9 @@ static void compare_message(struct l_dbus_message *msg,
 {
 	bool result;
 
+	/* Shut valgrind up */
+	_dbus_message_set_serial(msg, 0);
+
 	if (do_print) {
 		void *blob;
 		void *header, *body;
