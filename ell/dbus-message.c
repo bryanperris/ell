@@ -729,15 +729,23 @@ static void build_header(struct l_dbus_message *message, const char *signature)
 			message->header_size - header_size);
 }
 
+struct container {
+	char type;
+	const char *sig_start;
+	const char *sig_end;
+	unsigned int n_items;
+};
+
 static bool append_arguments(struct l_dbus_message *message,
 					const char *signature, va_list args)
 {
-	const char *s = signature;
 	struct dbus_builder *builder;
 	struct builder_driver *driver;
 	char *generated_signature;
 	char subsig[256];
 	const char *sigend;
+	struct container stack[32];
+	unsigned int stack_index = 0;
 
 	if (_dbus_message_is_gvariant(message))
 		driver = &gvariant_driver;
@@ -746,9 +754,45 @@ static bool append_arguments(struct l_dbus_message *message,
 
 	builder = driver->new(NULL, 0);
 
-	while (*s) {
+	stack[stack_index].type = DBUS_CONTAINER_TYPE_STRUCT;
+	stack[stack_index].sig_start = signature;
+	stack[stack_index].sig_end = signature + strlen(signature);
+	stack[stack_index].n_items = 0;
+
+	while (stack_index != 0 || stack[0].sig_start != stack[0].sig_end) {
+		const char *s;
 		const char *str;
 		const void *value;
+
+		if (stack[stack_index].sig_start ==
+				stack[stack_index].sig_end) {
+			bool ret;
+
+			switch (stack[stack_index].type) {
+			case DBUS_CONTAINER_TYPE_STRUCT:
+				ret = driver->leave_struct(builder);
+				break;
+			case DBUS_CONTAINER_TYPE_DICT_ENTRY:
+				ret = driver->leave_dict(builder);
+				break;
+			case DBUS_CONTAINER_TYPE_VARIANT:
+				ret = driver->leave_variant(builder);
+				break;
+			case DBUS_CONTAINER_TYPE_ARRAY:
+				ret = driver->leave_array(builder);
+				break;
+			default:
+				ret = false;
+			}
+
+			if (!ret)
+				goto error;
+
+			stack_index -= 1;
+			continue;
+		}
+
+		s = stack[stack_index].sig_start++;
 
 		switch (*s) {
 		case 'o':
@@ -775,24 +819,47 @@ static bool append_arguments(struct l_dbus_message *message,
 				goto error;
 			break;
 		case '(':
+		case '{':
 			sigend = _dbus_signature_end(s);
 			memcpy(subsig, s + 1, sigend - s - 1);
 			subsig[sigend - s - 1] = '\0';
 
-			if (!driver->enter_struct(builder, subsig))
+			if (*s == '(' && !driver->enter_struct(builder, subsig))
 				goto error;
 
-			break;
-		case ')':
-			if (!driver->leave_struct(builder))
+			if (*s == '{' && !driver->enter_dict(builder, subsig))
 				goto error;
+
+			stack[stack_index].sig_start = sigend + 1;
+
+			stack_index += 1;
+			stack[stack_index].sig_start = s + 1;
+			stack[stack_index].sig_end = sigend;
+			stack[stack_index].n_items = 0;
+			stack[stack_index].type = *s == '(' ?
+						DBUS_CONTAINER_TYPE_STRUCT :
+						DBUS_CONTAINER_TYPE_DICT_ENTRY;
+
+			break;
+		case 'v':
+			str = va_arg(args, const char *);
+
+			if (!str)
+				goto error;
+
+			if (!driver->enter_variant(builder, str))
+				goto error;
+
+			stack_index += 1;
+			stack[stack_index].type = DBUS_CONTAINER_TYPE_VARIANT;
+			stack[stack_index].sig_start = str;
+			stack[stack_index].sig_end = str + strlen(str);
+			stack[stack_index].n_items = 0;
 
 			break;
 		default:
 			goto error;
 		}
-
-		s += 1;
 	}
 
 	generated_signature = driver->finish(builder, &message->body,
