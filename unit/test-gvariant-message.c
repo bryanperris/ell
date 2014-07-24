@@ -223,8 +223,6 @@ static void build_basic_1(const void *data)
 	_dbus_message_set_serial(msg, 1111);
 
 	compare_message(msg, data);
-
-	l_dbus_message_unref(msg);
 }
 
 int main(int argc, char *argv[])
