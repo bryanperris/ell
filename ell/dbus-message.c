@@ -764,6 +764,11 @@ static bool append_arguments(struct l_dbus_message *message,
 		const char *str;
 		const void *value;
 
+		if (stack[stack_index].type == DBUS_CONTAINER_TYPE_ARRAY &&
+				stack[stack_index].n_items == 0)
+			stack[stack_index].sig_start =
+				stack[stack_index].sig_end;
+
 		if (stack[stack_index].sig_start ==
 				stack[stack_index].sig_end) {
 			bool ret;
@@ -792,7 +797,12 @@ static bool append_arguments(struct l_dbus_message *message,
 			continue;
 		}
 
-		s = stack[stack_index].sig_start++;
+		s = stack[stack_index].sig_start;
+
+		if (stack[stack_index].type != DBUS_CONTAINER_TYPE_ARRAY)
+			stack[stack_index].sig_start += 1;
+		else
+			stack[stack_index].n_items -= 1;
 
 		switch (*s) {
 		case 'o':
@@ -830,7 +840,9 @@ static bool append_arguments(struct l_dbus_message *message,
 			if (*s == '{' && !driver->enter_dict(builder, subsig))
 				goto error;
 
-			stack[stack_index].sig_start = sigend + 1;
+			if (stack[stack_index].type !=
+					DBUS_CONTAINER_TYPE_ARRAY)
+				stack[stack_index].sig_start = sigend + 1;
 
 			stack_index += 1;
 			stack[stack_index].sig_start = s + 1;
@@ -855,6 +867,25 @@ static bool append_arguments(struct l_dbus_message *message,
 			stack[stack_index].sig_start = str;
 			stack[stack_index].sig_end = str + strlen(str);
 			stack[stack_index].n_items = 0;
+
+			break;
+		case 'a':
+			sigend = _dbus_signature_end(s + 1) + 1;
+			memcpy(subsig, s + 1, sigend - s - 1);
+			subsig[sigend - s - 1] = '\0';
+
+			if (!driver->enter_array(builder, subsig))
+				goto error;
+
+			if (stack[stack_index].type !=
+					DBUS_CONTAINER_TYPE_ARRAY)
+				stack[stack_index].sig_start = sigend;
+
+			stack_index += 1;
+			stack[stack_index].sig_start = s + 1;
+			stack[stack_index].sig_end = sigend;
+			stack[stack_index].n_items = va_arg(args, unsigned int);
+			stack[stack_index].type = DBUS_CONTAINER_TYPE_ARRAY;
 
 			break;
 		default:
