@@ -814,7 +814,7 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 		xml = l_string_free(buf, false);
 
 		reply = l_dbus_message_new_method_return(message);
-		l_dbus_message_set_arguments(reply, "s", &xml);
+		l_dbus_message_set_arguments(reply, "s", xml);
 		l_dbus_send(dbus, reply);
 
 		l_free(xml);
