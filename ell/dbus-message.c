@@ -209,7 +209,6 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_error_valist(
 					const char *format, va_list args)
 {
 	char str[1024];
-	const char *s = str;
 	struct l_dbus_message *reply;
 	struct dbus_header *hdr = method_call->header;
 	const char *sender;
@@ -230,7 +229,7 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_error_valist(
 
 	reply->error_name = l_strdup(name);
 
-	if (!l_dbus_message_set_arguments(reply, "s", &s)) {
+	if (!l_dbus_message_set_arguments(reply, "s", str)) {
 		l_dbus_message_unref(reply);
 		return NULL;
 	}
@@ -755,7 +754,7 @@ static bool append_arguments(struct l_dbus_message *message,
 		case 'o':
 		case 's':
 		case 'g':
-			str = *va_arg(args, const char **);
+			str = va_arg(args, const char *);
 
 			if (!driver->append_basic(builder, *s, str))
 				goto error;
