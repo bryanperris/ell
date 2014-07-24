@@ -139,7 +139,7 @@ static void request_name_setup(struct l_dbus_message *message, void *user_data)
 	const char *name = "org.test";
 	uint32_t flags = 0;
 
-	l_dbus_message_set_arguments(message, "su", &name, &flags);
+	l_dbus_message_set_arguments(message, "su", name, &flags);
 }
 
 static void request_name_callback(struct l_dbus_message *message,
@@ -167,7 +167,7 @@ static const char *match_rule = "type=signal,sender=org.freedesktop.DBus";
 
 static void add_match_setup(struct l_dbus_message *message, void *user_data)
 {
-	l_dbus_message_set_arguments(message, "s", &match_rule);
+	l_dbus_message_set_arguments(message, "s", match_rule);
 }
 
 static void add_match_callback(struct l_dbus_message *message, void *user_data)

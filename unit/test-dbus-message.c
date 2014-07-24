@@ -1403,7 +1403,7 @@ static void build_basic_1(const void *data)
 	struct l_dbus_message *msg = build_message(data);
 	const char *str = "Linus Torvalds";
 
-	l_dbus_message_set_arguments(msg, "s", &str);
+	l_dbus_message_set_arguments(msg, "s", str);
 
 	compare_message(msg, data);
 }
@@ -1428,7 +1428,7 @@ static void build_basic_2(const void *data)
 	const char *str1 = "Linus";
 	const char *str2 = "Torvalds";
 
-	l_dbus_message_set_arguments(msg, "ss", &str1, &str2);
+	l_dbus_message_set_arguments(msg, "ss", str1, str2);
 
 	compare_message(msg, data);
 }
@@ -1453,7 +1453,7 @@ static void build_basic_3(const void *data)
 	const char *str = "Linus Torvalds";
 	bool val = true;
 
-	l_dbus_message_set_arguments(msg, "sb", &str, &val);
+	l_dbus_message_set_arguments(msg, "sb", str, &val);
 
 	compare_message(msg, data);
 }
@@ -1663,7 +1663,7 @@ static void build_struct_1(const void *data)
 	const char *str2 = "Torvalds";
 	bool result;
 
-	result = l_dbus_message_set_arguments(msg, "(ss)", &str1, &str2);
+	result = l_dbus_message_set_arguments(msg, "(ss)", str1, str2);
 	assert(result);
 
 	compare_message(msg, data);
@@ -1694,7 +1694,7 @@ static void build_struct_2(const void *data)
 	bool result;
 
 	result = l_dbus_message_set_arguments(msg, "(s(ss))",
-							&str, &str1, &str2);
+							str, str1, str2);
 	assert(result);
 
 	compare_message(msg, data);
