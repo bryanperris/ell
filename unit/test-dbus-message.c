@@ -2344,6 +2344,21 @@ static void check_complex_2(const void *data)
 	l_dbus_message_unref(msg);
 }
 
+static void build_complex_2(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	bool result;
+
+	result = l_dbus_message_set_arguments(msg, "a(oa{sv})", 2,
+						"/com/example/object1", 1,
+						"Name", "s", "Linus Torvalds",
+						"/com/example/object2", 1,
+						"Name", "s", "Marcel Holtmann");
+	assert(result);
+
+	compare_message(msg, data);
+}
+
 static void check_complex_3(const void *data)
 {
         struct l_dbus_message *msg = check_message(data);
@@ -2497,7 +2512,10 @@ int main(int argc, char *argv[])
 						&message_data_complex_1);
 	l_test_add("Complex 1 (build)", build_complex_1,
 						&message_data_complex_1);
-	l_test_add("Complex 2", check_complex_2, &message_data_complex_2);
+	l_test_add("Complex 2 (parse)", check_complex_2,
+						&message_data_complex_2);
+	l_test_add("Complex 2 (build)", build_complex_2,
+						&message_data_complex_2);
 	l_test_add("Complex 3", check_complex_3, &message_data_complex_3);
 	l_test_add("Complex 4", check_complex_4, &message_data_complex_4);
 	l_test_add("Complex 5", check_complex_5, &message_data_complex_5);
