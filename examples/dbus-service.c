@@ -100,32 +100,28 @@ static void test_data_destroy(void *data)
 	l_free(test);
 }
 
-static void test_set_property(struct l_dbus *dbus,
-				struct l_dbus_message *message,
-				void *user_data)
+static struct l_dbus_message *test_set_property(struct l_dbus *dbus,
+						struct l_dbus_message *message,
+						void *user_data)
 {
 	struct test_data *test = user_data;
 	struct l_dbus_message *reply;
 	struct l_dbus_message_iter variant;
 	const char *property;
 
-	if (!l_dbus_message_get_arguments(message, "sv", &property, &variant)) {
-		reply = l_dbus_message_new_error(message,
+	if (!l_dbus_message_get_arguments(message, "sv", &property, &variant))
+		return l_dbus_message_new_error(message,
 						"org.test.InvalidArguments",
 						"Invalid arguments");
-		goto done;
-	}
 
 	if (!strcmp(property, "String")) {
 		const char *strvalue;
 
 		if (!l_dbus_message_iter_get_variant(&variant, "s",
-							&strvalue)) {
-			reply = l_dbus_message_new_error(message,
+							&strvalue))
+			return l_dbus_message_new_error(message,
 						"org.test.InvalidArguments",
 						"String value expected");
-			goto done;
-		}
 
 		l_info("New String value: %s", strvalue);
 		l_free(test->string);
@@ -133,33 +129,29 @@ static void test_set_property(struct l_dbus *dbus,
 	} else if (!strcmp(property, "Integer")) {
 		uint32_t u;
 
-		if (!l_dbus_message_iter_get_variant(&variant, "u", &u)) {
-			reply = l_dbus_message_new_error(message,
+		if (!l_dbus_message_iter_get_variant(&variant, "u", &u))
+			return l_dbus_message_new_error(message,
 						"org.test.InvalidArguments",
 						"Integer value expected");
-			goto done;
-		}
 
 		l_info("New Integer value: %u", u);
 		test->integer = u;
-	} else {
-		reply = l_dbus_message_new_error(message,
+	} else
+		return l_dbus_message_new_error(message,
 						"org.test.InvalidArguments",
 						"Unknown Property %s",
 						property);
-		goto done;
-	}
 
 	reply = l_dbus_message_new_method_return(message);
 	l_dbus_message_set_arguments(reply, "");
-
-done:
 	l_dbus_send(dbus, reply);
+
+	return NULL;
 }
 
-static void test_get_properties(struct l_dbus *dbus,
-				struct l_dbus_message *message,
-				void *user_data)
+static struct l_dbus_message *test_get_properties(struct l_dbus *dbus,
+						struct l_dbus_message *message,
+						void *user_data)
 {
 	struct test_data *test = user_data;
 	struct l_dbus_message *reply;
@@ -169,21 +161,21 @@ static void test_get_properties(struct l_dbus *dbus,
 					"String", "s", test->string,
 					"Integer", "u", test->integer);
 
-	l_dbus_send(dbus, reply);
+	return reply;
 }
 
-static void test_method_call(struct l_dbus *dbus,
-				struct l_dbus_message *message,
-				void *user_data)
+static struct l_dbus_message *test_method_call(struct l_dbus *dbus,
+						struct l_dbus_message *message,
+						void *user_data)
 {
 	struct l_dbus_message *reply;
 
 	l_info("Method Call");
 
 	reply = l_dbus_message_new_method_return(message);
-
 	l_dbus_message_set_arguments(reply, "");
-	l_dbus_send(dbus, reply);
+
+	return reply;
 }
 
 static void setup_test_interface(struct l_dbus_interface *interface)
