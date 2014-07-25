@@ -2099,6 +2099,18 @@ static void check_variant_2(const void *data)
 	l_dbus_message_unref(msg);
 }
 
+static void build_variant_2(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	bool result;
+
+	result = l_dbus_message_set_arguments(msg, "v", "as", 2,
+						"Linus", "Torvalds");
+	assert(result);
+
+	compare_message(msg, data);
+}
+
 static void check_variant_3(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
@@ -2410,7 +2422,10 @@ int main(int argc, char *argv[])
 						&message_data_variant_1);
 	l_test_add("Variant 1 (build)", build_variant_1,
 						&message_data_variant_1);
-	l_test_add("Variant 2", check_variant_2, &message_data_variant_2);
+	l_test_add("Variant 2 (parse)", check_variant_2,
+						&message_data_variant_2);
+	l_test_add("Variant 2 (build)", build_variant_2,
+						&message_data_variant_2);
 	l_test_add("Variant 3 (parse)", check_variant_3,
 						&message_data_variant_3);
 	l_test_add("Variant 3 (build)", build_variant_3,
