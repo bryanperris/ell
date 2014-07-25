@@ -1825,6 +1825,20 @@ static void check_array_3(const void *data)
 	l_dbus_message_unref(msg);
 }
 
+static void build_array_3(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	bool result;
+
+	result = l_dbus_message_set_arguments(msg, "aas", 3,
+						1, "Linus Torvalds",
+						2, "Linus", "Torvalds",
+						0);
+	assert(result);
+
+	compare_message(msg, data);
+}
+
 static void check_array_4(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
@@ -2340,7 +2354,8 @@ int main(int argc, char *argv[])
 	l_test_add("Array 1 (build)", build_array_1, &message_data_array_1);
 	l_test_add("Array 2 (parse)", check_array_2, &message_data_array_2);
 	l_test_add("Array 2 (build)", build_array_2, &message_data_array_2);
-	l_test_add("Array 3", check_array_3, &message_data_array_3);
+	l_test_add("Array 3 (parse)", check_array_3, &message_data_array_3);
+	l_test_add("Array 3 (build)", build_array_3, &message_data_array_3);
 	l_test_add("Array 4", check_array_4, &message_data_array_4);
 	l_test_add("Array 5", check_array_5, &message_data_array_5);
 	l_test_add("Array 6", check_array_6, &message_data_array_6);
