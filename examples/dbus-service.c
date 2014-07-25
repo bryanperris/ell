@@ -157,6 +157,21 @@ done:
 	l_dbus_send(dbus, reply);
 }
 
+static void test_get_properties(struct l_dbus *dbus,
+				struct l_dbus_message *message,
+				void *user_data)
+{
+	struct test_data *test = user_data;
+	struct l_dbus_message *reply;
+
+	reply = l_dbus_message_new_method_return(message);
+	l_dbus_message_set_arguments(reply, "a{sv}", 2,
+					"String", "s", test->string,
+					"Integer", "u", test->integer);
+
+	l_dbus_send(dbus, reply);
+}
+
 static void test_method_call(struct l_dbus *dbus,
 				struct l_dbus_message *message,
 				void *user_data)
@@ -173,6 +188,9 @@ static void test_method_call(struct l_dbus *dbus,
 
 static void setup_test_interface(struct l_dbus_interface *interface)
 {
+	l_dbus_interface_method(interface, "GetProperties", 0,
+				test_get_properties,
+				"a{sv}", "", "properties");
 	l_dbus_interface_method(interface, "SetProperty", 0,
 				test_set_property,
 				"", "sv", "name", "value");
