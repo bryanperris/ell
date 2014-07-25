@@ -762,7 +762,6 @@ static bool append_arguments(struct l_dbus_message *message,
 	while (stack_index != 0 || stack[0].sig_start != stack[0].sig_end) {
 		const char *s;
 		const char *str;
-		const void *value;
 
 		if (stack[stack_index].type == DBUS_CONTAINER_TYPE_ARRAY &&
 				stack[stack_index].n_items == 0)
@@ -815,19 +814,52 @@ static bool append_arguments(struct l_dbus_message *message,
 			break;
 		case 'b':
 		case 'y':
+		{
+			uint8_t y = (uint8_t) va_arg(args, int);
+
+			if (!driver->append_basic(builder, *s, &y))
+				goto error;
+
+			break;
+		}
 		case 'n':
 		case 'q':
+		{
+			uint16_t n = (uint16_t) va_arg(args, int);
+
+			if (!driver->append_basic(builder, *s, &n))
+				goto error;
+
+			break;
+		}
 		case 'i':
 		case 'u':
+		case 'h':
+		{
+			uint32_t u = va_arg(args, uint32_t);
+
+			if (!driver->append_basic(builder, *s, &u))
+				goto error;
+
+			break;
+		}
 		case 'x':
 		case 't':
-		case 'd':
-		case 'h':
-			value = va_arg(args, void *);
+		{
+			uint64_t x = va_arg(args, uint64_t);
 
-			if (!driver->append_basic(builder, *s, value))
+			if (!driver->append_basic(builder, *s, &x))
 				goto error;
 			break;
+		}
+		case 'd':
+		{
+			double d = va_arg(args, double);
+
+			if (!driver->append_basic(builder, *s, &d))
+				goto error;
+			break;
+		}
 		case '(':
 		case '{':
 			sigend = _dbus_signature_end(s);
