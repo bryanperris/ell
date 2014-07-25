@@ -926,9 +926,6 @@ bool _dbus1_builder_enter_struct(struct dbus_builder *builder,
 bool _dbus1_builder_enter_dict(struct dbus_builder *builder,
 					const char *signature)
 {
-	if (!_dbus_valid_signature(signature))
-		return false;
-
 	if (_dbus_num_children(signature) != 2)
 		return false;
 
@@ -992,9 +989,6 @@ bool _dbus1_builder_enter_variant(struct dbus_builder *builder,
 	struct container *container = l_queue_peek_head(builder->containers);
 	size_t start;
 	size_t siglen;
-
-	if (!_dbus_valid_signature(signature))
-		return false;
 
 	if (_dbus_num_children(signature) != 1)
 		return false;
