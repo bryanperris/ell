@@ -198,6 +198,9 @@ int _gvariant_num_children(const char *sig)
 	int a;
 	int num_children = 0;
 
+	if (strlen(sig) > 255)
+		return false;
+
 	do {
 		s = validate_next_type(s, &a);
 
@@ -690,9 +693,6 @@ bool _gvariant_iter_enter_variant(struct l_dbus_message_iter *iter,
 	memcpy(signature, nul + 1, end - nul - 1);
 	signature[end - nul - 1] = '\0';
 
-	if (!_gvariant_valid_signature(signature))
-		return false;
-
 	if (_gvariant_num_children(signature) != 1)
 		return false;
 
@@ -943,9 +943,6 @@ bool _gvariant_builder_enter_struct(struct dbus_builder *builder,
 bool _gvariant_builder_enter_dict(struct dbus_builder *builder,
 					const char *signature)
 {
-	if (!_gvariant_valid_signature(signature))
-		return false;
-
 	if (_gvariant_num_children(signature) != 2)
 		return false;
 
@@ -1024,9 +1021,6 @@ bool _gvariant_builder_enter_variant(struct dbus_builder *builder,
 	struct container *container = l_queue_peek_head(builder->containers);
 	size_t start;
 
-	if (!_gvariant_valid_signature(signature))
-		return false;
-
 	if (_gvariant_num_children(signature) != 1)
 		return false;
 
@@ -1093,9 +1087,6 @@ bool _gvariant_builder_enter_array(struct dbus_builder *builder,
 	struct container *container = l_queue_peek_head(builder->containers);
 	size_t start;
 	int alignment;
-
-	if (!_gvariant_valid_signature(signature))
-		return false;
 
 	if (_gvariant_num_children(signature) != 1)
 		return false;
