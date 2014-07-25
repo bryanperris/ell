@@ -2067,6 +2067,19 @@ static void check_dict_3(const void *data)
         l_dbus_message_unref(msg);
 }
 
+static void build_dict_3(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	bool result;
+
+	result = l_dbus_message_set_arguments(msg, "a{ss}", 2,
+						"Linus", "Torvalds",
+						"Marcel", "Holtmann");
+	assert(result);
+
+	compare_message(msg, data);
+}
+
 static void check_variant_1(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
@@ -2442,7 +2455,8 @@ int main(int argc, char *argv[])
 	l_test_add("Dict 1 (build)", build_dict_1, &message_data_dict_1);
 	l_test_add("Dict 2 (parse)", check_dict_2, &message_data_dict_2);
 	l_test_add("Dict 2 (build)", build_dict_2, &message_data_dict_2);
-	l_test_add("Dict 3", check_dict_3, &message_data_dict_3);
+	l_test_add("Dict 3 (parse)", check_dict_3, &message_data_dict_3);
+	l_test_add("Dict 3 (build)", build_dict_3, &message_data_dict_3);
 
 	l_test_add("Variant 1 (parse)", check_variant_1,
 						&message_data_variant_1);
