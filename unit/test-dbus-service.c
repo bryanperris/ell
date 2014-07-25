@@ -228,12 +228,14 @@ static void test_dbus_object_tree(const void *test_data)
 	_dbus_object_tree_free(tree);
 }
 
-static void get_modems_callback(struct l_dbus *dbus,
+static struct l_dbus_message *get_modems_callback(struct l_dbus *dbus,
 					struct l_dbus_message *message,
 					void *user_data)
 {
 	assert(user_data == dummy_data);
 	callback_called = true;
+
+	return NULL;
 }
 
 static void build_manager_interface(struct l_dbus_interface *iface)
