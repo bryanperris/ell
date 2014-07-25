@@ -1454,9 +1454,8 @@ static void build_basic_3(const void *data)
 {
 	struct l_dbus_message *msg = build_message(data);
 	const char *str = "Linus Torvalds";
-	bool val = true;
 
-	l_dbus_message_set_arguments(msg, "sb", str, &val);
+	l_dbus_message_set_arguments(msg, "sb", str, true);
 
 	compare_message(msg, data);
 }
@@ -1479,7 +1478,7 @@ static void build_basic_4(const void *data)
 	struct l_dbus_message *msg = build_message(data);
 	uint8_t val = 23;
 
-	l_dbus_message_set_arguments(msg, "y", &val);
+	l_dbus_message_set_arguments(msg, "y", val);
 
 	compare_message(msg, data);
 }
@@ -1502,7 +1501,7 @@ static void build_basic_5(const void *data)
 	struct l_dbus_message *msg = build_message(data);
 	uint16_t val = 42;
 
-	l_dbus_message_set_arguments(msg, "q", &val);
+	l_dbus_message_set_arguments(msg, "q", val);
 
 	compare_message(msg, data);
 }
@@ -1523,9 +1522,8 @@ static void parse_basic_6(const void *data)
 static void build_basic_6(const void *data)
 {
 	struct l_dbus_message *msg = build_message(data);
-	uint32_t val = 4711;
 
-	l_dbus_message_set_arguments(msg, "u", &val);
+	l_dbus_message_set_arguments(msg, "u", 4711);
 
 	compare_message(msg, data);
 }
@@ -1546,9 +1544,8 @@ static void parse_basic_7(const void *data)
 static void build_basic_7(const void *data)
 {
 	struct l_dbus_message *msg = build_message(data);
-	uint64_t val = 10000;
 
-	l_dbus_message_set_arguments(msg, "t", &val);
+	l_dbus_message_set_arguments(msg, "t", 10000);
 
 	compare_message(msg, data);
 }
@@ -1571,7 +1568,7 @@ static void build_basic_8(const void *data)
 	struct l_dbus_message *msg = build_message(data);
 	int16_t val = -42;
 
-	l_dbus_message_set_arguments(msg, "n", &val);
+	l_dbus_message_set_arguments(msg, "n", val);
 
 	compare_message(msg, data);
 }
@@ -1594,7 +1591,7 @@ static void build_basic_9(const void *data)
 	struct l_dbus_message *msg = build_message(data);
 	int32_t val = -4711;
 
-	l_dbus_message_set_arguments(msg, "i", &val);
+	l_dbus_message_set_arguments(msg, "i", val);
 
 	compare_message(msg, data);
 }
@@ -1617,7 +1614,7 @@ static void build_basic_10(const void *data)
 	struct l_dbus_message *msg = build_message(data);
 	int64_t val = -10000;
 
-	l_dbus_message_set_arguments(msg, "x", &val);
+	l_dbus_message_set_arguments(msg, "x", val);
 
 	compare_message(msg, data);
 }
@@ -1640,7 +1637,7 @@ static void build_basic_11(const void *data)
 	struct l_dbus_message *msg = build_message(data);
 	double val = M_PI;
 
-	l_dbus_message_set_arguments(msg, "d", &val);
+	l_dbus_message_set_arguments(msg, "d", val);
 
 	compare_message(msg, data);
 }
@@ -2063,11 +2060,10 @@ static void build_variant_3(const void *data)
 	struct l_dbus_message *msg = build_message(data);
 	const char *str1 = "Linus";
 	const char *str2 = "Torvalds";
-	bool val = true;
 	bool result;
 
 	result = l_dbus_message_set_arguments(msg, "v", "(ssb)",
-						str1, str2, &val);
+						str1, str2, true);
 	assert(result);
 
 	compare_message(msg, data);
@@ -2096,10 +2092,10 @@ static void check_variant_4(const void *data)
 static void build_variant_4(const void *data)
 {
 	struct l_dbus_message *msg = build_message(data);
-	const char *str = "Linus Torvalds";
 	bool result;
 
-	result = l_dbus_message_set_arguments(msg, "v", "v", "s", str);
+	result = l_dbus_message_set_arguments(msg, "v", "v", "s",
+						"Linus Torvalds");
 	assert(result);
 
 	compare_message(msg, data);
@@ -2129,11 +2125,11 @@ static void check_variant_5(const void *data)
 static void build_variant_5(const void *data)
 {
 	struct l_dbus_message *msg = build_message(data);
-	const char *str = "Linus Torvalds";
-	bool val = true;
 	bool result;
 
-	result = l_dbus_message_set_arguments(msg, "v", "(sv)", str, "b", &val);
+	result = l_dbus_message_set_arguments(msg, "v", "(sv)",
+						"Linus Torvalds",
+						"b", true);
 	assert(result);
 
 	compare_message(msg, data);

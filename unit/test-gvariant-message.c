@@ -202,22 +202,14 @@ static void build_basic_1(const void *data)
 	const struct message_data *msg_data = data;
 	struct l_dbus_message *msg;
 	bool result;
-	bool b = true;
-	uint8_t y = 255;
-	uint16_t q = 32;
-	int16_t n = -32;
-	uint32_t u = 24;
-	int32_t i = -24;
-	uint64_t t = 99;
-	int64_t x = 140179142606749;
-	double d = 5.0;
 
 	msg = _dbus_message_new_method_call(2, msg_data->destination,
 			msg_data->path, msg_data->interface, msg_data->member);
 	assert(msg);
 
-	result = l_dbus_message_set_arguments(msg, "bynqiuxtd", &b, &y, &n, &q,
-						&i, &u, &x, &t, &d);
+	result = l_dbus_message_set_arguments(msg, "bynqiuxtd", true, 255,
+						-32, 32, -24, 24,
+						140179142606749, 99L, 5.0);
 	assert(result);
 
 	_dbus_message_set_serial(msg, 1111);
