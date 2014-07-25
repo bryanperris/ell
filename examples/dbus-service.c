@@ -55,9 +55,8 @@ static void signal_handler(struct l_signal *signal, uint32_t signo,
 static void request_name_setup(struct l_dbus_message *message, void *user_data)
 {
 	const char *name = "org.test";
-	uint32_t flags = 0;
 
-	l_dbus_message_set_arguments(message, "su", name, &flags);
+	l_dbus_message_set_arguments(message, "su", name, 0);
 }
 
 static void request_name_callback(struct l_dbus_message *message,
