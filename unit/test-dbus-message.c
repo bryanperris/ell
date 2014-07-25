@@ -1252,6 +1252,17 @@ static const unsigned char message_binary_complex_3[] = {
 };
 
 static const struct message_data message_data_complex_3 = {
+	.type		= "method_call",
+	.path		= "/org/freedesktop/PolicyKit1/Authority",
+	.interface	= "org.freedesktop.PolicyKit1.Authority",
+	.member		= "CheckAuthorization",
+	.destination	= "org.freedesktop.PolicyKit1",
+	.signature	= "(sa{sv})sa{ss}us",
+	.serial		= 0,
+	.reply_serial	= 0,
+	.no_reply	= 0,
+	.auto_start	= 1,
+	.unix_fds	= 0,
 	.binary		= message_binary_complex_3,
 	.binary_len	= 305,
 };
@@ -2392,6 +2403,21 @@ static void check_complex_3(const void *data)
 	l_dbus_message_unref(msg);
 }
 
+static void build_complex_3(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	bool result;
+
+	result = l_dbus_message_set_arguments(msg, "(sa{sv})sa{ss}us",
+					"system-bus-name", 1,
+					"name", "s", ":1.3307",
+					"org.freedesktop.policykit.exec", 0,
+					1, "");
+	assert(result);
+
+	compare_message(msg, data);
+}
+
 static void check_complex_4(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
@@ -2516,7 +2542,10 @@ int main(int argc, char *argv[])
 						&message_data_complex_2);
 	l_test_add("Complex 2 (build)", build_complex_2,
 						&message_data_complex_2);
-	l_test_add("Complex 3", check_complex_3, &message_data_complex_3);
+	l_test_add("Complex 3 (parse)", check_complex_3,
+						&message_data_complex_3);
+	l_test_add("Complex 3 (build)", build_complex_3,
+						&message_data_complex_3);
 	l_test_add("Complex 4", check_complex_4, &message_data_complex_4);
 	l_test_add("Complex 5", check_complex_5, &message_data_complex_5);
 
