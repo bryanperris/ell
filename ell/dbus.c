@@ -359,7 +359,15 @@ static bool message_read_handler(struct l_io *io, void *user_data)
 		handle_signal(dbus, message);
 		break;
 	case DBUS_MESSAGE_TYPE_METHOD_CALL:
-		_dbus_object_tree_dispatch(dbus->tree, dbus, message);
+		if (!_dbus_object_tree_dispatch(dbus->tree, dbus, message)) {
+			struct l_dbus_message *error;
+
+			error = l_dbus_message_new_error(message,
+					"org.freedesktop.DBus.Error.NotFound",
+					"No matching method found");
+			l_dbus_send(dbus, error);
+		}
+
 		break;
 	}
 
