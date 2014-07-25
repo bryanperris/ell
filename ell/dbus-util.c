@@ -205,6 +205,31 @@ static const char *validate_next_type(const char *sig)
 	return NULL;
 }
 
+static bool valid_dict_signature(const char *sig)
+{
+	char s = *sig;
+
+	if (s != '{')
+		return false;
+
+	s = *++sig;
+
+	if (!strchr(simple_types, s))
+		return false;
+
+	sig = validate_next_type(sig + 1);
+	if (!sig)
+		return false;
+
+	if (sig[0] != '}')
+		return false;
+
+	if (sig[1] != '\0')
+		return false;
+
+	return true;
+}
+
 bool _dbus_valid_signature(const char *sig)
 {
 	const char *s = sig;
@@ -1026,10 +1051,8 @@ bool _dbus1_builder_enter_array(struct dbus_builder *builder,
 	size_t start;
 	int alignment;
 
-	if (!_dbus_valid_signature(signature))
-		return false;
-
-	if (_dbus_num_children(signature) != 1)
+	if (_dbus_num_children(signature) != 1 &&
+			!valid_dict_signature(signature))
 		return false;
 
 	if (qlen == 1) {
