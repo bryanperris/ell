@@ -893,7 +893,7 @@ static bool enter_struct_dict_common(struct dbus_builder *builder,
 		const char *end;
 
 		start = container->signature + container->sigindex;
-		end = validate_next_type(start) - 1;
+		end = _dbus_signature_end(start);
 
 		if (*start != open || *end != close)
 			return false;
