@@ -106,6 +106,7 @@ static struct l_dbus_message *test_set_property(struct l_dbus *dbus,
 {
 	struct test_data *test = user_data;
 	struct l_dbus_message *reply;
+	struct l_dbus_message *signal;
 	struct l_dbus_message_iter variant;
 	const char *property;
 
@@ -126,6 +127,11 @@ static struct l_dbus_message *test_set_property(struct l_dbus *dbus,
 		l_info("New String value: %s", strvalue);
 		l_free(test->string);
 		test->string = l_strdup(strvalue);
+
+		signal = l_dbus_message_new_signal("/test",
+					"org.test", "PropertyChanged");
+		l_dbus_message_set_arguments(signal, "sv",
+						"String", "s", test->string);
 	} else if (!strcmp(property, "Integer")) {
 		uint32_t u;
 
@@ -136,6 +142,10 @@ static struct l_dbus_message *test_set_property(struct l_dbus *dbus,
 
 		l_info("New Integer value: %u", u);
 		test->integer = u;
+		signal = l_dbus_message_new_signal("/test",
+					"org.test", "PropertyChanged");
+		l_dbus_message_set_arguments(signal, "sv",
+						"Integer", "u", test->integer);
 	} else
 		return l_dbus_message_new_error(message,
 						"org.test.InvalidArguments",
@@ -146,6 +156,7 @@ static struct l_dbus_message *test_set_property(struct l_dbus *dbus,
 	l_dbus_message_set_arguments(reply, "");
 	l_dbus_send(dbus, reply);
 
+	l_dbus_send(dbus, signal);
 	return NULL;
 }
 
