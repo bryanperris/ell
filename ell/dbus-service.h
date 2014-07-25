@@ -49,7 +49,7 @@ enum l_dbus_property_flag {
 	L_DBUS_PROPERTY_FLAG_WRITABLE	= 2,
 };
 
-typedef void (*l_dbus_interface_method_cb_t) (struct l_dbus *,
+typedef struct l_dbus_message *(*l_dbus_interface_method_cb_t) (struct l_dbus *,
 						struct l_dbus_message *message,
 						void *user_data);
 

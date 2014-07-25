@@ -793,6 +793,7 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 	struct object_node *node;
 	struct interface_instance *instance;
 	struct _dbus_method *method;
+	struct l_dbus_message *reply;
 
 	path = l_dbus_message_get_path(message);
 	interface = l_dbus_message_get_interface(message);
@@ -807,7 +808,6 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 			!strcmp(msg_sig, "")) {
 		struct l_string *buf;
 		char *xml;
-		struct l_dbus_message *reply;
 
 		buf = l_string_new(0);
 		_dbus_object_tree_introspect(tree, path, buf);
@@ -840,7 +840,9 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 	if (strcmp(msg_sig, sig))
 		return false;
 
-	method->cb(dbus, message, instance->user_data);
+	reply = method->cb(dbus, message, instance->user_data);
+	if (reply)
+		l_dbus_send(dbus, reply);
 
 	return true;
 }
