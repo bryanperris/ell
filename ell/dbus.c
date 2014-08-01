@@ -736,6 +736,8 @@ static struct l_dbus *setup_kdbus(int fd)
 
 	l_idle_oneshot(kdbus_ready, dbus, NULL);
 
+	dbus->tree = _dbus_object_tree_new();
+
 	return dbus;
 }
 
@@ -854,6 +856,7 @@ LIB_EXPORT void l_dbus_destroy(struct l_dbus *dbus)
 		dbus->debug_destroy(dbus->debug_data);
 
 	l_free(dbus->guid);
+
 	_dbus_object_tree_free(dbus->tree);
 
 	l_free(dbus);
