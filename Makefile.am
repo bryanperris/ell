@@ -63,7 +63,9 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/dbus-util.c \
 			ell/dbus-service.c \
 			ell/gvariant-private.h \
-			ell/gvariant-util.c
+			ell/gvariant-util.c \
+			ell/siphash-private.h \
+			ell/siphash.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)
