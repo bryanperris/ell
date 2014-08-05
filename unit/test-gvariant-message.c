@@ -27,7 +27,6 @@
 #include <assert.h>
 
 #include <ell/ell.h>
-#include <ell/dbus.h>
 #include "ell/dbus-private.h"
 
 static bool do_print = true;

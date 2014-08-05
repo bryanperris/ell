@@ -30,7 +30,6 @@
 #include <stdio.h>
 
 #include <ell/ell.h>
-#include <ell/dbus.h>
 #include "ell/gvariant-private.h"
 
 struct signature_test {

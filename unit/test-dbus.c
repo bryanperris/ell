@@ -29,7 +29,6 @@
 #include <sys/wait.h>
 
 #include <ell/ell.h>
-#include <ell/dbus.h>
 
 #define TEST_BUS_ADDRESS "unix:path=/tmp/ell-test-bus"
 

@@ -28,7 +28,6 @@
 #include <math.h>
 
 #include <ell/ell.h>
-#include <ell/dbus.h>
 
 #include "ell/dbus-private.h"
 
