@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include <byteswap.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,6 +56,36 @@ do {						\
 	} *__p = (typeof(__p)) (ptr);		\
 	__p->__v = (val);			\
 } while(0)
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define L_LE16_TO_CPU(val) (val)
+#define L_LE32_TO_CPU(val) (val)
+#define L_LE64_TO_CPU(val) (val)
+#define L_CPU_TO_LE16(val) (val)
+#define L_CPU_TO_LE32(val) (val)
+#define L_CPU_TO_LE64(val) (val)
+#define L_BE16_TO_CPU(val) bswap_16(val)
+#define L_BE32_TO_CPU(val) bswap_32(val)
+#define L_BE64_TO_CPU(val) bswap_64(val)
+#define L_CPU_TO_BE16(val) bswap_16(val)
+#define L_CPU_TO_BE32(val) bswap_32(val)
+#define L_CPU_TO_BE64(val) bswap_64(val)
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define L_LE16_TO_CPU(val) bswap_16(val)
+#define L_LE32_TO_CPU(val) bswap_32(val)
+#define L_LE64_TO_CPU(val) bswap_64(val)
+#define L_CPU_TO_LE16(val) bswap_16(val)
+#define L_CPU_TO_LE32(val) bswap_32(val)
+#define L_CPU_TO_LE64(val) bswap_64(val)
+#define L_BE16_TO_CPU(val) (val)
+#define L_BE32_TO_CPU(val) (val)
+#define L_BE64_TO_CPU(val) (val)
+#define L_CPU_TO_BE16(val) (val)
+#define L_CPU_TO_BE32(val) (val)
+#define L_CPU_TO_BE64(val) (val)
+#else
+#error "Unknown byte order"
+#endif
 
 #define L_AUTO_CLEANUP_VAR(vartype,varname,destroy) \
 	vartype varname __attribute__((cleanup(destroy)));
