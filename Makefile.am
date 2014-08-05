@@ -100,7 +100,8 @@ unit_tests = unit/test-unit \
 			unit/test-dbus-message \
 			unit/test-dbus-service \
 			unit/test-gvariant-util \
-			unit/test-gvariant-message
+			unit/test-gvariant-message \
+			unit/test-siphash
 
 if MAINTAINER_MODE
 noinst_PROGRAMS += $(unit_tests)
@@ -143,6 +144,8 @@ unit_test_dbus_service_LDADD = ell/libell-private.la
 unit_test_gvariant_util_LDADD = ell/libell-private.la
 
 unit_test_gvariant_message_LDADD = ell/libell-private.la
+
+unit_test_siphash_LDADD = ell/libell-private.la
 
 if MAINTAINER_MODE
 noinst_LTLIBRARIES += unit/example-plugin.la
