@@ -332,7 +332,7 @@ static bool can_write_data(struct l_io *io, void *user_data)
 
 	l_queue_push_tail(genl->pending_list, request);
 
-	return !l_queue_isempty(genl->request_queue);
+	return false;
 }
 
 static void wakeup_writer(struct l_genl *genl)
@@ -340,8 +340,16 @@ static void wakeup_writer(struct l_genl *genl)
 	if (genl->writer_active)
 		return;
 
+	if (l_queue_isempty(genl->request_queue))
+		return;
+
+	if (!l_queue_isempty(genl->pending_list))
+		return;
+
 	l_io_set_write_handler(genl->io, can_write_data, genl,
 						write_watch_destroy);
+
+	genl->writer_active = true;
 }
 
 static bool match_request_seq(const void *a, const void *b)
@@ -369,6 +377,7 @@ static void process_request(struct l_genl *genl, const struct nlmsghdr *nlmsg)
 	msg = msg_create(nlmsg);
 	if (!msg) {
 		destroy_request(request);
+		wakeup_writer(genl);
 		return;
 	}
 
@@ -376,12 +385,15 @@ static void process_request(struct l_genl *genl, const struct nlmsghdr *nlmsg)
 		request->callback(msg, request->user_data);
 
 	if (nlmsg->nlmsg_flags & NLM_F_MULTI) {
-		if (nlmsg->nlmsg_type == NLMSG_DONE)
+		if (nlmsg->nlmsg_type == NLMSG_DONE) {
 			destroy_request(request);
-		else
+			wakeup_writer(genl);
+		} else
 			l_queue_push_head(genl->pending_list, request);
-	} else
+	} else {
 		destroy_request(request);
+		wakeup_writer(genl);
+	}
 
 	l_genl_msg_unref(msg);
 }
