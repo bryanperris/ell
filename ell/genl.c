@@ -209,7 +209,6 @@ static void family_add_mcast(struct l_genl_family *family, const char *name,
 {
 	struct l_genl *genl = family->genl;
 	struct genl_mcast *mcast;
-	int group = id;
 
 	if (!genl)
 		return;
@@ -223,13 +222,6 @@ static void family_add_mcast(struct l_genl_family *family, const char *name,
 
 	strncpy(mcast->name, name, GENL_NAMSIZ);
 	mcast->id = id;
-
-	if (setsockopt(genl->fd, SOL_NETLINK, NETLINK_ADD_MEMBERSHIP,
-						&group, sizeof(group)) < 0) {
-		l_free(mcast);
-		return;
-	}
-
 	mcast->users = 0;
 
 	l_queue_push_tail(family->mcast_list, mcast);
