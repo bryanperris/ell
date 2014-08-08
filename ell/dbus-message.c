@@ -1134,6 +1134,26 @@ enum dbus_message_type _dbus_message_get_type(struct l_dbus_message *message)
 	return header->message_type;
 }
 
+const char * _dbus_message_get_type_as_string(struct l_dbus_message *message)
+{
+	struct dbus_header *header;
+
+	header = message->header;
+
+	switch (header->message_type) {
+	case DBUS_MESSAGE_TYPE_METHOD_CALL:
+		return "method_call";
+	case DBUS_MESSAGE_TYPE_METHOD_RETURN:
+		return "method_return";
+	case DBUS_MESSAGE_TYPE_ERROR:
+		return "error";
+	case DBUS_MESSAGE_TYPE_SIGNAL:
+		return "signal";
+	}
+
+	return NULL;
+}
+
 uint8_t _dbus_message_get_endian(struct l_dbus_message *message)
 {
 	struct dbus_header *header = message->header;
