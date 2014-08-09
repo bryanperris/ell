@@ -2460,6 +2460,32 @@ static void check_complex_5(const void *data)
 	l_dbus_message_unref(msg);
 }
 
+static uint64_t bloom_1[] = {
+	0x8000001100001000, 0x0010304080000001, 0x0000800810000411,
+	0x0040002100000081, 0x0120004008030080, 0x8400020801000008,
+	0x0002000000008010, 0x0010000100000008,
+};
+
+static void check_bloom_1(const void *data)
+{
+	struct l_dbus_message *msg;
+	bool result;
+	uint64_t filter[8];
+	int i;
+
+	memset(filter, 0, sizeof(filter));
+
+	msg = l_dbus_message_new_signal("/test",
+					"org.test", "PropertyChanged");
+	result = l_dbus_message_set_arguments(msg, "");
+	assert(result);
+
+	_dbus_kernel_calculate_bloom(msg, filter, 64, 8);
+
+	for (i = 0; i < 8; i++)
+		assert(bloom_1[i] == filter[i]);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -2547,6 +2573,8 @@ int main(int argc, char *argv[])
 						&message_data_complex_3);
 	l_test_add("Complex 4", check_complex_4, &message_data_complex_4);
 	l_test_add("Complex 5", check_complex_5, &message_data_complex_5);
+
+	l_test_add("Bloom 1", check_bloom_1, NULL);
 
 	return l_test_run();
 }
