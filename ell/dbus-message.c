@@ -1228,3 +1228,88 @@ LIB_EXPORT bool l_dbus_message_iter_get_variant(
 
 	return result;
 }
+
+bool _dbus_kernel_calculate_bloom(struct l_dbus_message *message,
+					uint64_t filter[], size_t f_size,
+					uint8_t num_hash)
+{
+	const char *attr;
+	const char *signature;
+	void *body;
+	size_t body_size;
+	struct l_dbus_message_iter iter;
+	uint8_t argn;
+	char buf[256];
+
+	/* The string "interface:" suffixed by the interface name */
+	attr = l_dbus_message_get_interface(message);
+	if (attr)
+		_dbus_kernel_bloom_add(filter, f_size, num_hash,
+					"interface", attr);
+
+	/* The string "member:" suffixed by the member name */
+	attr = l_dbus_message_get_member(message);
+	if (attr)
+		_dbus_kernel_bloom_add(filter, f_size, num_hash,
+					"member", attr);
+
+	/*
+	 * The string "path:" suffixed by the path name
+	 *
+	 * The string "path-slash-prefix:" suffixed with the path name, and
+	 * also all prefixes of the path name (cut off at "/"), also prefixed
+	 * with "path-slash-prefix"
+	 */
+	attr = l_dbus_message_get_path(message);
+	if (attr) {
+		_dbus_kernel_bloom_add(filter, f_size, num_hash, "path", attr);
+		_dbus_kernel_bloom_add(filter, f_size, num_hash,
+					"path-slash-prefix", attr);
+		_dbus_kernel_bloom_add_parents(filter, f_size, num_hash,
+						"path-slash-prefix", attr, '/');
+	}
+
+	/*
+	 * The string "message-type:" suffixed with the strings "signal",
+	 * "method_call", "error" or "method_return" for the respective
+	 * message type of the message.
+	 */
+	_dbus_kernel_bloom_add(filter, f_size, num_hash, "message-type",
+				_dbus_message_get_type_as_string(message));
+
+	signature = l_dbus_message_get_signature(message);
+	if (!signature)
+		return true;
+
+	body = _dbus_message_get_body(message, &body_size);
+
+	if (_dbus_message_is_gvariant(message))
+		_gvariant_iter_init(&iter, message, signature, NULL,
+					body, body_size);
+	else
+		_dbus1_iter_init(&iter, message, signature, NULL,
+				body, body_size);
+
+	argn = 0;
+
+	while (*signature == 's' || *signature == 'o' || *signature == 'g') {
+		if (!message_iter_next_entry(&iter, &attr))
+			return false;
+
+		sprintf(buf, "arg%hhu", argn);
+		_dbus_kernel_bloom_add(filter, f_size, num_hash, buf, attr);
+
+		sprintf(buf, "arg%hhu-slash-prefix", argn);
+		_dbus_kernel_bloom_add_parents(filter, f_size, num_hash, buf,
+						attr, '/');
+
+		sprintf(buf, "arg%hhu-dot-prefix", argn);
+		_dbus_kernel_bloom_add_parents(filter, f_size, num_hash, buf,
+						attr, '.');
+
+		argn += 1;
+		signature += 1;
+	}
+
+	return true;
+}

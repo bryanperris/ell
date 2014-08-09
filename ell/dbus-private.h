@@ -173,3 +173,7 @@ struct l_dbus_message *_dbus_message_new_method_call(uint8_t version,
 							const char *path,
 							const char *interface,
 							const char *method);
+
+bool _dbus_kernel_calculate_bloom(struct l_dbus_message *message,
+					uint64_t filter[], size_t f_size,
+					uint8_t num_hash);
