@@ -1092,8 +1092,8 @@ unsigned int l_genl_family_dump(struct l_genl_family *family,
 				struct l_genl_msg *msg, l_genl_msg_func_t callback,
 				void *user_data, l_genl_destroy_func_t destroy)
 {
-	return send_common(family, NLM_F_DUMP, msg, callback,
-						user_data, destroy);
+	return send_common(family, NLM_F_ACK | NLM_F_DUMP, msg, callback,
+							user_data, destroy);
 }
 
 static bool match_request_id(const void *a, const void *b)
