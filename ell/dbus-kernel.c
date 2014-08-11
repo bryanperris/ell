@@ -28,11 +28,126 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <alloca.h>
 
 #include "linux/kdbus.h"
 
+#include "private.h"
 #include "dbus.h"
 #include "dbus-private.h"
+#include "siphash-private.h"
+
+#define HASH_KEY(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15) \
+        { 0x##v0, 0x##v1, 0x##v2, 0x##v3, 0x##v4, 0x##v5, 0x##v6, 0x##v7, \
+	0x##v8, 0x##v9, 0x##v10, 0x##v11, 0x##v12, 0x##v13, 0x##v14, 0x##v15 }
+
+static inline unsigned int __u64_log2(uint64_t n)
+{
+	if (n == 0)
+		return 0;
+
+	return __builtin_clzll(n) ^ 63U;
+}
+
+static inline void set_bit(uint64_t filter[], size_t b)
+{
+	filter[b >> 6] |= 1ULL << (b & 63);
+}
+
+static const uint8_t hash_keys[][16] = {
+	HASH_KEY(b9,66,0b,f0,46,70,47,c1,88,75,c4,9c,54,b9,bd,15),
+	HASH_KEY(aa,a1,54,a2,e0,71,4b,39,bf,e1,dd,2e,9f,c5,4a,3b),
+	HASH_KEY(63,fd,ae,be,cd,82,48,12,a1,6e,41,26,cb,fa,a0,c8),
+	HASH_KEY(23,be,45,29,32,d2,46,2d,82,03,52,28,fe,37,17,f5),
+	HASH_KEY(56,3b,bf,ee,5a,4f,43,39,af,aa,94,08,df,f0,fc,10),
+	HASH_KEY(31,80,c8,73,c7,ea,46,d3,aa,25,75,0f,9e,4c,09,29),
+	HASH_KEY(7d,f7,18,4b,7b,a4,44,d5,85,3c,06,e0,65,53,96,6d),
+	HASH_KEY(f2,77,e9,6f,93,b5,4e,71,9a,0c,34,88,39,25,bf,35),
+};
+
+static void bloom_update(uint64_t filter[], size_t size, uint8_t num_hash,
+				const void *data, size_t data_size)
+{
+	uint8_t hashed[8];
+	uint64_t n_bits;
+	unsigned int index_size;
+	unsigned int i;
+	unsigned int hash_index;
+	unsigned int unused_bytes = 0;
+
+	if (unlikely(num_hash == 0))
+		return;
+
+	if (unlikely(size == 0))
+		return;
+
+	n_bits = size * 8;
+	index_size = (__u64_log2(n_bits) + 7) / 8;
+
+	if (unlikely(index_size > sizeof(uint32_t)))
+		return;
+
+	for (i = 0, hash_index = 0; i < num_hash; i++) {
+		uint32_t index = 0;
+		unsigned int j;
+
+		for (j = 0; j < index_size; j++) {
+			if (unused_bytes == 0) {
+				_siphash24(hashed, data, data_size,
+						hash_keys[hash_index++]);
+				unused_bytes = 8;
+			}
+
+			index = index << 8;
+			index |= hashed[8 - unused_bytes];
+			unused_bytes -= 1;
+		}
+
+		index &= n_bits - 1;
+		set_bit(filter, index);
+	}
+}
+
+void _dbus_kernel_bloom_add(uint64_t filter[], size_t size, uint8_t num_hash,
+				const char *prefix, const char *str)
+{
+	char *buf;
+	size_t len;
+
+	len = strlen(prefix) + 1 + strlen(str) + 1;
+	buf = alloca(len);
+
+	sprintf(buf, "%s:%s", prefix, str);
+
+	bloom_update(filter, size, num_hash, buf, len - 1);
+}
+
+void _dbus_kernel_bloom_add_parents(uint64_t filter[], size_t size,
+					uint8_t num_hash, const char *prefix,
+					const char *str, const char sep)
+{
+	char *buf;
+	size_t len;
+	int start;
+
+	len = strlen(prefix) + 1 + strlen(str) + 1;
+	buf = alloca(len);
+
+	sprintf(buf, "%s:%n%s", prefix, &start, str);
+
+	while (true) {
+		char *s = strrchr(buf + start, sep);
+
+		if (!s)
+			break;
+
+		if (s == buf + start)
+			break;
+
+		*s = '\0';
+		bloom_update(filter, size, num_hash, buf, s - buf);
+	}
+}
 
 int _dbus_kernel_create_bus(const char *name)
 {

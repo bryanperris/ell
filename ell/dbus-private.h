@@ -160,6 +160,12 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 					struct l_dbus *dbus,
 					struct l_dbus_message *message);
 
+void _dbus_kernel_bloom_add(uint64_t filter[], size_t size, uint8_t num_hash,
+				const char *prefix, const char *str);
+void _dbus_kernel_bloom_add_parents(uint64_t filter[], size_t size,
+					uint8_t num_hash, const char *prefix,
+					const char *str, const char sep);
+
 int _dbus_kernel_create_bus(const char *name);
 
 struct l_dbus_message *_dbus_message_new_method_call(uint8_t version,
