@@ -73,7 +73,7 @@ static int open_log(const char *path)
 {
 	struct sockaddr_un addr;
 
-	log_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+	log_fd = socket(PF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
 	if (log_fd < 0)
 		return -1;
 
