@@ -226,5 +226,10 @@ int _dbus_kernel_hello(int fd, const char *connection_name)
 	if (ret < 0)
 		return -errno;
 
+        /* Check for incompatible flags (upper 32 bits) */
+        if (hello->bus_flags > 0xFFFFFFFFULL ||
+			hello->conn_flags > 0xFFFFFFFFULL)
+                return -ENOTSUP;
+
 	return 0;
 }
