@@ -71,6 +71,7 @@ struct l_dbus {
 	size_t bloom_size;		/* Size of the filter in bytes */
 	uint64_t kdbus_id;		/* Unique id */
 	void *kdbus_pool;		/* KDBus Memory pool */
+	char *unique_name;
 	unsigned int next_id;
 	uint32_t next_serial;
 	struct l_queue *message_queue;
@@ -417,6 +418,21 @@ static uint32_t send_message(struct l_dbus *dbus, bool priority,
 static void hello_callback(struct l_dbus_message *message, void *user_data)
 {
 	struct l_dbus *dbus = user_data;
+	const char *signature;
+	const char *unique_name;
+
+	signature = l_dbus_message_get_signature(message);
+	if (!signature || strcmp(signature, "s")) {
+		close(l_io_get_fd(dbus->io));
+		return;
+	}
+
+	if (!l_dbus_message_get_arguments(message, "s", &unique_name)) {
+		close(l_io_get_fd(dbus->io));
+		return;
+	}
+
+	dbus->unique_name = l_strdup(unique_name);
 
 	dbus->is_ready = true;
 
@@ -871,6 +887,7 @@ LIB_EXPORT void l_dbus_destroy(struct l_dbus *dbus)
 		_dbus_kernel_unmap_pool(dbus->kdbus_pool);
 
 	l_free(dbus->guid);
+	l_free(dbus->unique_name);
 
 	_dbus_object_tree_free(dbus->tree);
 
