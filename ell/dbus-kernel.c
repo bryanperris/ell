@@ -37,6 +37,9 @@
 #include "dbus-private.h"
 #include "siphash-private.h"
 
+#define DEFAULT_BLOOM_SIZE (512 / 8)
+#define DEFAULT_BLOOM_N_HASH (8)
+
 #define HASH_KEY(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15) \
         { 0x##v0, 0x##v1, 0x##v2, 0x##v3, 0x##v4, 0x##v5, 0x##v6, 0x##v7, \
 	0x##v8, 0x##v9, 0x##v10, 0x##v11, 0x##v12, 0x##v13, 0x##v14, 0x##v15 }
@@ -172,8 +175,8 @@ int _dbus_kernel_create_bus(const char *name)
 	/* bloom size item */
 	bus_make.bloom_size = 16 + sizeof(bus_make.bloom_param);
 	bus_make.bloom_type = KDBUS_ITEM_BLOOM_PARAMETER;
-	bus_make.bloom_param.size = 64;
-	bus_make.bloom_param.n_hash = 1;
+	bus_make.bloom_param.size = DEFAULT_BLOOM_SIZE;
+	bus_make.bloom_param.n_hash = DEFAULT_BLOOM_N_HASH;
 	/* name item */
 	snprintf(bus_make.name_param, sizeof(bus_make.name_param), "%s", name);
 	bus_make.name_size = 16 + strlen(bus_make.name_param) + 1;
