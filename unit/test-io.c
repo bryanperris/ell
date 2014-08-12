@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 
 	l_log_set_stderr();
 
-	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, fd) < 0) {
+	if (socketpair(PF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, fd) < 0) {
 		l_error("Failed to create socket pair");
 		return 0;
 	}
