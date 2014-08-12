@@ -67,6 +67,10 @@ struct l_dbus {
 	bool negotiate_unix_fd;
 	bool support_unix_fd;
 	bool is_ready;
+	uint8_t bloom_n_hash;		/* Number of hash indexes to use */
+	size_t bloom_size;		/* Size of the filter in bytes */
+	uint64_t kdbus_id;		/* Unique id */
+	void *kdbus_pool;		/* KDBus Memory pool */
 	unsigned int next_id;
 	uint32_t next_serial;
 	struct l_queue *message_queue;
@@ -727,13 +731,16 @@ static void kdbus_ready(void *user_data)
 static struct l_dbus *setup_kdbus(int fd)
 {
 	struct l_dbus *dbus;
+	dbus = l_new(struct l_dbus, 1);
 
-	if (_dbus_kernel_hello(fd, "ell-connection") < 0) {
+	if (_dbus_kernel_hello(fd, "ell-connection",
+				&dbus->bloom_size, &dbus->bloom_n_hash,
+				&dbus->kdbus_id, &dbus->kdbus_pool,
+				&dbus->guid) < 0) {
+		l_free(dbus);
 		close(fd);
 		return NULL;
 	}
-
-	dbus = l_new(struct l_dbus, 1);
 
 	dbus->io = l_io_new(fd);
 
@@ -859,6 +866,9 @@ LIB_EXPORT void l_dbus_destroy(struct l_dbus *dbus)
 
 	if (dbus->debug_destroy)
 		dbus->debug_destroy(dbus->debug_data);
+
+	if (dbus->kdbus_pool)
+		_dbus_kernel_unmap_pool(dbus->kdbus_pool);
 
 	l_free(dbus->guid);
 

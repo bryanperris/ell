@@ -30,6 +30,7 @@
 #include <string.h>
 #include <alloca.h>
 #include <errno.h>
+#include <sys/mman.h>
 
 #include "linux/kdbus.h"
 
@@ -198,7 +199,14 @@ int _dbus_kernel_create_bus(const char *name)
 	return fd;
 }
 
-int _dbus_kernel_hello(int fd, const char *connection_name)
+void _dbus_kernel_unmap_pool(void *pool)
+{
+	munmap(pool, KDBUS_POOL_SIZE);
+}
+
+int _dbus_kernel_hello(int fd, const char *connection_name,
+			size_t *bloom_size, uint8_t *bloom_n_hash,
+			uint64_t *id, void **pool, char **guid)
 {
 	size_t len = strlen(connection_name);
 	size_t size;
@@ -230,6 +238,27 @@ int _dbus_kernel_hello(int fd, const char *connection_name)
         if (hello->bus_flags > 0xFFFFFFFFULL ||
 			hello->conn_flags > 0xFFFFFFFFULL)
                 return -ENOTSUP;
+
+	*pool = mmap(NULL, KDBUS_POOL_SIZE, PROT_READ, MAP_SHARED, fd, 0);
+	if (*pool == MAP_FAILED) {
+		*pool = NULL;
+		return -errno;
+	}
+
+	*bloom_size = hello->bloom.size;
+	*bloom_n_hash = hello->bloom.n_hash;
+	*id = hello->id;
+	*guid = l_strdup_printf("%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx"
+				"%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx"
+				"%02hhx%02hhx",
+				hello->id128[0], hello->id128[1],
+				hello->id128[2], hello->id128[3],
+				hello->id128[4], hello->id128[5],
+				hello->id128[6], hello->id128[7],
+				hello->id128[8], hello->id128[9],
+				hello->id128[10], hello->id128[11],
+				hello->id128[12], hello->id128[13],
+				hello->id128[14], hello->id128[15]);
 
 	return 0;
 }

@@ -178,4 +178,7 @@ bool _dbus_kernel_calculate_bloom(struct l_dbus_message *message,
 					uint64_t filter[], size_t f_size,
 					uint8_t num_hash);
 
-int _dbus_kernel_hello(int fd, const char *connection_name);
+int _dbus_kernel_hello(int fd, const char *connection_name,
+			size_t *bloom_size, uint8_t *bloom_n_hash,
+			uint64_t *id, void **pool, char **guid);
+void _dbus_kernel_unmap_pool(void *pool);
