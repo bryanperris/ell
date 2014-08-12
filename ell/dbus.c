@@ -728,6 +728,11 @@ static struct l_dbus *setup_kdbus(int fd)
 {
 	struct l_dbus *dbus;
 
+	if (_dbus_kernel_hello(fd, "ell-connection") < 0) {
+		close(fd);
+		return NULL;
+	}
+
 	dbus = l_new(struct l_dbus, 1);
 
 	dbus->io = l_io_new(fd);
