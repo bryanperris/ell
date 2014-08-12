@@ -189,8 +189,9 @@ int _dbus_kernel_create_bus(const char *name)
 				strlen(bus_make.name_param) + 1;
 	bus_make.name_type = KDBUS_ITEM_MAKE_NAME;
 	/* bus make head */
-	bus_make.head.size = sizeof(bus_make.head) +
-				bus_make.bloom_size + bus_make.name_size;
+	bus_make.head.size = align_len(sizeof(bus_make.head) +
+					bus_make.bloom_size +
+					bus_make.name_size, 8);
 	bus_make.head.flags = KDBUS_MAKE_ACCESS_WORLD;
 
 	if (ioctl(fd, KDBUS_CMD_BUS_MAKE, &bus_make) < 0) {
