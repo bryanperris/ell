@@ -178,13 +178,15 @@ int _dbus_kernel_create_bus(const char *name)
 
 	memset(&bus_make, 0, sizeof(bus_make));
 	/* bloom size item */
-	bus_make.bloom_size = 16 + sizeof(bus_make.bloom_param);
+	bus_make.bloom_size = KDBUS_ITEM_HEADER_SIZE +
+					sizeof(bus_make.bloom_param);
 	bus_make.bloom_type = KDBUS_ITEM_BLOOM_PARAMETER;
 	bus_make.bloom_param.size = DEFAULT_BLOOM_SIZE;
 	bus_make.bloom_param.n_hash = DEFAULT_BLOOM_N_HASH;
 	/* name item */
 	snprintf(bus_make.name_param, sizeof(bus_make.name_param), "%s", name);
-	bus_make.name_size = 16 + strlen(bus_make.name_param) + 1;
+	bus_make.name_size = KDBUS_ITEM_HEADER_SIZE +
+				strlen(bus_make.name_param) + 1;
 	bus_make.name_type = KDBUS_ITEM_MAKE_NAME;
 	/* bus make head */
 	bus_make.head.size = sizeof(bus_make.head) +
