@@ -123,6 +123,8 @@ char **l_strsplit(const char *str, const char sep);
 char **l_strsplit_set(const char *str, const char *separators);
 char *l_strjoinv(char **str_array, const char delim);
 
+bool l_str_has_prefix(const char *str, const char *prefix);
+
 char *l_util_hexstring(const unsigned char *buf, size_t len);
 
 typedef void (*l_util_hexdump_func_t) (const char *str, void *user_data);

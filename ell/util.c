@@ -354,6 +354,36 @@ LIB_EXPORT char *l_strjoinv(char **str_array, const char delim)
 }
 
 /**
+ * l_str_has_prefix:
+ * @str: A string to be examined
+ * @delim: Prefix string
+ *
+ * Determines if the string given by @str is prefixed by string given by
+ * @prefix.
+ *
+ * Returns: True if @str was prefixed by @prefix.  False otherwise.
+ */
+LIB_EXPORT bool l_str_has_prefix(const char *str, const char *prefix)
+{
+	size_t str_len;
+	size_t prefix_len;
+
+	if (unlikely(!str))
+		return false;
+
+	if (unlikely(!prefix))
+		return false;
+
+	str_len = strlen(str);
+	prefix_len = strlen(prefix);
+
+	if (str_len < prefix_len)
+		return false;
+
+	return !strncmp(str, prefix, prefix_len);
+}
+
+/**
  * l_util_hexstring:
  * @buf: buffer pointer
  * @len: length of buffer
