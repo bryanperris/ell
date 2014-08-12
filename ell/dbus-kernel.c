@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <alloca.h>
+#include <errno.h>
 
 #include "linux/kdbus.h"
 
@@ -36,6 +37,9 @@
 #include "dbus.h"
 #include "dbus-private.h"
 #include "siphash-private.h"
+
+#define KDBUS_ITEM_HEADER_SIZE offsetof(struct kdbus_item, data)
+#define KDBUS_POOL_SIZE (16*1024*1024)
 
 #define DEFAULT_BLOOM_SIZE (512 / 8)
 #define DEFAULT_BLOOM_N_HASH (8)
@@ -192,4 +196,35 @@ int _dbus_kernel_create_bus(const char *name)
         }
 
 	return fd;
+}
+
+int _dbus_kernel_hello(int fd, const char *connection_name)
+{
+	size_t len = strlen(connection_name);
+	size_t size;
+	struct kdbus_cmd_hello *hello;
+	struct kdbus_item *item;
+	int ret;
+
+	size = align_len(sizeof(struct kdbus_cmd_hello), 8);
+	size += align_len(offsetof(struct kdbus_item, str) + len + 1, 8);
+
+	hello = alloca(size);
+	memset(hello, 0, size);
+
+	hello->size = size;
+	hello->conn_flags |= KDBUS_HELLO_ACCEPT_FD;
+	hello->attach_flags |= KDBUS_ATTACH_NAMES;
+	hello->pool_size = KDBUS_POOL_SIZE;
+
+	item = hello->items;
+	item->size = KDBUS_ITEM_HEADER_SIZE + len + 1;
+	item->type = KDBUS_ITEM_CONN_NAME;
+	strcpy(item->str, connection_name);
+
+	ret = ioctl(fd, KDBUS_CMD_HELLO, hello);
+	if (ret < 0)
+		return -errno;
+
+	return 0;
 }
