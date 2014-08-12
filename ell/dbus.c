@@ -758,6 +758,8 @@ static struct l_dbus *setup_kdbus(int fd)
 		return NULL;
 	}
 
+	dbus->unique_name = l_strdup_printf(":1.%llu", dbus->kdbus_id);
+
 	dbus->io = l_io_new(fd);
 
 	l_io_set_close_on_destroy(dbus->io, true);
