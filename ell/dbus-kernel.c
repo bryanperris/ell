@@ -49,6 +49,11 @@
         { 0x##v0, 0x##v1, 0x##v2, 0x##v3, 0x##v4, 0x##v5, 0x##v6, 0x##v7, \
 	0x##v8, 0x##v9, 0x##v10, 0x##v11, 0x##v12, 0x##v13, 0x##v14, 0x##v15 }
 
+static inline size_t KDBUS_ITEM_SIZE(size_t actual)
+{
+	return align_len(actual + offsetof(struct kdbus_item, data), 8);
+}
+
 static inline unsigned int __u64_log2(uint64_t n)
 {
 	if (n == 0)
@@ -218,7 +223,7 @@ int _dbus_kernel_hello(int fd, const char *connection_name,
 	int ret;
 
 	size = align_len(sizeof(struct kdbus_cmd_hello), 8);
-	size += align_len(offsetof(struct kdbus_item, str) + len + 1, 8);
+	size += KDBUS_ITEM_SIZE(len + 1);
 
 	hello = alloca(size);
 	memset(hello, 0, size);
