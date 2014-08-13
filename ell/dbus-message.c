@@ -104,14 +104,21 @@ void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial)
 	hdr->serial = serial;
 }
 
-void _dbus_message_set_no_reply_expected(struct l_dbus_message *msg, bool on)
+LIB_EXPORT bool l_dbus_message_set_no_reply(struct l_dbus_message *msg, bool on)
 {
-	struct dbus_header *hdr = msg->header;
+	struct dbus_header *hdr;
+
+	if (unlikely(!msg))
+		return false;
+
+	hdr = msg->header;
 
 	if (on)
 		hdr->flags |= DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED;
 	else
 		hdr->flags &= ~DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED;
+
+	return true;
 }
 
 static struct l_dbus_message *message_new_common(uint8_t type, uint8_t flags,
