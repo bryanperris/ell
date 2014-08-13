@@ -154,6 +154,22 @@ LIB_EXPORT bool l_dbus_message_set_no_autostart(struct l_dbus_message *msg,
 	return true;
 }
 
+LIB_EXPORT bool l_dbus_message_get_no_autostart(struct l_dbus_message *msg)
+{
+	struct dbus_header *hdr;
+
+	if (unlikely(!msg))
+		return false;
+
+	hdr = msg->header;
+
+	if (hdr->flags & DBUS_MESSAGE_FLAG_NO_AUTO_START)
+		return true;
+
+	return false;
+
+}
+
 static struct l_dbus_message *message_new_common(uint8_t type, uint8_t flags,
 						uint8_t version)
 {

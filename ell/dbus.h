@@ -107,6 +107,7 @@ bool l_dbus_message_set_no_reply(struct l_dbus_message *message, bool on);
 bool l_dbus_message_get_no_reply(struct l_dbus_message *message);
 
 bool l_dbus_message_set_no_autostart(struct l_dbus_message *message, bool on);
+bool l_dbus_message_get_no_autostart(struct l_dbus_message *message);
 
 typedef void (*l_dbus_message_func_t) (struct l_dbus_message *message,
 							void *user_data);
