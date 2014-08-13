@@ -596,6 +596,27 @@ static void disconnect_handler(struct l_io *io, void *user_data)
 		dbus->disconnect_handler(dbus->disconnect_data);
 }
 
+static struct l_dbus *init_dbus_common(int fd)
+{
+	struct l_dbus *dbus = l_new(struct l_dbus, 1);
+
+	dbus->io = l_io_new(fd);
+	l_io_set_close_on_destroy(dbus->io, true);
+	l_io_set_disconnect_handler(dbus->io, disconnect_handler, dbus, NULL);
+
+	dbus->is_ready = false;
+	dbus->next_id = 1;
+	dbus->next_serial = 1;
+
+	dbus->message_queue = l_queue_new();
+	dbus->message_list = l_hashmap_new();
+	dbus->signal_list = l_hashmap_new();
+
+	dbus->tree = _dbus_object_tree_new();
+
+	return dbus;
+}
+
 static struct l_dbus *setup_dbus1(int fd, const char *guid)
 {
 	static const unsigned char creds = 0x00;
@@ -634,9 +655,7 @@ static struct l_dbus *setup_dbus1(int fd, const char *guid)
 		}
 	}
 
-	dbus = l_new(struct l_dbus, 1);
-
-	dbus->io = l_io_new(fd);
+	dbus = init_dbus_common(fd);
 	dbus->guid = l_strdup(guid);
 
 	dbus->auth_command = l_strdup_printf("AUTH EXTERNAL %s\r\n", hexuid);
@@ -644,22 +663,9 @@ static struct l_dbus *setup_dbus1(int fd, const char *guid)
 
 	dbus->negotiate_unix_fd = true;
 	dbus->support_unix_fd = false;
-	dbus->is_ready = false;
-	dbus->next_id = 1;
-	dbus->next_serial = 1;
-
-	dbus->message_queue = l_queue_new();
-	dbus->message_list = l_hashmap_new();
-	dbus->signal_list = l_hashmap_new();
-
-	l_io_set_close_on_destroy(dbus->io, true);
-
-	l_io_set_disconnect_handler(dbus->io, disconnect_handler, dbus, NULL);
 
 	l_io_set_read_handler(dbus->io, auth_read_handler, dbus, NULL);
 	l_io_set_write_handler(dbus->io, auth_write_handler, dbus, NULL);
-
-	dbus->tree = _dbus_object_tree_new();
 
 	return dbus;
 }
@@ -747,7 +753,8 @@ static void kdbus_ready(void *user_data)
 static struct l_dbus *setup_kdbus(int fd)
 {
 	struct l_dbus *dbus;
-	dbus = l_new(struct l_dbus, 1);
+
+	dbus = init_dbus_common(fd);
 
 	if (_dbus_kernel_hello(fd, "ell-connection",
 				&dbus->bloom_size, &dbus->bloom_n_hash,
@@ -760,13 +767,7 @@ static struct l_dbus *setup_kdbus(int fd)
 
 	dbus->unique_name = l_strdup_printf(":1.%llu", dbus->kdbus_id);
 
-	dbus->io = l_io_new(fd);
-
-	l_io_set_close_on_destroy(dbus->io, true);
-
 	l_idle_oneshot(kdbus_ready, dbus, NULL);
-
-	dbus->tree = _dbus_object_tree_new();
 
 	return dbus;
 }
