@@ -131,14 +131,11 @@ static void signal_list_destroy(void *value)
 	l_free(callback);
 }
 
-static bool send_message_to_fd(int fd, struct l_dbus_message *message,
-							uint32_t serial)
+static bool send_message_to_fd(int fd, struct l_dbus_message *message)
 {
 	struct msghdr msg;
 	struct iovec iov[2];
 	ssize_t len;
-
-	_dbus_message_set_serial(message, serial);
 
 	iov[0].iov_base = _dbus_message_get_header(message, &iov[0].iov_len);
 	iov[1].iov_base = _dbus_message_get_body(message, &iov[1].iov_len);
@@ -173,8 +170,9 @@ static bool message_write_handler(struct l_io *io, void *user_data)
 		l_dbus_message_set_no_reply(message, true);
 
 	fd = l_io_get_fd(io);
+	_dbus_message_set_serial(message, callback->serial);
 
-	if (!send_message_to_fd(fd, message, callback->serial))
+	if (!send_message_to_fd(fd, message))
 		return false;
 
 	header = _dbus_message_get_header(message, &header_size);
