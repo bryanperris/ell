@@ -96,6 +96,7 @@ char *_dbus1_builder_finish(struct dbus_builder *builder,
 void *_dbus_message_get_body(struct l_dbus_message *msg, size_t *out_size);
 void *_dbus_message_get_header(struct l_dbus_message *msg, size_t *out_size);
 void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial);
+uint32_t _dbus_message_get_serial(struct l_dbus_message *msg);
 uint32_t _dbus_message_get_reply_serial(struct l_dbus_message *message);
 
 enum dbus_message_type _dbus_message_get_type(struct l_dbus_message *message);

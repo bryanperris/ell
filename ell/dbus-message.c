@@ -104,6 +104,13 @@ void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial)
 	hdr->serial = serial;
 }
 
+uint32_t _dbus_message_get_serial(struct l_dbus_message *msg)
+{
+	struct dbus_header *hdr = msg->header;
+
+	return hdr->serial;
+}
+
 LIB_EXPORT bool l_dbus_message_set_no_reply(struct l_dbus_message *msg, bool on)
 {
 	struct dbus_header *hdr;
