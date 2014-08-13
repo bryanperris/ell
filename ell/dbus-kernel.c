@@ -24,7 +24,9 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -52,6 +54,14 @@
 static inline size_t KDBUS_ITEM_SIZE(size_t actual)
 {
 	return align_len(actual + offsetof(struct kdbus_item, data), 8);
+}
+
+static inline struct kdbus_item *KDBUS_ITEM_NEXT(struct kdbus_item *item)
+{
+	size_t aligned = align_len(item->size, 8);
+	void *start = item;
+
+	return start + aligned;
 }
 
 static inline unsigned int __u64_log2(uint64_t n)
@@ -288,4 +298,120 @@ static bool parse_unique_name(const char *name, uint64_t *out_id)
 		*out_id = r;
 
 	return true;
+}
+
+int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t n_bloom_hash,
+			struct l_dbus_message *message)
+{
+	size_t kmsg_size;
+	bool unique;
+	uint64_t id;
+	const char *dest;
+	size_t dest_len;
+	struct kdbus_item *item;
+	void *header;
+	size_t header_size;
+	void *body;
+	size_t body_size;
+	int ret;
+	L_AUTO_CLEANUP_VAR(struct kdbus_msg *, kmsg, l_free);
+
+	dest = l_dbus_message_get_destination(message);
+	if (dest)
+		unique = parse_unique_name(dest, &id);
+	else
+		unique = false;
+
+	dest_len = dest ? strlen(dest) : 0;
+
+	kmsg_size = sizeof(struct kdbus_msg);
+
+	/* Reserve space for header + body */
+	kmsg_size += KDBUS_ITEM_SIZE(sizeof(struct kdbus_vec));
+	kmsg_size += KDBUS_ITEM_SIZE(sizeof(struct kdbus_vec));
+
+	/* Reserve space for bloom filter */
+	if (_dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_SIGNAL)
+		kmsg_size += KDBUS_ITEM_SIZE(sizeof(struct kdbus_bloom_filter) +
+						bloom_size);
+
+	/* Reserve space for well-known destination header */
+	if (dest && !unique)
+		kmsg_size += KDBUS_ITEM_SIZE(dest_len + 1);
+
+	kmsg = aligned_alloc(8, kmsg_size);
+	if (!kmsg)
+		return -ENOMEM;
+
+	memset(kmsg, 0, kmsg_size);
+	item = kmsg->items;
+
+	kmsg->payload_type = KDBUS_PAYLOAD_DBUS;
+	kmsg->priority = 0;
+	kmsg->cookie = _dbus_message_get_serial(message);
+
+	if (l_dbus_message_get_no_autostart(message))
+		kmsg->flags |= KDBUS_MSG_FLAGS_NO_AUTO_START;
+
+	if (!l_dbus_message_get_no_reply(message))
+		kmsg->flags |= KDBUS_MSG_FLAGS_EXPECT_REPLY;
+
+	if (!unique && dest) {
+		kmsg->dst_id = KDBUS_DST_ID_NAME;
+		item->size = KDBUS_ITEM_HEADER_SIZE + dest_len + 1;
+		item->type = KDBUS_ITEM_DST_NAME;
+		strcpy(item->str, dest);
+		item = KDBUS_ITEM_NEXT(item);
+	} else if (!unique && !dest)
+		kmsg->dst_id = KDBUS_DST_ID_BROADCAST;
+	else
+		kmsg->dst_id = id;
+
+	switch(_dbus_message_get_type(message)) {
+	case DBUS_MESSAGE_TYPE_METHOD_RETURN:
+	case DBUS_MESSAGE_TYPE_ERROR:
+	{
+		uint32_t reply_cookie = _dbus_message_get_reply_serial(message);
+
+		if (reply_cookie == 0)
+			return -EINVAL;
+
+		kmsg->cookie_reply = reply_cookie;
+		break;
+	}
+	case DBUS_MESSAGE_TYPE_METHOD_CALL:
+		kmsg->timeout_ns = 30000 * 1000ULL;
+		break;
+	case DBUS_MESSAGE_TYPE_SIGNAL:
+		item->size = KDBUS_ITEM_HEADER_SIZE +
+				sizeof(struct kdbus_bloom_filter) + bloom_size;
+		item->type = KDBUS_ITEM_BLOOM_FILTER;
+
+		/* TODO: Calculate actual bloom filter */
+
+		item = KDBUS_ITEM_NEXT(item);
+		break;
+	}
+
+	header = _dbus_message_get_header(message, &header_size);
+	item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(struct kdbus_vec);
+	item->type = KDBUS_ITEM_PAYLOAD_VEC;
+	item->vec.address = (uint64_t) header;
+	item->vec.size = header_size;
+	item = KDBUS_ITEM_NEXT(item);
+
+	body = _dbus_message_get_body(message, &body_size);
+	item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(struct kdbus_vec);
+	item->type = KDBUS_ITEM_PAYLOAD_VEC;
+	item->vec.address = (uint64_t) body;
+	item->vec.size = body_size;
+	item = KDBUS_ITEM_NEXT(item);
+
+	kmsg->size = (void *)item - (void *)kmsg;
+
+	ret = ioctl(fd, KDBUS_CMD_MSG_SEND, kmsg);
+	if (ret < 0)
+		return -errno;
+
+	return 0;
 }
