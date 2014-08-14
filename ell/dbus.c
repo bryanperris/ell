@@ -59,18 +59,19 @@ enum auth_state {
 	SETUP_DONE
 };
 
+struct l_dbus_ops {
+	char version;
+	bool (*send_message)(struct l_dbus *bus,
+				struct l_dbus_message *message);
+	void (*free)(struct l_dbus *bus);
+};
+
 struct l_dbus {
 	struct l_io *io;
 	char *guid;
-	void *auth_command;
-	enum auth_state auth_state;
 	bool negotiate_unix_fd;
 	bool support_unix_fd;
 	bool is_ready;
-	uint8_t bloom_n_hash;		/* Number of hash indexes to use */
-	size_t bloom_size;		/* Size of the filter in bytes */
-	uint64_t kdbus_id;		/* Unique id */
-	void *kdbus_pool;		/* KDBus Memory pool */
 	char *unique_name;
 	unsigned int next_id;
 	uint32_t next_serial;
@@ -87,6 +88,22 @@ struct l_dbus {
 	l_dbus_destroy_func_t debug_destroy;
 	void *debug_data;
 	struct _dbus_object_tree *tree;
+
+	const struct l_dbus_ops *driver;
+};
+
+struct l_dbus_kdbus {
+	struct l_dbus super;
+	uint8_t bloom_n_hash;		/* Number of hash indexes to use */
+	size_t bloom_size;		/* Size of the filter in bytes */
+	uint64_t kdbus_id;		/* Unique id */
+	void *kdbus_pool;		/* KDBus Memory pool */
+};
+
+struct l_dbus_classic {
+	struct l_dbus super;
+	void *auth_command;
+	enum auth_state auth_state;
 };
 
 struct message_callback {
@@ -131,32 +148,11 @@ static void signal_list_destroy(void *value)
 	l_free(callback);
 }
 
-static bool send_message_to_fd(int fd, struct l_dbus_message *message)
-{
-	struct msghdr msg;
-	struct iovec iov[2];
-	ssize_t len;
-
-	iov[0].iov_base = _dbus_message_get_header(message, &iov[0].iov_len);
-	iov[1].iov_base = _dbus_message_get_body(message, &iov[1].iov_len);
-
-	memset(&msg, 0, sizeof(msg));
-	msg.msg_iov = iov;
-	msg.msg_iovlen = 2;
-
-	len = sendmsg(fd, &msg, 0);
-	if (len < 0)
-		return false;
-
-	return true;
-}
-
 static bool message_write_handler(struct l_io *io, void *user_data)
 {
 	struct l_dbus *dbus = user_data;
 	struct l_dbus_message *message;
 	struct message_callback *callback;
-	int fd;
 	const void *header, *body;
 	size_t header_size, body_size;
 
@@ -169,10 +165,9 @@ static bool message_write_handler(struct l_io *io, void *user_data)
 			callback->callback == NULL)
 		l_dbus_message_set_no_reply(message, true);
 
-	fd = l_io_get_fd(io);
 	_dbus_message_set_serial(message, callback->serial);
 
-	if (!send_message_to_fd(fd, message))
+	if (!dbus->driver->send_message(dbus, message))
 		return false;
 
 	header = _dbus_message_get_header(message, &header_size);
@@ -446,28 +441,29 @@ static void hello_callback(struct l_dbus_message *message, void *user_data)
 
 static bool auth_write_handler(struct l_io *io, void *user_data)
 {
-	struct l_dbus *dbus = user_data;
+	struct l_dbus_classic *classic = user_data;
+	struct l_dbus *dbus = &classic->super;
 	ssize_t written, len;
 	int fd;
 
 	fd = l_io_get_fd(io);
 
-	if (!dbus->auth_command)
+	if (!classic->auth_command)
 		return false;
 
-	len = strlen(dbus->auth_command);
+	len = strlen(classic->auth_command);
 	if (!len)
 		return false;
 
-	written = send(fd, dbus->auth_command, len, 0);
+	written = send(fd, classic->auth_command, len, 0);
 
-	l_util_hexdump(false, dbus->auth_command, written,
+	l_util_hexdump(false, classic->auth_command, written,
 					dbus->debug_handler, dbus->debug_data);
 
-	l_free(dbus->auth_command);
-	dbus->auth_command = NULL;
+	l_free(classic->auth_command);
+	classic->auth_command = NULL;
 
-	if (dbus->auth_state == SETUP_DONE) {
+	if (classic->auth_state == SETUP_DONE) {
 		struct l_dbus_message *message;
 
 		l_io_set_read_handler(dbus->io, message_read_handler,
@@ -487,7 +483,8 @@ static bool auth_write_handler(struct l_io *io, void *user_data)
 
 static bool auth_read_handler(struct l_io *io, void *user_data)
 {
-	struct l_dbus *dbus = user_data;
+	struct l_dbus_classic *classic = user_data;
+	struct l_dbus *dbus = &classic->super;
 	char buffer[64];
 	char *ptr, *end;
 	ssize_t offset, len;
@@ -523,7 +520,7 @@ static bool auth_read_handler(struct l_io *io, void *user_data)
 
 	end = '\0';
 
-	switch (dbus->auth_state) {
+	switch (classic->auth_state) {
 	case WAITING_FOR_OK:
 		if (!strncmp(ptr, "OK ", 3)) {
 			enum auth_state state;
@@ -540,16 +537,16 @@ static bool auth_read_handler(struct l_io *io, void *user_data)
 			l_free(dbus->guid);
 			dbus->guid = l_strdup(ptr + 3);
 
-			dbus->auth_command = l_strdup(command);
-			dbus->auth_state = state;
+			classic->auth_command = l_strdup(command);
+			classic->auth_state = state;
 			break;
 		} else if (!strncmp(ptr, "REJECTED ", 9)) {
 			static const char *command = "AUTH ANONYMOUS\r\n";
 
 			dbus->negotiate_unix_fd = false;
 
-			dbus->auth_command = l_strdup(command);
-			dbus->auth_state = WAITING_FOR_OK;
+			classic->auth_command = l_strdup(command);
+			classic->auth_state = WAITING_FOR_OK;
 		}
 		break;
 
@@ -559,16 +556,16 @@ static bool auth_read_handler(struct l_io *io, void *user_data)
 
 			dbus->support_unix_fd = true;
 
-			dbus->auth_command = l_strdup(command);
-			dbus->auth_state = SETUP_DONE;
+			classic->auth_command = l_strdup(command);
+			classic->auth_state = SETUP_DONE;
 			break;
 		} else if (!strncmp(ptr, "ERROR", 5)) {
 			static const char *command = "BEGIN\r\n";
 
 			dbus->support_unix_fd = false;
 
-			dbus->auth_command = l_strdup(command);
-			dbus->auth_state = SETUP_DONE;
+			classic->auth_command = l_strdup(command);
+			classic->auth_state = SETUP_DONE;
 			break;
 		}
 		break;
@@ -594,10 +591,8 @@ static void disconnect_handler(struct l_io *io, void *user_data)
 		dbus->disconnect_handler(dbus->disconnect_data);
 }
 
-static struct l_dbus *init_dbus_common(int fd)
+static void dbus_init(struct l_dbus *dbus, int fd)
 {
-	struct l_dbus *dbus = l_new(struct l_dbus, 1);
-
 	dbus->io = l_io_new(fd);
 	l_io_set_close_on_destroy(dbus->io, true);
 	l_io_set_disconnect_handler(dbus->io, disconnect_handler, dbus, NULL);
@@ -611,15 +606,51 @@ static struct l_dbus *init_dbus_common(int fd)
 	dbus->signal_list = l_hashmap_new();
 
 	dbus->tree = _dbus_object_tree_new();
-
-	return dbus;
 }
+
+static void classic_free(struct l_dbus *dbus)
+{
+	struct l_dbus_classic *classic =
+		container_of(dbus, struct l_dbus_classic, super);
+
+	l_free(classic->auth_command);
+	l_free(classic);
+}
+
+static bool classic_send_message(struct l_dbus *dbus,
+					struct l_dbus_message *message)
+{
+	int fd = l_io_get_fd(dbus->io);
+	struct msghdr msg;
+	struct iovec iov[2];
+	ssize_t len;
+
+	iov[0].iov_base = _dbus_message_get_header(message, &iov[0].iov_len);
+	iov[1].iov_base = _dbus_message_get_body(message, &iov[1].iov_len);
+
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 2;
+
+	len = sendmsg(fd, &msg, 0);
+	if (len < 0)
+		return false;
+
+	return true;
+}
+
+static const struct l_dbus_ops classic_ops = {
+	.version = 1,
+	.send_message = classic_send_message,
+	.free = classic_free,
+};
 
 static struct l_dbus *setup_dbus1(int fd, const char *guid)
 {
 	static const unsigned char creds = 0x00;
 	char uid[6], hexuid[12], *ptr = hexuid;
 	struct l_dbus *dbus;
+	struct l_dbus_classic *classic;
 	ssize_t written;
 	unsigned int i;
 	long flags;
@@ -653,11 +684,15 @@ static struct l_dbus *setup_dbus1(int fd, const char *guid)
 		}
 	}
 
-	dbus = init_dbus_common(fd);
+	classic = l_new(struct l_dbus_classic, 1);
+	dbus = &classic->super;
+	dbus->driver = &classic_ops;
+
+	dbus_init(dbus, fd);
 	dbus->guid = l_strdup(guid);
 
-	dbus->auth_command = l_strdup_printf("AUTH EXTERNAL %s\r\n", hexuid);
-	dbus->auth_state = WAITING_FOR_OK;
+	classic->auth_command = l_strdup_printf("AUTH EXTERNAL %s\r\n", hexuid);
+	classic->auth_state = WAITING_FOR_OK;
 
 	dbus->negotiate_unix_fd = true;
 	dbus->support_unix_fd = false;
@@ -748,22 +783,60 @@ static void kdbus_ready(void *user_data)
 		dbus->ready_handler(dbus->ready_data);
 }
 
+static void kdbus_free(struct l_dbus *dbus)
+{
+	struct l_dbus_kdbus *kdbus =
+		container_of(dbus, struct l_dbus_kdbus, super);
+
+	if (kdbus->kdbus_pool)
+		_dbus_kernel_unmap_pool(kdbus->kdbus_pool);
+
+	l_free(kdbus);
+}
+
+static bool kdbus_send_message(struct l_dbus *dbus,
+					struct l_dbus_message *message)
+{
+	struct l_dbus_kdbus *kdbus =
+			container_of(dbus, struct l_dbus_kdbus, super);
+	int fd = l_io_get_fd(dbus->io);
+	int r;
+
+	r = _dbus_kernel_send(fd, kdbus->bloom_size,
+				kdbus->bloom_n_hash, message);
+	if (r < 0)
+		return false;
+
+	return true;
+}
+
+static const struct l_dbus_ops kdbus_ops = {
+	.version  = 2,
+	.free = kdbus_free,
+	.send_message = kdbus_send_message,
+};
+
 static struct l_dbus *setup_kdbus(int fd)
 {
 	struct l_dbus *dbus;
+	struct l_dbus_kdbus *kdbus;
 
-	dbus = init_dbus_common(fd);
+	kdbus = l_new(struct l_dbus_kdbus, 1);
+	dbus = &kdbus->super;
+	dbus->driver = &kdbus_ops;
+
+	dbus_init(dbus, fd);
 
 	if (_dbus_kernel_hello(fd, "ell-connection",
-				&dbus->bloom_size, &dbus->bloom_n_hash,
-				&dbus->kdbus_id, &dbus->kdbus_pool,
+				&kdbus->bloom_size, &kdbus->bloom_n_hash,
+				&kdbus->kdbus_id, &kdbus->kdbus_pool,
 				&dbus->guid) < 0) {
 		l_free(dbus);
 		close(fd);
 		return NULL;
 	}
 
-	dbus->unique_name = l_strdup_printf(":1.%llu", dbus->kdbus_id);
+	dbus->unique_name = l_strdup_printf(":1.%llu", kdbus->kdbus_id);
 
 	l_idle_oneshot(kdbus_ready, dbus, NULL);
 
@@ -884,15 +957,12 @@ LIB_EXPORT void l_dbus_destroy(struct l_dbus *dbus)
 	if (dbus->debug_destroy)
 		dbus->debug_destroy(dbus->debug_data);
 
-	if (dbus->kdbus_pool)
-		_dbus_kernel_unmap_pool(dbus->kdbus_pool);
-
 	l_free(dbus->guid);
 	l_free(dbus->unique_name);
 
 	_dbus_object_tree_free(dbus->tree);
 
-	l_free(dbus);
+	dbus->driver->free(dbus);
 }
 
 LIB_EXPORT bool l_dbus_set_ready_handler(struct l_dbus *dbus,
