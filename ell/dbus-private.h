@@ -185,3 +185,5 @@ void _dbus_kernel_unmap_pool(void *pool);
 
 int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t n_bloom_hash,
 			struct l_dbus_message *message);
+
+uint8_t _dbus_get_version(struct l_dbus *dbus);

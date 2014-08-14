@@ -1133,6 +1133,11 @@ LIB_EXPORT uint32_t l_dbus_method_call(struct l_dbus *dbus,
 	return send_message(dbus, false, message, function, user_data, destroy);
 }
 
+uint8_t _dbus_get_version(struct l_dbus *dbus)
+{
+	return dbus->driver->version;
+}
+
 LIB_EXPORT bool l_dbus_register_interface(struct l_dbus *dbus,
 				const char *path, const char *interface,
 				l_dbus_interface_setup_func_t setup_func,
