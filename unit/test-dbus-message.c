@@ -2475,7 +2475,7 @@ static void check_bloom_1(const void *data)
 
 	memset(filter, 0, sizeof(filter));
 
-	msg = l_dbus_message_new_signal("/test",
+	msg = _dbus_message_new_signal(2, "/test",
 					"org.test", "PropertyChanged");
 	result = l_dbus_message_set_arguments(msg, "");
 	assert(result);
