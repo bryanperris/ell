@@ -303,7 +303,7 @@ static void test_dbus_object_tree_dispatch(const void *test_data)
 					build_manager_interface,
 					dummy_data, NULL);
 
-	message = l_dbus_message_new_method_call("org.ofono", "/",
+	message = _dbus_message_new_method_call(1, "org.ofono", "/",
 						"org.ofono.Manager",
 						"GetModems");
 	l_dbus_message_set_arguments(message, "");
