@@ -74,8 +74,11 @@ struct l_dbus_message_iter {
 	const void *offsets;
 };
 
-struct l_dbus_message *l_dbus_message_new_method_call(const char *destination,
-		const char *path, const char *interface, const char *method);
+struct l_dbus_message *l_dbus_message_new_method_call(struct l_dbus *dbus,
+							const char *destination,
+							const char *path,
+							const char *interface,
+							const char *method);
 
 struct l_dbus_message *l_dbus_message_new_signal(const char *path,
 							const char *interface,

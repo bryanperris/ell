@@ -469,8 +469,11 @@ static bool auth_write_handler(struct l_io *io, void *user_data)
 		l_io_set_read_handler(dbus->io, message_read_handler,
 							dbus, NULL);
 
-		message = l_dbus_message_new_method_call(DBUS_SERVICE_DBUS,
-				DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "Hello");
+		message = l_dbus_message_new_method_call(dbus,
+							DBUS_SERVICE_DBUS,
+							DBUS_PATH_DBUS,
+							DBUS_INTERFACE_DBUS,
+							"Hello");
 		l_dbus_message_set_arguments(message, "");
 
 		send_message(dbus, true, message, hello_callback, dbus, NULL);
@@ -1124,7 +1127,7 @@ LIB_EXPORT uint32_t l_dbus_method_call(struct l_dbus *dbus,
 	if (unlikely(!dbus))
 		return 0;
 
-	message = l_dbus_message_new_method_call(destination, path,
+	message = l_dbus_message_new_method_call(dbus, destination, path,
 							interface, method);
 
 	if (setup)

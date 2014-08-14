@@ -220,11 +220,21 @@ struct l_dbus_message *_dbus_message_new_method_call(uint8_t version,
 	return message;
 }
 
-LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_call(const char *destination,
-                const char *path, const char *interface, const char *method)
+LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_call(
+							struct l_dbus *dbus,
+							const char *destination,
+							const char *path,
+							const char *interface,
+							const char *method)
 {
-	return _dbus_message_new_method_call(DBUS_MESSAGE_PROTOCOL_VERSION,
-						destination, path,
+	uint8_t version;
+
+	if (unlikely(!dbus))
+		return NULL;
+
+	version = _dbus_get_version(dbus);
+
+	return _dbus_message_new_method_call(version, destination, path,
 						interface, method);
 }
 
