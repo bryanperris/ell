@@ -127,7 +127,7 @@ static struct l_dbus_message *test_set_property(struct l_dbus *dbus,
 		l_free(test->string);
 		test->string = l_strdup(strvalue);
 
-		signal = l_dbus_message_new_signal("/test",
+		signal = l_dbus_message_new_signal(dbus, "/test",
 					"org.test", "PropertyChanged");
 		l_dbus_message_set_arguments(signal, "sv",
 						"String", "s", test->string);
@@ -141,7 +141,7 @@ static struct l_dbus_message *test_set_property(struct l_dbus *dbus,
 
 		l_info("New Integer value: %u", u);
 		test->integer = u;
-		signal = l_dbus_message_new_signal("/test",
+		signal = l_dbus_message_new_signal(dbus, "/test",
 					"org.test", "PropertyChanged");
 		l_dbus_message_set_arguments(signal, "sv",
 						"Integer", "u", test->integer);
