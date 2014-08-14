@@ -104,6 +104,12 @@ const char * _dbus_message_get_type_as_string(struct l_dbus_message *message);
 uint8_t _dbus_message_get_version(struct l_dbus_message *message);
 uint8_t _dbus_message_get_endian(struct l_dbus_message *message);
 
+struct l_dbus_message *_dbus_message_new_method_call(uint8_t version,
+							const char *destination,
+							const char *path,
+							const char *interface,
+							const char *method);
+
 struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size);
 struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 						void *body, size_t body_size,
@@ -167,12 +173,6 @@ void _dbus_kernel_bloom_add_parents(uint64_t filter[], size_t size,
 					const char *str, const char sep);
 
 int _dbus_kernel_create_bus(const char *name);
-
-struct l_dbus_message *_dbus_message_new_method_call(uint8_t version,
-							const char *destination,
-							const char *path,
-							const char *interface,
-							const char *method);
 
 bool _dbus_kernel_calculate_bloom(struct l_dbus_message *message,
 					uint64_t filter[], size_t f_size,
