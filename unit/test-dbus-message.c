@@ -1356,7 +1356,7 @@ static struct l_dbus_message *build_message(const struct message_data *msg_data)
 {
 	struct l_dbus_message *msg;
 
-	msg = l_dbus_message_new_method_call(msg_data->destination,
+	msg = _dbus_message_new_method_call(1, msg_data->destination,
 			msg_data->path, msg_data->interface, msg_data->member);
 	assert(msg);
 
