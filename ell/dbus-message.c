@@ -256,22 +256,19 @@ struct l_dbus_message *_dbus_message_new_signal(uint8_t version,
 	return message;
 }
 
-LIB_EXPORT struct l_dbus_message *l_dbus_message_new_signal(const char *path,
+LIB_EXPORT struct l_dbus_message *l_dbus_message_new_signal(struct l_dbus *dbus,
+							const char *path,
 							const char *interface,
 							const char *name)
 {
-	struct l_dbus_message *message;
+	uint8_t version;
 
-	message = message_new_common(DBUS_MESSAGE_TYPE_SIGNAL,
-					DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED,
-					DBUS_MESSAGE_PROTOCOL_VERSION);
+	if (unlikely(!dbus))
+		return NULL;
 
-	message->path = l_strdup(path);
-	message->interface = l_strdup(interface);
-	message->member = l_strdup(name);
+	version = _dbus_get_version(dbus);
 
-	return message;
-
+	return _dbus_message_new_signal(version, path, interface, name);
 }
 
 LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_return(
