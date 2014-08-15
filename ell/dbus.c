@@ -786,6 +786,12 @@ static void kdbus_ready(void *user_data)
 
 	if (dbus->ready_handler)
 		dbus->ready_handler(dbus->ready_data);
+
+	/* Check for messages added before the connection was ready */
+	if (l_queue_isempty(dbus->message_queue))
+		return;
+
+	l_io_set_write_handler(dbus->io, message_write_handler, dbus, NULL);
 }
 
 static void kdbus_free(struct l_dbus *dbus)
