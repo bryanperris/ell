@@ -401,11 +401,13 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t n_bloom_hash,
 	item = KDBUS_ITEM_NEXT(item);
 
 	body = _dbus_message_get_body(message, &body_size);
-	item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(struct kdbus_vec);
-	item->type = KDBUS_ITEM_PAYLOAD_VEC;
-	item->vec.address = (uint64_t) body;
-	item->vec.size = body_size;
-	item = KDBUS_ITEM_NEXT(item);
+	if (body_size > 0) {
+		item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(struct kdbus_vec);
+		item->type = KDBUS_ITEM_PAYLOAD_VEC;
+		item->vec.address = (uint64_t) body;
+		item->vec.size = body_size;
+		item = KDBUS_ITEM_NEXT(item);
+	}
 
 	kmsg->size = (void *)item - (void *)kmsg;
 
