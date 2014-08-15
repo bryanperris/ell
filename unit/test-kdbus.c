@@ -54,8 +54,14 @@ static void signal_handler(struct l_signal *signal, uint32_t signo,
 static void ready_callback(void *user_data)
 {
 	struct l_dbus *dbus = user_data;
+	struct l_dbus_message *message;
 
 	l_info("ready");
+
+	message = l_dbus_message_new_signal(dbus, "/test",
+					"org.test", "TestSignal");
+	l_dbus_message_set_arguments(message, "");
+	l_dbus_send(dbus, message);
 }
 
 int main(int argc, char *argv[])
