@@ -20,22 +20,23 @@
  *
  */
 
-#include <ell/util.h>
-#include <ell/test.h>
-#include <ell/queue.h>
-#include <ell/hashmap.h>
-#include <ell/string.h>
-#include <ell/main.h>
-#include <ell/idle.h>
-#include <ell/signal.h>
-#include <ell/timeout.h>
-#include <ell/io.h>
-#include <ell/log.h>
-#include <ell/plugin.h>
-#include <ell/checksum.h>
-#include <ell/settings.h>
-#include <ell/hwdb.h>
+#ifndef __ELL_HWDB_H
+#define __ELL_HWDB_H
 
-#include <ell/netlink.h>
-#include <ell/genl.h>
-#include <ell/dbus.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct l_hwdb;
+
+struct l_hwdb *l_hwdb_new(const char *pathname);
+struct l_hwdb *l_hwdb_new_default(void);
+
+struct l_hwdb *l_hwdb_ref(struct l_hwdb *hwdb);
+void l_hwdb_unref(struct l_hwdb *hwdb);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_HWDB_H */

@@ -32,7 +32,8 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/netlink.h \
 			ell/genl.h \
 			ell/dbus.h \
-			ell/dbus-service.h
+			ell/dbus-service.h \
+			ell/hwdb.h
 
 lib_LTLIBRARIES = ell/libell.la
 
@@ -65,7 +66,8 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/gvariant-private.h \
 			ell/gvariant-util.c \
 			ell/siphash-private.h \
-			ell/siphash.c
+			ell/siphash.c \
+			ell/hwdb.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)
