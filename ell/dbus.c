@@ -167,8 +167,10 @@ static bool message_write_handler(struct l_io *io, void *user_data)
 
 	_dbus_message_set_serial(message, callback->serial);
 
-	if (!dbus->driver->send_message(dbus, message))
+	if (!dbus->driver->send_message(dbus, message)) {
+		message_queue_destroy(callback);
 		return false;
+	}
 
 	header = _dbus_message_get_header(message, &header_size);
 	body = _dbus_message_get_body(message, &body_size);
