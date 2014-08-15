@@ -300,7 +300,7 @@ static bool parse_unique_name(const char *name, uint64_t *out_id)
 	return true;
 }
 
-int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t n_bloom_hash,
+int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 			struct l_dbus_message *message)
 {
 	size_t kmsg_size;
@@ -387,7 +387,10 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t n_bloom_hash,
 				sizeof(struct kdbus_bloom_filter) + bloom_size;
 		item->type = KDBUS_ITEM_BLOOM_FILTER;
 
-		/* TODO: Calculate actual bloom filter */
+		item->bloom_filter.generation = 0;
+		_dbus_kernel_calculate_bloom(message,
+					(uint64_t *) item->bloom_filter.data,
+					bloom_size, bloom_n_hash);
 
 		item = KDBUS_ITEM_NEXT(item);
 		break;
