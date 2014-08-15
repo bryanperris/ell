@@ -90,6 +90,9 @@ do {						\
 #define L_AUTO_CLEANUP_VAR(vartype,varname,destroy) \
 	vartype varname __attribute__((cleanup(destroy)));
 
+#define L_AUTO_FREE_VAR(vartype,varname) \
+	vartype varname __attribute__((cleanup(auto_free)));
+
 #define L_ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 void *l_malloc(size_t size) __attribute__ ((warn_unused_result, malloc));
@@ -97,6 +100,12 @@ void l_free(void *ptr);
 
 void *l_realloc(void *mem, size_t size)
 			__attribute__ ((warn_unused_result, malloc));
+
+static inline void auto_free(void *a)
+{
+	void **p = (void **)a;
+	l_free(*p);
+}
 
 /**
  * l_new:
