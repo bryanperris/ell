@@ -41,6 +41,8 @@
 #include "dbus-private.h"
 #include "siphash-private.h"
 
+#define uninitialized_var(x) x = x
+
 #define KDBUS_ITEM_HEADER_SIZE offsetof(struct kdbus_item, data)
 #define KDBUS_POOL_SIZE (16*1024*1024)
 
@@ -305,7 +307,7 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 {
 	size_t kmsg_size;
 	bool unique;
-	uint64_t id;
+	uint64_t uninitialized_var(id);
 	const char *dest;
 	size_t dest_len;
 	struct kdbus_item *item;
