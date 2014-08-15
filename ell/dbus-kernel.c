@@ -41,8 +41,6 @@
 #include "dbus-private.h"
 #include "siphash-private.h"
 
-#define uninitialized_var(x) x = x
-
 #define KDBUS_ITEM_HEADER_SIZE offsetof(struct kdbus_item, data)
 #define KDBUS_POOL_SIZE (16*1024*1024)
 
