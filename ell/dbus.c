@@ -809,8 +809,11 @@ static bool kdbus_send_message(struct l_dbus *dbus,
 
 	r = _dbus_kernel_send(fd, kdbus->bloom_size,
 				kdbus->bloom_n_hash, message);
-	if (r < 0)
+	if (r < 0) {
+		l_util_debug(dbus->debug_handler,
+				dbus->debug_data, strerror(-r));
 		return false;
+	}
 
 	return true;
 }
