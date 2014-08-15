@@ -39,11 +39,23 @@ static void do_debug(const char *str, void *user_data)
 	l_info("%s%s", prefix, str);
 }
 
+static void signal_handler(struct l_signal *signal, uint32_t signo,
+							void *user_data)
+{
+	switch (signo) {
+	case SIGINT:
+	case SIGTERM:
+		l_info("Terminate");
+		l_main_quit();
+		break;
+	}
+}
+
 static void ready_callback(void *user_data)
 {
-	l_info("ready");
+	struct l_dbus *dbus = user_data;
 
-	l_main_quit();
+	l_info("ready");
 }
 
 int main(int argc, char *argv[])
@@ -52,6 +64,14 @@ int main(int argc, char *argv[])
 	char bus_name[16];
 	char bus_address[64];
 	int bus_fd;
+	struct l_signal *signal;
+	sigset_t mask;
+
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGINT);
+	sigaddset(&mask, SIGTERM);
+
+	signal = l_signal_create(&mask, signal_handler, NULL, NULL);
 
 	l_log_set_stderr();
 
@@ -77,8 +97,9 @@ int main(int argc, char *argv[])
 	l_main_run();
 
 	l_dbus_destroy(dbus);
-
 	close(bus_fd);
+
+	l_signal_remove(signal);
 
 	return EXIT_SUCCESS;
 }
