@@ -1059,7 +1059,7 @@ LIB_EXPORT bool l_settings_set_double(struct l_settings *settings,
 					const char *group_name, const char *key,
 					double in)
 {
-	L_AUTO_CLEANUP_VAR(char *, buf, l_free);
+	L_AUTO_FREE_VAR(char *, buf);
 
 	buf = l_strdup_printf("%d", in);
 
@@ -1105,7 +1105,7 @@ LIB_EXPORT bool l_settings_set_float(struct l_settings *settings,
 					const char *group_name, const char *key,
 					float in)
 {
-	L_AUTO_CLEANUP_VAR(char *, buf, l_free);
+	L_AUTO_FREE_VAR(char *, buf);
 
 	buf = l_strdup_printf("%f", in);
 
