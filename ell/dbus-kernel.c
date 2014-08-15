@@ -314,7 +314,7 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t n_bloom_hash,
 	void *body;
 	size_t body_size;
 	int ret;
-	L_AUTO_CLEANUP_VAR(struct kdbus_msg *, kmsg, l_free);
+	L_AUTO_FREE_VAR(struct kdbus_msg *, kmsg);
 
 	dest = l_dbus_message_get_destination(message);
 	if (dest)
