@@ -477,3 +477,37 @@ int _dbus_kernel_name_acquire(int fd, const char *name)
 
 	return 0;
 }
+
+int _dbus_kernel_add_match(int fd, uint64_t bloom_size, uint64_t bloom_n_hash,
+				uint64_t *out_cookie)
+{
+	static uint64_t cookie = 1;
+	struct kdbus_item *item;
+	struct kdbus_cmd_match *cmd;
+	size_t cmd_size;
+	int r;
+
+	cmd_size = sizeof(struct kdbus_cmd_match);
+	cmd_size += KDBUS_ITEM_SIZE(bloom_size);
+
+	cmd = alloca(cmd_size);
+	memset(cmd, 0, cmd_size);
+	cmd->size = cmd_size;
+	cmd->cookie = cookie++;
+	item = cmd->items;
+
+	item->size = KDBUS_ITEM_HEADER_SIZE + bloom_size;
+	item->type = KDBUS_ITEM_BLOOM_MASK;
+	_dbus_kernel_bloom_add((uint64_t *) item->data64, bloom_size,
+				bloom_n_hash, "message-type", "signal");
+	item = KDBUS_ITEM_NEXT(item);
+
+	r = ioctl(fd, KDBUS_CMD_MATCH_ADD, cmd);
+	if (r < 0)
+		return -errno;
+
+	if (out_cookie)
+		*out_cookie = cmd->cookie;
+
+	return 0;
+}
