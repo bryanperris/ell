@@ -51,6 +51,19 @@ static void print_modalias(struct l_hwdb *hwdb, const char *format, ...)
 	printf("\n");
 }
 
+static void print_entry(const char *modalias,
+				struct l_hwdb_entry *entries, void *user_data)
+{
+	struct l_hwdb_entry *entry;
+
+	printf("%s\n", modalias);
+
+	for (entry = entries; entry; entry = entry->next)
+		printf(" %s=%s\n", entry->key, entry->value);
+
+	printf("\n");
+}
+
 int main(int argc, char *argv[])
 {
 	struct l_hwdb *hwdb;
@@ -58,6 +71,8 @@ int main(int argc, char *argv[])
 	hwdb = l_hwdb_new_default();
 	if (!hwdb)
 		return 0;
+
+	l_hwdb_foreach(hwdb, print_entry, NULL);
 
 	/* Bluetooth Interest Group Inc. */
 	print_modalias(hwdb, "OUI:000F79");
