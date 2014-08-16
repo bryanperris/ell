@@ -511,3 +511,19 @@ int _dbus_kernel_add_match(int fd, uint64_t bloom_size, uint64_t bloom_n_hash,
 
 	return 0;
 }
+
+int _dbus_kernel_remove_match(int fd, uint64_t cookie)
+{
+	struct kdbus_cmd_match cmd;
+	int r;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.size = sizeof(cmd);
+	cmd.cookie = cookie;
+
+	r = ioctl(fd, KDBUS_CMD_MATCH_REMOVE, &cmd);
+	if (r < 0)
+		return -errno;
+
+	return 0;
+}

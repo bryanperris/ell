@@ -199,6 +199,7 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 int _dbus_kernel_name_acquire(int fd, const char *name);
 int _dbus_kernel_add_match(int fd, uint64_t bloom_size, uint64_t bloom_n_hash,
 				uint64_t *out_cookie);
+int _dbus_kernel_remove_match(int fd, uint64_t cookie);
 
 uint8_t _dbus_get_version(struct l_dbus *dbus);
 int _dbus_get_fd(struct l_dbus *dbus);
