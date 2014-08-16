@@ -28,9 +28,20 @@
 
 #include <ell/ell.h>
 
-static void print_line(const char *str, void *user_data)
+static void print_modalias(struct l_hwdb *hwdb, const char *modalias)
 {
-	printf("%s\n", str);
+	struct l_hwdb_entry *entries, *entry;
+
+	printf("%s\n", modalias);
+
+	entries = l_hwdb_lookup(hwdb, modalias);
+
+	for (entry = entries; entry; entry = entry->next)
+		printf(" %s=%s\n", entry->key, entry->value);
+
+	l_hwdb_lookup_free(entries);
+
+	printf("\n");
 }
 
 int main(int argc, char *argv[])
@@ -41,7 +52,17 @@ int main(int argc, char *argv[])
 	if (!hwdb)
 		return 0;
 
-	l_hwdb_print_all(hwdb, print_line, NULL);
+	/* Bluetooth Interest Group Inc. */
+	print_modalias(hwdb, "OUI:000F79");
+
+	/* Bluetooth SIG, Inc. */
+	print_modalias(hwdb, "bluetooth:v003F");
+
+	/* Nike+ FuelBand */
+	print_modalias(hwdb, "bluetooth:v0078p0001");
+
+	/* Bluetooth Type-A standard interface */
+	print_modalias(hwdb, "sdio:c02");
 
 	l_hwdb_unref(hwdb);
 
