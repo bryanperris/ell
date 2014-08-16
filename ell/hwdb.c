@@ -24,8 +24,11 @@
 #include <config.h>
 #endif
 
+#include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <alloca.h>
+#include <fnmatch.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 
@@ -234,4 +237,88 @@ LIB_EXPORT void l_hwdb_print_all(struct l_hwdb *hwdb, l_hwdb_print_func_t func,
 		return;
 
 	print_node(hwdb->addr, hwdb->root, "", func, user_data);
+}
+
+static int trie_fnmatch(const void *addr, uint64_t offset, const char *prefix,
+			const char *string, struct l_hwdb_entry **entries)
+{
+	const struct trie_node *node = addr + offset;
+	const void *addr_ptr = addr + offset + sizeof(*node);
+	const char *prefix_str = addr + le64_to_cpu(node->prefix_offset);
+	uint64_t child_count = le64_to_cpu(node->child_count);
+	uint64_t entry_count = le64_to_cpu(node->entry_count);
+	uint64_t i;
+	size_t scratch_len;
+	char *scratch_buf;
+
+	scratch_len = strlen(prefix) + strlen(prefix_str);
+	scratch_buf = alloca(scratch_len + 2);
+	sprintf(scratch_buf, "%s%s", prefix, prefix_str);
+	scratch_buf[scratch_len + 1] = '\0';
+
+	for (i = 0; i < child_count; i++) {
+		const struct trie_child *child = addr_ptr;
+		int err;
+
+		scratch_buf[scratch_len] = child->c;
+
+		err = trie_fnmatch(addr, le64_to_cpu(child->child_offset),
+						scratch_buf, string, entries);
+		if (err)
+			return err;
+
+		addr_ptr += sizeof(*child);
+	}
+
+	if (!entry_count)
+		return 0;
+
+	scratch_buf[scratch_len] = '\0';
+
+	if (fnmatch(scratch_buf, string, 0))
+		return 0;
+
+	for (i = 0; i < entry_count; i++) {
+		const struct trie_entry *entry = addr_ptr;
+		const char *key_str = addr + le64_to_cpu(entry->key_offset);
+		const char *val_str = addr + le64_to_cpu(entry->value_offset);
+		struct l_hwdb_entry *result;
+
+		if (key_str[0] == ' ') {
+			result = l_new(struct l_hwdb_entry, 1);
+
+			result->key = key_str + 1;
+			result->value = val_str;
+			result->next = (*entries);
+			*entries = result;
+		}
+
+		addr_ptr += sizeof(*entry);
+	}
+
+	return 0;
+}
+
+LIB_EXPORT struct l_hwdb_entry *l_hwdb_lookup(struct l_hwdb *hwdb,
+							const char *modalias)
+{
+	struct l_hwdb_entry *entries = NULL;
+
+	if (!hwdb || !modalias)
+		return NULL;
+
+	trie_fnmatch(hwdb->addr, hwdb->root, "", modalias, &entries);
+
+	return entries;
+}
+
+LIB_EXPORT void l_hwdb_lookup_free(struct l_hwdb_entry *entries)
+{
+	while (entries) {
+		struct l_hwdb_entry *entry = entries;
+
+		entries = entries->next;
+
+		l_free(entry);
+	}
 }

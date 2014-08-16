@@ -40,6 +40,15 @@ typedef void (*l_hwdb_print_func_t)(const char *str, void *user_data);
 void l_hwdb_print_all(struct l_hwdb *hwdb, l_hwdb_print_func_t func,
 							void *user_data);
 
+struct l_hwdb_entry {
+	const char *key;
+	const char *value;
+	struct l_hwdb_entry *next;
+};
+
+struct l_hwdb_entry *l_hwdb_lookup(struct l_hwdb *hwdb, const char *modalias);
+void l_hwdb_lookup_free(struct l_hwdb_entry *entries);
+
 #ifdef __cplusplus
 }
 #endif
