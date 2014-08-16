@@ -451,3 +451,29 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 
 	return 0;
 }
+
+int _dbus_kernel_name_acquire(int fd, const char *name)
+{
+	struct {
+		struct kdbus_cmd_name head;
+		char param[64];
+	} cmd_name;
+	size_t nlen;
+
+	if (!name)
+		return false;
+
+	nlen = strlen(name) + 1;
+	if (nlen > sizeof(cmd_name.param))
+		return false;
+
+	memset(&cmd_name, 0, sizeof(cmd_name));
+
+	strcpy(cmd_name.param, name);
+	cmd_name.head.size = sizeof(cmd_name.head) + nlen;
+
+	if (ioctl(fd, KDBUS_CMD_NAME_ACQUIRE, &cmd_name) < 0)
+		return -errno;
+
+	return 0;
+}

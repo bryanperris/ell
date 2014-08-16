@@ -196,4 +196,6 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t n_bloom_hash,
 int _dbus_kernel_recv(int fd, void *kdbus_pool,
 				struct l_dbus_message **out_message);
 
+int _dbus_kernel_name_acquire(int fd, const char *name);
+
 uint8_t _dbus_get_version(struct l_dbus *dbus);
