@@ -420,3 +420,34 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 
 	return 0;
 }
+
+int _dbus_kernel_recv(int fd, void *kdbus_pool,
+				struct l_dbus_message **out_message)
+{
+	struct kdbus_cmd_recv recv_cmd;
+	struct kdbus_msg *msg;
+	int r;
+
+	memset(&recv_cmd, 0, sizeof(recv_cmd));
+
+	r = ioctl(fd, KDBUS_CMD_MSG_RECV, &recv_cmd);
+	if (r < 0)
+		return -errno;
+
+	msg = (struct kdbus_msg *)(kdbus_pool + recv_cmd.offset);
+
+	switch (msg->payload_type) {
+	case KDBUS_PAYLOAD_DBUS:
+		break;
+	case KDBUS_PAYLOAD_KERNEL:
+		break;
+	default:
+		break;
+	}
+
+	r = ioctl(fd, KDBUS_CMD_FREE, &recv_cmd.offset);
+	if (r < 0)
+		return -errno;
+
+	return 0;
+}
