@@ -24,7 +24,14 @@
 #include <config.h>
 #endif
 
+#include <stdio.h>
+
 #include <ell/ell.h>
+
+static void print_line(const char *str, void *user_data)
+{
+	printf("%s\n", str);
+}
 
 int main(int argc, char *argv[])
 {
@@ -33,6 +40,8 @@ int main(int argc, char *argv[])
 	hwdb = l_hwdb_new_default();
 	if (!hwdb)
 		return 0;
+
+	l_hwdb_print_all(hwdb, print_line, NULL);
 
 	l_hwdb_unref(hwdb);
 
