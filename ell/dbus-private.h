@@ -199,3 +199,4 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 int _dbus_kernel_name_acquire(int fd, const char *name);
 
 uint8_t _dbus_get_version(struct l_dbus *dbus);
+int _dbus_get_fd(struct l_dbus *dbus);
