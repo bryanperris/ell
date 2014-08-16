@@ -189,59 +189,6 @@ LIB_EXPORT void l_hwdb_unref(struct l_hwdb *hwdb)
 	l_free(hwdb);
 }
 
-static void print_node(const void *addr, uint64_t offset, const char *prefix,
-				l_hwdb_print_func_t func, void *user_data)
-{
-	const struct trie_node *node = addr + offset;
-	const void *addr_ptr = addr + offset + sizeof(*node);
-	const char *prefix_str = addr + le64_to_cpu(node->prefix_offset);
-	uint64_t child_count = le64_to_cpu(node->child_count);
-	uint64_t entry_count = le64_to_cpu(node->entry_count);
-	uint64_t i;
-	char *str;
-
-	for (i = 0; i < child_count; i++) {
-		const struct trie_child *child = addr_ptr;
-
-		str = l_strdup_printf("%s%s%c", prefix, prefix_str, child->c);
-		print_node(addr, le64_to_cpu(child->child_offset), str,
-							func, user_data);
-		l_free(str);
-
-		addr_ptr += sizeof(*child);
-	}
-
-	if (!entry_count)
-		return;
-
-	str = l_strdup_printf("%s%s", prefix, prefix_str);
-	func(str, user_data);
-	l_free(str);
-
-	for (i = 0; i < entry_count; i++) {
-		const struct trie_entry *entry = addr_ptr;
-		const char *key_str = addr + le64_to_cpu(entry->key_offset);
-		const char *val_str = addr + le64_to_cpu(entry->value_offset);
-
-		str = l_strdup_printf("%s=%s", key_str, val_str);
-		func(str, user_data);
-		l_free(str);
-
-		addr_ptr += sizeof(*entry);
-	}
-
-	func("", user_data);
-}
-
-LIB_EXPORT void l_hwdb_print_all(struct l_hwdb *hwdb, l_hwdb_print_func_t func,
-							void *user_data)
-{
-	if (!hwdb || !func)
-		return;
-
-	print_node(hwdb->addr, hwdb->root, "", func, user_data);
-}
-
 static int trie_fnmatch(const void *addr, uint64_t offset, const char *prefix,
 			const char *string, struct l_hwdb_entry **entries)
 {
