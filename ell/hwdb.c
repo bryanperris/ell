@@ -276,6 +276,13 @@ LIB_EXPORT struct l_hwdb_entry *l_hwdb_lookup_valist(struct l_hwdb *hwdb,
 	if (len < 0)
 		return NULL;
 
+	/*
+	 * This search operation is not optimized for the Patricia Trie
+	 * and will compare every single entry in the database.
+	 *
+	 * An optimized version should allow using the Patricia Trie data
+	 * structure and follow the shortest path to the matching entry.
+	 */
 	trie_fnmatch(hwdb->addr, hwdb->root, "", modalias, &entries);
 
 	free(modalias);
