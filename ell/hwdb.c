@@ -306,17 +306,26 @@ LIB_EXPORT struct l_hwdb_entry *l_hwdb_lookup(struct l_hwdb *hwdb,
 						const char *format, ...)
 {
 	struct l_hwdb_entry *entries = NULL;
-	va_list ap;
+	va_list args;
+
+	va_start(args, format);
+	entries = l_hwdb_lookup_valist(hwdb, format, args);
+	va_end(args);
+
+	return entries;
+}
+
+LIB_EXPORT struct l_hwdb_entry *l_hwdb_lookup_valist(struct l_hwdb *hwdb,
+					const char *format, va_list args)
+{
+	struct l_hwdb_entry *entries = NULL;
 	char *modalias;
 	int len;
 
 	if (!hwdb || !format)
 		return NULL;
 
-	va_start(ap, format);
-	len = vasprintf(&modalias, format, ap);
-	va_end(ap);
-
+	len = vasprintf(&modalias, format, args);
 	if (len < 0)
 		return NULL;
 

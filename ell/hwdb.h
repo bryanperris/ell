@@ -23,6 +23,8 @@
 #ifndef __ELL_HWDB_H
 #define __ELL_HWDB_H
 
+#include <stdarg.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,6 +50,8 @@ struct l_hwdb_entry {
 
 struct l_hwdb_entry *l_hwdb_lookup(struct l_hwdb *hwdb, const char *format, ...)
 					__attribute__((format(printf, 2, 3)));
+struct l_hwdb_entry *l_hwdb_lookup_valist(struct l_hwdb *hwdb,
+					const char *format, va_list args);
 void l_hwdb_lookup_free(struct l_hwdb_entry *entries);
 
 #ifdef __cplusplus
