@@ -46,7 +46,8 @@ struct l_hwdb_entry {
 	struct l_hwdb_entry *next;
 };
 
-struct l_hwdb_entry *l_hwdb_lookup(struct l_hwdb *hwdb, const char *modalias);
+struct l_hwdb_entry *l_hwdb_lookup(struct l_hwdb *hwdb, const char *format, ...)
+					__attribute__((format(printf, 2, 3)));
 void l_hwdb_lookup_free(struct l_hwdb_entry *entries);
 
 #ifdef __cplusplus

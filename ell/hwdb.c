@@ -24,9 +24,12 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdarg.h>
+#include <stdlib.h>
 #include <alloca.h>
 #include <fnmatch.h>
 #include <sys/stat.h>
@@ -300,14 +303,26 @@ static int trie_fnmatch(const void *addr, uint64_t offset, const char *prefix,
 }
 
 LIB_EXPORT struct l_hwdb_entry *l_hwdb_lookup(struct l_hwdb *hwdb,
-							const char *modalias)
+						const char *format, ...)
 {
 	struct l_hwdb_entry *entries = NULL;
+	va_list ap;
+	char *modalias;
+	int len;
 
-	if (!hwdb || !modalias)
+	if (!hwdb || !format)
+		return NULL;
+
+	va_start(ap, format);
+	len = vasprintf(&modalias, format, ap);
+	va_end(ap);
+
+	if (len < 0)
 		return NULL;
 
 	trie_fnmatch(hwdb->addr, hwdb->root, "", modalias, &entries);
+
+	free(modalias);
 
 	return entries;
 }
