@@ -51,12 +51,31 @@ static void signal_handler(struct l_signal *signal, uint32_t signo,
 	}
 }
 
-static void ready_callback(void *user_data)
+static void client_ready_callback(void *user_data)
+{
+	struct l_dbus *dbus = user_data;
+
+	l_info("client ready");
+
+	l_dbus_method_call(dbus, "org.test",
+				"/test",
+				"org.test", "TestMethod",
+				NULL,
+				NULL, NULL, NULL);
+}
+
+static void service_ready_callback(void *user_data)
 {
 	struct l_dbus *dbus = user_data;
 	struct l_dbus_message *message;
+	int fd = _dbus_get_fd(dbus);
+	int r;
 
-	l_info("ready");
+	r = _dbus_kernel_name_acquire(fd, "org.test");
+	if (r < 0)
+		l_info("Failed to acquire name: %s", strerror(-r));
+
+	l_info("service ready");
 
 	message = l_dbus_message_new_signal(dbus, "/test",
 					"org.test", "TestSignal");
@@ -66,7 +85,8 @@ static void ready_callback(void *user_data)
 
 int main(int argc, char *argv[])
 {
-	struct l_dbus *dbus;
+	struct l_dbus *service;
+	struct l_dbus *client;
 	char bus_name[16];
 	char bus_address[64];
 	int bus_fd;
@@ -92,17 +112,23 @@ int main(int argc, char *argv[])
 	snprintf(bus_address, sizeof(bus_address),
 				"kernel:path=/dev/kdbus/%s/bus", bus_name);
 
-	dbus = l_dbus_new(bus_address);
+	service = l_dbus_new(bus_address);
+	assert(service);
 
-	assert(dbus);
+	l_dbus_set_debug(service, do_debug, "[SERVICE] ", NULL);
+	l_dbus_set_ready_handler(service, service_ready_callback,
+					service, NULL);
 
-	l_dbus_set_debug(dbus, do_debug, "[DBUS] ", NULL);
+	client = l_dbus_new(bus_address);
+	assert(client);
 
-	l_dbus_set_ready_handler(dbus, ready_callback, dbus, NULL);
+	l_dbus_set_debug(client, do_debug, "[CLIENT] ", NULL);
+	l_dbus_set_ready_handler(client, client_ready_callback, client, NULL);
 
 	l_main_run();
 
-	l_dbus_destroy(dbus);
+	l_dbus_destroy(service);
+	l_dbus_destroy(client);
 	close(bus_fd);
 
 	l_signal_remove(signal);
