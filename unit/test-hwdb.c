@@ -28,13 +28,20 @@
 
 #include <ell/ell.h>
 
-static void print_modalias(struct l_hwdb *hwdb, const char *modalias)
+static void print_modalias(struct l_hwdb *hwdb, const char *format, ...)
 {
 	struct l_hwdb_entry *entries, *entry;
+	va_list args;
 
-	printf("%s\n", modalias);
+	va_start(args, format);
+	vprintf(format, args);
+	va_end(args);
 
-	entries = l_hwdb_lookup(hwdb, modalias);
+	printf("\n");
+
+	va_start(args, format);
+	entries = l_hwdb_lookup_valist(hwdb, format, args);
+	va_end(args);
 
 	for (entry = entries; entry; entry = entry->next)
 		printf(" %s=%s\n", entry->key, entry->value);
@@ -56,10 +63,10 @@ int main(int argc, char *argv[])
 	print_modalias(hwdb, "OUI:000F79");
 
 	/* Bluetooth SIG, Inc. */
-	print_modalias(hwdb, "bluetooth:v003F");
+	print_modalias(hwdb, "bluetooth:v%04X", 0x003f);
 
 	/* Nike+ FuelBand */
-	print_modalias(hwdb, "bluetooth:v0078p0001");
+	print_modalias(hwdb, "bluetooth:v%04Xp%04X", 0x0078, 0x0001);
 
 	/* Bluetooth Type-A standard interface */
 	print_modalias(hwdb, "sdio:c02");
