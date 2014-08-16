@@ -35,6 +35,11 @@ struct l_hwdb *l_hwdb_new_default(void);
 struct l_hwdb *l_hwdb_ref(struct l_hwdb *hwdb);
 void l_hwdb_unref(struct l_hwdb *hwdb);
 
+typedef void (*l_hwdb_print_func_t)(const char *str, void *user_data);
+
+void l_hwdb_print_all(struct l_hwdb *hwdb, l_hwdb_print_func_t func,
+							void *user_data);
+
 #ifdef __cplusplus
 }
 #endif
