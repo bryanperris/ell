@@ -787,6 +787,16 @@ static struct l_dbus *setup_unix(char *params)
 static void kdbus_ready(void *user_data)
 {
 	struct l_dbus *dbus = user_data;
+	struct l_dbus_kdbus *kdbus =
+		container_of(dbus, struct l_dbus_kdbus, super);
+	int fd = l_io_get_fd(dbus->io);
+	int r;
+
+	r = _dbus_kernel_add_match(fd, kdbus->bloom_size, kdbus->bloom_n_hash,
+					NULL);
+	if (r < 0)
+		l_util_debug(dbus->debug_handler,
+				dbus->debug_data, strerror(-r));
 
 	dbus->is_ready = true;
 
