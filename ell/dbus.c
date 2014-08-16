@@ -1183,6 +1183,8 @@ LIB_EXPORT uint32_t l_dbus_method_call(struct l_dbus *dbus,
 
 	if (setup)
 		setup(message, user_data);
+	else
+		l_dbus_message_set_arguments(message, "");
 
 	return send_message(dbus, false, message, function, user_data, destroy);
 }
