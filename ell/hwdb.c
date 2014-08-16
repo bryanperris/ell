@@ -62,7 +62,7 @@ struct trie_node {
 } __attribute__ ((packed));
 
 struct trie_child {
-	uint8_t  c;			/* Index charactuer of child node */
+	uint8_t  c;			/* Prefix character of child node */
 	uint8_t  padding[7];
 	uint64_t child_offset;		/* Location of node structure */
 } __attribute__ ((packed));
