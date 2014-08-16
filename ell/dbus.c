@@ -830,10 +830,32 @@ static bool kdbus_send_message(struct l_dbus *dbus,
 	return true;
 }
 
+static struct l_dbus_message *kdbus_recv_message(struct l_dbus *dbus)
+{
+	struct l_dbus_kdbus *kdbus =
+			container_of(dbus, struct l_dbus_kdbus, super);
+	int fd = l_io_get_fd(dbus->io);
+	struct l_dbus_message *message = NULL;
+	int r;
+
+	r = _dbus_kernel_recv(fd, kdbus->kdbus_pool, &message);
+	if (r < 0) {
+		l_util_debug(dbus->debug_handler,
+				dbus->debug_data, strerror(-r));
+		return NULL;
+	}
+
+	l_util_debug(dbus->debug_handler, dbus->debug_data,
+			"Read KDBUS Message");
+
+	return NULL;
+}
+
 static const struct l_dbus_ops kdbus_ops = {
 	.version  = 2,
 	.free = kdbus_free,
 	.send_message = kdbus_send_message,
+	.recv_message = kdbus_recv_message,
 };
 
 static struct l_dbus *setup_kdbus(int fd)
