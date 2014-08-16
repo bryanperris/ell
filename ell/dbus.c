@@ -63,6 +63,7 @@ struct l_dbus_ops {
 	char version;
 	bool (*send_message)(struct l_dbus *bus,
 				struct l_dbus_message *message);
+	struct l_dbus_message *(*recv_message)(struct l_dbus *bus);
 	void (*free)(struct l_dbus *bus);
 };
 
@@ -193,72 +194,6 @@ done:
 	return dbus->is_ready;
 }
 
-static struct l_dbus_message *receive_message_from_fd(int fd)
-{
-	struct dbus_header hdr;
-	struct msghdr msg;
-	struct iovec iov[2];
-	struct cmsghdr *cmsg;
-	ssize_t len;
-	void *header, *body;
-	size_t header_size, body_size;
-	int fds[16];
-	uint32_t num_fds = 0;
-
-	len = recv(fd, &hdr, DBUS_HEADER_SIZE, MSG_PEEK);
-	if (len != DBUS_HEADER_SIZE)
-		return NULL;
-
-	header_size = align_len(DBUS_HEADER_SIZE + hdr.field_length, 8);
-	header = l_malloc(header_size);
-
-	body_size = hdr.body_length;
-	body = l_malloc(body_size);
-
-	iov[0].iov_base = header;
-	iov[0].iov_len  = header_size;
-	iov[1].iov_base = body;
-	iov[1].iov_len  = body_size;
-
-	memset(&msg, 0, sizeof(msg));
-	msg.msg_iov = iov;
-	msg.msg_iovlen = 2;
-	msg.msg_control = &fds;
-	msg.msg_controllen = CMSG_SPACE(16 * sizeof(int));
-
-	len = recvmsg(fd, &msg, MSG_CMSG_CLOEXEC);
-	if (len < 0)
-		return NULL;
-
-	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg;
-				cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-		unsigned int i;
-
-		if (cmsg->cmsg_level != SOL_SOCKET ||
-					cmsg->cmsg_type != SCM_RIGHTS)
-			continue;
-
-		num_fds = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
-
-		memcpy(fds, CMSG_DATA(cmsg), num_fds * sizeof(int));
-
-		/* Set FD_CLOEXEC on all file descriptors */
-		for (i = 0; i < num_fds; i++) {
-			long flags;
-
-			flags = fcntl(fd, F_GETFD, NULL);
-			if (flags < 0)
-				continue;
-
-			if (!(flags & FD_CLOEXEC))
-				fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
-                }
-	}
-
-	return dbus_message_build(header, header_size, body, body_size,
-					fds, num_fds);
-}
-
 static void handle_method_return(struct l_dbus *dbus,
 					struct l_dbus_message *message)
 {
@@ -318,14 +253,11 @@ static bool message_read_handler(struct l_io *io, void *user_data)
 {
 	struct l_dbus *dbus = user_data;
 	struct l_dbus_message *message;
-	int fd;
 	const void *header, *body;
 	size_t header_size, body_size;
 	enum dbus_message_type msgtype;
 
-	fd = l_io_get_fd(io);
-
-	message = receive_message_from_fd(fd);
+	message = dbus->driver->recv_message(dbus);
 	if (!message)
 		return false;
 
@@ -333,18 +265,6 @@ static bool message_read_handler(struct l_io *io, void *user_data)
 	body = _dbus_message_get_body(message, &body_size);
 	l_util_hexdump_two(true, header, header_size, body, body_size,
 				dbus->debug_handler, dbus->debug_data);
-
-	if (_dbus_message_get_endian(message) != DBUS_NATIVE_ENDIAN) {
-		l_util_debug(dbus->debug_handler,
-				dbus->debug_data, "Endianness incorrect");
-		goto done;
-	}
-
-	if (_dbus_message_get_version(message) != 1) {
-		l_util_debug(dbus->debug_handler,
-				dbus->debug_data, "Protocol version incorrect");
-		goto done;
-	}
 
 	msgtype = _dbus_message_get_type(message);
 
@@ -371,7 +291,6 @@ static bool message_read_handler(struct l_io *io, void *user_data)
 		break;
 	}
 
-done:
 	l_dbus_message_unref(message);
 
 	return true;
@@ -644,9 +563,96 @@ static bool classic_send_message(struct l_dbus *dbus,
 	return true;
 }
 
+static struct l_dbus_message *classic_recv_message(struct l_dbus *dbus)
+{
+	int fd = l_io_get_fd(dbus->io);
+	struct dbus_header hdr;
+	struct msghdr msg;
+	struct iovec iov[2];
+	struct cmsghdr *cmsg;
+	ssize_t len;
+	void *header, *body;
+	size_t header_size, body_size;
+	int fds[16];
+	uint32_t num_fds = 0;
+
+	len = recv(fd, &hdr, DBUS_HEADER_SIZE, MSG_PEEK);
+	if (len != DBUS_HEADER_SIZE)
+		return NULL;
+
+	header_size = align_len(DBUS_HEADER_SIZE + hdr.field_length, 8);
+	header = l_malloc(header_size);
+
+	body_size = hdr.body_length;
+	body = l_malloc(body_size);
+
+	iov[0].iov_base = header;
+	iov[0].iov_len  = header_size;
+	iov[1].iov_base = body;
+	iov[1].iov_len  = body_size;
+
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 2;
+	msg.msg_control = &fds;
+	msg.msg_controllen = CMSG_SPACE(16 * sizeof(int));
+
+	len = recvmsg(fd, &msg, MSG_CMSG_CLOEXEC);
+	if (len < 0)
+		goto cmsg_fail;
+
+	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg;
+				cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+		unsigned int i;
+
+		if (cmsg->cmsg_level != SOL_SOCKET ||
+					cmsg->cmsg_type != SCM_RIGHTS)
+			continue;
+
+		num_fds = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+
+		memcpy(fds, CMSG_DATA(cmsg), num_fds * sizeof(int));
+
+		/* Set FD_CLOEXEC on all file descriptors */
+		for (i = 0; i < num_fds; i++) {
+			long flags;
+
+			flags = fcntl(fd, F_GETFD, NULL);
+			if (flags < 0)
+				continue;
+
+			if (!(flags & FD_CLOEXEC))
+				fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+                }
+	}
+
+	if (hdr.endian != DBUS_NATIVE_ENDIAN) {
+		l_util_debug(dbus->debug_handler,
+				dbus->debug_data, "Endianness incorrect");
+		goto bad_msg;
+	}
+
+	if (hdr.version != 1) {
+		l_util_debug(dbus->debug_handler,
+				dbus->debug_data, "Protocol version incorrect");
+		goto bad_msg;
+	}
+
+	return dbus_message_build(header, header_size, body, body_size,
+					fds, num_fds);
+
+bad_msg:
+cmsg_fail:
+	l_free(header);
+	l_free(body);
+
+	return NULL;
+}
+
 static const struct l_dbus_ops classic_ops = {
 	.version = 1,
 	.send_message = classic_send_message,
+	.recv_message = classic_recv_message,
 	.free = classic_free,
 };
 
