@@ -54,6 +54,13 @@ struct l_hwdb_entry *l_hwdb_lookup_valist(struct l_hwdb *hwdb,
 					const char *format, va_list args);
 void l_hwdb_lookup_free(struct l_hwdb_entry *entries);
 
+typedef void (*l_hwdb_foreach_func_t)(const char *modalias,
+					struct l_hwdb_entry *entries,
+							void *user_data);
+
+bool l_hwdb_foreach(struct l_hwdb *hwdb, l_hwdb_foreach_func_t func,
+							void *user_data);
+
 #ifdef __cplusplus
 }
 #endif

@@ -346,3 +346,71 @@ LIB_EXPORT void l_hwdb_lookup_free(struct l_hwdb_entry *entries)
 		l_free(entry);
 	}
 }
+
+static void foreach_node(const void *addr, uint64_t offset, const char *prefix,
+				l_hwdb_foreach_func_t func, void *user_data)
+{
+	const struct trie_node *node = addr + offset;
+	const void *addr_ptr = addr + offset + sizeof(*node);
+	const char *prefix_str = addr + le64_to_cpu(node->prefix_offset);
+	uint64_t child_count = le64_to_cpu(node->child_count);
+	uint64_t entry_count = le64_to_cpu(node->entry_count);
+	uint64_t i;
+	size_t scratch_len;
+	char *scratch_buf;
+	struct l_hwdb_entry *entries = NULL;
+
+	scratch_len = strlen(prefix) + strlen(prefix_str);
+	scratch_buf = alloca(scratch_len + 2);
+	sprintf(scratch_buf, "%s%s", prefix, prefix_str);
+	scratch_buf[scratch_len + 1] = '\0';
+
+	for (i = 0; i < child_count; i++) {
+		const struct trie_child *child = addr_ptr;
+
+		scratch_buf[scratch_len] = child->c;
+
+		foreach_node(addr, le64_to_cpu(child->child_offset),
+						scratch_buf, func, user_data);
+
+		addr_ptr += sizeof(*child);
+	}
+
+	if (!entry_count)
+		return;
+
+	scratch_buf[scratch_len] = '\0';
+
+	for (i = 0; i < entry_count; i++) {
+		const struct trie_entry *entry = addr_ptr;
+		const char *key_str = addr + le64_to_cpu(entry->key_offset);
+		const char *val_str = addr + le64_to_cpu(entry->value_offset);
+		struct l_hwdb_entry *result;
+
+		if (key_str[0] == ' ') {
+			result = l_new(struct l_hwdb_entry, 1);
+
+			result->key = key_str + 1;
+			result->value = val_str;
+			result->next = entries;
+			entries = result;
+		}
+
+		addr_ptr += sizeof(*entry);
+	}
+
+	func(scratch_buf, entries, user_data);
+
+	l_hwdb_lookup_free(entries);
+}
+
+LIB_EXPORT bool l_hwdb_foreach(struct l_hwdb *hwdb, l_hwdb_foreach_func_t func,
+							void *user_data)
+{
+	if (!hwdb || !func)
+		return false;
+
+	foreach_node(hwdb->addr, hwdb->root, "", func, user_data);
+
+	return true;
+}
