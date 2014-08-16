@@ -64,7 +64,7 @@ struct trie_node {
 struct trie_child {
 	uint8_t  c;			/* Prefix character of child node */
 	uint8_t  padding[7];
-	uint64_t child_offset;		/* Location of node structure */
+	uint64_t child_offset;		/* Location of child node structure */
 } __attribute__ ((packed));
 
 struct trie_entry {
