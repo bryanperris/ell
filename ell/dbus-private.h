@@ -20,6 +20,8 @@
  *
  */
 
+#include <endian.h>
+
 enum dbus_message_type {
 	DBUS_MESSAGE_TYPE_METHOD_CALL	= 1,
 	DBUS_MESSAGE_TYPE_METHOD_RETURN	= 2,
@@ -34,10 +36,12 @@ enum dbus_container_type {
 	DBUS_CONTAINER_TYPE_DICT_ENTRY	= 'e',
 };
 
-#if __BYTE_ORDER == __BIG_ENDIAN
-	#define DBUS_NATIVE_ENDIAN 'B'
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define DBUS_NATIVE_ENDIAN 'l'
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define DBUS_NATIVE_ENDIAN 'B'
 #else
-	#define DBUS_NATIVE_ENDIAN 'l'
+#error "Unknown byte order"
 #endif
 
 struct dbus_header {
