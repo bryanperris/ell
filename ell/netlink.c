@@ -399,6 +399,9 @@ LIB_EXPORT unsigned int l_netlink_send(struct l_netlink *netlink,
 	if (flags & 0xff)
 		return 0;
 
+	if (function)
+		flags |= NLM_F_ACK;
+
 	size = NLMSG_ALIGN(sizeof(struct command)) +
 					NLMSG_HDRLEN + NLMSG_ALIGN(len);
 
