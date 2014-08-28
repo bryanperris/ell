@@ -304,7 +304,7 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 
 	dest = l_dbus_message_get_destination(message);
 	if (dest)
-		unique = parse_unique_name(dest, &id);
+		unique = _dbus_parse_unique_name(dest, &id);
 	else
 		unique = false;
 
