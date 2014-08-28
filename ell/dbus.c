@@ -860,7 +860,7 @@ static struct l_dbus_message *kdbus_recv_message(struct l_dbus *dbus)
 	l_util_debug(dbus->debug_handler, dbus->debug_data,
 			"Read KDBUS Message");
 
-	return NULL;
+	return message;
 }
 
 static const struct l_dbus_ops kdbus_ops = {
