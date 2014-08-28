@@ -30,7 +30,6 @@
 #include <assert.h>
 
 #include <ell/ell.h>
-#include <ell/dbus-service.h>
 
 static void do_debug(const char *str, void *user_data)
 {
