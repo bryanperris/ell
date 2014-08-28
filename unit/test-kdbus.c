@@ -70,6 +70,20 @@ static void signal_message(struct l_dbus_message *message, void *user_data)
 	l_info("sender=%s", sender);
 }
 
+static struct l_dbus_message *test_method_call(struct l_dbus *dbus,
+						struct l_dbus_message *message,
+						void *user_data)
+{
+	struct l_dbus_message *reply;
+
+	l_info("Method Call");
+
+	reply = l_dbus_message_new_method_return(message);
+	l_dbus_message_set_arguments(reply, "");
+
+	return reply;
+}
+
 static void client_ready_callback(void *user_data)
 {
 	struct l_dbus *dbus = user_data;
@@ -100,6 +114,12 @@ static void service_ready_callback(void *user_data)
 					"org.test", "TestSignal");
 	l_dbus_message_set_arguments(message, "");
 	l_dbus_send(dbus, message);
+}
+
+static void setup_test_interface(struct l_dbus_interface *interface)
+{
+	l_dbus_interface_method(interface, "TestMethod", 0,
+				test_method_call, "", "");
 }
 
 int main(int argc, char *argv[])
@@ -138,6 +158,12 @@ int main(int argc, char *argv[])
 	l_dbus_set_ready_handler(service, service_ready_callback,
 					service, NULL);
 
+	if (!l_dbus_register_interface(service, "/test", "org.test",
+					setup_test_interface, NULL, NULL)) {
+		l_info("Unable to register interface");
+		goto error;
+	}
+
 	client = l_dbus_new(bus_address);
 	assert(client);
 
@@ -147,8 +173,10 @@ int main(int argc, char *argv[])
 
 	l_main_run();
 
-	l_dbus_destroy(service);
 	l_dbus_destroy(client);
+error:
+	l_dbus_destroy(service);
+
 	close(bus_fd);
 
 	l_signal_remove(signal);
