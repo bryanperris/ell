@@ -51,6 +51,25 @@ static void signal_handler(struct l_signal *signal, uint32_t signo,
 	}
 }
 
+static void signal_message(struct l_dbus_message *message, void *user_data)
+{
+	const char *path, *interface, *member, *destination, *sender;
+
+	path = l_dbus_message_get_path(message);
+	destination = l_dbus_message_get_destination(message);
+
+	l_info("path=%s destination=%s", path, destination);
+
+	interface = l_dbus_message_get_interface(message);
+	member = l_dbus_message_get_member(message);
+
+	l_info("interface=%s member=%s", interface, member);
+
+	sender = l_dbus_message_get_sender(message);
+
+	l_info("sender=%s", sender);
+}
+
 static void client_ready_callback(void *user_data)
 {
 	struct l_dbus *dbus = user_data;
@@ -124,6 +143,7 @@ int main(int argc, char *argv[])
 
 	l_dbus_set_debug(client, do_debug, "[CLIENT] ", NULL);
 	l_dbus_set_ready_handler(client, client_ready_callback, client, NULL);
+	l_dbus_register(client, signal_message, NULL, NULL);
 
 	l_main_run();
 
