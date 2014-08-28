@@ -44,6 +44,11 @@
 #define KDBUS_ITEM_HEADER_SIZE offsetof(struct kdbus_item, data)
 #define KDBUS_POOL_SIZE (16*1024*1024)
 
+#define KDBUS_ITEM_FOREACH(item, head, first)				\
+	for (item = head->first;					\
+		(void *)(item) < (void *)(head) + (head)->size;		\
+		item = KDBUS_ITEM_NEXT(item))				\
+
 #define DEFAULT_BLOOM_SIZE (512 / 8)
 #define DEFAULT_BLOOM_N_HASH (8)
 
@@ -421,6 +426,122 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 	return 0;
 }
 
+static int collect_body_parts(struct kdbus_msg *kmsg,
+					size_t header_size, void **out_header,
+					size_t body_size, void **out_body)
+{
+	struct kdbus_item *item;
+	void *body;
+	void *header;
+	bool saw_header = false;
+	size_t offset = 0;
+
+	header = l_malloc(header_size);
+	if (!header)
+		return -ENOMEM;
+
+	body = NULL;
+
+	if (body_size > 0) {
+		body = l_malloc(body_size);
+		if (!body) {
+			l_free(header);
+			return -ENOMEM;
+		}
+	}
+
+	KDBUS_ITEM_FOREACH(item, kmsg, items) {
+		switch (item->type) {
+		case KDBUS_ITEM_PAYLOAD_OFF:
+			if (saw_header) {
+				memcpy(body + offset,
+					(void *)kmsg + item->vec.offset,
+					item->vec.size);
+
+				offset += item->vec.size;
+			} else {
+				memcpy(header, (void *)kmsg + item->vec.offset,
+					item->vec.size);
+				saw_header = true;
+			}
+
+			break;
+		}
+	}
+
+	*out_body = body;
+	*out_header = header;
+
+	return 0;
+}
+
+static int _dbus_kernel_make_message(struct kdbus_msg *kmsg,
+				struct l_dbus_message **out_message)
+{
+	struct kdbus_item *item;
+	void *header = 0;
+	size_t header_size = 0;
+	struct dbus_header *hdr;
+	void *body = 0;
+	size_t body_size = 0;
+	int r;
+
+	KDBUS_ITEM_FOREACH(item, kmsg, items) {
+		switch (item->type) {
+		case KDBUS_ITEM_PAYLOAD_OFF:
+			if (!header_size) {
+				header = (void *)kmsg + item->vec.offset;
+
+				header_size = item->vec.size;
+
+				if (!_dbus_header_is_valid(header, header_size))
+					return -EBADMSG;
+			} else
+				body_size += item->vec.size;
+
+			break;
+		case KDBUS_ITEM_PAYLOAD_MEMFD:
+			if (!header_size)
+				return -EBADMSG;
+
+			return -ENOTSUP;
+		case KDBUS_ITEM_FDS:
+			return -ENOTSUP;
+		}
+	}
+
+	if (!header)
+		return -EBADMSG;
+
+	hdr = header;
+	if (hdr->endian != DBUS_NATIVE_ENDIAN)
+		return -EPROTOTYPE;
+
+	if (hdr->version != 2)
+		return -EPROTO;
+
+	if (hdr->body_length != body_size)
+		return -EBADMSG;
+
+	r = collect_body_parts(kmsg, header_size, &header,
+						body_size, &body);
+	if (r < 0)
+		return r;
+
+	*out_message = dbus_message_build(header, header_size, body, body_size,
+						NULL, 0);
+
+	if (kmsg->src_id != KDBUS_SRC_ID_KERNEL) {
+		char buf[128];
+
+		sprintf(buf, ":1.%llu", kmsg->src_id);
+		_dbus_message_set_sender(*out_message, buf);
+	} else
+		_dbus_message_set_sender(*out_message, "org.freedesktop.DBus");
+
+	return 0;
+}
+
 int _dbus_kernel_recv(int fd, void *kdbus_pool,
 				struct l_dbus_message **out_message)
 {
@@ -438,18 +559,18 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 
 	switch (msg->payload_type) {
 	case KDBUS_PAYLOAD_DBUS:
+		r = _dbus_kernel_make_message(msg, out_message);
 		break;
 	case KDBUS_PAYLOAD_KERNEL:
 		break;
 	default:
+		r = -EPROTONOSUPPORT;
 		break;
 	}
 
-	r = ioctl(fd, KDBUS_CMD_FREE, &recv_cmd.offset);
-	if (r < 0)
-		return -errno;
+	ioctl(fd, KDBUS_CMD_FREE, &recv_cmd.offset);
 
-	return 0;
+	return r;
 }
 
 int _dbus_kernel_name_acquire(int fd, const char *name)
