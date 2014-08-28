@@ -104,7 +104,7 @@ static int get_basic_size(const char type)
 	}
 }
 
-static inline bool is_valid_character(const char c)
+static inline bool is_valid_character(const char c, bool bus_name)
 {
 	if (c >= 'a' && c <= 'z')
 		return true;
@@ -116,6 +116,9 @@ static inline bool is_valid_character(const char c)
 		return true;
 
 	if (c == '_')
+		return true;
+
+	if (c == '-' && bus_name)
 		return true;
 
 	return false;
@@ -144,7 +147,7 @@ bool _dbus_valid_object_path(const char *path)
 
 		c = path[i];
 
-		if (is_valid_character(path[i]) || path[i] == '/')
+		if (is_valid_character(path[i], false) || path[i] == '/')
 			continue;
 
 		return false;
@@ -262,7 +265,8 @@ static int _dbus_num_children(const char *sig)
 	return num_children;
 }
 
-static bool valid_member_name(const char *start, const char *end)
+static bool valid_member_name(const char *start, const char *end,
+				bool bus_name)
 {
 	const char *p;
 
@@ -273,7 +277,7 @@ static bool valid_member_name(const char *start, const char *end)
 		return false;
 
 	for (p = start; p < end; p++)
-		if (!is_valid_character(*p))
+		if (!is_valid_character(*p, bus_name))
 			return false;
 
 	return true;
@@ -293,7 +297,7 @@ bool _dbus_valid_method(const char *method)
 		return false;
 
 	for (i = 0; method[i]; i++)
-		if (!is_valid_character(method[i]))
+		if (!is_valid_character(method[i], false))
 			return false;
 
 	return true;
@@ -314,7 +318,7 @@ bool _dbus_valid_interface(const char *interface)
 		return false;
 
 	while (true) {
-		if (!valid_member_name(interface, sep))
+		if (!valid_member_name(interface, sep, false))
 			return false;
 
 		if (*sep == '\0')
@@ -322,6 +326,34 @@ bool _dbus_valid_interface(const char *interface)
 
 		interface = sep + 1;
 		sep = strchrnul(interface, '.');
+	}
+
+	return true;
+}
+
+bool _dbus_valid_bus_name(const char *bus_name)
+{
+	const char *sep;
+
+	if (!bus_name)
+		return false;
+
+	if (bus_name[0] == '\0' || strlen(bus_name) > DBUS_MAX_INTERFACE_LEN)
+		return false;
+
+	sep = strchrnul(bus_name, '.');
+	if (*sep == '\0')
+		return false;
+
+	while (true) {
+		if (!valid_member_name(bus_name, sep, true))
+			return false;
+
+		if (*sep == '\0')
+			break;
+
+		bus_name = sep + 1;
+		sep = strchrnul(bus_name, '.');
 	}
 
 	return true;

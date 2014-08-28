@@ -136,6 +136,7 @@ bool _dbus_valid_object_path(const char *path);
 bool _dbus_valid_signature(const char *sig);
 bool _dbus_valid_interface(const char *interface);
 bool _dbus_valid_method(const char *method);
+bool _dbus_valid_bus_name(const char *bus_name);
 
 bool _dbus_header_is_valid(void *data, size_t size);
 
