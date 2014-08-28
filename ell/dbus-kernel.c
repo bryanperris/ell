@@ -295,7 +295,7 @@ static bool parse_unique_name(const char *name, uint64_t *out_id)
 		return false;
 
 	errno = 0;
-	r = strtoull(name, &endp, 10);
+	r = strtoull(name + 3, &endp, 10);
 	if (!endp || endp == name || *endp || errno)
 		return false;
 
