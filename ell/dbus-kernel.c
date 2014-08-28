@@ -466,6 +466,8 @@ static int _dbus_kernel_make_message(struct kdbus_msg *kmsg,
 	void *body = 0;
 	size_t body_size = 0;
 	int r;
+	const char *destination = 0;
+	char unique_bus_name[128];
 
 	KDBUS_ITEM_FOREACH(item, kmsg, items) {
 		switch (item->type) {
@@ -488,6 +490,12 @@ static int _dbus_kernel_make_message(struct kdbus_msg *kmsg,
 			return -ENOTSUP;
 		case KDBUS_ITEM_FDS:
 			return -ENOTSUP;
+		case KDBUS_ITEM_DST_NAME:
+			if (!_dbus_valid_bus_name(item->str))
+				return -EBADMSG;
+
+			destination = item->str;
+			break;
 		}
 	}
 
@@ -513,12 +521,23 @@ static int _dbus_kernel_make_message(struct kdbus_msg *kmsg,
 						NULL, 0);
 
 	if (kmsg->src_id != KDBUS_SRC_ID_KERNEL) {
-		char buf[128];
-
-		sprintf(buf, ":1.%llu", kmsg->src_id);
-		_dbus_message_set_sender(*out_message, buf);
+		sprintf(unique_bus_name, ":1.%llu", kmsg->src_id);
+		_dbus_message_set_sender(*out_message, unique_bus_name);
 	} else
 		_dbus_message_set_sender(*out_message, "org.freedesktop.DBus");
+
+	switch (kmsg->dst_id) {
+	case KDBUS_DST_ID_NAME:
+		break;
+	case KDBUS_DST_ID_BROADCAST:
+		break;
+	default:
+		sprintf(unique_bus_name, ":1.%llu", kmsg->dst_id);
+		_dbus_message_set_destination(*out_message, unique_bus_name);
+	}
+
+	if (destination)
+		_dbus_message_set_destination(*out_message, destination);
 
 	return 0;
 }
