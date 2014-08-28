@@ -132,6 +132,8 @@ bool _dbus_valid_signature(const char *sig);
 bool _dbus_valid_interface(const char *interface);
 bool _dbus_valid_method(const char *method);
 
+bool _dbus_header_is_valid(void *data, size_t size);
+
 void _dbus_method_introspection(struct _dbus_method *info,
 					struct l_string *buf);
 void _dbus_signal_introspection(struct _dbus_signal *info,

@@ -30,6 +30,7 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <string.h>
+#include <endian.h>
 
 #include "dbus.h"
 #include "private.h"
@@ -354,6 +355,25 @@ const char *_dbus_signature_end(const char *signature)
 	}
 
 	return NULL;
+}
+
+bool _dbus_header_is_valid(void *data, size_t size)
+{
+	struct dbus_header *hdr;
+	size_t header_len;
+
+	if (size < sizeof(struct dbus_header))
+		return false;
+
+	hdr = data;
+
+	if (hdr->endian != DBUS_NATIVE_ENDIAN)
+		header_len = bswap_32(hdr->field_length);
+	else
+		header_len = hdr->field_length;
+
+	header_len += sizeof(struct dbus_header);
+	return size >= header_len;
 }
 
 static inline void dbus1_iter_init_internal(struct l_dbus_message_iter *iter,
