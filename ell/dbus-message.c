@@ -354,6 +354,7 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_ref(struct l_dbus_message *mess
 LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 {
 	unsigned int i;
+	bool is_kdbus;
 
 	if (unlikely(!message))
 		return;
@@ -364,12 +365,16 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 	for (i = 0; i < message->num_fds; i++)
 		close(message->fds[i]);
 
+	is_kdbus = _dbus_message_is_gvariant(message);
+
 	if (!message->sealed) {
 		l_free(message->destination);
 		l_free(message->path);
 		l_free(message->interface);
 		l_free(message->member);
 		l_free(message->error_name);
+		l_free(message->sender);
+	} else if (is_kdbus) {
 		l_free(message->sender);
 	}
 
@@ -1315,6 +1320,15 @@ LIB_EXPORT bool l_dbus_message_iter_get_variant(
 	va_end(args);
 
 	return result;
+}
+
+void _dbus_message_set_sender(struct l_dbus_message *message,
+					const char *sender)
+{
+	if (!_dbus_message_is_gvariant(message))
+		return;
+
+	message->sender = l_strdup(sender);
 }
 
 bool _dbus_kernel_calculate_bloom(struct l_dbus_message *message,
