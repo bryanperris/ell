@@ -28,7 +28,6 @@
 #include <stdbool.h>
 
 #include <ell/ell.h>
-#include <ell/dbus-service.h>
 #include "ell/dbus-private.h"
 
 struct l_dbus_interface *interface;
