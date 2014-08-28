@@ -30,7 +30,6 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <string.h>
-#include <endian.h>
 #include <errno.h>
 #include <stdlib.h>
 
