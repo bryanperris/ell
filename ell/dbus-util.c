@@ -31,6 +31,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <endian.h>
+#include <errno.h>
+#include <stdlib.h>
 
 #include "dbus.h"
 #include "private.h"
@@ -327,6 +329,25 @@ bool _dbus_valid_interface(const char *interface)
 		interface = sep + 1;
 		sep = strchrnul(interface, '.');
 	}
+
+	return true;
+}
+
+bool _dbus_parse_unique_name(const char *name, uint64_t *out_id)
+{
+	char *endp = NULL;
+	uint64_t r;
+
+	if (!l_str_has_prefix(name, ":1."))
+		return false;
+
+	errno = 0;
+	r = strtoull(name + 3, &endp, 10);
+	if (!endp || endp == name || *endp || errno)
+		return false;
+
+	if (out_id)
+		*out_id = r;
 
 	return true;
 }
