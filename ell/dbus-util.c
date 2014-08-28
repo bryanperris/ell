@@ -361,6 +361,9 @@ bool _dbus_valid_bus_name(const char *bus_name)
 	if (bus_name[0] == '\0' || strlen(bus_name) > DBUS_MAX_INTERFACE_LEN)
 		return false;
 
+	if (_dbus_parse_unique_name(bus_name, NULL))
+		return true;
+
 	sep = strchrnul(bus_name, '.');
 	if (*sep == '\0')
 		return false;
