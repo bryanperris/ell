@@ -39,3 +39,4 @@
 #include <ell/netlink.h>
 #include <ell/genl.h>
 #include <ell/dbus.h>
+#include <ell/dbus-service.h>
