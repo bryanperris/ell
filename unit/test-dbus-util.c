@@ -122,6 +122,35 @@ static void test_method(const void *test_data)
 	assert(valid == test->valid);
 }
 
+struct bus_name_test {
+	bool valid;
+	const char *bus_name;
+};
+
+#define BUS_NAME_TEST(v, name, i)				\
+	static struct bus_name_test bus_name_test##i = {	\
+		.valid = v,					\
+		.bus_name = name,				\
+	}
+
+BUS_NAME_TEST(false, "org", 1);
+BUS_NAME_TEST(true, "org.foobar", 2);
+BUS_NAME_TEST(false, ".", 3);
+BUS_NAME_TEST(false, "0Bar", 4);
+BUS_NAME_TEST(true, "org.foo-bar", 5);
+BUS_NAME_TEST(false, ":1.2f", 6);
+BUS_NAME_TEST(true, ":1.2", 7);
+
+static void test_bus_name(const void *test_data)
+{
+	const struct bus_name_test *test = test_data;
+	bool valid;
+
+	valid = _dbus_valid_bus_name(test->bus_name);
+
+	assert(valid == test->valid);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -155,6 +184,14 @@ int main(int argc, char *argv[])
 
 	l_test_add("Method Test 1", test_method, &method_test1);
 	l_test_add("Method Test 2", test_method, &method_test2);
+
+	l_test_add("Bus Name Test 1", test_bus_name, &bus_name_test1);
+	l_test_add("Bus Name Test 2", test_bus_name, &bus_name_test2);
+	l_test_add("Bus Name Test 3", test_bus_name, &bus_name_test3);
+	l_test_add("Bus Name Test 4", test_bus_name, &bus_name_test4);
+	l_test_add("Bus Name Test 5", test_bus_name, &bus_name_test5);
+	l_test_add("Bus Name Test 6", test_bus_name, &bus_name_test6);
+	l_test_add("Bus Name Test 7", test_bus_name, &bus_name_test7);
 
 	return l_test_run();
 }
