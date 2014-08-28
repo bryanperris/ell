@@ -376,6 +376,7 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 		l_free(message->sender);
 	} else if (is_kdbus) {
 		l_free(message->sender);
+		l_free(message->destination);
 	}
 
 	l_free(message->header);
@@ -1329,6 +1330,15 @@ void _dbus_message_set_sender(struct l_dbus_message *message,
 		return;
 
 	message->sender = l_strdup(sender);
+}
+
+void _dbus_message_set_destination(struct l_dbus_message *message,
+					const char *destination)
+{
+	if (!_dbus_message_is_gvariant(message))
+		return;
+
+	message->destination = l_strdup(destination);
 }
 
 bool _dbus_kernel_calculate_bloom(struct l_dbus_message *message,

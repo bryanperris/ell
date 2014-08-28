@@ -105,6 +105,8 @@ uint32_t _dbus_message_get_reply_serial(struct l_dbus_message *message);
 
 void _dbus_message_set_sender(struct l_dbus_message *message,
 					const char *sender);
+void _dbus_message_set_destination(struct l_dbus_message *message,
+					const char *destination);
 
 enum dbus_message_type _dbus_message_get_type(struct l_dbus_message *message);
 const char * _dbus_message_get_type_as_string(struct l_dbus_message *message);
