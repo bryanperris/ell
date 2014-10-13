@@ -151,6 +151,10 @@ bool l_dbus_message_iter_get_variant(struct l_dbus_message_iter *iter,
 bool l_dbus_message_set_arguments(struct l_dbus_message *message,
 						const char *signature, ...);
 
+struct l_dbus_message_builder *l_dbus_message_builder_new(
+						struct l_dbus_message *message);
+void l_dbus_message_builder_destroy(struct l_dbus_message_builder *builder);
+
 bool l_dbus_register_interface(struct l_dbus *dbus,
 				const char *path, const char *interface,
 				l_dbus_interface_setup_func_t setup_func,

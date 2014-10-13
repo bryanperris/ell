@@ -76,6 +76,12 @@ struct l_dbus_message {
 	bool kdbus_destination : 1;
 };
 
+struct l_dbus_message_builder {
+	struct l_dbus_message *message;
+	struct dbus_builder *builder;
+	struct builder_driver *driver;
+};
+
 static inline bool _dbus_message_is_gvariant(struct l_dbus_message *msg)
 {
 	struct dbus_header *hdr = msg->header;
@@ -1428,4 +1434,37 @@ bool _dbus_kernel_calculate_bloom(struct l_dbus_message *message,
 	}
 
 	return true;
+}
+
+LIB_EXPORT struct l_dbus_message_builder *l_dbus_message_builder_new(
+						struct l_dbus_message *message)
+{
+	struct l_dbus_message_builder *ret;
+
+	if (unlikely(!message))
+		return NULL;
+
+	ret = l_new(struct l_dbus_message_builder, 1);
+	ret->message = l_dbus_message_ref(message);
+
+	if (_dbus_message_is_gvariant(message))
+		ret->driver = &gvariant_driver;
+	else
+		ret->driver = &dbus1_driver;
+
+	ret->builder = ret->driver->new(NULL, 0);
+
+	return ret;
+}
+
+LIB_EXPORT void l_dbus_message_builder_destroy(
+					struct l_dbus_message_builder *builder)
+{
+	if (unlikely(!builder))
+		return;
+
+	builder->driver->free(builder->builder);
+	l_dbus_message_unref(builder->message);
+
+	l_free(builder);
 }
