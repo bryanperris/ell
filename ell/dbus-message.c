@@ -1468,3 +1468,115 @@ LIB_EXPORT void l_dbus_message_builder_destroy(
 
 	l_free(builder);
 }
+
+LIB_EXPORT bool l_dbus_message_builder_append_basic(
+					struct l_dbus_message_builder *builder,
+					char type, const void *value)
+{
+	if (unlikely(!builder))
+		return false;
+
+	return builder->driver->append_basic(builder->builder, type, value);
+}
+
+LIB_EXPORT bool l_dbus_message_builder_enter_container(
+					struct l_dbus_message_builder *builder,
+					char container_type,
+					const char *signature)
+{
+	if (unlikely(!builder))
+		return false;
+
+	switch (container_type) {
+	case DBUS_CONTAINER_TYPE_ARRAY:
+		return builder->driver->enter_array(builder->builder,
+								signature);
+	case DBUS_CONTAINER_TYPE_DICT_ENTRY:
+		return builder->driver->enter_dict(builder->builder, signature);
+	case DBUS_CONTAINER_TYPE_STRUCT:
+		return builder->driver->enter_struct(builder->builder,
+								signature);
+	case DBUS_CONTAINER_TYPE_VARIANT:
+		return builder->driver->enter_variant(builder->builder,
+								signature);
+	default:
+		break;
+	}
+
+	return false;
+}
+
+LIB_EXPORT bool l_dbus_message_builder_leave_container(
+					struct l_dbus_message_builder *builder,
+					char container_type)
+{
+	if (unlikely(!builder))
+		return false;
+
+	switch (container_type) {
+	case DBUS_CONTAINER_TYPE_ARRAY:
+		return builder->driver->leave_array(builder->builder);
+	case DBUS_CONTAINER_TYPE_DICT_ENTRY:
+		return builder->driver->leave_dict(builder->builder);
+	case DBUS_CONTAINER_TYPE_STRUCT:
+		return builder->driver->leave_struct(builder->builder);
+	case DBUS_CONTAINER_TYPE_VARIANT:
+		return builder->driver->leave_variant(builder->builder);
+	default:
+		break;
+	}
+
+	return false;
+}
+
+LIB_EXPORT bool l_dbus_message_builder_enter_struct(
+					struct l_dbus_message_builder *builder,
+					const char *signature)
+{
+	return l_dbus_message_builder_enter_container(builder, 'r', signature);
+}
+
+LIB_EXPORT bool l_dbus_message_builder_leave_struct(
+					struct l_dbus_message_builder *builder)
+{
+	return l_dbus_message_builder_leave_container(builder, 'r');
+}
+
+LIB_EXPORT bool l_dbus_message_builder_enter_array(
+					struct l_dbus_message_builder *builder,
+					const char *signature)
+{
+	return l_dbus_message_builder_enter_container(builder, 'a', signature);
+}
+
+LIB_EXPORT bool l_dbus_message_builder_leave_array(
+					struct l_dbus_message_builder *builder)
+{
+	return l_dbus_message_builder_leave_container(builder, 'a');
+}
+
+LIB_EXPORT bool l_dbus_message_builder_enter_dict(
+					struct l_dbus_message_builder *builder,
+					const char *signature)
+{
+	return l_dbus_message_builder_enter_container(builder, 'e', signature);
+}
+
+LIB_EXPORT bool l_dbus_message_builder_leave_dict(
+					struct l_dbus_message_builder *builder)
+{
+	return l_dbus_message_builder_leave_container(builder, 'e');
+}
+
+LIB_EXPORT bool l_dbus_message_builder_enter_variant(
+					struct l_dbus_message_builder *builder,
+					const char *signature)
+{
+	return l_dbus_message_builder_enter_container(builder, 'v', signature);
+}
+
+LIB_EXPORT bool l_dbus_message_builder_leave_variant(
+					struct l_dbus_message_builder *builder)
+{
+	return l_dbus_message_builder_leave_container(builder, 'v');
+}

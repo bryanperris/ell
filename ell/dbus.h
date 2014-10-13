@@ -155,6 +155,36 @@ struct l_dbus_message_builder *l_dbus_message_builder_new(
 						struct l_dbus_message *message);
 void l_dbus_message_builder_destroy(struct l_dbus_message_builder *builder);
 
+bool l_dbus_message_builder_append_basic(struct l_dbus_message_builder *builder,
+					char type, const void *value);
+
+bool l_dbus_message_builder_enter_container(
+					struct l_dbus_message_builder *builder,
+					char container_type,
+					const char *signature);
+bool l_dbus_message_builder_leave_container(
+					struct l_dbus_message_builder *builder,
+					char container_type);
+
+bool l_dbus_message_builder_enter_struct(struct l_dbus_message_builder *builder,
+						const char *signature);
+bool l_dbus_message_builder_leave_struct(
+					struct l_dbus_message_builder *builder);
+
+bool l_dbus_message_builder_enter_dict(struct l_dbus_message_builder *builder,
+					const char *signature);
+bool l_dbus_message_builder_leave_dict(struct l_dbus_message_builder *builder);
+
+bool l_dbus_message_builder_enter_array(struct l_dbus_message_builder *builder,
+					const char *signature);
+bool l_dbus_message_builder_leave_array(struct l_dbus_message_builder *builder);
+
+bool l_dbus_message_builder_enter_variant(
+					struct l_dbus_message_builder *builder,
+					const char *signature);
+bool l_dbus_message_builder_leave_variant(
+					struct l_dbus_message_builder *builder);
+
 bool l_dbus_register_interface(struct l_dbus *dbus,
 				const char *path, const char *interface,
 				l_dbus_interface_setup_func_t setup_func,
