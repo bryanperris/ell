@@ -1444,6 +1444,9 @@ LIB_EXPORT struct l_dbus_message_builder *l_dbus_message_builder_new(
 	if (unlikely(!message))
 		return NULL;
 
+	if (message->sealed)
+		return NULL;
+
 	ret = l_new(struct l_dbus_message_builder, 1);
 	ret->message = l_dbus_message_ref(message);
 
