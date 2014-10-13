@@ -1580,3 +1580,25 @@ LIB_EXPORT bool l_dbus_message_builder_leave_variant(
 {
 	return l_dbus_message_builder_leave_container(builder, 'v');
 }
+
+LIB_EXPORT struct l_dbus_message *l_dbus_message_builder_finalize(
+					struct l_dbus_message_builder *builder)
+{
+	char *generated_signature;
+
+	if (unlikely(!builder))
+		return NULL;
+
+	generated_signature = builder->driver->finish(builder->builder,
+						&builder->message->body,
+						&builder->message->body_size);
+
+	build_header(builder->message, generated_signature);
+	builder->message->sealed = true;
+
+	get_header_field(builder->message, DBUS_MESSAGE_FIELD_SIGNATURE,
+						&builder->message->signature);
+	l_free(generated_signature);
+
+	return builder->message;
+}

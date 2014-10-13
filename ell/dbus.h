@@ -185,6 +185,9 @@ bool l_dbus_message_builder_enter_variant(
 bool l_dbus_message_builder_leave_variant(
 					struct l_dbus_message_builder *builder);
 
+struct l_dbus_message *l_dbus_message_builder_finalize(
+					struct l_dbus_message_builder *builder);
+
 bool l_dbus_register_interface(struct l_dbus *dbus,
 				const char *path, const char *interface,
 				l_dbus_interface_setup_func_t setup_func,
