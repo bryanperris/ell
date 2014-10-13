@@ -2417,6 +2417,45 @@ static void build_complex_3(const void *data)
 	compare_message(msg, data);
 }
 
+static void builder_complex_3(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	struct l_dbus_message_builder *builder;
+	uint32_t u = 1;
+
+	builder = l_dbus_message_builder_new(msg);
+	assert(builder);
+
+	assert(l_dbus_message_builder_enter_struct(builder, "sa{sv}"));
+	assert(l_dbus_message_builder_append_basic(builder, 's',
+							"system-bus-name"));
+	assert(l_dbus_message_builder_enter_array(builder, "{sv}"));
+	assert(l_dbus_message_builder_enter_dict(builder, "sv"));
+	assert(l_dbus_message_builder_append_basic(builder, 's', "name"));
+	assert(l_dbus_message_builder_enter_variant(builder, "s"));
+	assert(l_dbus_message_builder_append_basic(builder, 's', ":1.3307"));
+	assert(l_dbus_message_builder_leave_variant(builder));
+	assert(l_dbus_message_builder_leave_dict(builder));
+	assert(l_dbus_message_builder_leave_array(builder));
+	assert(l_dbus_message_builder_leave_struct(builder));
+
+	assert(l_dbus_message_builder_append_basic(builder, 's',
+					"org.freedesktop.policykit.exec"));
+
+	assert(l_dbus_message_builder_enter_array(builder, "{ss}"));
+	assert(l_dbus_message_builder_leave_array(builder));
+
+	assert(l_dbus_message_builder_append_basic(builder, 'u', &u));
+
+	assert(l_dbus_message_builder_append_basic(builder, 's', ""));
+
+	assert(l_dbus_message_builder_finalize(builder));
+
+	l_dbus_message_builder_destroy(builder);
+
+	compare_message(msg, data);
+}
+
 static void check_complex_4(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
@@ -2575,6 +2614,9 @@ int main(int argc, char *argv[])
 	l_test_add("Complex 5", check_complex_5, &message_data_complex_5);
 
 	l_test_add("Bloom 1", check_bloom_1, NULL);
+
+	l_test_add("Message Builder Complex 3", builder_complex_3,
+						&message_data_complex_3);
 
 	return l_test_run();
 }
