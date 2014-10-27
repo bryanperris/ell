@@ -864,8 +864,11 @@ static void get_family_callback(struct l_genl_msg *msg, void *user_data)
 		return;
 
 	error = l_genl_msg_get_error(msg);
-	if (error < 0)
+	if (error < 0) {
+		if (family->watch_vanished)
+			family->watch_vanished(family->watch_data);
 		return;
+	}
 
 	if (!l_genl_attr_init(&attr, msg))
 		return;
