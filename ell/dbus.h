@@ -39,6 +39,7 @@ enum l_dbus_bus {
 
 struct l_dbus;
 struct l_dbus_interface;
+struct l_dbus_message_builder;
 
 typedef void (*l_dbus_ready_func_t) (void *user_data);
 typedef void (*l_dbus_disconnect_func_t) (void *user_data);
