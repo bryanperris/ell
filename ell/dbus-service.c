@@ -741,8 +741,10 @@ bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
 	if (instance)
 		interface_instance_free(instance);
 
-	if (l_queue_isempty(node->instances) && !node->children)
+	if (l_queue_isempty(node->instances) && !node->children) {
+		l_hashmap_remove(tree->objects, path);
 		_dbus_object_tree_prune_node(node);
+	}
 
 	return r;
 }
