@@ -373,7 +373,7 @@ static void process_request(struct l_genl *genl, const struct nlmsghdr *nlmsg)
 		return;
 	}
 
-	if (request->callback)
+	if (request->callback && nlmsg->nlmsg_type != NLMSG_DONE)
 		request->callback(msg, request->user_data);
 
 	if (nlmsg->nlmsg_flags & NLM_F_MULTI) {
