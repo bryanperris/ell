@@ -23,6 +23,8 @@
 #ifndef __ELL_IDLE_H
 #define __ELL_IDLE_H
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
