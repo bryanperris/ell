@@ -1,0 +1,34 @@
+Background
+==========
+
+- Priority scale: High, Medium and Low
+
+- Complexity scale: C1, C2, C4 and C8.  The complexity scale is exponential,
+  with complexity 1 being the lowest complexity.  Complexity is a function
+  of both task 'complexity' and task 'scope'.
+
+  The general rule of thumb is that a complexity 1 task should take 1-2 weeks
+  for a person very familiar with the codebase.  Higher complexity tasks
+  require more time and have higher uncertainty.
+
+  Higher complexity tasks should be refined into several lower complexity tasks
+  once the task is better understood.
+
+
+DBus API
+========
+
+- Add APIs that would allow an application to listen to a particular signal or
+  set of signals.  The set of signals can be specified by using signal filtering
+  mechanisms specified in the DBus specification.  Whenever a given signal
+  matches one of the filters, the relevant callback function should be called.
+
+  For KDBus this implies calculating and installing proper bloom filters.  For
+  DBus classic this implies managing a set of appropriate filters with the DBus
+  daemon as specified in the DBus specification.
+
+  Note that certain filtering mechanisms which are possible with DBus classic
+  are likely not possible with KDBus.
+
+  Priority: Medium
+  Complexity: C4
