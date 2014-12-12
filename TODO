@@ -32,3 +32,8 @@ DBus API
 
   Priority: Medium
   Complexity: C4
+
+- Add builder APIs for appending fixed-size array data.  Currently arrays are
+  built one element at a time which can get pretty expensive for large arrays.
+  A function that appends multiple fixed elements at once to the gvariant and
+  dbus1 builders is needed.
