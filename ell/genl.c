@@ -593,6 +593,8 @@ void l_genl_unref(struct l_genl *genl)
 	l_io_destroy(genl->io);
 	genl->io = NULL;
 
+	l_genl_family_unref(genl->nlctrl);
+
 	l_queue_destroy(genl->family_list, family_free);
 
 	if (genl->close_on_unref)
