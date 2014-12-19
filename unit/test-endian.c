@@ -32,14 +32,14 @@ static void big_endian(const void *data)
 {
 	uint8_t val[2] = { 0x12, 0x34 }, *ptr = val;
 
-	assert(L_BE16_TO_CPU(L_GET_UNALIGNED((uint16_t *) ptr)) == 0x1234);
+	assert(l_get_be16(ptr) == 0x1234);
 }
 
 static void litte_endian(const void *data)
 {
 	uint8_t val[2] = { 0x34, 0x12 }, *ptr = val;
 
-	assert(L_LE16_TO_CPU(L_GET_UNALIGNED((uint16_t *) ptr)) == 0x1234);
+	assert(l_get_le16(ptr) == 0x1234);
 }
 
 int main(int argc, char *argv[])
