@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include <endian.h>
 #include <byteswap.h>
 
 #ifdef __cplusplus

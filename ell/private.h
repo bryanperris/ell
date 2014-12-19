@@ -21,6 +21,7 @@
  */
 
 #include <stdint.h>
+#include <endian.h>
 #include <byteswap.h>
 
 #include <ell/util.h>
