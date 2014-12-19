@@ -87,6 +87,7 @@ noinst_PROGRAMS =
 unit_tests = unit/test-unit \
 			unit/test-queue \
 			unit/test-hashmap \
+			unit/test-endian \
 			unit/test-string \
 			unit/test-utf8 \
 			unit/test-main \
@@ -115,6 +116,8 @@ unit_test_unit_LDADD = ell/libell-private.la
 unit_test_queue_LDADD = ell/libell-private.la
 
 unit_test_hashmap_LDADD = ell/libell-private.la
+
+unit_test_endian_LDADD = ell/libell-private.la
 
 unit_test_string_LDADD = ell/libell-private.la
 
