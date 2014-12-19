@@ -85,59 +85,6 @@
 #define put_s32(ptr, val)	(*((int32_t *) (ptr)) = (val))
 #define put_s64(ptr, val)	(*((int64_t *) (ptr)) = (val))
 
-#define get_unaligned(ptr)	L_GET_UNALIGNED(ptr)
-#define put_unaligned(val, ptr)	L_PUT_UNALIGNED(val, ptr)
-
-static inline uint16_t get_le16(const void *ptr)
-{
-	return le16_to_cpu(get_unaligned((const uint16_t *) ptr));
-}
-
-static inline uint16_t get_be16(const void *ptr)
-{
-	return be16_to_cpu(get_unaligned((const uint16_t *) ptr));
-}
-
-static inline uint32_t get_le32(const void *ptr)
-{
-	return le32_to_cpu(get_unaligned((const uint32_t *) ptr));
-}
-
-static inline uint32_t get_be32(const void *ptr)
-{
-	return be32_to_cpu(get_unaligned((const uint32_t *) ptr));
-}
-
-static inline uint64_t get_le64(const void *ptr)
-{
-	return le64_to_cpu(get_unaligned((const uint64_t *) ptr));
-}
-
-static inline uint64_t get_be64(const void *ptr)
-{
-	return be64_to_cpu(get_unaligned((const uint64_t *) ptr));
-}
-
-static inline void put_le16(uint16_t val, void *dst)
-{
-	put_unaligned(cpu_to_le16(val), (uint16_t *) dst);
-}
-
-static inline void put_be16(uint16_t val, const void *ptr)
-{
-	put_unaligned(cpu_to_be16(val), (uint16_t *) ptr);
-}
-
-static inline void put_le32(uint32_t val, void *dst)
-{
-	put_unaligned(cpu_to_le32(val), (uint32_t *) dst);
-}
-
-static inline void put_be32(uint32_t val, void *dst)
-{
-	put_unaligned(cpu_to_be32(val), (uint32_t *) dst);
-}
-
 struct l_debug_desc;
 
 void debug_enable(struct l_debug_desc *start, struct l_debug_desc *stop);
