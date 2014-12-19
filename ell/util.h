@@ -88,6 +88,66 @@ do {						\
 #error "Unknown byte order"
 #endif
 
+static inline uint16_t l_get_le16(const void *ptr)
+{
+	return L_LE16_TO_CPU(L_GET_UNALIGNED((const uint16_t *) ptr));
+}
+
+static inline uint16_t l_get_be16(const void *ptr)
+{
+	return L_BE16_TO_CPU(L_GET_UNALIGNED((const uint16_t *) ptr));
+}
+
+static inline uint32_t l_get_le32(const void *ptr)
+{
+	return L_LE32_TO_CPU(L_GET_UNALIGNED((const uint32_t *) ptr));
+}
+
+static inline uint32_t l_get_be32(const void *ptr)
+{
+	return L_BE32_TO_CPU(L_GET_UNALIGNED((const uint32_t *) ptr));
+}
+
+static inline uint64_t l_get_le64(const void *ptr)
+{
+	return L_LE64_TO_CPU(L_GET_UNALIGNED((const uint64_t *) ptr));
+}
+
+static inline uint64_t l_get_be64(const void *ptr)
+{
+	return L_BE64_TO_CPU(L_GET_UNALIGNED((const uint64_t *) ptr));
+}
+
+static inline void l_put_le16(uint16_t val, void *dst)
+{
+	L_PUT_UNALIGNED(L_CPU_TO_LE16(val), (uint16_t *) dst);
+}
+
+static inline void l_put_be16(uint16_t val, const void *ptr)
+{
+	L_PUT_UNALIGNED(L_CPU_TO_BE16(val), (uint16_t *) ptr);
+}
+
+static inline void l_put_le32(uint32_t val, void *dst)
+{
+	L_PUT_UNALIGNED(L_CPU_TO_LE32(val), (uint32_t *) dst);
+}
+
+static inline void l_put_be32(uint32_t val, void *dst)
+{
+	L_PUT_UNALIGNED(L_CPU_TO_BE32(val), (uint32_t *) dst);
+}
+
+static inline void l_put_le64(uint64_t val, void *dst)
+{
+	L_PUT_UNALIGNED(L_CPU_TO_LE64(val), (uint64_t *) dst);
+}
+
+static inline void l_put_be64(uint64_t val, void *dst)
+{
+	L_PUT_UNALIGNED(L_CPU_TO_BE64(val), (uint64_t *) dst);
+}
+
 #define L_AUTO_CLEANUP_VAR(vartype,varname,destroy) \
 	vartype varname __attribute__((cleanup(destroy)));
 
