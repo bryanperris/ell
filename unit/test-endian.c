@@ -28,26 +28,42 @@
 
 #include <ell/ell.h>
 
-static void big_endian(const void *data)
+static void big_endian_16(const void *data)
 {
 	uint8_t val[2] = { 0x12, 0x34 }, *ptr = val;
 
 	assert(l_get_be16(ptr) == 0x1234);
 }
 
-static void litte_endian(const void *data)
+static void big_endian_32(const void *data)
+{
+	uint8_t val[4] = { 0x12, 0x34, 0x56, 0x78 }, *ptr = val;
+
+	assert(l_get_be32(ptr) == 0x12345678);
+}
+
+static void litte_endian_16(const void *data)
 {
 	uint8_t val[2] = { 0x34, 0x12 }, *ptr = val;
 
 	assert(l_get_le16(ptr) == 0x1234);
 }
 
+static void litte_endian_32(const void *data)
+{
+	uint8_t val[4] = { 0x78, 0x56, 0x34, 0x12 }, *ptr = val;
+
+	assert(l_get_le32(ptr) == 0x12345678);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
-	l_test_add("Big endian", big_endian, NULL);
-	l_test_add("Little endian", litte_endian, NULL);
+	l_test_add("Big endian 16", big_endian_16, NULL);
+	l_test_add("Big endian 32", big_endian_32, NULL);
+	l_test_add("Little endian 16", litte_endian_16, NULL);
+	l_test_add("Little endian 32", litte_endian_32, NULL);
 
 	return l_test_run();
 }
