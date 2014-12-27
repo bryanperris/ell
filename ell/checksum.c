@@ -56,12 +56,12 @@ struct sockaddr_alg {
  * Checksum handling
  */
 
-#define is_valid_type(type)  ((type) <= L_CHECKSUM_SHA1)
+#define is_valid_type(type)  ((type) <= L_CHECKSUM_SHA256)
 
 static struct {
 	int sk;
 	unsigned int count;
-} alg_list[L_CHECKSUM_SHA1 + 1];
+} alg_list[L_CHECKSUM_SHA256 + 1];
 
 /**
  * l_checksum:
@@ -102,6 +102,9 @@ static int create_alg(enum l_checksum_type type)
 		break;
 	case L_CHECKSUM_SHA1:
 		strcpy((char *) salg.salg_name, "sha1");
+		break;
+	case L_CHECKSUM_SHA256:
+		strcpy((char *) salg.salg_name, "sha256");
 		break;
 	}
 
@@ -258,7 +261,7 @@ LIB_EXPORT void l_checksum_get_digest(struct l_checksum *checksum,
  **/
 LIB_EXPORT char *l_checksum_get_string(struct l_checksum *checksum)
 {
-	unsigned char digest[20];
+	unsigned char digest[32];
 
 	if (unlikely(!checksum))
 		return NULL;
@@ -270,6 +273,8 @@ LIB_EXPORT char *l_checksum_get_string(struct l_checksum *checksum)
 		return l_util_hexstring(digest, 16);
 	case L_CHECKSUM_SHA1:
 		return l_util_hexstring(digest, 20);
+	case L_CHECKSUM_SHA256:
+		return l_util_hexstring(digest, 32);
 	}
 
 	return NULL;

@@ -32,6 +32,7 @@ struct l_checksum;
 enum l_checksum_type {
 	L_CHECKSUM_MD5,
 	L_CHECKSUM_SHA1,
+	L_CHECKSUM_SHA256,
 };
 
 struct l_checksum *l_checksum_new(enum l_checksum_type type);
