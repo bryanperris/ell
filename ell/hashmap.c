@@ -322,18 +322,23 @@ LIB_EXPORT void l_hashmap_destroy(struct l_hashmap *hashmap,
 		return;
 
 	for (i = 0; i < NBUCKETS; i++) {
-		struct entry *entry, *head = &hashmap->buckets[i];
+		struct entry *entry, *next, *head = &hashmap->buckets[i];
 
 		if (!head->next)
 			continue;
 
-		for (entry = head;; entry = entry->next) {
+		for (entry = head;; entry = next) {
 			if (destroy)
 				destroy(entry->value);
 
 			free_key(hashmap, entry->key);
 
-			if (entry->next == head)
+			next = entry->next;
+
+			if (entry != head)
+				l_free(entry);
+
+			if (next == head)
 				break;
 		}
 	}
