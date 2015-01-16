@@ -257,12 +257,10 @@ static struct l_genl_msg *msg_create(const struct nlmsghdr *nlmsg)
 		goto done;
 	}
 
-	msg->data = l_malloc(nlmsg->nlmsg_len);
+	msg->data = l_memdup(nlmsg, nlmsg->nlmsg_len);
 
 	msg->len = nlmsg->nlmsg_len;
 	msg->size = nlmsg->nlmsg_len;
-
-	memcpy(msg->data, nlmsg, nlmsg->nlmsg_len);
 
 	if (msg->len >= GENL_HDRLEN) {
 		struct genlmsghdr *genlmsg = msg->data + NLMSG_HDRLEN;
