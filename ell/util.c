@@ -103,6 +103,29 @@ LIB_EXPORT void *l_realloc(void *mem, size_t size)
 }
 
 /**
+ * l_memdup:
+ * @mem: pointer to memory you want to duplicate
+ * @size: memory size
+ *
+ * If for any reason the memory allocation fails, then execution will be
+ * halted via abort().
+ *
+ * In case @size is 0 then #NULL will be returned.
+ *
+ * Returns: pointer to duplicated memory buffer
+ **/
+LIB_EXPORT void *l_memdup(const void *mem, size_t size)
+{
+	void *ptr;
+
+	ptr = l_malloc(size);
+	if (ptr)
+		memcpy(ptr, mem, size);
+
+	return ptr;
+}
+
+/**
  * l_free:
  * @ptr: memory pointer
  *
