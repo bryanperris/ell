@@ -239,7 +239,7 @@ static struct l_genl_msg *msg_alloc(uint8_t cmd, uint8_t version, uint32_t size)
 	msg->len = NLMSG_HDRLEN + GENL_HDRLEN;
 	msg->size = msg->len + NLMSG_ALIGN(size);
 
-	msg->data = l_malloc(msg->size);
+	msg->data = l_new(unsigned char, msg->size);
 
 	return l_genl_msg_ref(msg);
 }
