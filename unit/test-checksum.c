@@ -102,6 +102,27 @@ static void test_sha256(const void *data)
 	l_checksum_free(checksum);
 }
 
+static void test_reset(const void *data)
+{
+	struct l_checksum *checksum;
+	unsigned char digest[16];
+	char *str;
+
+	checksum = l_checksum_new(L_CHECKSUM_MD5);
+	assert(checksum);
+
+	l_checksum_update(checksum, FIXED_STR, FIXED_LEN);
+	l_checksum_reset(checksum);
+	l_checksum_update(checksum, FIXED_STR, FIXED_LEN);
+	l_checksum_get_digest(checksum, digest, sizeof(digest));
+
+	str = l_checksum_get_string(checksum);
+	l_info("%s", str);
+	l_free(str);
+
+	l_checksum_free(checksum);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -113,6 +134,8 @@ int main(int argc, char *argv[])
 	l_test_add("sha1-1", test_sha1, NULL);
 
 	l_test_add("sha256-1", test_sha256, NULL);
+
+	l_test_add("checksum reset", test_reset, NULL);
 
 	return l_test_run();
 }
