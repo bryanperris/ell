@@ -58,11 +58,6 @@ struct sockaddr_alg {
 
 #define is_valid_type(type)  ((type) <= L_CHECKSUM_SHA256)
 
-static struct {
-	int sk;
-	unsigned int count;
-} alg_list[L_CHECKSUM_SHA256 + 1];
-
 /**
  * l_checksum:
  *
@@ -77,16 +72,6 @@ static int create_alg(enum l_checksum_type type)
 {
 	struct sockaddr_alg salg;
 	int sk, nsk;
-
-	if (alg_list[type].sk > 0) {
-		nsk = accept(alg_list[type].sk, NULL, 0);
-		if (nsk < 0)
-			return -1;
-
-		alg_list[type].count++;
-
-		return nsk;
-	}
 
 	sk = socket(PF_ALG, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
 	if (sk < 0)
@@ -114,29 +99,9 @@ static int create_alg(enum l_checksum_type type)
 	}
 
 	nsk = accept4(sk, NULL, 0, SOCK_CLOEXEC);
-	if (nsk < 0) {
-		close(sk);
-		return -1;
-	}
-
-	alg_list[type].sk = sk;
-	alg_list[type].count = 1;
-
-	return nsk;
-}
-
-static void free_alg(enum l_checksum_type type, int sk)
-{
-	alg_list[type].count--;
-
 	close(sk);
 
-	if (alg_list[type].count > 0)
-		return;
-
-	close(alg_list[type].sk);
-
-	alg_list[type].sk = 0;
+	return nsk;
 }
 
 /**
@@ -178,8 +143,7 @@ LIB_EXPORT void l_checksum_free(struct l_checksum *checksum)
 	if (unlikely(!checksum))
 		return;
 
-	free_alg(checksum->type, checksum->sk);
-
+	close(checksum->sk);
 	l_free(checksum);
 }
 
@@ -191,16 +155,10 @@ LIB_EXPORT void l_checksum_free(struct l_checksum *checksum)
  **/
 void l_checksum_reset(struct l_checksum *checksum)
 {
-	int sk;
-
 	if (unlikely(!checksum))
 		return;
 
-	sk = checksum->sk;
-
-	checksum->sk = create_alg(checksum->type);
-
-	free_alg(checksum->type, sk);
+	send(checksum->sk, NULL, 0, 0);
 }
 
 /**
