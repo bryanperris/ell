@@ -26,6 +26,7 @@
 
 #define _GNU_SOURCE
 #include <unistd.h>
+#include <errno.h>
 #include <sys/socket.h>
 
 #include "util.h"
@@ -72,34 +73,20 @@ struct af_alg_iv {
 
 struct l_cipher {
 	enum l_cipher_type type;
-	int b_sk;
-	int sk;
-	void *key;
-	size_t key_length;
-	bool enc;
-	bool dec;
+	int encrypt_sk;
+	int decrypt_sk;
 };
 
-LIB_EXPORT struct l_cipher *l_cipher_new(enum l_cipher_type type,
-						const void *key,
-						size_t key_length)
+static int create_alg(enum l_cipher_type type,
+				const void *key, size_t key_length)
 {
 	struct sockaddr_alg salg;
-	struct l_cipher *cipher;
+	int sk;
+	int ret;
 
-	if (unlikely(!key))
-		return NULL;
-
-	if (!is_valid_type(type))
-		return NULL;
-
-	cipher = l_new(struct l_cipher, 1);
-
-	cipher->type = type;
-
-	cipher->b_sk = socket(PF_ALG, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
-	if (cipher->b_sk < 0)
-		goto error;
+	sk = socket(PF_ALG, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
+	if (sk < 0)
+		return -errno;
 
 	memset(&salg, 0, sizeof(salg));
 	salg.salg_family = AF_ALG;
@@ -114,26 +101,51 @@ LIB_EXPORT struct l_cipher *l_cipher_new(enum l_cipher_type type,
 		break;
 	}
 
-	if (bind(cipher->b_sk, (struct sockaddr *) &salg, sizeof(salg)) < 0)
-		goto error;
+	if (bind(sk, (struct sockaddr *) &salg, sizeof(salg)) < 0) {
+		close(sk);
+		return -1;
+	}
 
-	cipher->key = l_memdup(key, key_length);
-	cipher->key_length = key_length;
+	if (setsockopt(sk, SOL_ALG, ALG_SET_KEY, key, key_length) < 0) {
+		close(sk);
+		return -1;
+	}
 
-	cipher->sk = accept4(cipher->b_sk, NULL, 0, SOCK_CLOEXEC);
-	if (cipher->sk < 0)
-		goto error;
+	ret = accept4(sk, NULL, 0, SOCK_CLOEXEC);
+	close(sk);
+
+	return ret;
+}
+
+LIB_EXPORT struct l_cipher *l_cipher_new(enum l_cipher_type type,
+						const void *key,
+						size_t key_length)
+{
+	struct l_cipher *cipher;
+
+	if (unlikely(!key))
+		return NULL;
+
+	if (!is_valid_type(type))
+		return NULL;
+
+	cipher = l_new(struct l_cipher, 1);
+	cipher->type = type;
+
+	cipher->encrypt_sk = create_alg(type, key, key_length);
+	if (cipher->encrypt_sk < 0)
+		goto error_free;
+
+	cipher->decrypt_sk = create_alg(type, key, key_length);
+	if (cipher->decrypt_sk < 0)
+		goto error_close;
 
 	return cipher;
-error:
-	if (cipher->b_sk > 0)
-		close(cipher->b_sk);
 
-	if (cipher->key)
-		l_free(cipher->key);
-
+error_close:
+	close(cipher->encrypt_sk);
+error_free:
 	l_free(cipher);
-
 	return NULL;
 }
 
@@ -142,37 +154,19 @@ LIB_EXPORT void l_cipher_free(struct l_cipher *cipher)
 	if (unlikely(!cipher))
 		return;
 
-	close(cipher->sk);
-	close(cipher->b_sk);
-
-	if (cipher->key)
-		l_free(cipher->key);
+	close(cipher->encrypt_sk);
+	close(cipher->decrypt_sk);
 
 	l_free(cipher);
 }
 
-static void operate_cipher(struct l_cipher *cipher, __u32 operation,
+static void operate_cipher(int sk, __u32 operation,
 				const void *in, void *out, size_t len)
 {
 	char c_msg_buf[CMSG_SPACE(sizeof(operation))] = {};
 	struct msghdr msg = {};
-	bool setkey = false;
 	struct cmsghdr *c_msg;
 	struct iovec iov;
-
-	if (operation == ALG_OP_ENCRYPT && !cipher->enc) {
-		setkey = cipher->enc = true;
-		cipher->dec = false;
-	} else if (operation == ALG_OP_DECRYPT && !cipher->dec) {
-		setkey = cipher->dec = true;
-		cipher->enc = false;
-	}
-
-	if (setkey) {
-		if (setsockopt(cipher->b_sk, SOL_ALG, ALG_SET_KEY,
-					cipher->key, cipher->key_length) < 0)
-			return;
-	}
 
 	msg.msg_control = c_msg_buf;
 	msg.msg_controllen = sizeof(c_msg_buf);
@@ -189,10 +183,10 @@ static void operate_cipher(struct l_cipher *cipher, __u32 operation,
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 
-	if (sendmsg(cipher->sk, &msg, 0) < 0)
+	if (sendmsg(sk, &msg, 0) < 0)
 		return;
 
-	if (read(cipher->sk, out, len) < 0)
+	if (read(sk, out, len) < 0)
 		return;
 }
 
@@ -205,7 +199,7 @@ LIB_EXPORT void l_cipher_encrypt(struct l_cipher *cipher,
 	if (unlikely(!in) || unlikely(!out))
 		return;
 
-	operate_cipher(cipher, ALG_OP_ENCRYPT, in, out, len);
+	operate_cipher(cipher->encrypt_sk, ALG_OP_ENCRYPT, in, out, len);
 }
 
 LIB_EXPORT void l_cipher_decrypt(struct l_cipher *cipher,
@@ -217,5 +211,5 @@ LIB_EXPORT void l_cipher_decrypt(struct l_cipher *cipher,
 	if (unlikely(!in) || unlikely(!out))
 		return;
 
-	operate_cipher(cipher, ALG_OP_DECRYPT, in, out, len);
+	operate_cipher(cipher->decrypt_sk, ALG_OP_DECRYPT, in, out, len);
 }

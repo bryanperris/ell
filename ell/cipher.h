@@ -30,7 +30,7 @@ extern "C" {
 struct l_cipher;
 
 enum l_cipher_type {
-	L_CIPHER_AES,
+	L_CIPHER_AES = 0,
 	L_CIPHER_ARC4,
 };
 
