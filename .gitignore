@@ -40,6 +40,7 @@ unit/test-gvariant-util
 unit/test-gvariant-message
 unit/test-siphash
 unit/test-hwdb
+unit/test-cipher
 unit/*.log
 unit/*.trs
 examples/dbus-service
