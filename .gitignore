@@ -41,6 +41,7 @@ unit/test-gvariant-message
 unit/test-siphash
 unit/test-hwdb
 unit/test-cipher
+unit/test-random
 unit/*.log
 unit/*.trs
 examples/dbus-service
