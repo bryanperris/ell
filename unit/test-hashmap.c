@@ -159,11 +159,35 @@ static void test_str(const void *test_data)
 	l_hashmap_destroy(hashmap, NULL);
 }
 
+static void test_duplicate(const void *test_data)
+{
+	struct l_hashmap *hashmap;
+	int one = 1;
+	int two = 2;
+	int three = 3;
+
+	hashmap = l_hashmap_string_new();
+	assert(hashmap);
+
+	assert(l_hashmap_insert(hashmap, "one", &one));
+	assert(l_hashmap_insert(hashmap, "two", &two));
+	assert(l_hashmap_insert(hashmap, "one", &three));
+
+	assert(l_hashmap_lookup(hashmap, "two") == &two);
+	assert(l_hashmap_lookup(hashmap, "one") == &one);
+
+	assert(l_hashmap_remove(hashmap, "one") == &one);
+	assert(l_hashmap_lookup(hashmap, "one") == &three);
+
+	l_hashmap_destroy(hashmap, NULL);
+};
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
 	l_test_add("Pointer Test", test_ptr, NULL);
 	l_test_add("String Test", test_str, NULL);
+	l_test_add("Duplicate Test", test_duplicate, NULL);
 	return l_test_run();
 }
