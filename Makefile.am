@@ -110,7 +110,8 @@ unit_tests = unit/test-unit \
 			unit/test-gvariant-message \
 			unit/test-siphash \
 			unit/test-hwdb \
-			unit/test-cipher
+			unit/test-cipher \
+			unit/test-random
 
 if MAINTAINER_MODE
 noinst_PROGRAMS += $(unit_tests)
@@ -161,6 +162,8 @@ unit_test_siphash_LDADD = ell/libell-private.la
 unit_test_hwdb_LDADD = ell/libell-private.la
 
 unit_test_cipher_LDADD = ell/libell-private.la
+
+unit_test_random_LDADD = ell/libell-private.la
 
 if MAINTAINER_MODE
 noinst_LTLIBRARIES += unit/example-plugin.la
