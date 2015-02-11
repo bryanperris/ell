@@ -42,6 +42,7 @@ lib_LTLIBRARIES = ell/libell.la
 ell_libell_la_SOURCES = $(linux_headers) \
 			$(pkginclude_HEADERS) \
 			ell/private.h \
+			ell/missing.h \
 			ell/util.c \
 			ell/test.c \
 			ell/queue.c \

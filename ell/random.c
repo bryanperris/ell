@@ -28,10 +28,10 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/syscall.h>
-#include <linux/random.h>
 
 #include "random.h"
 #include "private.h"
+#include "missing.h"
 
 static inline int getrandom(void *buffer, size_t count, unsigned flags) {
         return syscall(__NR_getrandom, buffer, count, flags);
