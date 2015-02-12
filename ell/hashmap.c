@@ -312,6 +312,10 @@ LIB_EXPORT bool l_hashmap_set_key_free_function(struct l_hashmap *hashmap,
  * @destroy: destroy function
  *
  * Free hash table and call @destory on all remaining entries.
+ *
+ * NOTE: While the destroy is in progress, the hashmap is assumed to be
+ * invariant.  The behavior of adding or removing entries while a destroy
+ * operation is in progress is undefined.
  **/
 LIB_EXPORT void l_hashmap_destroy(struct l_hashmap *hashmap,
 				l_hashmap_destroy_func_t destroy)
@@ -505,6 +509,10 @@ LIB_EXPORT void *l_hashmap_lookup(struct l_hashmap *hashmap, const void *key)
  * @user_data: user data given to callback function
  *
  * Call @function for every entry in @hashmap.
+ *
+ * NOTE: While the foreach is in progress, the hashmap is assumed to be
+ * invariant.  The behavior of adding or removing entries while a foreach
+ * operation is in progress is undefined.
  **/
 LIB_EXPORT void l_hashmap_foreach(struct l_hashmap *hashmap,
 			l_hashmap_foreach_func_t function, void *user_data)
