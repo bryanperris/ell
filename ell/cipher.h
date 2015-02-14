@@ -39,10 +39,10 @@ struct l_cipher *l_cipher_new(enum l_cipher_type type,
 
 void l_cipher_free(struct l_cipher *cipher);
 
-void l_cipher_encrypt(struct l_cipher *cipher,
+bool l_cipher_encrypt(struct l_cipher *cipher,
 			const void *in, void *out, size_t len);
 
-void l_cipher_decrypt(struct l_cipher *cipher,
+bool l_cipher_decrypt(struct l_cipher *cipher,
 			const void *in, void *out, size_t len);
 
 #ifdef __cplusplus

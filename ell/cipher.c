@@ -160,7 +160,7 @@ LIB_EXPORT void l_cipher_free(struct l_cipher *cipher)
 	l_free(cipher);
 }
 
-static void operate_cipher(int sk, __u32 operation,
+static bool operate_cipher(int sk, __u32 operation,
 				const void *in, void *out, size_t len)
 {
 	char c_msg_buf[CMSG_SPACE(sizeof(operation))] = {};
@@ -184,32 +184,34 @@ static void operate_cipher(int sk, __u32 operation,
 	msg.msg_iovlen = 1;
 
 	if (sendmsg(sk, &msg, 0) < 0)
-		return;
+		return false;
 
 	if (read(sk, out, len) < 0)
-		return;
+		return false;
+
+	return true;
 }
 
-LIB_EXPORT void l_cipher_encrypt(struct l_cipher *cipher,
+LIB_EXPORT bool l_cipher_encrypt(struct l_cipher *cipher,
 					const void *in, void *out, size_t len)
 {
 	if (unlikely(!cipher))
-		return;
+		return false;
 
 	if (unlikely(!in) || unlikely(!out))
-		return;
+		return false;
 
-	operate_cipher(cipher->encrypt_sk, ALG_OP_ENCRYPT, in, out, len);
+	return operate_cipher(cipher->encrypt_sk, ALG_OP_ENCRYPT, in, out, len);
 }
 
-LIB_EXPORT void l_cipher_decrypt(struct l_cipher *cipher,
+LIB_EXPORT bool l_cipher_decrypt(struct l_cipher *cipher,
 					const void *in, void *out, size_t len)
 {
 	if (unlikely(!cipher))
-		return;
+		return false;
 
 	if (unlikely(!in) || unlikely(!out))
-		return;
+		return false;
 
-	operate_cipher(cipher->decrypt_sk, ALG_OP_DECRYPT, in, out, len);
+	return operate_cipher(cipher->decrypt_sk, ALG_OP_DECRYPT, in, out, len);
 }
