@@ -185,6 +185,24 @@ LIB_EXPORT void l_checksum_update(struct l_checksum *checksum,
 		return;
 }
 
+void l_checksum_updatev(struct l_checksum *checksum,
+					struct iovec *iov, size_t iov_len)
+{
+	struct msghdr msg;
+
+	if (unlikely(!checksum))
+		return;
+
+	if (unlikely(!iov) || unlikely(!iov_len))
+		return;
+
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_iov = iov;
+	msg.msg_iovlen = iov_len;
+
+	sendmsg(checksum->sk, &msg, MSG_MORE);
+}
+
 /**
  * l_checksum_get_digest:
  * @checksum: checksum object

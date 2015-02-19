@@ -23,6 +23,8 @@
 #ifndef __ELL_CHECKSUM_H
 #define __ELL_CHECKSUM_H
 
+#include <sys/uio.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -42,6 +44,8 @@ void l_checksum_reset(struct l_checksum *checksum);
 
 void l_checksum_update(struct l_checksum *checksum,
 					const void *data, size_t len);
+void l_checksum_updatev(struct l_checksum *checksum,
+					struct iovec *iov, size_t iov_len);
 void l_checksum_get_digest(struct l_checksum *checksum,
 					void *digest, size_t len);
 char *l_checksum_get_string(struct l_checksum *checksum);
