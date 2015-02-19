@@ -173,6 +173,50 @@ LIB_EXPORT struct l_checksum *l_checksum_new_cmac_aes(const void *key,
 	return checksum;
 }
 
+struct l_checksum *l_checksum_new_hmac(enum l_checksum_type type,
+					const void *key, size_t key_len)
+{
+	struct l_checksum *checksum;
+	int fd;
+	const char *name;
+
+	if (!is_valid_type(type))
+		return NULL;
+
+	switch (type) {
+	case L_CHECKSUM_MD5:
+		name = "hmac(md5)";
+		break;
+	case L_CHECKSUM_SHA1:
+		name = "hmac(sha1)";
+		break;
+	case L_CHECKSUM_SHA256:
+		name = "hmac(sha256)";
+		break;
+	}
+
+	fd = create_alg(name);
+	if (fd < 0)
+		return NULL;
+
+	if (setsockopt(fd, SOL_ALG, ALG_SET_KEY, key, key_len) < 0) {
+		close(fd);
+		return NULL;
+	}
+
+	checksum = l_new(struct l_checksum, 1);
+	checksum->sk = accept4(fd, NULL, 0, SOCK_CLOEXEC);
+	close(fd);
+
+	if (checksum->sk < 0) {
+		l_free(checksum);
+		return NULL;
+	}
+
+	strcpy(checksum->alg_name, name);
+	return checksum;
+}
+
 /**
  * l_checksum_free:
  * @checksum: checksum object
@@ -283,6 +327,9 @@ LIB_EXPORT char *l_checksum_get_string(struct l_checksum *checksum)
 		{ .name = "sha1", .digest_len = 20 },
 		{ .name = "sha256", .digest_len = 32 },
 		{ .name = "cmac(aes)", .digest_len = 16 },
+		{ .name = "hmac(md5)", .digest_len = 16 },
+		{ .name = "hmac(sha1)", .digest_len = 20 },
+		{ .name = "hmac(sha256)", .digest_len = 32 },
 		{ .name = NULL, .digest_len = 0 },
 	};
 	unsigned char digest[32];
