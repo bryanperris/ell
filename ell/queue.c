@@ -318,7 +318,8 @@ done:
  * Returns: Matching entry or NULL if no entry can be found
  **/
 LIB_EXPORT void *l_queue_find(struct l_queue *queue,
-				l_queue_match_func_t function, void *user_data)
+				l_queue_match_func_t function,
+				const void *user_data)
 {
 	struct l_queue_entry *entry;
 
