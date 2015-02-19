@@ -37,3 +37,11 @@ DBus API
   built one element at a time which can get pretty expensive for large arrays.
   A function that appends multiple fixed elements at once to the gvariant and
   dbus1 builders is needed.
+
+
+Kernel Crypto
+=============
+
+- Add support for getsockname (getname) in the Linux kernel for sockets of
+  type AF_ALG.  Currently this is not implemented and the kernel returns
+  EOPNOTSUPP.
