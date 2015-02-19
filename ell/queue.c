@@ -486,7 +486,8 @@ LIB_EXPORT unsigned int l_queue_foreach_remove(struct l_queue *queue,
  * Returns: Whether an entry was removed or not.
  **/
 LIB_EXPORT void *l_queue_remove_if(struct l_queue *queue,
-				l_queue_match_func_t function, void *user_data)
+				l_queue_match_func_t function,
+				const void *user_data)
 {
 	struct l_queue_entry *entry, *prev = NULL;
 

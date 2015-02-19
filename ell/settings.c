@@ -1115,8 +1115,7 @@ LIB_EXPORT bool l_settings_remove_group(struct l_settings *settings,
 	if (unlikely(!settings))
 		return false;
 
-	group = l_queue_remove_if(settings->groups, group_match,
-						(char *) group_name);
+	group = l_queue_remove_if(settings->groups, group_match, group_name);
 	if (!group)
 		return false;
 
@@ -1139,7 +1138,7 @@ LIB_EXPORT bool l_settings_remove_key(struct l_settings *settings,
 	if (!group)
 		return false;
 
-	setting = l_queue_remove_if(group->settings, key_match, (char *) key);
+	setting = l_queue_remove_if(group->settings, key_match, key);
 	if (!setting)
 		return false;
 
