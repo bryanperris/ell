@@ -123,6 +123,39 @@ static void test_reset(const void *data)
 	l_checksum_free(checksum);
 }
 
+static void test_updatev(const void *data)
+{
+	struct l_checksum *checksum;
+	unsigned char digest[20];
+	struct iovec iov[2];
+	char *str;
+	char *str2;
+
+	checksum = l_checksum_new(L_CHECKSUM_SHA1);
+	assert(checksum);
+
+	l_checksum_update(checksum, FIXED_STR, FIXED_LEN);
+	l_checksum_get_digest(checksum, digest, sizeof(digest));
+	str = l_checksum_get_string(checksum);
+
+	iov[0].iov_base = FIXED_STR;
+	iov[0].iov_len = FIXED_LEN / 2;
+
+	iov[1].iov_base = FIXED_STR + FIXED_LEN / 2;
+	iov[1].iov_len = FIXED_LEN - FIXED_LEN / 2;
+
+	l_checksum_updatev(checksum, iov, 2);
+	l_checksum_get_digest(checksum, digest, sizeof(digest));
+	str2 = l_checksum_get_string(checksum);
+
+	assert(!strcmp(str, str2));
+
+	l_free(str);
+	l_free(str2);
+
+	l_checksum_free(checksum);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -136,6 +169,8 @@ int main(int argc, char *argv[])
 	l_test_add("sha256-1", test_sha256, NULL);
 
 	l_test_add("checksum reset", test_reset, NULL);
+
+	l_test_add("checksum updatev", test_updatev, NULL);
 
 	return l_test_run();
 }
