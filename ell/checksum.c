@@ -26,11 +26,16 @@
 
 #define _GNU_SOURCE
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 
 #include "util.h"
 #include "checksum.h"
 #include "private.h"
+
+#ifndef SOL_ALG
+#define SOL_ALG 279
+#endif
 
 #ifndef AF_ALG
 #define AF_ALG	38
@@ -64,14 +69,14 @@ struct sockaddr_alg {
  * Opague object representing the checksum.
  */
 struct l_checksum {
-	enum l_checksum_type type;
 	int sk;
+	char alg_name[16];
 };
 
-static int create_alg(enum l_checksum_type type)
+static int create_alg(const char *alg)
 {
 	struct sockaddr_alg salg;
-	int sk, nsk;
+	int sk;
 
 	sk = socket(PF_ALG, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
 	if (sk < 0)
@@ -80,28 +85,14 @@ static int create_alg(enum l_checksum_type type)
 	memset(&salg, 0, sizeof(salg));
 	salg.salg_family = AF_ALG;
 	strcpy((char *) salg.salg_type, "hash");
-
-	switch (type) {
-	case L_CHECKSUM_MD5:
-		strcpy((char *) salg.salg_name, "md5");
-		break;
-	case L_CHECKSUM_SHA1:
-		strcpy((char *) salg.salg_name, "sha1");
-		break;
-	case L_CHECKSUM_SHA256:
-		strcpy((char *) salg.salg_name, "sha256");
-		break;
-	}
+	strcpy((char *) salg.salg_name, alg);
 
 	if (bind(sk, (struct sockaddr *) &salg, sizeof(salg)) < 0) {
 		close(sk);
 		return -1;
 	}
 
-	nsk = accept4(sk, NULL, 0, SOCK_CLOEXEC);
-	close(sk);
-
-	return nsk;
+	return sk;
 }
 
 /**
@@ -115,20 +106,70 @@ static int create_alg(enum l_checksum_type type)
 LIB_EXPORT struct l_checksum *l_checksum_new(enum l_checksum_type type)
 {
 	struct l_checksum *checksum;
+	const char *name;
+	int fd;
 
 	if (!is_valid_type(type))
 		return NULL;
 
 	checksum = l_new(struct l_checksum, 1);
 
-	checksum->type = type;
-	checksum->sk = create_alg(type);
+	switch (type) {
+	case L_CHECKSUM_MD5:
+		name = "md5";
+		break;
+	case L_CHECKSUM_SHA1:
+		name = "sha1";
+		break;
+	case L_CHECKSUM_SHA256:
+		name = "sha256";
+		break;
+	}
+
+	fd = create_alg(name);
+	if (fd < 0)
+		goto error;
+
+	checksum->sk = accept4(fd, NULL, 0, SOCK_CLOEXEC);
+	close(fd);
+
+	if (checksum->sk < 0)
+		goto error;
+
+	strcpy(checksum->alg_name, name);
+
+	return checksum;
+
+error:
+	l_free(checksum);
+	return NULL;
+}
+
+LIB_EXPORT struct l_checksum *l_checksum_new_cmac_aes(const void *key,
+							size_t key_len)
+{
+	struct l_checksum *checksum;
+	int fd;
+
+	fd = create_alg("cmac(aes)");
+	if (fd < 0)
+		return NULL;
+
+	if (setsockopt(fd, SOL_ALG, ALG_SET_KEY, key, key_len) < 0) {
+		close(fd);
+		return NULL;
+	}
+
+	checksum = l_new(struct l_checksum, 1);
+	checksum->sk = accept4(fd, NULL, 0, SOCK_CLOEXEC);
+	close(fd);
 
 	if (checksum->sk < 0) {
 		l_free(checksum);
 		return NULL;
 	}
 
+	strcpy(checksum->alg_name, "cmac(aes)");
 	return checksum;
 }
 
@@ -175,9 +216,6 @@ LIB_EXPORT void l_checksum_update(struct l_checksum *checksum,
 	ssize_t written;
 
 	if (unlikely(!checksum))
-		return;
-
-	if (unlikely(!data) || unlikely(!len))
 		return;
 
 	written = send(checksum->sk, data, len, MSG_MORE);
@@ -237,20 +275,29 @@ LIB_EXPORT void l_checksum_get_digest(struct l_checksum *checksum,
  **/
 LIB_EXPORT char *l_checksum_get_string(struct l_checksum *checksum)
 {
+	static struct {
+		const char *name;
+		size_t digest_len;
+	} digest_lut[] = {
+		{ .name = "md5", .digest_len = 16 },
+		{ .name = "sha1", .digest_len = 20 },
+		{ .name = "sha256", .digest_len = 32 },
+		{ .name = "cmac(aes)", .digest_len = 16 },
+		{ .name = NULL, .digest_len = 0 },
+	};
 	unsigned char digest[32];
+	unsigned int i;
 
 	if (unlikely(!checksum))
 		return NULL;
 
 	l_checksum_get_digest(checksum, digest, sizeof(digest));
 
-	switch (checksum->type) {
-	case L_CHECKSUM_MD5:
-		return l_util_hexstring(digest, 16);
-	case L_CHECKSUM_SHA1:
-		return l_util_hexstring(digest, 20);
-	case L_CHECKSUM_SHA256:
-		return l_util_hexstring(digest, 32);
+	for (i = 0; digest_lut[i].name; i++) {
+		if (strcmp(digest_lut[i].name, checksum->alg_name))
+			continue;
+
+		return l_util_hexstring(digest, digest_lut[i].digest_len);
 	}
 
 	return NULL;

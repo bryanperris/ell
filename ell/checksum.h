@@ -38,6 +38,8 @@ enum l_checksum_type {
 };
 
 struct l_checksum *l_checksum_new(enum l_checksum_type type);
+struct l_checksum *l_checksum_new_cmac_aes(const void *key, size_t key_len);
+
 void l_checksum_free(struct l_checksum *checksum);
 
 void l_checksum_reset(struct l_checksum *checksum);
