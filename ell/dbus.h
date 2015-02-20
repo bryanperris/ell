@@ -48,6 +48,8 @@ typedef void (*l_dbus_debug_func_t) (const char *str, void *user_data);
 typedef void (*l_dbus_destroy_func_t) (void *user_data);
 typedef void (*l_dbus_interface_setup_func_t) (struct l_dbus_interface *);
 
+typedef void (*l_dbus_watch_func_t) (struct l_dbus *dbus, void *user_data);
+
 struct l_dbus *l_dbus_new(const char *address);
 struct l_dbus *l_dbus_new_default(enum l_dbus_bus bus);
 void l_dbus_destroy(struct l_dbus *dbus);

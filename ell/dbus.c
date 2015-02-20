@@ -122,6 +122,19 @@ struct signal_callback {
 	void *user_data;
 };
 
+struct dbus1_filter_data {
+	struct l_dbus *dbus;
+	l_dbus_message_func_t handle_func;
+	l_dbus_watch_func_t disconnect_func;
+	char *sender;
+	char *path;
+	char *interface;
+	char *member;
+	char *argument;
+	void *user_data;
+	l_dbus_destroy_func_t destroy_func;
+};
+
 static void message_queue_destroy(void *data)
 {
 	struct message_callback *callback = data;
@@ -1226,4 +1239,49 @@ LIB_EXPORT bool l_dbus_unregister_interface(struct l_dbus *dbus,
 		return false;
 
 	return _dbus_object_tree_unregister(dbus->tree, path, interface);
+}
+
+struct dbus1_filter_data *_dbus1_filter_data_get(struct l_dbus *dbus,
+					l_dbus_message_func_t filter,
+					const char *sender,
+					const char *path,
+					const char *interface,
+					const char *member,
+					const char *argument,
+					l_dbus_watch_func_t disconnect_func,
+					void *user_data,
+					l_dbus_destroy_func_t destroy)
+{
+	struct dbus1_filter_data *data;
+
+	data = l_new(struct dbus1_filter_data, 1);
+
+	data->dbus = dbus;
+	data->handle_func = filter;
+	data->disconnect_func = disconnect_func;
+	data->sender = l_strdup(sender);
+	data->path = l_strdup(path);
+	data->interface = l_strdup(interface);
+	data->member = l_strdup(member);
+	data->argument = l_strdup(argument);
+	data->user_data = user_data;
+	data->destroy_func = destroy;
+
+	return data;
+}
+
+void _dbus1_filter_data_destroy(void *user_data)
+{
+	struct dbus1_filter_data *data = user_data;
+
+	l_free(data->sender);
+	l_free(data->path);
+	l_free(data->interface);
+	l_free(data->member);
+	l_free(data->argument);
+
+	if (data->destroy_func)
+		data->destroy_func(data->user_data);
+
+	l_free(data);
 }

@@ -212,3 +212,17 @@ int _dbus_kernel_remove_match(int fd, uint64_t cookie);
 
 uint8_t _dbus_get_version(struct l_dbus *dbus);
 int _dbus_get_fd(struct l_dbus *dbus);
+
+struct dbus1_filter_data;
+
+struct dbus1_filter_data *_dbus1_filter_data_get(struct l_dbus *dbus,
+					l_dbus_message_func_t filter,
+					const char *sender,
+					const char *path,
+					const char *interface,
+					const char *member,
+					const char *argument,
+					l_dbus_watch_func_t disconnect_func,
+					void *user_data,
+					l_dbus_destroy_func_t destroy);
+void _dbus1_filter_data_destroy(void *user_data);
