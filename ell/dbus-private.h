@@ -215,6 +215,9 @@ int _dbus_get_fd(struct l_dbus *dbus);
 
 struct dbus1_filter_data;
 
+void _dbus1_filter_format_match(struct dbus1_filter_data *data, char *rule,
+								size_t size);
+
 struct dbus1_filter_data *_dbus1_filter_data_get(struct l_dbus *dbus,
 					l_dbus_message_func_t filter,
 					const char *sender,

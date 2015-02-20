@@ -1241,6 +1241,30 @@ LIB_EXPORT bool l_dbus_unregister_interface(struct l_dbus *dbus,
 	return _dbus_object_tree_unregister(dbus->tree, path, interface);
 }
 
+void _dbus1_filter_format_match(struct dbus1_filter_data *data, char *rule,
+					size_t size)
+{
+	int offset;
+
+	offset = snprintf(rule, size, "type='signal'");
+
+	if (data->sender)
+		offset += snprintf(rule + offset, size - offset,
+				",sender='%s'", data->sender);
+	if (data->path)
+		offset += snprintf(rule + offset, size - offset,
+				",path='%s'", data->path);
+	if (data->interface)
+		offset += snprintf(rule + offset, size - offset,
+				",interface='%s'", data->interface);
+	if (data->member)
+		offset += snprintf(rule + offset, size - offset,
+				",member='%s'", data->member);
+	if (data->argument)
+		snprintf(rule + offset, size - offset,
+				",arg0='%s'", data->argument);
+}
+
 struct dbus1_filter_data *_dbus1_filter_data_get(struct l_dbus *dbus,
 					l_dbus_message_func_t filter,
 					const char *sender,
