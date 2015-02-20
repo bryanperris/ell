@@ -37,9 +37,9 @@
 #include "queue.h"
 #include "string.h"
 #include "log.h"
+#include "dbus.h"
 #include "dbus-private.h"
 #include "gvariant-private.h"
-#include "dbus.h"
 
 static const char *simple_types = "sogybnqiuxtdh";
 static const char *variable_types = "sogav";
