@@ -1309,3 +1309,29 @@ void _dbus1_filter_data_destroy(void *user_data)
 
 	l_free(data);
 }
+
+static void dbus1_send_match(struct l_dbus *dbus, const char *rule,
+						const char *method)
+{
+	struct l_dbus_message *message;
+
+	message = l_dbus_message_new_method_call(dbus,
+						DBUS_SERVICE_DBUS,
+						DBUS_PATH_DBUS,
+						DBUS_INTERFACE_DBUS,
+						method);
+
+	l_dbus_message_set_arguments(message, "s", rule);
+
+	send_message(dbus, false, message, NULL, NULL, NULL);
+}
+
+static void dbus1_bus_add_match(struct l_dbus *dbus, const char *rule)
+{
+	dbus1_send_match(dbus, rule, "AddMatch");
+}
+
+static void dbus1_bus_remove_match(struct l_dbus *dbus, const char *rule)
+{
+	dbus1_send_match(dbus, rule, "RemoveMatch");
+}
