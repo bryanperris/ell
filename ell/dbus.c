@@ -1337,6 +1337,7 @@ static void dbus1_bus_remove_match(struct l_dbus *dbus, const char *rule)
 {
 	dbus1_send_match(dbus, rule, "RemoveMatch");
 }
+
 static void add_match(struct dbus1_filter_data *data)
 {
 	char rule[DBUS_MAXIMUM_MATCH_RULE_LENGTH];
