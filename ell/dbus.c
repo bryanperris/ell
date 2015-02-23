@@ -53,6 +53,8 @@
 #define DBUS_INTERFACE_INTROSPECTABLE	"org.freedesktop.DBus.Introspectable"
 #define DBUS_INTERFACE_PROPERTIES	"org.freedesktop.DBus.Properties"
 
+#define DBUS_MAXIMUM_MATCH_RULE_LENGTH	1024
+
 enum auth_state {
 	WAITING_FOR_OK,
 	WAITING_FOR_AGREE_UNIX_FD,
@@ -1334,4 +1336,110 @@ static void dbus1_bus_add_match(struct l_dbus *dbus, const char *rule)
 static void dbus1_bus_remove_match(struct l_dbus *dbus, const char *rule)
 {
 	dbus1_send_match(dbus, rule, "RemoveMatch");
+}
+static void add_match(struct dbus1_filter_data *data)
+{
+	char rule[DBUS_MAXIMUM_MATCH_RULE_LENGTH];
+
+	_dbus1_filter_format_match(data, rule, sizeof(rule));
+
+	dbus1_bus_add_match(data->dbus, rule);
+}
+
+static void remove_match(struct dbus1_filter_data *data)
+{
+	char rule[DBUS_MAXIMUM_MATCH_RULE_LENGTH];
+
+	_dbus1_filter_format_match(data, rule, sizeof(rule));
+
+	dbus1_bus_remove_match(data->dbus, rule);
+}
+
+static void filter_data_destroy(void *user_data)
+{
+	remove_match(user_data);
+
+	_dbus1_filter_data_destroy(user_data);
+}
+
+void _dbus1_signal_dispatcher(struct l_dbus_message *message, void *user_data)
+{
+	struct dbus1_filter_data *data = user_data;
+	const char *sender, *path, *iface, *member;
+
+	if (_dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_SIGNAL)
+		return;
+
+	sender = l_dbus_message_get_sender(message);
+	if (!sender)
+		return;
+
+	if (data->sender && strcmp(sender, data->sender))
+		return;
+
+	path = l_dbus_message_get_path(message);
+	if (data->path && strcmp(path, data->path))
+		return;
+
+	iface = l_dbus_message_get_interface(message);
+	if (data->interface && strcmp(iface, data->interface))
+		return;
+
+	member = l_dbus_message_get_member(message);
+	if (data->member && strcmp(member, data->member))
+		return;
+
+	if (data->handle_func)
+		data->handle_func(message, data);
+}
+
+void _dbus1_name_owner_changed_filter(struct l_dbus_message *message,
+							void *user_data)
+{
+	struct dbus1_filter_data *data = user_data;
+	char *name, *old, *new;
+
+	if (!l_dbus_message_get_arguments(message, "sss",
+						&name, &old, &new))
+		return;
+
+	if (strcmp(name, data->argument))
+		return;
+
+	if (*new == '\0') {
+		if (data->disconnect_func)
+			data->disconnect_func(data->dbus, data->user_data);
+	}
+}
+
+LIB_EXPORT unsigned int l_dbus_add_disconnect_watch(struct l_dbus *dbus,
+					const char *name,
+					l_dbus_watch_func_t disconnect_func,
+					void *user_data,
+					l_dbus_destroy_func_t destroy)
+{
+	struct dbus1_filter_data *data;
+
+	if (!name)
+		return 0;
+
+	data = _dbus1_filter_data_get(dbus, _dbus1_name_owner_changed_filter,
+				DBUS_SERVICE_DBUS, DBUS_PATH_DBUS,
+				DBUS_INTERFACE_DBUS, "NameOwnerChanged",
+				name,
+				disconnect_func,
+				user_data,
+				destroy);
+	if (!data)
+		return 0;
+
+	add_match(data);
+
+	return l_dbus_register(dbus, _dbus1_signal_dispatcher, data,
+							filter_data_destroy);
+}
+
+LIB_EXPORT bool l_dbus_remove_watch(struct l_dbus *dbus, unsigned int id)
+{
+	return l_dbus_unregister(dbus, id);
 }

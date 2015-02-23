@@ -229,3 +229,6 @@ struct dbus1_filter_data *_dbus1_filter_data_get(struct l_dbus *dbus,
 					void *user_data,
 					l_dbus_destroy_func_t destroy);
 void _dbus1_filter_data_destroy(void *user_data);
+void _dbus1_signal_dispatcher(struct l_dbus_message *message, void *user_data);
+void _dbus1_name_owner_changed_filter(struct l_dbus_message *message,
+							void *user_data);

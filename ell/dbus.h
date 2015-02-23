@@ -198,6 +198,13 @@ bool l_dbus_register_interface(struct l_dbus *dbus,
 				l_dbus_destroy_func_t destroy);
 bool l_dbus_unregister_interface(struct l_dbus *dbus, const char *path,
 					const char *interface);
+unsigned int l_dbus_add_disconnect_watch(struct l_dbus *dbus,
+					const char *name,
+					l_dbus_watch_func_t disconnect_func,
+					void *user_data,
+					l_dbus_destroy_func_t destroy);
+bool l_dbus_remove_watch(struct l_dbus *dbus, unsigned int id);
+
 #ifdef __cplusplus
 }
 #endif
