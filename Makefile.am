@@ -107,6 +107,7 @@ unit_tests = unit/test-unit \
 			unit/test-dbus-util \
 			unit/test-dbus-message \
 			unit/test-dbus-service \
+			unit/test-dbus-watch \
 			unit/test-gvariant-util \
 			unit/test-gvariant-message \
 			unit/test-siphash \
@@ -153,6 +154,8 @@ unit_test_dbus_message_LDADD = ell/libell-private.la
 unit_test_dbus_util_LDADD = ell/libell-private.la
 
 unit_test_dbus_service_LDADD = ell/libell-private.la
+
+unit_test_dbus_watch_LDADD = ell/libell-private.la
 
 unit_test_gvariant_util_LDADD = ell/libell-private.la
 
