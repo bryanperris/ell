@@ -159,6 +159,14 @@ static const struct watch_test match_test_9 = {
 	.expected = "type='signal'",
 };
 
+static struct watch_test disconnect_test = {
+	.name = ":101.1",
+	.service = DBUS_SERVICE_DBUS,
+	.path = DBUS_PATH_DBUS,
+	.interface = DBUS_INTERFACE_DBUS,
+	.method = "NameOwnerChanged",
+};
+
 static void test_match(const void *test_data)
 {
 	const struct watch_test *test = test_data;
@@ -183,6 +191,60 @@ static void test_match(const void *test_data)
 	_dbus1_filter_data_destroy(data);
 }
 
+static void disconnect_cb(struct l_dbus *dbus, void *user_data)
+{
+	int *count = user_data;
+
+	(*count)++;
+}
+
+static void send_filter_signal(struct dbus1_filter_data *data,
+			const char *name, const char *old, const char *new)
+{
+	struct l_dbus_message *message;
+
+	message = _dbus_message_new_signal(2,
+					DBUS_PATH_DBUS,
+					DBUS_INTERFACE_DBUS,
+					"NameOwnerChanged");
+	l_dbus_message_set_arguments(message, "sss", name, old, new);
+	_dbus_message_set_sender(message, DBUS_SERVICE_DBUS);
+	_dbus1_signal_dispatcher(message, data);
+	l_dbus_message_unref(message);
+}
+
+static void test_disconnect_watch(const void *test_data)
+{
+	const struct watch_test *test = test_data;
+	struct dbus1_filter_data *data;
+	int count = 0;
+
+	data = _dbus1_filter_data_get(NULL,
+				_dbus1_name_owner_changed_filter,
+				test->service,
+				test->path,
+				test->interface,
+				test->method,
+				test->name,
+				disconnect_cb,
+				&count,
+				NULL);
+
+	send_filter_signal(data, ":0.1", ":0.1", "");
+	assert(count == 0);
+
+	send_filter_signal(data, ":0.1", ":0.1", ":0.2");
+	assert(count == 0);
+
+	send_filter_signal(data, ":101.1", ":101.1", ":101.1");
+	assert(count == 0);
+
+	send_filter_signal(data, ":101.1", ":101.1", "");
+	assert(count == 1);
+
+	_dbus1_filter_data_destroy(data);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -198,6 +260,9 @@ int main(int argc, char *argv[])
 	l_test_add("DBus filter NULL service, path and interface", test_match,
 								&match_test_8);
 	l_test_add("DBus filter NULL all fields", test_match, &match_test_9);
+
+	l_test_add("DBus disconnect watch", test_disconnect_watch,
+						&disconnect_test);
 
 	return l_test_run();
 }
