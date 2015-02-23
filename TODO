@@ -38,6 +38,9 @@ DBus API
   A function that appends multiple fixed elements at once to the gvariant and
   dbus1 builders is needed.
 
+  Priority: Medium
+  Complexity: C4
+
 
 Kernel Crypto
 =============
@@ -45,6 +48,9 @@ Kernel Crypto
 - Add support for getsockname (getname) in the Linux kernel for sockets of
   type AF_ALG.  Currently this is not implemented and the kernel returns
   EOPNOTSUPP.
+
+  Priority: Low
+  Complexity: C2
 
 
 Big endian support
