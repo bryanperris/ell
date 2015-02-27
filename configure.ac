@@ -61,6 +61,8 @@ AC_CHECK_FUNC(epoll_create, dummy=yes,
 AC_CHECK_LIB(dl, dlopen, dummy=yes,
 			AC_MSG_ERROR(dynamic linking loader is required))
 
+AC_CHECK_HEADERS(linux/types.h linux/if_alg.h)
+
 AC_CONFIG_FILES(Makefile ell/ell.pc)
 
 AC_OUTPUT
