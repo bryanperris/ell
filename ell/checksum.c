@@ -33,15 +33,19 @@
 #include "checksum.h"
 #include "private.h"
 
-#ifndef SOL_ALG
-#define SOL_ALG 279
+#ifndef HAVE_LINUX_IF_ALG_H
+#ifndef HAVE_LINUX_TYPES_H
+typedef uint8_t __u8;
+typedef uint16_t __u16;
+typedef uint32_t __u32;
+#else
+#include <linux/types.h>
 #endif
 
 #ifndef AF_ALG
 #define AF_ALG	38
 #define PF_ALG	AF_ALG
-
-#include <linux/types.h>
+#endif
 
 struct sockaddr_alg {
 	__u16	salg_family;
@@ -50,8 +54,16 @@ struct sockaddr_alg {
 	__u32	salg_mask;
 	__u8	salg_name[64];
 };
+
+/* Socket options */
+#define ALG_SET_KEY	1
+
 #else
 #include <linux/if_alg.h>
+#endif
+
+#ifndef SOL_ALG
+#define SOL_ALG 279
 #endif
 
 /**
