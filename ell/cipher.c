@@ -33,15 +33,19 @@
 #include "cipher.h"
 #include "private.h"
 
-#ifndef SOL_ALG
-#define SOL_ALG 279
+#ifndef HAVE_LINUX_IF_ALG_H
+#ifndef HAVE_LINUX_TYPES_H
+typedef uint8_t __u8;
+typedef uint16_t __u16;
+typedef uint32_t __u32;
+#else
+#include <linux/types.h>
 #endif
 
 #ifndef AF_ALG
 #define AF_ALG	38
 #define PF_ALG	AF_ALG
-
-#include <linux/types.h>
+#endif
 
 struct sockaddr_alg {
 	__u16	salg_family;
@@ -64,9 +68,12 @@ struct af_alg_iv {
 /* Operations */
 #define ALG_OP_DECRYPT	0
 #define ALG_OP_ENCRYPT	1
-
 #else
 #include <linux/if_alg.h>
+#endif
+
+#ifndef SOL_ALG
+#define SOL_ALG 279
 #endif
 
 #define is_valid_type(type)  ((type) <= L_CIPHER_ARC4)
