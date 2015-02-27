@@ -1084,7 +1084,8 @@ static unsigned int send_common(struct l_genl_family *family, uint16_t flags,
 }
 
 unsigned int l_genl_family_send(struct l_genl_family *family,
-				struct l_genl_msg *msg, l_genl_msg_func_t callback,
+				struct l_genl_msg *msg,
+				l_genl_msg_func_t callback,
 				void *user_data, l_genl_destroy_func_t destroy)
 {
 	return send_common(family, NLM_F_ACK, msg, callback,
@@ -1092,7 +1093,8 @@ unsigned int l_genl_family_send(struct l_genl_family *family,
 }
 
 unsigned int l_genl_family_dump(struct l_genl_family *family,
-				struct l_genl_msg *msg, l_genl_msg_func_t callback,
+				struct l_genl_msg *msg,
+				l_genl_msg_func_t callback,
 				void *user_data, l_genl_destroy_func_t destroy)
 {
 	return send_common(family, NLM_F_ACK | NLM_F_DUMP, msg, callback,
