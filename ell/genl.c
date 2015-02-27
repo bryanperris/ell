@@ -925,8 +925,6 @@ struct l_genl_family *l_genl_family_new(struct l_genl *genl, const char *name)
 	family->nlctrl_cmd = l_genl_family_send(genl->nlctrl, msg,
 					get_family_callback, family, NULL);
 
-	l_genl_msg_unref(msg);
-
 	if (!family->nlctrl_cmd) {
 		family_free(family);
 		return NULL;
@@ -1065,7 +1063,7 @@ static unsigned int send_common(struct l_genl_family *family, uint16_t flags,
 	request->type = family->id;
 	request->flags = NLM_F_REQUEST | flags;
 
-	request->msg = l_genl_msg_ref(msg);
+	request->msg = msg;
 
 	request->callback = callback;
 	request->destroy = destroy;
