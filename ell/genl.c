@@ -34,6 +34,7 @@
 #include "io.h"
 #include "netlink-private.h"
 #include "genl.h"
+#include "genl-private.h"
 #include "private.h"
 
 struct l_genl {
@@ -244,7 +245,7 @@ static struct l_genl_msg *msg_alloc(uint8_t cmd, uint8_t version, uint32_t size)
 	return l_genl_msg_ref(msg);
 }
 
-static struct l_genl_msg *msg_create(const struct nlmsghdr *nlmsg)
+struct l_genl_msg *_genl_msg_create(const struct nlmsghdr *nlmsg)
 {
 	struct l_genl_msg *msg;
 
@@ -364,7 +365,7 @@ static void process_request(struct l_genl *genl, const struct nlmsghdr *nlmsg)
 	if (!request)
 		return;
 
-	msg = msg_create(nlmsg);
+	msg = _genl_msg_create(nlmsg);
 	if (!msg) {
 		destroy_request(request);
 		wakeup_writer(genl);
@@ -414,7 +415,7 @@ static void process_notify(struct l_genl *genl, uint32_t group,
 {
 	struct notify_type_group match;
 
-	match.msg = msg_create(nlmsg);
+	match.msg = _genl_msg_create(nlmsg);
 	if (!match.msg)
 		return;
 
