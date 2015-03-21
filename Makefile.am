@@ -103,6 +103,7 @@ unit_tests = unit/test-unit \
 			unit/test-settings \
 			unit/test-netlink \
 			unit/test-genl \
+			unit/test-genl-msg \
 			unit/test-kdbus \
 			unit/test-dbus \
 			unit/test-dbus-util \
@@ -145,6 +146,8 @@ unit_test_settings_LDADD = ell/libell-private.la
 unit_test_netlink_LDADD = ell/libell-private.la
 
 unit_test_genl_LDADD = ell/libell-private.la
+
+unit_test_genl_msg_LDADD = ell/libell-private.la
 
 unit_test_kdbus_LDADD = ell/libell-private.la
 
