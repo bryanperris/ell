@@ -37,6 +37,7 @@ unit/test-dbus
 unit/test-dbus-message
 unit/test-dbus-util
 unit/test-dbus-service
+unit/test-dbus-watch
 unit/test-gvariant-util
 unit/test-gvariant-message
 unit/test-siphash
