@@ -633,6 +633,33 @@ LIB_EXPORT bool l_genl_set_close_on_unref(struct l_genl *genl, bool do_close)
 	return true;
 }
 
+const void *_genl_msg_as_bytes(struct l_genl_msg *msg, uint16_t type,
+					uint16_t flags, uint32_t seq,
+					uint32_t pid,
+					size_t *out_size)
+{
+	struct nlmsghdr *nlmsg;
+	struct genlmsghdr *genlmsg;
+
+	nlmsg = msg->data;
+
+	nlmsg->nlmsg_len = msg->len;
+	nlmsg->nlmsg_type = type;
+	nlmsg->nlmsg_flags = flags;
+	nlmsg->nlmsg_seq = seq;
+	nlmsg->nlmsg_pid = pid;
+
+	genlmsg = msg->data + NLMSG_HDRLEN;
+
+	genlmsg->cmd = msg->cmd;
+	genlmsg->version = msg->version;
+
+	if (out_size)
+		*out_size = msg->len;
+
+	return msg->data;
+}
+
 LIB_EXPORT struct l_genl_msg *l_genl_msg_new(uint8_t cmd)
 {
 	return l_genl_msg_new_sized(cmd, 0);

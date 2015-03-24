@@ -21,3 +21,7 @@
  */
 
 struct l_genl_msg *_genl_msg_create(const struct nlmsghdr *nlmsg);
+const void *_genl_msg_as_bytes(struct l_genl_msg *msg, uint16_t type,
+					uint16_t flags, uint32_t seq,
+					uint32_t pid,
+					size_t *out_size);
