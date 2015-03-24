@@ -84,9 +84,86 @@ static void parse_set_station(const void *data)
 	l_genl_msg_unref(msg);
 }
 
+static const unsigned char set_rekey_offload_request[] = {
+	0x54, 0x00, 0x00, 0x00, 0x1b, 0x00, 0x05, 0x00, 0x59, 0xa3, 0xe1, 0x53,
+	0xba, 0x02, 0x40, 0xe7, 0x4f, 0x00, 0x00, 0x00, 0x08, 0x00, 0x03, 0x00,
+	0x03, 0x00, 0x00, 0x00, 0x38, 0x00, 0x7a, 0x00, 0x14, 0x00, 0x01, 0x00,
+	0x2f, 0x82, 0xbb, 0x0d, 0x93, 0x56, 0x60, 0x4b, 0xb1, 0x55, 0x1c, 0x85,
+	0xc0, 0xeb, 0x32, 0x8b, 0x14, 0x00, 0x02, 0x00, 0x43, 0x25, 0xcf, 0x08,
+	0x0b, 0x92, 0xa7, 0x2d, 0x86, 0xdc, 0x43, 0x21, 0xd6, 0x0c, 0x12, 0x03,
+	0x0c, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+};
+
+static void parse_set_rekey_offload(const void *data)
+{
+	static const unsigned char kek[] = {
+		0x2f, 0x82, 0xbb, 0x0d, 0x93, 0x56, 0x60, 0x4b,
+		0xb1, 0x55, 0x1c, 0x85, 0xc0, 0xeb, 0x32, 0x8b };
+	static const unsigned char kck[] = {
+		0x43, 0x25, 0xcf, 0x08, 0x0b, 0x92, 0xa7, 0x2d,
+		0x86, 0xdc, 0x43, 0x21, 0xd6, 0x0c, 0x12, 0x03 };
+	static const unsigned char replay_counter[] = {
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
+	struct nlmsghdr *nlmsg;
+	struct l_genl_msg *msg;
+	struct l_genl_attr attr;
+	struct l_genl_attr nested;
+	bool result;
+	uint16_t type;
+	uint16_t len;
+	const void *payload;
+
+	nlmsg = (struct nlmsghdr *) set_rekey_offload_request;
+	msg = _genl_msg_create(nlmsg);
+	assert(msg);
+
+	result = l_genl_attr_init(&attr, msg);
+	assert(result);
+
+	/*Interface Index: 3 (0x00000003) */
+	assert(l_genl_attr_next(&attr, &type, &len, &payload));
+	assert(type == 3);
+	assert(len == 4);
+	assert(*((unsigned int *) payload) == 3);
+
+	/*
+	 * Rekey Data: len 52
+	 *     KEK: len 16
+	 *         2f 82 bb 0d 93 56 60 4b b1 55 1c 85 c0 eb 32 8b
+	 *     KCK: len 16
+	 *         43 25 cf 08 0b 92 a7 2d 86 dc 43 21 d6 0c 12 03
+	 *     Replay CTR: len 8
+	 *         00 00 00 00 00 00 00 01
+	 */
+	assert(l_genl_attr_next(&attr, &type, &len, &payload));
+	assert(type == 122);
+	assert(len == 52);
+
+	assert(l_genl_attr_recurse(&attr, &nested));
+
+	assert(l_genl_attr_next(&nested, &type, &len, &payload));
+	assert(type == 1);
+	assert(len == 16);
+	assert(!memcmp(payload, kek, 16));
+
+	assert(l_genl_attr_next(&nested, &type, &len, &payload));
+	assert(type == 2);
+	assert(len == 16);
+	assert(!memcmp(payload, kck, 16));
+
+	assert(l_genl_attr_next(&nested, &type, &len, &payload));
+	assert(type == 3);
+	assert(len == 8);
+	assert(!memcmp(payload, replay_counter, 8));
+
+	l_genl_msg_unref(msg);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_add("Parse Set Station Request", parse_set_station, NULL);
+	l_test_add("Parse Set Rekey Offload Request",
+				parse_set_rekey_offload, NULL);
 
 	return l_test_run();
 }
