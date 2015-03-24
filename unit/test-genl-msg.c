@@ -25,10 +25,20 @@
 #endif
 
 #include <assert.h>
+#include <stdio.h>
 #include <linux/genetlink.h>
 #include <ell/ell.h>
 
 #include "ell/genl-private.h"
+
+static bool do_print = false;
+
+static void do_debug(const char *str, void *user_data)
+{
+	const char *prefix = user_data;
+
+	printf("%s%s\n", prefix, str);
+}
 
 static unsigned char set_station_request[] = {
 	0x34, 0x00, 0x00, 0x00, 0x17, 0x00, 0x05, 0x00, 0x8b, 0x53, 0x0d, 0x55,
@@ -80,6 +90,37 @@ static void parse_set_station(const void *data)
 	assert(len == 8);
 	assert(((unsigned int *) payload)[0] == 2);
 	assert(((unsigned int *) payload)[1] == 2);
+
+	l_genl_msg_unref(msg);
+}
+
+static void build_set_station(const void *data)
+{
+	static uint32_t index = 3;
+	static const unsigned char mac[6] =
+		{ 0x24, 0xa2, 0xe1, 0xec, 0x17, 0x04 };
+	static uint32_t flags[] = { 2, 2 };
+	struct l_genl_msg *msg;
+	const void *raw;
+	size_t size;
+
+	msg = l_genl_msg_new_sized(18, 512);
+	assert(msg);
+
+	assert(l_genl_msg_append_attr(msg, 3, 4, &index));
+	assert(l_genl_msg_append_attr(msg, 6, 6, mac));
+	assert(l_genl_msg_append_attr(msg, 67, 8, flags));
+
+	raw = _genl_msg_as_bytes(msg, 0x17, 0x05, 0x550d538b, 3604, &size);
+
+	if (do_print) {
+		l_util_hexdump(false, raw, size, do_debug, "[MSG] ");
+		l_util_hexdump(true, set_station_request, size,
+					do_debug, "[MSG] ");
+	}
+
+	assert(size == sizeof(set_station_request));
+	assert(!memcmp(raw, set_station_request, size));
 
 	l_genl_msg_unref(msg);
 }
@@ -164,6 +205,8 @@ int main(int argc, char *argv[])
 	l_test_add("Parse Set Station Request", parse_set_station, NULL);
 	l_test_add("Parse Set Rekey Offload Request",
 				parse_set_rekey_offload, NULL);
+
+	l_test_add("Build Set Station Request", build_set_station, NULL);
 
 	return l_test_run();
 }
