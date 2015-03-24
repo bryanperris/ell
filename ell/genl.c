@@ -37,6 +37,8 @@
 #include "genl-private.h"
 #include "private.h"
 
+#define MAX_NESTING_LEVEL 4
+
 struct l_genl {
 	int ref_count;
 	int fd;
@@ -65,6 +67,8 @@ struct l_genl_msg {
 	void *data;
 	uint32_t size;
 	uint32_t len;
+	struct nlattr *nests[MAX_NESTING_LEVEL];
+	uint8_t nesting_level;
 };
 
 struct genl_request {
@@ -241,6 +245,7 @@ static struct l_genl_msg *msg_alloc(uint8_t cmd, uint8_t version, uint32_t size)
 	msg->size = msg->len + NLMSG_ALIGN(size);
 
 	msg->data = l_new(unsigned char, msg->size);
+	msg->nesting_level = 0;
 
 	return l_genl_msg_ref(msg);
 }
@@ -733,6 +738,49 @@ LIB_EXPORT bool l_genl_msg_append_attr(struct l_genl_msg *msg, uint16_t type,
 
 	memcpy(msg->data + msg->len + NLA_HDRLEN, data, len);
 	msg->len += NLA_HDRLEN + NLA_ALIGN(len);
+
+	return true;
+}
+
+LIB_EXPORT bool l_genl_msg_enter_nested(struct l_genl_msg *msg, uint16_t type)
+{
+	struct nlattr *nla;
+
+	if (unlikely(!msg))
+		return false;
+
+	if (unlikely(msg->nesting_level == MAX_NESTING_LEVEL))
+		return false;
+
+	if (msg->len + NLA_HDRLEN > msg->size)
+		return false;
+
+	nla = msg->data + msg->len;
+	nla->nla_type = type;
+	nla->nla_len = msg->len; /* Save position */
+
+	msg->nests[msg->nesting_level] = nla;
+	msg->nesting_level += 1;
+
+	msg->len += NLA_HDRLEN;
+
+	return true;
+}
+
+LIB_EXPORT bool l_genl_msg_leave_nested(struct l_genl_msg *msg)
+{
+	struct nlattr *nla;
+
+	if (unlikely(!msg))
+		return false;
+
+	if (unlikely(msg->nesting_level == 0))
+		return false;
+
+	nla = msg->nests[msg->nesting_level - 1];
+	nla->nla_len = msg->len - nla->nla_len;
+
+	msg->nesting_level -= 1;
 
 	return true;
 }

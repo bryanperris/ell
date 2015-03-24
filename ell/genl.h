@@ -71,6 +71,8 @@ int l_genl_msg_get_error(struct l_genl_msg *msg);
 
 bool l_genl_msg_append_attr(struct l_genl_msg *msg, uint16_t type,
 					uint16_t len, const void *data);
+bool l_genl_msg_enter_nested(struct l_genl_msg *msg, uint16_t type);
+bool l_genl_msg_leave_nested(struct l_genl_msg *msg);
 
 bool l_genl_attr_init(struct l_genl_attr *attr, struct l_genl_msg *msg);
 bool l_genl_attr_next(struct l_genl_attr *attr, uint16_t *type,
