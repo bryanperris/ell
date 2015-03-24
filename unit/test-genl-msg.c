@@ -64,6 +64,8 @@ static void parse_set_station(const void *data)
 	msg = _genl_msg_create(nlmsg);
 	assert(msg);
 
+	assert(l_genl_msg_get_command(msg) == 18);
+
 	result = l_genl_attr_init(&attr, msg);
 	assert(result);
 
@@ -157,6 +159,8 @@ static void parse_set_rekey_offload(const void *data)
 	nlmsg = (struct nlmsghdr *) set_rekey_offload_request;
 	msg = _genl_msg_create(nlmsg);
 	assert(msg);
+
+	assert(l_genl_msg_get_command(msg) == 79);
 
 	result = l_genl_attr_init(&attr, msg);
 	assert(result);
