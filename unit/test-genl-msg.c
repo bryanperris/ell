@@ -332,6 +332,40 @@ static void parse_libnl_nested(const void *data)
 	l_genl_msg_unref(msg);
 }
 
+static void build_libnl_nested(const void *data)
+{
+	static uint32_t index = 1;
+	struct l_genl_msg *msg;
+	const void *raw;
+	size_t size;
+
+	msg = l_genl_msg_new_sized(1, 512);
+	assert(msg);
+
+	assert(l_genl_msg_append_attr(msg, 1, 4, &index));
+
+	assert(l_genl_msg_enter_nested(msg, 0x45));
+	assert(l_genl_msg_append_attr(msg, 0x46, 2, "f"));
+	assert(l_genl_msg_append_attr(msg, 0x47, 5, "foob"));
+	assert(l_genl_msg_append_attr(msg, 0x48, 7, "foobar"));
+	assert(l_genl_msg_enter_nested(msg, 0x49));
+	assert(l_genl_msg_append_attr(msg, 0x50, 3, "ba"));
+	assert(l_genl_msg_leave_nested(msg));
+	assert(l_genl_msg_leave_nested(msg));
+
+	raw = _genl_msg_as_bytes(msg, 0x15, 0x05, 0x55130572, 0x0c406877,
+					&size);
+	if (do_print) {
+		l_util_hexdump(false, raw, size, do_debug, "[MSG] ");
+		l_util_hexdump(true, libnl_nested, size, do_debug, "[MSG] ");
+	}
+
+	assert(size == sizeof(libnl_nested));
+	assert(!memcmp(raw, libnl_nested, size));
+
+	l_genl_msg_unref(msg);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_add("Parse Set Station Request", parse_set_station, NULL);
@@ -344,6 +378,8 @@ int main(int argc, char *argv[])
 
 	l_test_add("libnl-generated Example with Nesting",
 				parse_libnl_nested, NULL);
+	l_test_add("Build libnl-generated Example with Nesting",
+				build_libnl_nested, NULL);
 
 	return l_test_run();
 }
