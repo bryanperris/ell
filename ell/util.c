@@ -218,6 +218,31 @@ LIB_EXPORT char *l_strdup_printf(const char *format, ...)
 }
 
 /**
+ * l_strdup_vprintf:
+ * @format: string format
+ * @args: parameters to insert into format string
+ *
+ * Returns: a newly allocated string
+ **/
+LIB_EXPORT char *l_strdup_vprintf(const char *format, va_list args)
+{
+	char *str;
+	int len;
+
+	len = vasprintf(&str, format, args);
+
+	if (len < 0) {
+		fprintf(stderr, "%s:%s(): failed to allocate string\n",
+					STRLOC, __PRETTY_FUNCTION__);
+		abort();
+
+		return NULL;
+	}
+
+	return str;
+}
+
+/**
  * l_strfreev:
  * @strlist: String list to free
  *
