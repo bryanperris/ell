@@ -459,6 +459,62 @@ LIB_EXPORT char *l_util_hexstring(const unsigned char *buf, size_t len)
 	return str;
 }
 
+/**
+ * l_util_from_hexstring:
+ * @str: Null-terminated string containing the hex-encoded bytes
+ * @out_len: Number of bytes decoded
+ *
+ * Returns: a newly allocated byte array
+ **/
+LIB_EXPORT unsigned char *l_util_from_hexstring(const char *str,
+							size_t *out_len)
+{
+	size_t i, j;
+	size_t len;
+	char c;
+	unsigned char *buf;
+
+	if (unlikely(!str) || unlikely(!out_len))
+		return false;
+
+	for (i = 0; str[i]; i++) {
+		c = toupper(str[i]);
+
+		if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'))
+			continue;
+
+		return NULL;
+	}
+
+	if ((i % 2) != 0)
+		return NULL;
+
+	len = i;
+	buf = l_malloc(i >> 1);
+
+	for (i = 0, j = 0; i < len; i++, j++) {
+		c = toupper(str[i]);
+
+		if (c >= '0' && c <= '9')
+			buf[j] = c - '0';
+		else if (c >= 'A' && c <= 'F')
+			buf[j] = 10 + c - 'A';
+
+		i += 1;
+
+		c = toupper(str[i]);
+
+		if (c >= '0' && c <= '9')
+			buf[j] = buf[j] * 16 + c - '0';
+		else if (c >= 'A' && c <= 'F')
+			buf[j] = buf[j] * 16 + 10 + c - 'A';
+	}
+
+	*out_len = j;
+
+	return buf;
+}
+
 static void hexdump(const char dir, const unsigned char *buf, size_t len,
 			l_util_hexdump_func_t function, void *user_data)
 {
