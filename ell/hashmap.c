@@ -538,6 +538,91 @@ LIB_EXPORT void l_hashmap_foreach(struct l_hashmap *hashmap,
 }
 
 /**
+ * l_hashmap_foreach_remove:
+ * @hashmap: hash table object
+ * @function: callback function
+ * @user_data: user data given to callback function
+ *
+ * Call @function for every entry in @hashmap.  If the @function returns
+ * true, then the object will be removed from the hashmap.
+ *
+ * NOTE: While the foreach is in progress, the hashmap is assumed to be
+ * invariant.  The behavior of adding or removing entries while a foreach
+ * operation is in progress is undefined.
+ *
+ * Returns: Number of entries removed.
+ **/
+LIB_EXPORT unsigned int l_hashmap_foreach_remove(struct l_hashmap *hashmap,
+					l_hashmap_remove_func_t function,
+					void *user_data)
+{
+	unsigned int i;
+	unsigned int nremoved = 0;
+
+	if (unlikely(!hashmap || !function))
+		return 0;
+
+	for (i = 0; i < NBUCKETS; i++) {
+		struct entry *head = &hashmap->buckets[i];
+		struct entry *entry;
+		struct entry *prev;
+		bool remove;
+
+		if (head->next == NULL)
+			continue;
+
+		entry = head;
+		prev = NULL;
+
+		while (true) {
+			remove = function(entry->key, entry->value, user_data);
+
+			if (!remove)
+				goto next;
+
+			nremoved += 1;
+			hashmap->entries -= 1;
+
+			if (entry == head) {
+				if (entry->next == head) {
+					free_key(hashmap, entry->key);
+					head->key = NULL;
+					head->value = NULL;
+					head->hash = 0;
+					head->next = NULL;
+					break;
+				} else {
+					entry = entry->next;
+					free_key(hashmap, head->key);
+					head->key = entry->key;
+					head->value = entry->value;
+					head->hash = entry->hash;
+					head->next = entry->next;
+					l_free(entry);
+					entry = head;
+					continue;
+				}
+			} else {
+				prev->next = entry->next;
+				free_key(hashmap, entry->key);
+				l_free(entry);
+				entry = prev->next;
+				continue;
+			}
+
+next:
+			if (entry->next == head)
+				break;
+
+			prev = entry;
+			entry = entry->next;
+		}
+	}
+
+	return nremoved;
+}
+
+/**
  * l_hashmap_size:
  * @hashmap: hash table object
  *

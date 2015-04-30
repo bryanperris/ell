@@ -36,6 +36,8 @@ typedef unsigned int (*l_hashmap_hash_func_t) (const void *p);
 typedef int (*l_hashmap_compare_func_t) (const void *a, const void *b);
 typedef void *(*l_hashmap_key_new_func_t) (const void *p);
 typedef void (*l_hashmap_key_free_func_t) (void *p);
+typedef bool (*l_hashmap_remove_func_t)(const void *key, void *value,
+						void *user_data);
 
 struct l_hashmap;
 
@@ -63,6 +65,8 @@ void *l_hashmap_lookup(struct l_hashmap *hashmap, const void *key);
 
 void l_hashmap_foreach(struct l_hashmap *hashmap,
 			l_hashmap_foreach_func_t function, void *user_data);
+unsigned int l_hashmap_foreach_remove(struct l_hashmap *hashmap,
+			l_hashmap_remove_func_t function, void *user_data);
 
 unsigned int l_hashmap_size(struct l_hashmap *hashmap);
 bool l_hashmap_isempty(struct l_hashmap *hashmap);
