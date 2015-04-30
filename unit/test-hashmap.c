@@ -182,6 +182,95 @@ static void test_duplicate(const void *test_data)
 	l_hashmap_destroy(hashmap, NULL);
 };
 
+static unsigned int always_0(const void *p)
+{
+	return 0;
+}
+
+static bool remove_with_key(const void *key, void *value, void *user_data)
+{
+	if (!strcmp(key, user_data))
+		return true;
+
+	return false;
+}
+
+static bool remove_always(const void *key, void *value, void *user_data)
+{
+	return true;
+}
+
+static void test_foreach_remove(const void *test_data)
+{
+	struct l_hashmap *hashmap;
+	int one = 1;
+	int two = 2;
+	int three = 3;
+	unsigned int n;
+
+	hashmap = l_hashmap_string_new();
+	assert(hashmap);
+
+	l_hashmap_set_hash_function(hashmap, always_0);
+
+	assert(l_hashmap_insert(hashmap, "one", &one));
+	assert(l_hashmap_insert(hashmap, "two", &two));
+	assert(l_hashmap_insert(hashmap, "three", &three));
+
+	n = l_hashmap_foreach_remove(hashmap, remove_with_key, "three");
+	assert(n == 1);
+	n = l_hashmap_foreach_remove(hashmap, remove_with_key, "two");
+	assert(n == 1);
+	n = l_hashmap_foreach_remove(hashmap, remove_with_key, "one");
+	assert(n == 1);
+
+	assert(l_hashmap_insert(hashmap, "one", &one));
+	assert(l_hashmap_insert(hashmap, "two", &two));
+	assert(l_hashmap_insert(hashmap, "three", &three));
+	assert(l_hashmap_insert(hashmap, "three", &three));
+
+	n = l_hashmap_foreach_remove(hashmap, remove_with_key, "three");
+	assert(n == 2);
+	n = l_hashmap_foreach_remove(hashmap, remove_with_key, "two");
+	assert(n == 1);
+	n = l_hashmap_foreach_remove(hashmap, remove_with_key, "one");
+	assert(n == 1);
+
+	assert(l_hashmap_insert(hashmap, "one", &one));
+	assert(l_hashmap_insert(hashmap, "one", &one));
+	assert(l_hashmap_insert(hashmap, "two", &two));
+	assert(l_hashmap_insert(hashmap, "three", &three));
+	n = l_hashmap_foreach_remove(hashmap, remove_with_key, "one");
+	assert(n == 2);
+	n = l_hashmap_foreach_remove(hashmap, remove_with_key, "two");
+	assert(n == 1);
+	n = l_hashmap_foreach_remove(hashmap, remove_with_key, "three");
+	assert(n == 1);
+
+	assert(l_hashmap_insert(hashmap, "one", &one));
+	assert(l_hashmap_insert(hashmap, "two", &two));
+	assert(l_hashmap_insert(hashmap, "two", &two));
+	assert(l_hashmap_insert(hashmap, "three", &three));
+
+	n = l_hashmap_foreach_remove(hashmap, remove_with_key, "two");
+	assert(n == 2);
+	n = l_hashmap_foreach_remove(hashmap, remove_with_key, "one");
+	assert(n == 1);
+	n = l_hashmap_foreach_remove(hashmap, remove_with_key, "three");
+	assert(n == 1);
+
+	assert(l_hashmap_insert(hashmap, "one", &one));
+	assert(l_hashmap_insert(hashmap, "two", &two));
+	assert(l_hashmap_insert(hashmap, "three", &three));
+	n = l_hashmap_foreach_remove(hashmap, remove_always, NULL);
+	assert(n == 3);
+
+	n = l_hashmap_size(hashmap);
+	assert(n == 0);
+
+	l_hashmap_destroy(hashmap, NULL);
+};
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -189,5 +278,7 @@ int main(int argc, char *argv[])
 	l_test_add("Pointer Test", test_ptr, NULL);
 	l_test_add("String Test", test_str, NULL);
 	l_test_add("Duplicate Test", test_duplicate, NULL);
+	l_test_add("Foreach Remove Test", test_foreach_remove, NULL);
+
 	return l_test_run();
 }
