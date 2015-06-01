@@ -156,7 +156,7 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 	return 0;
 }
 
-int watch_modify(int fd, uint32_t events)
+int watch_modify(int fd, uint32_t events, bool force)
 {
 	struct watch_data *data;
 	struct epoll_event ev;
@@ -172,7 +172,7 @@ int watch_modify(int fd, uint32_t events)
 	if (!data)
 		return -ENXIO;
 
-	if (data->events == events)
+	if (data->events == events && !force)
 		return 0;
 
 	memset(&ev, 0, sizeof(ev));

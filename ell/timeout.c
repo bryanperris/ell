@@ -162,7 +162,7 @@ LIB_EXPORT void l_timeout_modify(struct l_timeout *timeout,
 			return;
 	}
 
-	watch_modify(timeout->fd, EPOLLIN | EPOLLONESHOT);
+	watch_modify(timeout->fd, EPOLLIN | EPOLLONESHOT, true);
 }
 
 /**

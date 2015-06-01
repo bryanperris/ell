@@ -99,7 +99,7 @@ typedef void (*idle_destroy_cb_t) (void *user_data);
 
 int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 				void *user_data, watch_destroy_cb_t destroy);
-int watch_modify(int fd, uint32_t events);
+int watch_modify(int fd, uint32_t events, bool force);
 int watch_remove(int fd);
 
 int idle_add(idle_event_cb_t callback, void *user_data,

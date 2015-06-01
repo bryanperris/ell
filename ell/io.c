@@ -127,7 +127,7 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 
 			io->events &= ~EPOLLIN;
 
-			watch_modify(io->fd, io->events);
+			watch_modify(io->fd, io->events, false);
 		}
 	}
 
@@ -145,7 +145,7 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 
 			io->events &= ~EPOLLOUT;
 
-			watch_modify(io->fd, io->events);
+			watch_modify(io->fd, io->events, false);
 		}
 	}
 }
@@ -271,7 +271,7 @@ LIB_EXPORT bool l_io_set_read_handler(struct l_io *io, l_io_read_cb_t callback,
 	if (events == io->events)
 		return true;
 
-	err = watch_modify(io->fd, events);
+	err = watch_modify(io->fd, events, false);
 	if (err)
 		return false;
 
@@ -322,7 +322,7 @@ LIB_EXPORT bool l_io_set_write_handler(struct l_io *io, l_io_write_cb_t callback
 	if (events == io->events)
 		return true;
 
-	err = watch_modify(io->fd, events);
+	err = watch_modify(io->fd, events, false);
 	if (err)
 		return false;
 
