@@ -44,6 +44,7 @@ unit/test-siphash
 unit/test-hwdb
 unit/test-cipher
 unit/test-random
+unit/test-util
 unit/*.log
 unit/*.trs
 examples/dbus-service
