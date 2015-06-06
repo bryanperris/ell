@@ -35,7 +35,8 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/dbus-service.h \
 			ell/hwdb.h \
 			ell/cipher.h \
-			ell/random.h
+			ell/random.h \
+			ell/uintset.h
 
 lib_LTLIBRARIES = ell/libell.la
 
@@ -73,7 +74,8 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/siphash.c \
 			ell/hwdb.c \
 			ell/cipher.c \
-			ell/random.c
+			ell/random.c \
+			ell/uintset.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)

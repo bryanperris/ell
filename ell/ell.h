@@ -37,6 +37,7 @@
 #include <ell/hwdb.h>
 #include <ell/cipher.h>
 #include <ell/random.h>
+#include <ell/uintset.h>
 
 #include <ell/netlink.h>
 #include <ell/genl.h>
