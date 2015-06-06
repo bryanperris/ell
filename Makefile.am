@@ -118,7 +118,8 @@ unit_tests = unit/test-unit \
 			unit/test-hwdb \
 			unit/test-cipher \
 			unit/test-random \
-			unit/test-util
+			unit/test-util \
+			unit/test-uintset
 
 if MAINTAINER_MODE
 noinst_PROGRAMS += $(unit_tests)
@@ -177,6 +178,8 @@ unit_test_cipher_LDADD = ell/libell-private.la
 unit_test_random_LDADD = ell/libell-private.la
 
 unit_test_util_LDADD = ell/libell-private.la
+
+unit_test_uintset_LDADD = ell/libell-private.la
 
 if MAINTAINER_MODE
 noinst_LTLIBRARIES += unit/example-plugin.la
