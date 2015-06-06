@@ -45,6 +45,7 @@ unit/test-hwdb
 unit/test-cipher
 unit/test-random
 unit/test-util
+unit/test-uintset
 unit/*.log
 unit/*.trs
 examples/dbus-service
