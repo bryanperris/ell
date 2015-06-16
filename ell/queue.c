@@ -255,14 +255,16 @@ LIB_EXPORT void *l_queue_peek_tail(struct l_queue *queue)
  * @user_data: user data given to compare function
  *
  * Inserts @data pointer at a position in the queue determined by the
- * compare @function.
+ * compare @function.  @function should return > 0 if the @data (first
+ * parameter) should be inserted after the current entry (second parameter).
  *
  * Returns: #true when data has been added and #false in case of failure
  **/
 LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
                         l_queue_compare_func_t function, void *user_data)
 {
-	struct l_queue_entry *entry, *prev;
+	struct l_queue_entry *entry, *prev, *cur;
+	int cmp;
 
 	if (unlikely(!queue || !function))
 		return false;
@@ -278,24 +280,22 @@ LIB_EXPORT bool l_queue_insert(struct l_queue *queue, void *data,
 		goto done;
 	}
 
-	for (prev = queue->head; prev; prev = prev->next) {
-		int match = function(entry->data, prev->data, user_data);
+	for (prev = NULL, cur = queue->head; cur; prev = cur, cur = cur->next) {
+		cmp = function(entry->data, cur->data, user_data);
 
-		if (match > 0) {
-			if (prev == queue->head) {
-				entry->next = queue->head;
-				queue->head = entry;
-				goto done;
-			}
+		if (cmp >= 0)
+			continue;
 
-			entry->next = prev->next;
-			prev->next = entry;
-
-			if (!entry->next)
-				queue->tail = entry;
-
+		if (prev == NULL) {
+			entry->next = queue->head;
+			queue->head = entry;
 			goto done;
 		}
+
+		entry->next = cur;
+		prev->next = entry;
+
+		goto done;
 	}
 
 	queue->tail->next = entry;
