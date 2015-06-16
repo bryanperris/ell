@@ -81,6 +81,7 @@ static int queue_compare(const void *a, const void *b, void *user)
 static void test_insert(const void *data)
 {
 	int unsorted[] = { 0, 50, 10, 20, 30, 5, 30 };
+	int sorted[] = { 0, 5, 10, 20, 30, 30, 50 };
 	struct l_queue *queue;
 	const struct l_queue_entry *entry;
 	unsigned int i;
@@ -93,10 +94,10 @@ static void test_insert(const void *data)
 		l_queue_insert(queue, L_INT_TO_PTR(unsorted[i]),
 						queue_compare, NULL);
 
-	for (entry = l_queue_get_entries(queue); entry; entry = entry->next) {
+	for (i = 0, entry = l_queue_get_entries(queue); entry;
+					entry = entry->next, i++) {
 		n = L_PTR_TO_INT(entry->data);
-
-		printf("%d\n", n);
+		assert(n == sorted[i]);
 	}
 
 	l_queue_destroy(queue, NULL);
