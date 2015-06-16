@@ -70,11 +70,44 @@ static void test_push_pop(const void *data)
 	l_queue_destroy(queue, NULL);
 }
 
+static int queue_compare(const void *a, const void *b, void *user)
+{
+	int ai = L_PTR_TO_INT(a);
+	int bi = L_PTR_TO_INT(b);
+
+	return ai - bi;
+}
+
+static void test_insert(const void *data)
+{
+	int unsorted[] = { 0, 50, 10, 20, 30, 5, 30 };
+	struct l_queue *queue;
+	const struct l_queue_entry *entry;
+	unsigned int i;
+	int n;
+
+	queue = l_queue_new();
+	assert(queue);
+
+	for (i = 0; i < L_ARRAY_SIZE(unsorted); i++)
+		l_queue_insert(queue, L_INT_TO_PTR(unsorted[i]),
+						queue_compare, NULL);
+
+	for (entry = l_queue_get_entries(queue); entry; entry = entry->next) {
+		n = L_PTR_TO_INT(entry->data);
+
+		printf("%d\n", n);
+	}
+
+	l_queue_destroy(queue, NULL);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
 	l_test_add("queue push & pop", test_push_pop, NULL);
+	l_test_add("queue insert", test_insert, NULL);
 
 	return l_test_run();
 }
