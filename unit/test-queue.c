@@ -25,17 +25,17 @@
 #endif
 
 #include <stdio.h>
+#include <assert.h>
 
 #include <ell/ell.h>
 
-int main(int argc, char *argv[])
+static void test_push_pop(const void *data)
 {
 	struct l_queue *queue;
 	unsigned int n, i;
 
 	queue = l_queue_new();
-	if (!queue)
-		return 1;
+	assert(queue);
 
 	for (n = 0; n < 1024; n++) {
 		for (i = 1; i < n + 2; i++) {
@@ -68,6 +68,13 @@ int main(int argc, char *argv[])
 	}
 
 	l_queue_destroy(queue, NULL);
+}
 
-	return 0;
+int main(int argc, char *argv[])
+{
+	l_test_init(&argc, &argv);
+
+	l_test_add("queue push & pop", test_push_pop, NULL);
+
+	return l_test_run();
 }
