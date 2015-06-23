@@ -47,9 +47,6 @@ static inline int __ffs(unsigned long word)
 	return __builtin_ctzl(word);
 }
 
-/*
- * Stolen from linux kernel lib/find_next_bit.c
- */
 static unsigned int find_next_zero_bit(const unsigned long *addr,
 					unsigned int size,
 					unsigned int offset)
@@ -128,31 +125,23 @@ static unsigned long find_first_bit(const unsigned long *addr,
 found:
 	return result + __ffs(tmp);
 }
-/*
- * Stolen from linux kernel lib/find_last_bit.c
- */
+
 static unsigned long find_last_bit(const unsigned long *addr, unsigned int size)
 {
 	unsigned long words;
 	unsigned long tmp;
+	long i;
 
-	/* Start at final word. */
-	words = size / BITS_PER_LONG;
+	/* Bits out of bounds are always zero, start at last word */
+	words = (size + BITS_PER_LONG - 1) / BITS_PER_LONG;
 
-	/* Partial final word? */
-	if (size & (BITS_PER_LONG-1)) {
-		tmp = (addr[words] & (~0UL >>
-				(BITS_PER_LONG - (size & (BITS_PER_LONG-1)))));
-		if (tmp)
-			goto found;
-	}
+	for (i = words - 1; i >= 0; i -= 1) {
+		tmp = addr[i];
 
-	while (words) {
-		tmp = addr[--words];
-		if (tmp) {
-found:
-			return words * BITS_PER_LONG + __fls(tmp) - 1;
-		}
+		if (!tmp)
+			continue;
+
+		return i * BITS_PER_LONG + __fls(tmp) - 1;
 	}
 
 	/* Not found */
