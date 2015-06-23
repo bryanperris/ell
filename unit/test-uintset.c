@@ -76,6 +76,46 @@ static void test_uintset(const void *data)
 
 	assert(l_uintset_find_unused_min(set) == 77);
 
+	assert(l_uintset_take(set, 76));
+	assert(l_uintset_find_unused_min(set) == 76);
+
+	l_uintset_free(set);
+}
+
+static void test_uintset_2(const void *data)
+{
+	struct l_uintset *set;
+	int i;
+	bool r;
+
+	set = l_uintset_new_from_range(0, 63);
+	assert(set);
+
+	assert(l_uintset_find_min(set) == 64);
+	assert(l_uintset_find_max(set) == 64);
+
+	assert(l_uintset_put(set, 63));
+	assert(l_uintset_find_min(set) == 63);
+	assert(l_uintset_find_max(set) == 63);
+
+	l_uintset_free(set);
+}
+
+static void test_uintset_3(const void *data)
+{
+	struct l_uintset *set;
+	int i;
+	bool r;
+
+	set = l_uintset_new_from_range(0, 62);
+	assert(set);
+
+	assert(l_uintset_find_min(set) == 63);
+	assert(l_uintset_find_max(set) == 63);
+	assert(l_uintset_put(set, 62));
+	assert(l_uintset_find_min(set) == 62);
+	assert(l_uintset_find_max(set) == 62);
+
 	l_uintset_free(set);
 }
 
@@ -84,6 +124,8 @@ int main(int argc, char *argv[])
 	l_test_init(&argc, &argv);
 
 	l_test_add("l_uintset sanity check", test_uintset, NULL);
+	l_test_add("l_uintset sanity check #2", test_uintset_2, NULL);
+	l_test_add("l_uintset sanity check #3", test_uintset_2, NULL);
 
 	return l_test_run();
 }
