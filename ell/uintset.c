@@ -47,54 +47,34 @@ static inline int __ffs(unsigned long word)
 	return __builtin_ctzl(word);
 }
 
-static unsigned int find_next_zero_bit(const unsigned long *addr,
-					unsigned int size,
-					unsigned int offset)
+static unsigned long find_first_zero_bit(const unsigned long *addr,
+							unsigned long size)
 {
-	const unsigned long *p = addr + offset / BITS_PER_LONG;
-	unsigned int result = offset & ~(BITS_PER_LONG-1);
+	unsigned long result = 0;
 	unsigned long tmp;
 
-	if (offset >= size)
-		return size;
+	while (size >= BITS_PER_LONG) {
+		tmp = *addr;
+		addr += 1;
 
-	size -= result;
-	offset %= BITS_PER_LONG;
-
-	if (offset) {
-		tmp = *(p++);
-		tmp |= ~0UL >> (BITS_PER_LONG - offset);
-
-		if (size < BITS_PER_LONG)
-			goto found_first;
-
+		/* Any zero bits? */
 		if (~tmp)
-			goto found_middle;
+			goto found;
 
-		size -= BITS_PER_LONG;
 		result += BITS_PER_LONG;
-	}
-
-	while (size & ~(BITS_PER_LONG-1)) {
-		if (~(tmp = *(p++)))
-			goto found_middle;
-
 		size -= BITS_PER_LONG;
-		result += BITS_PER_LONG;
 	}
 
 	if (!size)
 		return result;
 
-	tmp = *p;
+	/*
+	 * If we are here, then we have a partial last word.  Unused bits
+	 * are always zero, so no ffz sanity checking is needed
+	 */
+	tmp = *addr;
 
-found_first:
-	tmp |= ~0UL << size;
-
-	if (tmp == ~0UL)	/* Are any bits zero? */
-		return result + size;	/* Nope. */
-
-found_middle:
+found:
 	return result + __ffz(tmp);
 }
 
@@ -342,7 +322,7 @@ LIB_EXPORT uint32_t l_uintset_find_unused_min(struct l_uintset *set)
 	if (unlikely(!set))
 		return set->max + 1;
 
-	bit = find_next_zero_bit(set->bits, set->size, 0);
+	bit = find_first_zero_bit(set->bits, set->size);
 
 	if (bit >= set->size)
 		return set->max + 1;
