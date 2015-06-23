@@ -104,13 +104,16 @@ found_middle:
 static unsigned long find_first_bit(const unsigned long *addr,
 							unsigned long size)
 {
-	const unsigned long *p = addr;
 	unsigned long result = 0;
 	unsigned long tmp;
 
-	while (size & ~(BITS_PER_LONG-1)) {
-		if ((tmp = *(p++)))
+	while (size >= BITS_PER_LONG) {
+		tmp = *addr;
+		addr += 1;
+
+		if (tmp)
 			goto found;
+
 		result += BITS_PER_LONG;
 		size -= BITS_PER_LONG;
 	}
@@ -118,9 +121,10 @@ static unsigned long find_first_bit(const unsigned long *addr,
 	if (!size)
 		return result;
 
-	tmp = (*p) & (~0UL >> (BITS_PER_LONG - size));
-	if (tmp == 0UL)		/* Are any bits set? */
-		return result + size;	/* Nope. */
+	tmp = *addr;
+	if (!tmp)
+		return result + size;
+
 found:
 	return result + __ffs(tmp);
 }
