@@ -85,8 +85,6 @@ static void test_uintset(const void *data)
 static void test_uintset_2(const void *data)
 {
 	struct l_uintset *set;
-	int i;
-	bool r;
 
 	set = l_uintset_new_from_range(0, 63);
 	assert(set);
@@ -104,8 +102,6 @@ static void test_uintset_2(const void *data)
 static void test_uintset_3(const void *data)
 {
 	struct l_uintset *set;
-	int i;
-	bool r;
 
 	set = l_uintset_new_from_range(0, 62);
 	assert(set);
@@ -125,7 +121,7 @@ int main(int argc, char *argv[])
 
 	l_test_add("l_uintset sanity check", test_uintset, NULL);
 	l_test_add("l_uintset sanity check #2", test_uintset_2, NULL);
-	l_test_add("l_uintset sanity check #3", test_uintset_2, NULL);
+	l_test_add("l_uintset sanity check #3", test_uintset_3, NULL);
 
 	return l_test_run();
 }
