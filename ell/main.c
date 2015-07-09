@@ -30,6 +30,7 @@
 #include <sys/epoll.h>
 #include <limits.h>
 
+#include "signal.h"
 #include "queue.h"
 #include "log.h"
 #include "util.h"
@@ -399,4 +400,52 @@ LIB_EXPORT bool l_main_quit(void)
 	epoll_terminate = true;
 
 	return true;
+}
+
+struct signal_data {
+	l_main_signal_cb_t callback;
+	void *user_data;
+};
+
+static void signal_handler(struct l_signal *signal, uint32_t signo,
+							void *user_data)
+{
+	struct signal_data *data = user_data;
+
+	if (data->callback)
+		data->callback(signo, data->user_data);
+}
+
+/**
+ * l_main_run_with_signal:
+ *
+ * Run the main loop with signal handling for SIGINT and SIGTERM
+ *
+ * Returns: #EXIT_SCUCESS after successful execution or #EXIT_FAILURE in
+ *          case of failure
+ **/
+LIB_EXPORT
+int l_main_run_with_signal(l_main_signal_cb_t callback, void *user_data)
+{
+	struct signal_data *data;
+	struct l_signal *signal;
+	sigset_t mask;
+	int exit_status;
+
+	data = l_new(struct signal_data, 1);
+
+	data->callback = callback;
+	data->user_data = user_data;
+
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGINT);
+	sigaddset(&mask, SIGTERM);
+
+	signal = l_signal_create(&mask, signal_handler, data, l_free);
+
+	exit_status = l_main_run();
+
+	l_signal_remove(signal);
+
+	return exit_status;
 }
