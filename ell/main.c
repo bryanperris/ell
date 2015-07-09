@@ -27,8 +27,8 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <sys/epoll.h>
 #include <limits.h>
+#include <sys/epoll.h>
 
 #include "signal.h"
 #include "queue.h"
@@ -53,6 +53,7 @@ static int epoll_fd;
 static bool epoll_running;
 static bool epoll_terminate;
 static int idle_id;
+static int exit_status = EXIT_FAILURE;
 
 static struct l_queue *idle_list;
 
@@ -382,7 +383,7 @@ LIB_EXPORT int l_main_run(void)
 	close(epoll_fd);
 	epoll_fd = 0;
 
-	return EXIT_SUCCESS;
+	return exit_status;
 }
 
 /**
@@ -397,6 +398,7 @@ LIB_EXPORT bool l_main_quit(void)
 	if (unlikely(!epoll_running))
 		return false;
 
+	exit_status = EXIT_SUCCESS;
 	epoll_terminate = true;
 
 	return true;
@@ -430,7 +432,7 @@ int l_main_run_with_signal(l_main_signal_cb_t callback, void *user_data)
 	struct signal_data *data;
 	struct l_signal *signal;
 	sigset_t mask;
-	int exit_status;
+	int result;
 
 	data = l_new(struct signal_data, 1);
 
@@ -443,9 +445,25 @@ int l_main_run_with_signal(l_main_signal_cb_t callback, void *user_data)
 
 	signal = l_signal_create(&mask, signal_handler, data, l_free);
 
-	exit_status = l_main_run();
+	result = l_main_run();
 
 	l_signal_remove(signal);
 
-	return exit_status;
+	return result;
+}
+
+/**
+ * l_main_exit:
+ *
+ * Teminate the running main loop with exit status
+ *
+ **/
+LIB_EXPORT
+void l_main_exit(int status)
+{
+	if (unlikely(!epoll_running))
+		return;
+
+	exit_status = status;
+	epoll_terminate = true;
 }
