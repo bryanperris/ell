@@ -79,6 +79,20 @@ LIB_EXPORT struct l_queue *l_queue_new(void)
 LIB_EXPORT void l_queue_destroy(struct l_queue *queue,
 				l_queue_destroy_func_t destroy)
 {
+	l_queue_clear(queue, destroy);
+	l_free(queue);
+}
+
+/**
+ * l_queue_clear:
+ * @queue: queue object
+ * @destroy: destroy function
+ *
+ * Clear queue and call @destory on all remaining entries.
+ **/
+LIB_EXPORT void l_queue_clear(struct l_queue *queue,
+				l_queue_destroy_func_t destroy)
+{
 	struct l_queue_entry *entry;
 
 	if (unlikely(!queue))
@@ -97,7 +111,9 @@ LIB_EXPORT void l_queue_destroy(struct l_queue *queue,
 		l_free(tmp);
 	}
 
-	l_free(queue);
+	queue->head = NULL;
+	queue->tail = NULL;
+	queue->entries = 0;
 }
 
 /**
