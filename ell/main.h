@@ -29,7 +29,7 @@
 extern "C" {
 #endif
 
-bool l_main_run(void);
+int l_main_run(void);
 bool l_main_quit(void);
 
 #ifdef __cplusplus

@@ -313,17 +313,18 @@ static void idle_dispatch(void *data, void *user_data)
  *
  * Run the main loop
  *
- * Returns: #true after successful execution or #false in case of failure
+ * Returns: #EXIT_SCUCESS after successful execution or #EXIT_FAILURE in
+ *          case of failure
  **/
-LIB_EXPORT bool l_main_run(void)
+LIB_EXPORT int l_main_run(void)
 {
 	unsigned int i;
 
 	if (unlikely(epoll_running))
-		return false;
+		return EXIT_FAILURE;
 
 	if (!create_epoll())
-		return false;
+		return EXIT_FAILURE;
 
 	epoll_terminate = false;
 
@@ -380,7 +381,7 @@ LIB_EXPORT bool l_main_run(void)
 	close(epoll_fd);
 	epoll_fd = 0;
 
-	return true;
+	return EXIT_SUCCESS;
 }
 
 /**
