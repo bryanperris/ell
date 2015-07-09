@@ -119,8 +119,8 @@ LIB_EXPORT void *l_memdup(const void *mem, size_t size)
 	void *ptr;
 
 	ptr = l_malloc(size);
-	if (ptr)
-		memcpy(ptr, mem, size);
+
+	memcpy(ptr, mem, size);
 
 	return ptr;
 }
