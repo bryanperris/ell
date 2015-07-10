@@ -474,7 +474,7 @@ LIB_EXPORT unsigned char *l_util_from_hexstring(const char *str,
 	char c;
 	unsigned char *buf;
 
-	if (unlikely(!str) || unlikely(!out_len))
+	if (unlikely(!str))
 		return false;
 
 	for (i = 0; str[i]; i++) {
@@ -510,7 +510,8 @@ LIB_EXPORT unsigned char *l_util_from_hexstring(const char *str,
 			buf[j] = buf[j] * 16 + 10 + c - 'A';
 	}
 
-	*out_len = j;
+	if (out_len)
+		*out_len = j;
 
 	return buf;
 }
