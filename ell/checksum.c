@@ -253,6 +253,9 @@ LIB_EXPORT struct l_checksum *l_checksum_clone(struct l_checksum *checksum)
 {
 	struct l_checksum *clone;
 
+	if (unlikely(!checksum))
+		return NULL;
+
 	clone = l_new(struct l_checksum, 1);
 	clone->sk = accept4(checksum->sk, NULL, 0, SOCK_CLOEXEC);
 
