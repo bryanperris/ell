@@ -242,6 +242,30 @@ struct l_checksum *l_checksum_new_hmac(enum l_checksum_type type,
 }
 
 /**
+ * l_checksum_clone:
+ * @checksum: parent checksum object
+ *
+ * Creates a new checksum with an independent copy of parent @checksum's
+ * state.  l_checksum_get_digest can then be called on the parent or the
+ * clone without affecting the state of the other object.
+ **/
+LIB_EXPORT struct l_checksum *l_checksum_clone(struct l_checksum *checksum)
+{
+	struct l_checksum *clone;
+
+	clone = l_new(struct l_checksum, 1);
+	clone->sk = accept4(checksum->sk, NULL, 0, SOCK_CLOEXEC);
+
+	if (clone->sk < 0) {
+		l_free(clone);
+		return NULL;
+	}
+
+	strcpy(clone->alg_name, checksum->alg_name);
+	return clone;
+}
+
+/**
  * l_checksum_free:
  * @checksum: checksum object
  *
