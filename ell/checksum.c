@@ -73,7 +73,7 @@ struct sockaddr_alg {
  * Checksum handling
  */
 
-#define is_valid_type(type)  ((type) <= L_CHECKSUM_SHA256)
+#define is_valid_type(type)  ((type) <= L_CHECKSUM_SHA512)
 
 /**
  * l_checksum:
@@ -135,6 +135,12 @@ LIB_EXPORT struct l_checksum *l_checksum_new(enum l_checksum_type type)
 		break;
 	case L_CHECKSUM_SHA256:
 		name = "sha256";
+		break;
+	case L_CHECKSUM_SHA384:
+		name = "sha384";
+		break;
+	case L_CHECKSUM_SHA512:
+		name = "sha512";
 		break;
 	}
 
@@ -204,6 +210,12 @@ struct l_checksum *l_checksum_new_hmac(enum l_checksum_type type,
 		break;
 	case L_CHECKSUM_SHA256:
 		name = "hmac(sha256)";
+		break;
+	case L_CHECKSUM_SHA384:
+		name = "hmac(sha384)";
+		break;
+	case L_CHECKSUM_SHA512:
+		name = "hmac(sha512)";
 		break;
 	}
 
@@ -338,13 +350,17 @@ LIB_EXPORT char *l_checksum_get_string(struct l_checksum *checksum)
 		{ .name = "md5", .digest_len = 16 },
 		{ .name = "sha1", .digest_len = 20 },
 		{ .name = "sha256", .digest_len = 32 },
+		{ .name = "sha384", .digest_len = 48 },
+		{ .name = "sha512", .digest_len = 64 },
 		{ .name = "cmac(aes)", .digest_len = 16 },
 		{ .name = "hmac(md5)", .digest_len = 16 },
 		{ .name = "hmac(sha1)", .digest_len = 20 },
 		{ .name = "hmac(sha256)", .digest_len = 32 },
+		{ .name = "hmac(sha384)", .digest_len = 48 },
+		{ .name = "hmac(sha512)", .digest_len = 64 },
 		{ .name = NULL, .digest_len = 0 },
 	};
-	unsigned char digest[32];
+	unsigned char digest[64];
 	unsigned int i;
 
 	if (unlikely(!checksum))
