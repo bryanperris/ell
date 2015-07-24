@@ -76,7 +76,7 @@ struct af_alg_iv {
 #define SOL_ALG 279
 #endif
 
-#define is_valid_type(type)  ((type) <= L_CIPHER_ARC4)
+#define is_valid_type(type)  ((type) <= L_CIPHER_DES3_EDE_CBC)
 
 struct l_cipher {
 	enum l_cipher_type type;
@@ -103,8 +103,14 @@ static int create_alg(enum l_cipher_type type,
 	case L_CIPHER_AES:
 		strcpy((char *) salg.salg_name, "ecb(aes)");
 		break;
+	case L_CIPHER_AES_CBC:
+		strcpy((char *) salg.salg_name, "cbc(aes)");
+		break;
 	case L_CIPHER_ARC4:
 		strcpy((char *) salg.salg_name, "ecb(arc4)");
+		break;
+	case L_CIPHER_DES3_EDE_CBC:
+		strcpy((char *) salg.salg_name, "cbc(des3_ede)");
 		break;
 	}
 
