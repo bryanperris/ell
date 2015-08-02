@@ -475,7 +475,7 @@ LIB_EXPORT unsigned char *l_util_from_hexstring(const char *str,
 	unsigned char *buf;
 
 	if (unlikely(!str))
-		return false;
+		return NULL;
 
 	for (i = 0; str[i]; i++) {
 		c = toupper(str[i]);
