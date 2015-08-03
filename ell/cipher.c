@@ -176,8 +176,8 @@ LIB_EXPORT void l_cipher_free(struct l_cipher *cipher)
 static bool operate_cipher(int sk, __u32 operation,
 				const void *in, void *out, size_t len)
 {
-	char c_msg_buf[CMSG_SPACE(sizeof(operation))] = {};
-	struct msghdr msg = {};
+	char c_msg_buf[CMSG_SPACE(sizeof(operation))];
+	struct msghdr msg;
 	struct cmsghdr *c_msg;
 	struct iovec iov;
 
