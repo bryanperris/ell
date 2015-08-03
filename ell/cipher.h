@@ -47,6 +47,9 @@ bool l_cipher_encrypt(struct l_cipher *cipher,
 bool l_cipher_decrypt(struct l_cipher *cipher,
 			const void *in, void *out, size_t len);
 
+bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
+			size_t iv_length);
+
 #ifdef __cplusplus
 }
 #endif

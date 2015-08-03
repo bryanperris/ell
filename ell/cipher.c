@@ -228,3 +228,33 @@ LIB_EXPORT bool l_cipher_decrypt(struct l_cipher *cipher,
 
 	return operate_cipher(cipher->decrypt_sk, ALG_OP_DECRYPT, in, out, len);
 }
+
+LIB_EXPORT bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
+				size_t iv_length)
+{
+	char c_msg_buf[CMSG_SPACE(4 + iv_length)];
+	struct msghdr msg = {};
+	struct cmsghdr *c_msg;
+	uint32_t len = iv_length;
+
+	msg.msg_control = c_msg_buf;
+	msg.msg_controllen = sizeof(c_msg_buf);
+
+	c_msg = CMSG_FIRSTHDR(&msg);
+	c_msg->cmsg_level = SOL_ALG;
+	c_msg->cmsg_type = ALG_SET_IV;
+	c_msg->cmsg_len = CMSG_LEN(4 + iv_length);
+	memcpy(CMSG_DATA(c_msg) + 0, &len, 4);
+	memcpy(CMSG_DATA(c_msg) + 4, iv, iv_length);
+
+	msg.msg_iov = NULL;
+	msg.msg_iovlen = 0;
+
+	if (sendmsg(cipher->encrypt_sk, &msg, 0) < 0)
+		return false;
+
+	if (sendmsg(cipher->decrypt_sk, &msg, 0) < 0)
+		return false;
+
+	return true;
+}
