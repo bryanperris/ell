@@ -237,6 +237,9 @@ LIB_EXPORT bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
 	struct cmsghdr *c_msg;
 	uint32_t len = iv_length;
 
+	if (unlikely(!cipher))
+		return false;
+
 	memset(&msg, 0, sizeof(struct msghdr));
 
 	msg.msg_control = c_msg_buf;
