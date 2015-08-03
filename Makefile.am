@@ -74,6 +74,7 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/siphash.c \
 			ell/hwdb.c \
 			ell/cipher.c \
+			ell/cipher-private.h \
 			ell/random.c \
 			ell/uintset.c
 

@@ -31,6 +31,7 @@
 
 #include "util.h"
 #include "cipher.h"
+#include "cipher-private.h"
 #include "private.h"
 #include "random.h"
 
@@ -362,6 +363,90 @@ static bool parse_rsa_key(struct l_asymmetric_cipher *cipher, const void *key,
 	cipher->key_size = n_length;
 
 	return true;
+}
+
+static void write_asn1_definite_length(uint8_t **buf, size_t len)
+{
+	int n;
+
+	if (len < 0x80) {
+		*(*buf)++ = len;
+
+		return;
+	}
+
+	for (n = 1; len >> (n * 8); n++);
+	*(*buf)++ = 0x80 | n;
+
+	while (n--)
+		*(*buf)++ = len >> (n * 8);
+}
+
+/*
+ * Extract a ASN1 RsaKey-formatted public+private key structure in the
+ * form used in the kernel.  It is simpler than the PKCS#1 form as it only
+ * contains the N, E and D integers and also correctly parses as a PKCS#1
+ * RSAPublicKey.
+ */
+uint8_t *extract_rsakey(uint8_t *pkcs1_key, size_t pkcs1_key_len,
+			size_t *out_len)
+{
+	uint8_t *key, *ptr, *ver, *n, *e, *d;
+	uint8_t tag;
+	size_t ver_len, n_len, e_len, d_len;
+	int pos;
+
+	/* Unpack the outer SEQUENCE */
+	pkcs1_key = der_find_elem(pkcs1_key, pkcs1_key_len, 0, &tag,
+					&pkcs1_key_len);
+	if (!pkcs1_key || tag != ASN1_ID_SEQUENCE)
+		return NULL;
+
+	/* Check if the version element if present */
+	ver = der_find_elem(pkcs1_key, pkcs1_key_len, 0, &tag, &ver_len);
+	if (!ver || tag != ASN1_ID_INTEGER)
+		return NULL;
+
+	pos = (ver_len == 1 && ver[0] == 0x00) ? 1 : 0;
+
+	n = der_find_elem(pkcs1_key, pkcs1_key_len, pos + 0, &tag, &n_len);
+	if (!n || tag != ASN1_ID_INTEGER)
+		return NULL;
+
+	e = der_find_elem(pkcs1_key, pkcs1_key_len, pos + 1, &tag, &e_len);
+	if (!e || tag != ASN1_ID_INTEGER)
+		return NULL;
+
+	d = der_find_elem(pkcs1_key, pkcs1_key_len, pos + 2, &tag, &d_len);
+	if (!d || tag != ASN1_ID_INTEGER)
+		return NULL;
+
+	/* New SEQUENCE length including tags and lengths */
+	*out_len = 1 + (n_len >= 0x80 ? n_len >= 0x100 ? 3 : 2 : 1) + n_len +
+		1 + (e_len >= 0x80 ? e_len >= 0x100 ? 3 : 2 : 1) + e_len +
+		1 + (d_len >= 0x80 ? d_len >= 0x100 ? 3 : 2 : 1) + d_len;
+	ptr = key = l_malloc(*out_len);
+
+	*ptr++ = ASN1_ID_SEQUENCE;
+	write_asn1_definite_length(&ptr, *out_len);
+
+	*ptr++ = ASN1_ID_INTEGER;
+	write_asn1_definite_length(&ptr, n_len);
+	memcpy(ptr, n, n_len);
+	ptr += n_len;
+
+	*ptr++ = ASN1_ID_INTEGER;
+	write_asn1_definite_length(&ptr, e_len);
+	memcpy(ptr, e, e_len);
+	ptr += e_len;
+
+	*ptr++ = ASN1_ID_INTEGER;
+	write_asn1_definite_length(&ptr, d_len);
+	memcpy(ptr, d, d_len);
+	ptr += d_len;
+
+	*out_len = ptr - key;
+	return key;
 }
 
 LIB_EXPORT struct l_asymmetric_cipher *l_asymmetric_cipher_new(
