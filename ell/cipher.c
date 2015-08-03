@@ -233,9 +233,11 @@ LIB_EXPORT bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
 				size_t iv_length)
 {
 	char c_msg_buf[CMSG_SPACE(4 + iv_length)];
-	struct msghdr msg = {};
+	struct msghdr msg;
 	struct cmsghdr *c_msg;
 	uint32_t len = iv_length;
+
+	memset(&msg, 0, sizeof(struct msghdr));
 
 	msg.msg_control = c_msg_buf;
 	msg.msg_controllen = sizeof(c_msg_buf);
