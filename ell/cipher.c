@@ -32,6 +32,7 @@
 #include "util.h"
 #include "cipher.h"
 #include "private.h"
+#include "random.h"
 
 #ifndef HAVE_LINUX_IF_ALG_H
 #ifndef HAVE_LINUX_TYPES_H
@@ -79,12 +80,12 @@ struct af_alg_iv {
 #define is_valid_type(type)  ((type) <= L_CIPHER_DES3_EDE_CBC)
 
 struct l_cipher {
-	enum l_cipher_type type;
+	int type;
 	int encrypt_sk;
 	int decrypt_sk;
 };
 
-static int create_alg(enum l_cipher_type type,
+static int create_alg(const char *alg_type, const char *alg_name,
 				const void *key, size_t key_length)
 {
 	struct sockaddr_alg salg;
@@ -97,22 +98,8 @@ static int create_alg(enum l_cipher_type type,
 
 	memset(&salg, 0, sizeof(salg));
 	salg.salg_family = AF_ALG;
-	strcpy((char *) salg.salg_type, "skcipher");
-
-	switch (type) {
-	case L_CIPHER_AES:
-		strcpy((char *) salg.salg_name, "ecb(aes)");
-		break;
-	case L_CIPHER_AES_CBC:
-		strcpy((char *) salg.salg_name, "cbc(aes)");
-		break;
-	case L_CIPHER_ARC4:
-		strcpy((char *) salg.salg_name, "ecb(arc4)");
-		break;
-	case L_CIPHER_DES3_EDE_CBC:
-		strcpy((char *) salg.salg_name, "cbc(des3_ede)");
-		break;
-	}
+	strcpy((char *) salg.salg_type, alg_type);
+	strcpy((char *) salg.salg_name, alg_name);
 
 	if (bind(sk, (struct sockaddr *) &salg, sizeof(salg)) < 0) {
 		close(sk);
@@ -135,6 +122,7 @@ LIB_EXPORT struct l_cipher *l_cipher_new(enum l_cipher_type type,
 						size_t key_length)
 {
 	struct l_cipher *cipher;
+	const char *alg_name;
 
 	if (unlikely(!key))
 		return NULL;
@@ -145,11 +133,26 @@ LIB_EXPORT struct l_cipher *l_cipher_new(enum l_cipher_type type,
 	cipher = l_new(struct l_cipher, 1);
 	cipher->type = type;
 
-	cipher->encrypt_sk = create_alg(type, key, key_length);
+	switch (type) {
+	case L_CIPHER_AES:
+		alg_name = "ecb(aes)";
+		break;
+	case L_CIPHER_AES_CBC:
+		alg_name = "cbc(aes)";
+		break;
+	case L_CIPHER_ARC4:
+		alg_name = "ecb(arc4)";
+		break;
+	case L_CIPHER_DES3_EDE_CBC:
+		alg_name = "cbc(des3_ede)";
+		break;
+	}
+
+	cipher->encrypt_sk = create_alg("skcipher", alg_name, key, key_length);
 	if (cipher->encrypt_sk < 0)
 		goto error_free;
 
-	cipher->decrypt_sk = create_alg(type, key, key_length);
+	cipher->decrypt_sk = create_alg("skcipher", alg_name, key, key_length);
 	if (cipher->decrypt_sk < 0)
 		goto error_close;
 
@@ -260,6 +263,313 @@ LIB_EXPORT bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
 
 	if (sendmsg(cipher->decrypt_sk, &msg, 0) < 0)
 		return false;
+
+	return true;
+}
+
+struct l_asymmetric_cipher {
+	struct l_cipher cipher;
+	int key_size;
+};
+
+#define ASN1_ID(class, pc, tag)	(((class) << 6) | ((pc) << 5) | (tag))
+
+#define ASN1_CLASS_UNIVERSAL	0
+
+#define ASN1_ID_SEQUENCE	ASN1_ID(ASN1_CLASS_UNIVERSAL, 1, 0x10)
+#define ASN1_ID_INTEGER		ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x02)
+
+static inline int parse_asn1_definite_length(const uint8_t **buf,
+						size_t *len)
+{
+	int n;
+	size_t result = 0;
+
+	(*len)--;
+
+	if (!(**buf & 0x80))
+		return *(*buf)++;
+
+	n = *(*buf)++ & 0x7f;
+	if ((size_t) n > *len)
+		return -1;
+
+	*len -= n;
+	while (n--)
+		result = (result << 8) | *(*buf)++;
+
+	return result;
+}
+
+/* Return index'th element in a DER SEQUENCE */
+static uint8_t *der_find_elem(uint8_t *buf, size_t len_in, int index,
+				uint8_t *tag, size_t *len_out)
+{
+	int tlv_len;
+
+	while (1) {
+		if (len_in < 2)
+			return NULL;
+
+		*tag = *buf++;
+		len_in--;
+
+		tlv_len = parse_asn1_definite_length((void *) &buf, &len_in);
+		if (tlv_len < 0 || (size_t) tlv_len > len_in)
+			return NULL;
+
+		if (index-- == 0) {
+			*len_out = tlv_len;
+			return buf;
+		}
+
+		buf += tlv_len;
+		len_in -= tlv_len;
+	}
+}
+
+static bool parse_rsa_key(struct l_asymmetric_cipher *cipher, const void *key,
+				size_t key_length)
+{
+	/*
+	 * Parse the DER-encoded public or private RSA key to find
+	 * and cache the size of the modulus n for later use.
+	 * (RFC3279)
+	 */
+	size_t n_length;
+	uint8_t *der;
+	uint8_t tag;
+
+	if (key_length < 8)
+		return false;
+
+	/* Unpack the outer SEQUENCE */
+	der = der_find_elem((uint8_t *) key, key_length, 0, &tag, &n_length);
+	if (!der || tag != ASN1_ID_SEQUENCE)
+		return false;
+
+	/* Take first INTEGER as the modulus */
+	der = der_find_elem(der, n_length, 0, &tag, &n_length);
+	if (!der || tag != ASN1_ID_INTEGER || n_length < 4)
+		return false;
+
+	/* Skip leading zeros */
+	while (n_length && der[0] == 0x00) {
+		der++;
+		n_length--;
+	}
+
+	cipher->key_size = n_length;
+
+	return true;
+}
+
+LIB_EXPORT struct l_asymmetric_cipher *l_asymmetric_cipher_new(
+					enum l_asymmetric_cipher_type type,
+					const void *key, size_t key_length)
+{
+	struct l_asymmetric_cipher *cipher;
+	const char *alg_name;
+
+	if (unlikely(!key))
+		return NULL;
+
+	if (type != L_CIPHER_RSA_PKCS1_V1_5)
+		return NULL;
+
+	cipher = l_new(struct l_asymmetric_cipher, 1);
+	cipher->cipher.type = type;
+
+	switch (type) {
+	case L_CIPHER_RSA_PKCS1_V1_5:
+		if (!parse_rsa_key(cipher, key, key_length))
+			goto error_free;
+
+		alg_name = "rsa";
+		break;
+	}
+
+	cipher->cipher.encrypt_sk = create_alg("akcipher", alg_name,
+						key, key_length);
+	if (cipher->cipher.encrypt_sk < 0)
+		goto error_free;
+
+	cipher->cipher.decrypt_sk = create_alg("akcipher", alg_name,
+						key, key_length);
+	if (cipher->cipher.decrypt_sk < 0)
+		goto error_close;
+
+	return cipher;
+
+error_close:
+	close(cipher->cipher.encrypt_sk);
+error_free:
+	l_free(cipher);
+	return NULL;
+}
+
+LIB_EXPORT void l_asymmetric_cipher_free(struct l_asymmetric_cipher *cipher)
+{
+	if (unlikely(!cipher))
+		return;
+
+	close(cipher->cipher.encrypt_sk);
+	close(cipher->cipher.decrypt_sk);
+
+	l_free(cipher);
+}
+
+LIB_EXPORT int l_asymmetric_cipher_get_key_size(
+					struct l_asymmetric_cipher *cipher)
+{
+	return cipher->key_size;
+}
+
+static void getrandom_nonzero(uint8_t *buf, int len)
+{
+	while (len--) {
+		l_getrandom(buf, 1);
+		while (buf[0] == 0)
+			l_getrandom(buf, 1);
+
+		buf++;
+	}
+}
+
+LIB_EXPORT bool l_asymmetric_cipher_encrypt(struct l_asymmetric_cipher *cipher,
+					const void *in, void *out,
+					size_t len_in, size_t len_out)
+{
+	if (cipher->cipher.type == L_CIPHER_RSA_PKCS1_V1_5) {
+		/* PKCS#1 v1.5 RSA padding according to RFC3447 */
+		uint8_t buf[cipher->key_size];
+		int ps_len = cipher->key_size - len_in - 3;
+
+		if (len_in > (size_t) cipher->key_size - 11)
+			return false;
+		if (len_out != (size_t) cipher->key_size)
+			return false;
+
+		buf[0] = 0x00;
+		buf[1] = 0x02;
+		getrandom_nonzero(buf + 2, ps_len);
+		buf[ps_len + 2] = 0x00;
+		memcpy(buf + ps_len + 3, in, len_in);
+
+		if (!l_cipher_encrypt(&cipher->cipher, buf, out,
+					cipher->key_size))
+			return false;
+	}
+
+	return true;
+}
+
+LIB_EXPORT bool l_asymmetric_cipher_decrypt(struct l_asymmetric_cipher *cipher,
+					const void *in, void *out,
+					size_t len_in, size_t len_out)
+{
+	if (cipher->cipher.type == L_CIPHER_RSA_PKCS1_V1_5) {
+		/* PKCS#1 v1.5 RSA padding according to RFC3447 */
+		uint8_t buf[cipher->key_size];
+		int pos;
+
+		if (len_in != (size_t) cipher->key_size)
+			return false;
+
+		if (!l_cipher_decrypt(&cipher->cipher, in, buf,
+					cipher->key_size))
+			return false;
+
+		if (buf[0] != 0x00)
+			return false;
+		if (buf[1] != 0x02)
+			return false;
+
+		for (pos = 2; pos < cipher->key_size; pos++)
+			if (buf[pos] == 0)
+				break;
+		if (pos < 10 || pos == cipher->key_size)
+			return false;
+
+		pos++;
+		if (len_out != (size_t) cipher->key_size - pos)
+			return false;
+
+		memcpy(out, buf + pos, cipher->key_size - pos);
+	}
+
+	return true;
+}
+
+LIB_EXPORT bool l_asymmetric_cipher_sign(struct l_asymmetric_cipher *cipher,
+					const void *in, void *out,
+					size_t len_in, size_t len_out)
+{
+	if (cipher->cipher.type == L_CIPHER_RSA_PKCS1_V1_5) {
+		/* PKCS#1 v1.5 RSA padding according to RFC3447 */
+		uint8_t buf[cipher->key_size];
+		int ps_len = cipher->key_size - len_in - 3;
+
+		if (len_in > (size_t) cipher->key_size - 11)
+			return false;
+		if (len_out != (size_t) cipher->key_size)
+			return false;
+
+		buf[0] = 0x00;
+		buf[1] = 0x01;
+		memset(buf + 2, 0xff, ps_len);
+		buf[ps_len + 2] = 0x00;
+		memcpy(buf + ps_len + 3, in, len_in);
+
+		/*
+		 * The RSA signing operation uses the same primitive as
+		 * decryption so just call decrypt for now.
+		 */
+		if (!l_cipher_decrypt(&cipher->cipher, buf, out,
+					cipher->key_size))
+			return false;
+	}
+
+	return true;
+}
+
+LIB_EXPORT bool l_asymmetric_cipher_verify(struct l_asymmetric_cipher *cipher,
+					const void *in, void *out,
+					size_t len_in, size_t len_out)
+{
+	if (cipher->cipher.type == L_CIPHER_RSA_PKCS1_V1_5) {
+		/* PKCS#1 v1.5 RSA padding according to RFC3447 */
+		uint8_t buf[cipher->key_size];
+		int pos;
+
+		if (len_in != (size_t) cipher->key_size)
+			return false;
+
+		/*
+		 * The RSA verify operation uses the same primitive as
+		 * encryption so just call encrypt.
+		 */
+		if (!l_cipher_encrypt(&cipher->cipher, in, buf,
+					cipher->key_size))
+			return false;
+
+		if (buf[0] != 0x00)
+			return false;
+		if (buf[1] != 0x01)
+			return false;
+
+		for (pos = 2; pos < cipher->key_size; pos++)
+			if (buf[pos] != 0xff)
+				break;
+		if (pos < 10 || pos == cipher->key_size || buf[pos] != 0)
+			return false;
+
+		pos++;
+		if (len_out != (size_t) cipher->key_size - pos)
+			return false;
+
+		memcpy(out, buf + pos, cipher->key_size - pos);
+	}
 
 	return true;
 }

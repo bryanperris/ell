@@ -50,6 +50,36 @@ bool l_cipher_decrypt(struct l_cipher *cipher,
 bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
 			size_t iv_length);
 
+struct l_asymmetric_cipher;
+
+enum l_asymmetric_cipher_type {
+	L_CIPHER_RSA_PKCS1_V1_5,
+};
+
+struct l_asymmetric_cipher *l_asymmetric_cipher_new(
+					enum l_asymmetric_cipher_type type,
+					const void *key, size_t key_length);
+
+void l_asymmetric_cipher_free(struct l_asymmetric_cipher *cipher);
+
+int l_asymmetric_cipher_get_key_size(struct l_asymmetric_cipher *cipher);
+
+bool l_asymmetric_cipher_encrypt(struct l_asymmetric_cipher *cipher,
+					const void *in, void *out,
+					size_t len_in, size_t len_out);
+
+bool l_asymmetric_cipher_decrypt(struct l_asymmetric_cipher *cipher,
+					const void *in, void *out,
+					size_t len_in, size_t len_out);
+
+bool l_asymmetric_cipher_sign(struct l_asymmetric_cipher *cipher,
+				const void *in, void *out,
+				size_t len_in, size_t len_out);
+
+bool l_asymmetric_cipher_verify(struct l_asymmetric_cipher *cipher,
+				const void *in, void *out,
+				size_t len_in, size_t len_out);
+
 #ifdef __cplusplus
 }
 #endif
