@@ -48,7 +48,7 @@ static void test_unsupported(const void *data)
 static void test_aes(const void *data)
 {
 	struct l_cipher *cipher;
-	char buf[256] = {};
+	char buf[256];
 	int r;
 
 	cipher = l_cipher_new(L_CIPHER_AES, KEY_STR, KEY_LEN);
@@ -72,7 +72,7 @@ static void test_aes(const void *data)
 static void test_arc4(const void *data)
 {
 	struct l_cipher *cipher;
-	char buf[256] = {};
+	char buf[256];
 	int r;
 
 	static const unsigned char expect_plaintext[] = {
