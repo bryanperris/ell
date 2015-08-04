@@ -1,8 +1,7 @@
 /*
- *
  *  Embedded Linux library
  *
- *  Copyright (C) 2011-2014  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2015  Intel Corporation. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -17,30 +16,22 @@
  *  You should have received a copy of the GNU Lesser General Public
  *  License along with this library; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- *
  */
 
-#include <ell/util.h>
-#include <ell/test.h>
-#include <ell/queue.h>
-#include <ell/hashmap.h>
-#include <ell/string.h>
-#include <ell/main.h>
-#include <ell/idle.h>
-#include <ell/signal.h>
-#include <ell/timeout.h>
-#include <ell/io.h>
-#include <ell/log.h>
-#include <ell/plugin.h>
-#include <ell/checksum.h>
-#include <ell/settings.h>
-#include <ell/hwdb.h>
-#include <ell/cipher.h>
-#include <ell/random.h>
-#include <ell/uintset.h>
-#include <ell/base64.h>
+#ifndef __ELL_BASE64_H
+#define __ELL_BASE64_H
 
-#include <ell/netlink.h>
-#include <ell/genl.h>
-#include <ell/dbus.h>
-#include <ell/dbus-service.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+uint8_t *l_base64_decode(const uint8_t *in, size_t in_len, size_t *n_written);
+
+uint8_t *l_base64_encode(const uint8_t *in, size_t in_len, int columns,
+				size_t *n_written);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_BASE64_H */
