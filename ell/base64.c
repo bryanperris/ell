@@ -124,8 +124,8 @@ LIB_EXPORT char *l_base64_encode(const uint8_t *in, size_t in_len,
 
 	out_len = (in_len + 2) / 3 * 4;
 
-	if (columns)
-		out_len += (out_len ?: (out_len - 4)) / columns;
+	if (columns && out_len)
+		out_len += (out_len - 4) / columns;
 
 	out_buf = l_malloc(out_len);
 	*n_written = out_len;
