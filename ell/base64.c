@@ -89,6 +89,8 @@ LIB_EXPORT uint8_t *l_base64_decode(const uint8_t *in, size_t in_len,
 			reg |= *ptr - 'a' + 26;
 		else if (l_ascii_isdigit(*ptr))
 			reg |= *ptr - '0' + 52;
+		else if (*ptr == '+')
+			reg |= 62;
 		else if (*ptr == '/')
 			reg |= 63;
 
