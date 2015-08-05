@@ -28,10 +28,10 @@
 #include "base64.h"
 #include "string.h"
 
-LIB_EXPORT uint8_t *l_base64_decode(const uint8_t *in, size_t in_len,
+LIB_EXPORT uint8_t *l_base64_decode(const char *in, size_t in_len,
 					size_t *n_written)
 {
-	const uint8_t *ptr, *in_end = in + in_len;
+	const char *ptr, *in_end = in + in_len;
 	uint8_t *out_buf, *out;
 	int base64_len = 0, pad_len;
 	uint16_t reg = 0;
@@ -107,11 +107,11 @@ LIB_EXPORT uint8_t *l_base64_decode(const uint8_t *in, size_t in_len,
 	return out_buf;
 }
 
-LIB_EXPORT uint8_t *l_base64_encode(const uint8_t *in, size_t in_len,
+LIB_EXPORT char *l_base64_encode(const uint8_t *in, size_t in_len,
 					int columns, size_t *n_written)
 {
 	const uint8_t *in_end = in + in_len;
-	uint8_t *out_buf, *out;
+	char *out_buf, *out;
 	size_t out_len;
 	uint32_t reg;
 	uint8_t idx;
