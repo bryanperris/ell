@@ -26,6 +26,7 @@
 
 #include "util.h"
 #include "private.h"
+#include "tls.h"
 #include "checksum.h"
 #include "tls-private.h"
 
@@ -87,4 +88,131 @@ void tls12_prf(enum l_checksum_type type, size_t hash_len,
 	}
 
 	l_checksum_free(hmac);
+}
+
+LIB_EXPORT struct l_tls *l_tls_new(bool server,
+				l_tls_write_cb_t app_data_handler,
+				l_tls_write_cb_t tx_handler,
+				l_tls_ready_cb_t ready_handler,
+				l_tls_disconnect_cb_t disconnect_handler,
+				void *user_data)
+{
+	struct l_tls *tls;
+
+	tls = l_new(struct l_tls, 1);
+	tls->server = server;
+	tls->rx = app_data_handler;
+	tls->tx = tx_handler;
+	tls->ready_handle = ready_handler;
+	tls->disconnected = disconnect_handler;
+	tls->user_data = user_data;
+
+	return tls;
+}
+
+LIB_EXPORT void l_tls_free(struct l_tls *tls)
+{
+	if (unlikely(!tls))
+		return;
+
+	l_tls_set_cacert(tls, NULL);
+	l_tls_set_auth_data(tls, NULL, NULL, NULL);
+
+	l_free(tls);
+}
+
+LIB_EXPORT void l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path)
+{
+	if (tls->ca_cert_path) {
+		l_free(tls->ca_cert_path);
+		tls->ca_cert_path = NULL;
+	}
+
+	if (ca_cert_path)
+		tls->ca_cert_path = l_strdup(ca_cert_path);
+}
+
+LIB_EXPORT void l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
+				const char *priv_key_path,
+				const char *priv_key_passphrase)
+{
+	if (tls->cert_path) {
+		l_free(tls->cert_path);
+		l_free(tls->priv_key_path);
+		tls->cert_path = NULL;
+		tls->priv_key_path = NULL;
+	}
+
+	if (cert_path) {
+		tls->cert_path = l_strdup(cert_path);
+		tls->priv_key_path = l_strdup(priv_key_path);
+	}
+
+	if (tls->priv_key_passphrase) {
+		memset(tls->priv_key_passphrase, 0,
+				strlen(tls->priv_key_passphrase));
+		l_free(tls->priv_key_passphrase);
+		tls->priv_key_passphrase = NULL;
+	}
+
+	if (priv_key_passphrase)
+		tls->priv_key_passphrase = l_strdup(priv_key_passphrase);
+}
+
+LIB_EXPORT const char *l_tls_alert_to_str(enum l_tls_alert_desc desc)
+{
+	switch (desc) {
+	case TLS_ALERT_CLOSE_NOTIFY:
+		return "close_notify";
+	case TLS_ALERT_UNEXPECTED_MESSAGE:
+		return "unexpected_message";
+	case TLS_ALERT_BAD_RECORD_MAC:
+		return "bad_record_mac";
+	case TLS_ALERT_DECRYPT_FAIL_RESERVED:
+		return "decryption_failure_RESERVED";
+	case TLS_ALERT_RECORD_OVERFLOW:
+		return "record_overflow";
+	case TLS_ALERT_DECOMPRESS_FAIL:
+		return "decompression_failure";
+	case TLS_ALERT_HANDSHAKE_FAIL:
+		return "handshake_failure";
+	case TLS_ALERT_NO_CERT_RESERVED:
+		return "no_certificate_RESERVED";
+	case TLS_ALERT_BAD_CERT:
+		return "bad_certificate";
+	case TLS_ALERT_UNSUPPORTED_CERT:
+		return "unsupported_certificate";
+	case TLS_ALERT_CERT_REVOKED:
+		return "certificate_revoked";
+	case TLS_ALERT_CERT_EXPIRED:
+		return "certificate_expired";
+	case TLS_ALERT_CERT_UNKNOWN:
+		return "certificate_unknown";
+	case TLS_ALERT_ILLEGAL_PARAM:
+		return "illegal_parameter";
+	case TLS_ALERT_UNKNOWN_CA:
+		return "unknown_ca";
+	case TLS_ALERT_ACCESS_DENIED:
+		return "access_denied";
+	case TLS_ALERT_DECODE_ERROR:
+		return "decode_error";
+	case TLS_ALERT_DECRYPT_ERROR:
+		return "decrypt_error";
+	case TLS_ALERT_EXPORT_RES_RESERVED:
+		return "export_restriction_RESERVED";
+	case TLS_ALERT_PROTOCOL_VERSION:
+		return "protocol_version";
+	case TLS_ALERT_INSUFFICIENT_SECURITY:
+		return "insufficient_security";
+	case TLS_ALERT_INTERNAL_ERROR:
+		return "internal_error";
+	case TLS_ALERT_USER_CANCELED:
+		return "user_canceled";
+	case TLS_ALERT_NO_RENEGOTIATION:
+		return "no_renegotiation";
+	case TLS_ALERT_UNSUPPORTED_EXTENSION:
+		return "unsupported_extension";
+	}
+
+	return NULL;
 }

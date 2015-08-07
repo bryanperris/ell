@@ -39,7 +39,8 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/random.h \
 			ell/uintset.h \
 			ell/base64.h \
-			ell/pem.h
+			ell/pem.h \
+			ell/tls.h
 
 lib_LTLIBRARIES = ell/libell.la
 

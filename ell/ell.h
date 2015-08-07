@@ -41,6 +41,7 @@
 #include <ell/uintset.h>
 #include <ell/base64.h>
 #include <ell/pem.h>
+#include <ell/tls.h>
 
 #include <ell/netlink.h>
 #include <ell/genl.h>

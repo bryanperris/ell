@@ -20,6 +20,30 @@
  *
  */
 
+/* Only TLS 1.2 supported */
+#define TLS_V12		((3 << 8) | 3)
+#define TLS_V11		((3 << 8) | 2)
+#define TLS_V10		((3 << 8) | 1)
+
+#define TLS_VERSION	TLS_V12
+#define TLS_MIN_VERSION	TLS_V10
+
+struct l_tls {
+	bool server;
+
+	l_tls_write_cb_t tx, rx;
+	l_tls_ready_cb_t ready_handle;
+	l_tls_disconnect_cb_t disconnected;
+	void *user_data;
+
+	char *ca_cert_path;
+	char *cert_path;
+	char *priv_key_path;
+	char *priv_key_passphrase;
+
+	bool ready;
+};
+
 void tls10_prf(const uint8_t *secret, size_t secret_len,
 		const char *label,
 		const uint8_t *seed, size_t seed_len,
