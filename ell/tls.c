@@ -571,6 +571,25 @@ static bool tls_send_certificate(struct l_tls *tls)
 		return false;
 	}
 
+	if (cert && !tls_cert_find_certchain(cert, tls->ca_cert_path)) {
+		if (tls->server) {
+			tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+					TLS_ALERT_UNKNOWN_CA);
+
+			return false;
+		} else
+			cert = NULL;
+	}
+
+	/* TODO: might want check this earlier and exclude the cipher suite */
+	if (cert && !tls->pending.cipher_suite->key_xchg->
+			validate_cert_key_type(cert)) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+				TLS_ALERT_CERT_UNKNOWN);
+
+		return false;
+	}
+
 	/*
 	 * TODO: check that the certificate is compatible with hash and
 	 * signature algorithms lists supplied to us in the Client Hello
@@ -1273,6 +1292,27 @@ static void tls_handle_certificate(struct l_tls *tls,
 		}
 
 		tls->state = TLS_HANDSHAKE_WAIT_KEY_EXCHANGE;
+
+		goto done;
+	}
+
+	/*
+	 * Validate the certificate chain's consistency and validate it
+	 * against our CA if we have any.
+	 */
+
+	if (ca_cert) {
+		ca_cert = tls_cert_load_file(tls->ca_cert_path);
+		if (!ca_cert) {
+			tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+					TLS_ALERT_BAD_CERT);
+
+			goto done;
+		}
+	}
+
+	if (!tls_cert_verify_certchain(certchain, ca_cert)) {
+		tls_disconnect(tls, TLS_ALERT_BAD_CERT, 0);
 
 		goto done;
 	}
@@ -2027,6 +2067,24 @@ struct tls_cert *tls_cert_load_file(const char *filename)
 	return cert;
 }
 
+bool tls_cert_find_certchain(struct tls_cert *cert,
+				const char *cacert_filename)
+{
+	/*
+	 * TODO: Load the CA certificate and find a chain from cert up to
+	 * that CA certificate, store that entire chain in a linked list using
+	 * the .issuer fields in each certificate.  We might also want to
+	 * accept a directory of trusted CA certs (/etc/ssl/certs by default)
+	 * and find a chain to any of those CAs.
+	 *
+	 * This is unimplemented which means that only certificates issued
+	 * directly by given root CA will work as they're already complete
+	 * certchains.
+	 */
+
+	return true;
+}
+
 struct asn1_oid {
 	uint8_t asn1_len;
 	uint8_t asn1[10];
@@ -2041,6 +2099,12 @@ static const struct pkcs1_encryption_oid {
 		{ 9, { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01 } },
 	},
 };
+
+bool tls_cert_verify_certchain(struct tls_cert *certchain,
+				struct tls_cert *ca_cert)
+{
+	return true;
+}
 
 void tls_cert_free_certchain(struct tls_cert *cert)
 {
