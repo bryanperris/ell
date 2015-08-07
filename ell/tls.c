@@ -1008,6 +1008,26 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 					const uint8_t *buf, size_t len)
 {
 	switch (type) {
+	case TLS_HELLO_REQUEST:
+		if (tls->server) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+			break;
+		}
+
+		if (len != 0) {
+			tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+			break;
+		}
+
+		/*
+		 * May be sent by the server at any time but "SHOULD be ignored
+		 * by the client if it arrives in the middle of a handshake"
+		 * and "MAY be ignored by the client if it does not wish to
+		 * renegotiate a session".
+		 */
+
+		break;
+
 	case TLS_CLIENT_HELLO:
 		if (!tls->server) {
 			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
