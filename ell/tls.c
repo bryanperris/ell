@@ -142,6 +142,15 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 	l_free(tls);
 }
 
+LIB_EXPORT void l_tls_write(struct l_tls *tls, const uint8_t *data, size_t len)
+{
+	if (unlikely(!tls->ready)) {
+		return;
+	}
+
+	tls_tx_record(tls, TLS_CT_APPLICATION_DATA, data, len);
+}
+
 LIB_EXPORT void l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path)
 {
 	if (tls->ca_cert_path) {
