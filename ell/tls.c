@@ -207,6 +207,15 @@ static void tls_send_client_hello(struct l_tls *tls)
 	tls_tx_handshake(tls, TLS_CLIENT_HELLO, buf, ptr - buf);
 }
 
+static void tls_handle_handshake(struct l_tls *tls, int type,
+					const uint8_t *buf, size_t len)
+{
+	switch (type) {
+	default:
+		tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+	}
+}
+
 LIB_EXPORT struct l_tls *l_tls_new(bool server,
 				l_tls_write_cb_t app_data_handler,
 				l_tls_write_cb_t tx_handler,
@@ -283,6 +292,14 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 		tls_disconnect(tls, TLS_ALERT_CLOSE_NOTIFY, message[1]);
 
 		return false;
+
+	case TLS_CT_HANDSHAKE:
+		tls_handle_handshake(tls, message[0],
+					message + TLS_HANDSHAKE_HEADER_SIZE,
+					len - TLS_HANDSHAKE_HEADER_SIZE);
+
+		break;
+
 	case TLS_CT_APPLICATION_DATA:
 		if (!tls->ready) {
 			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
