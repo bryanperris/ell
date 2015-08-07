@@ -44,6 +44,17 @@ struct tls_compression_method {
 	int id;
 };
 
+enum tls_handshake_state {
+	TLS_HANDSHAKE_WAIT_HELLO,
+	TLS_HANDSHAKE_WAIT_CERTIFICATE,
+	TLS_HANDSHAKE_WAIT_KEY_EXCHANGE,
+	TLS_HANDSHAKE_WAIT_HELLO_DONE,
+	TLS_HANDSHAKE_WAIT_CERTIFICATE_VERIFY,
+	TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC,
+	TLS_HANDSHAKE_WAIT_FINISHED,
+	TLS_HANDSHAKE_DONE,
+};
+
 enum tls_content_type {
 	TLS_CT_CHANGE_CIPHER_SPEC	= 20,
 	TLS_CT_ALERT			= 21,
@@ -76,6 +87,8 @@ struct l_tls {
 	enum tls_content_type message_content_type;
 
 	/* Handshake protocol layer */
+
+	enum tls_handshake_state state;
 
 	uint16_t negotiated_version;
 

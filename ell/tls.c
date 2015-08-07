@@ -228,6 +228,8 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 	if (!tls->server)
 		tls_send_client_hello(tls);
 
+	tls->state = TLS_HANDSHAKE_WAIT_HELLO;
+
 	return tls;
 }
 
