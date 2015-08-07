@@ -850,6 +850,53 @@ LIB_EXPORT const char *l_tls_alert_to_str(enum l_tls_alert_desc desc)
 
 /* X509 Certificates and Certificate Chains */
 
+#define X509_CERTIFICATE_POS			0
+#define   X509_TBSCERTIFICATE_POS		  0
+#define     X509_TBSCERT_VERSION_POS		    0
+#define     X509_TBSCERT_SERIAL_POS		    1
+#define     X509_TBSCERT_SIGNATURE_POS		    2
+#define       X509_ALGORITHM_ID_ALGORITHM_POS	      0
+#define       X509_ALGORITHM_ID_PARAMS_POS	      1
+#define     X509_TBSCERT_ISSUER_DN_POS		    3
+#define     X509_TBSCERT_VALIDITY_POS		    4
+#define     X509_TBSCERT_SUBJECT_DN_POS		    5
+#define     X509_TBSCERT_SUBJECT_KEY_POS	    6
+#define       X509_SUBJECT_KEY_ALGORITHM_POS	      0
+#define       X509_SUBJECT_KEY_VALUE_POS	      1
+#define     X509_TBSCERT_ISSUER_UID_POS		    7
+#define     X509_TBSCERT_SUBJECT_UID_POS	    8
+#define     X509_TBSCERT_EXTENSIONS_POS		    9
+#define   X509_SIGNATURE_ALGORITHM_POS		  1
+#define   X509_SIGNATURE_VALUE_POS		  2
+
+/* Return an element in a DER SEQUENCE structure by path */
+static inline uint8_t *der_find_elem_by_path(uint8_t *buf, size_t len_in,
+						uint8_t tag, size_t *len_out,
+						...)
+{
+	uint8_t elem_tag;
+	int pos;
+	va_list vl;
+
+	va_start(vl, len_out);
+
+	pos = va_arg(vl, int);
+
+	while (pos != -1) {
+		buf = der_find_elem(buf, len_in, pos, &elem_tag, &len_in);
+
+		pos = va_arg(vl, int);
+
+		if (!buf || elem_tag != (pos == -1 ? tag : ASN1_ID_SEQUENCE))
+			return NULL;
+	}
+
+	va_end(vl);
+
+	*len_out = len_in;
+	return buf;
+}
+
 struct tls_cert *tls_cert_load_file(const char *filename)
 {
 	uint8_t *der;
@@ -874,4 +921,26 @@ struct tls_cert *tls_cert_load_file(const char *filename)
 	l_free(der);
 
 	return cert;
+}
+
+uint8_t *tls_cert_find_pubkey(struct tls_cert *cert, int *pubkey_len)
+{
+	uint8_t *key;
+	size_t len;
+
+	key = der_find_elem_by_path(cert->asn1, cert->size, ASN1_ID_BIT_STRING,
+					&len,
+					X509_CERTIFICATE_POS,
+					X509_TBSCERTIFICATE_POS,
+					X509_TBSCERT_SUBJECT_KEY_POS,
+					X509_SUBJECT_KEY_VALUE_POS, -1);
+	if (!key || len < 10)
+		return NULL;
+
+	/* Skip the BIT STRING metadata byte */
+	key += 1;
+	len -= 1;
+
+	*pubkey_len = len;
+	return key;
 }
