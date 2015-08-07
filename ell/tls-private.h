@@ -125,6 +125,7 @@ struct l_tls {
 
 	uint16_t client_version;
 	uint16_t negotiated_version;
+	bool cert_requested, cert_sent;
 
 	/* SecurityParameters current and pending */
 

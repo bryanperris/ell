@@ -259,6 +259,73 @@ static void tls_send_server_hello(struct l_tls *tls)
 	tls_tx_handshake(tls, TLS_SERVER_HELLO, buf, ptr - buf);
 }
 
+static bool tls_send_certificate(struct l_tls *tls)
+{
+	uint8_t *buf, *ptr;
+	struct tls_cert *cert, *i;
+	size_t total;
+
+	if (tls->cert_path) {
+		cert = tls_cert_load_file(tls->cert_path);
+
+		if (tls->server && !cert) {
+			tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+					TLS_ALERT_BAD_CERT);
+
+			return false;
+		}
+	} else
+		cert = NULL;
+
+	/*
+	 * TODO: check that the certificate is compatible with hash and
+	 * signature algorithms lists supplied to us in the Client Hello
+	 * extensions (if we're a server) or in the Certificate Request
+	 * (if we act as a 1.2+ client).
+	 *
+	 *  - for the hash and signature_algorithms list, check all
+	 *    certs in the cert chain.
+	 *
+	 *  - also if !cipher_suite->key_xchg->key_exchange_msg, check that the
+	 *    end entity certificate's key type matches and is usable with some
+	 *    hash/signature pair.
+	 *
+	 *  - on client check if any of the supplied DNs (if any) match
+	 *    anything in our cert chain.
+	 */
+
+	total = 0;
+	for (i = cert; i; i = i->issuer)
+		total += 3 + i->size;
+
+	buf = l_malloc(128 + total);
+	ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
+
+	/* Fill in the Certificate body */
+
+	*ptr++ = total >> 16;
+	*ptr++ = total >>  8;
+	*ptr++ = total >>  0;
+
+	for (i = cert; i; i = i->issuer) {
+		*ptr++ = i->size >> 16;
+		*ptr++ = i->size >>  8;
+		*ptr++ = i->size >>  0;
+
+		memcpy(ptr, i->asn1, i->size);
+		ptr += i->size;
+	}
+
+	tls_tx_handshake(tls, TLS_CERTIFICATE, buf, ptr - buf);
+
+	l_free(buf);
+
+	if (cert)
+		tls->cert_sent = true;
+
+	return true;
+}
+
 static void tls_handle_client_hello(struct l_tls *tls,
 					const uint8_t *buf, size_t len)
 {
@@ -390,6 +457,11 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	}
 
 	tls_send_server_hello(tls);
+
+	if (tls->pending.cipher_suite->key_xchg->certificate_check &&
+			tls->cert_path)
+		if (!tls_send_certificate(tls))
+			return;
 
 	return;
 
