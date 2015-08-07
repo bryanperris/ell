@@ -213,13 +213,16 @@ unit_example_plugin_la_LDFLAGS = -no-undefined -module -avoid-version \
 
 unit_test_data_files = unit/settings.test
 
-examples = examples/dbus-service
+examples = examples/dbus-service examples/https-client-test \
+		examples/https-server-test
 
 if MAINTAINER_MODE
 noinst_PROGRAMS += $(examples)
 endif
 
 examples_dbus_service_LDADD = ell/libell-private.la
+examples_https_client_test_LDADD = ell/libell-private.la
+examples_https_server_test_LDADD = ell/libell-private.la
 
 EXTRA_DIST = $(unit_test_data_files)
 
