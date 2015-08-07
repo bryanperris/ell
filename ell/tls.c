@@ -209,6 +209,8 @@ static void tls_reset_cipher_spec(struct l_tls *tls, bool txrx)
 	tls_change_cipher_spec(tls, txrx);
 }
 
+static bool tls_send_rsa_client_key_xchg(struct l_tls *tls);
+
 static bool tls_rsa_validate_cert_key(struct tls_cert *cert)
 {
 	return tls_cert_get_pubkey_type(cert) == TLS_CERT_KEY_RSA;
@@ -218,6 +220,7 @@ static struct tls_key_exchange_algorithm tls_rsa = {
 	.id = 1, /* RSA_sign */
 	.certificate_check = true,
 	.validate_cert_key_type = tls_rsa_validate_cert_key,
+	.send_client_key_exchange = tls_send_rsa_client_key_xchg,
 };
 
 static struct tls_bulk_encryption_algorithm tls_rc4 = {
@@ -614,6 +617,102 @@ static void tls_send_server_hello_done(struct l_tls *tls)
 
 	tls_tx_handshake(tls, TLS_SERVER_HELLO_DONE, buf,
 				TLS_HANDSHAKE_HEADER_SIZE);
+}
+
+static void tls_generate_master_secret(struct l_tls *tls,
+					const uint8_t *pre_master_secret,
+					int pre_master_secret_len)
+{
+	uint8_t seed[64];
+	int key_block_size;
+
+	memcpy(seed +  0, tls->pending.client_random, 32);
+	memcpy(seed + 32, tls->pending.server_random, 32);
+
+	tls12_prf(L_CHECKSUM_SHA256, 32,
+			pre_master_secret, pre_master_secret_len,
+			"master secret", seed, 64,
+			tls->pending.master_secret, 48);
+
+	/* Directly generate the key block while we're at it */
+
+	/* 2x fixed_IV_length to be added for AEAD suppot */
+	key_block_size = 2 * tls->pending.cipher_suite->encryption->key_length +
+		2 * tls->pending.cipher_suite->mac->mac_length;
+
+	/* Reverse order from the master secret seed */
+	memcpy(seed +  0, tls->pending.server_random, 32);
+	memcpy(seed + 32, tls->pending.client_random, 32);
+
+	tls12_prf(L_CHECKSUM_SHA256, 32, tls->pending.master_secret, 48,
+			"key expansion", seed, 64,
+			tls->pending.key_block, key_block_size);
+
+	memset(seed, 0, 64);
+	memset(tls->pending.client_random, 0, 32);
+	memset(tls->pending.server_random, 0, 32);
+}
+
+static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
+{
+	uint8_t buf[1024 + 32];
+	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
+	uint8_t pre_master_secret[48];
+	struct l_asymmetric_cipher *rsa_server_pubkey;
+	int key_size;
+	bool result;
+
+	if (!tls->peer_pubkey) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
+
+		return false;
+	}
+
+	pre_master_secret[0] = (uint8_t) (TLS_VERSION >> 8);
+	pre_master_secret[1] = (uint8_t) (TLS_VERSION >> 0);
+	l_getrandom(pre_master_secret + 2, 46);
+
+	/* Fill in the RSA Client Key Exchange body */
+
+	rsa_server_pubkey = l_asymmetric_cipher_new(L_CIPHER_RSA_PKCS1_V1_5,
+						tls->peer_pubkey,
+						tls->peer_pubkey_length);
+	if (!rsa_server_pubkey) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
+
+		return false;
+	}
+
+	key_size = l_asymmetric_cipher_get_key_size(rsa_server_pubkey);
+
+	if (key_size + 32 > (int) sizeof(buf)) {
+		l_asymmetric_cipher_free(rsa_server_pubkey);
+
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
+
+		return false;
+	}
+
+	l_put_be16(key_size, ptr);
+	result = l_asymmetric_cipher_encrypt(rsa_server_pubkey,
+						pre_master_secret, ptr + 2,
+						48, key_size);
+	ptr += key_size + 2;
+
+	l_asymmetric_cipher_free(rsa_server_pubkey);
+
+	if (!result) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
+
+		return false;
+	}
+
+	tls_tx_handshake(tls, TLS_CLIENT_KEY_EXCHANGE, buf, ptr - buf);
+
+	tls_generate_master_secret(tls, pre_master_secret, 48);
+	memset(pre_master_secret, 0, 48);
+
+	return true;
 }
 
 static void tls_get_handshake_hash(struct l_tls *tls, uint8_t *out)
