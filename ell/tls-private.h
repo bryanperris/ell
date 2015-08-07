@@ -60,3 +60,6 @@ void tls12_prf(enum l_checksum_type type, size_t hash_len,
 		const char *label,
 		const uint8_t *seed, size_t seed_len,
 		uint8_t *out, size_t out_len);
+
+void tls_disconnect(struct l_tls *tls, enum l_tls_alert_desc desc,
+			enum l_tls_alert_desc local_desc);

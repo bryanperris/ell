@@ -90,6 +90,21 @@ void tls12_prf(enum l_checksum_type type, size_t hash_len,
 	l_checksum_free(hmac);
 }
 
+/*
+ * Callers make sure this is about the last function before returning
+ * from the stack frames up to the exported library call so that the
+ * user-supplied disconnected callback here is free to use l_tls_free
+ * for example.
+ */
+void tls_disconnect(struct l_tls *tls, enum l_tls_alert_desc desc,
+			enum l_tls_alert_desc local_desc)
+{
+	tls->ready = false;
+
+	tls->disconnected(tls->user_data, local_desc ?: desc,
+				local_desc && !desc);
+}
+
 LIB_EXPORT struct l_tls *l_tls_new(bool server,
 				l_tls_write_cb_t app_data_handler,
 				l_tls_write_cb_t tx_handler,
