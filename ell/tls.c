@@ -164,6 +164,25 @@ LIB_EXPORT void l_tls_write(struct l_tls *tls, const uint8_t *data, size_t len)
 	tls_tx_record(tls, TLS_CT_APPLICATION_DATA, data, len);
 }
 
+bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
+			int len, uint8_t type, uint16_t version)
+{
+	switch (type) {
+	case TLS_CT_APPLICATION_DATA:
+		if (!tls->ready) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+
+			return false;
+		}
+
+		tls->rx(tls->user_data, message, len);
+
+		break;
+	}
+
+	return true;
+}
+
 LIB_EXPORT void l_tls_close(struct l_tls *tls)
 {
 	tls_disconnect(tls, TLS_ALERT_CLOSE_NOTIFY, 0);
