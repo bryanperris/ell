@@ -31,7 +31,10 @@
 #include "tls.h"
 #include "checksum.h"
 #include "cipher.h"
+#include "random.h"
+#include "pem.h"
 #include "tls-private.h"
+#include "cipher-private.h"
 
 void tls10_prf(const uint8_t *secret, size_t secret_len,
 		const char *label,
@@ -691,4 +694,32 @@ LIB_EXPORT const char *l_tls_alert_to_str(enum l_tls_alert_desc desc)
 	}
 
 	return NULL;
+}
+
+/* X509 Certificates and Certificate Chains */
+
+struct tls_cert *tls_cert_load_file(const char *filename)
+{
+	uint8_t *der;
+	size_t len;
+	struct tls_cert *cert;
+
+	der = l_pem_load_certificate(filename, &len);
+	if (!der)
+		return NULL;
+
+	if (!len || der[0] != ASN1_ID_SEQUENCE) {
+		l_free(der);
+		return NULL;
+	}
+
+	cert = l_malloc(sizeof(struct tls_cert) + len);
+	cert->size = len;
+	cert->asn1 = (void *) cert + sizeof(*cert);
+	cert->issuer = NULL;
+
+	memcpy(cert->asn1, der, len);
+	l_free(der);
+
+	return cert;
 }

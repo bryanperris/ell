@@ -277,13 +277,6 @@ struct l_asymmetric_cipher {
 	int key_size;
 };
 
-#define ASN1_ID(class, pc, tag)	(((class) << 6) | ((pc) << 5) | (tag))
-
-#define ASN1_CLASS_UNIVERSAL	0
-
-#define ASN1_ID_SEQUENCE	ASN1_ID(ASN1_CLASS_UNIVERSAL, 1, 0x10)
-#define ASN1_ID_INTEGER		ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x02)
-
 static inline int parse_asn1_definite_length(const uint8_t **buf,
 						size_t *len)
 {

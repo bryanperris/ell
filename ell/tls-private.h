@@ -169,3 +169,13 @@ void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
 			const uint8_t *data, size_t len);
 bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 			int len, enum tls_content_type type, uint16_t version);
+
+/* X509 Certificates and Certificate Chains */
+
+struct tls_cert {
+	size_t size;
+	uint8_t *asn1;
+	struct tls_cert *issuer;
+};
+
+struct tls_cert *tls_cert_load_file(const char *filename);
