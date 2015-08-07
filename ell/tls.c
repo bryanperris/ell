@@ -23,6 +23,8 @@
 #endif
 
 #define _GNU_SOURCE
+#include <time.h>
+#include <stdlib.h>
 
 #include "util.h"
 #include "private.h"
@@ -90,6 +92,23 @@ void tls12_prf(enum l_checksum_type type, size_t hash_len,
 	l_checksum_free(hmac);
 }
 
+static void tls_write_random(uint8_t *buf)
+{
+	l_put_be32(time(NULL), buf);
+
+	l_getrandom(buf + 4, 28);
+}
+
+static struct tls_cipher_suite tls_cipher_suite_pref[] = {
+};
+
+static struct tls_compression_method tls_compression_pref[] = {
+	/* CompressionMethod.null */
+	{
+		0,
+	},
+};
+
 enum tls_handshake_type {
 	TLS_HELLO_REQUEST	= 0,
 	TLS_CLIENT_HELLO	= 1,
@@ -131,6 +150,61 @@ void tls_disconnect(struct l_tls *tls, enum l_tls_alert_desc desc,
 				local_desc && !desc);
 }
 
+#define TLS_HANDSHAKE_HEADER_SIZE	4
+
+static void tls_tx_handshake(struct l_tls *tls, int type, uint8_t *buf,
+				size_t length)
+{
+	/* Fill in the handshake header */
+
+	buf[0] = type;
+	buf[1] = (length - TLS_HANDSHAKE_HEADER_SIZE) >> 16;
+	buf[2] = (length - TLS_HANDSHAKE_HEADER_SIZE) >>  8;
+	buf[3] = (length - TLS_HANDSHAKE_HEADER_SIZE) >>  0;
+
+	tls_tx_record(tls, TLS_CT_HANDSHAKE, buf, length);
+}
+
+static void tls_send_client_hello(struct l_tls *tls)
+{
+	uint8_t buf[128 + L_ARRAY_SIZE(tls_compression_pref) +
+			2 * L_ARRAY_SIZE(tls_cipher_suite_pref)];
+	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
+	int i;
+
+	/* Fill in the Client Hello body */
+
+	*ptr++ = (uint8_t) (TLS_VERSION >> 8);
+	*ptr++ = (uint8_t) (TLS_VERSION >> 0);
+
+	tls_write_random(tls->pending.client_random);
+	memcpy(ptr, tls->pending.client_random, 32);
+	ptr += 32;
+
+	*ptr++ = 0; /* No SessionID */
+
+	/*
+	 * We can list all supported key exchange mechanisms regardless of the
+	 * certificate type we are actually presenting (if any).
+	 *
+	 * TODO: perhaps scan /proc/crypto for supported ciphers so we don't
+	 * include ones that will cause an internal error later in the
+	 * handshake.  We can add camellia whan this is done.
+	 */
+	l_put_be16(L_ARRAY_SIZE(tls_cipher_suite_pref) * 2, ptr);
+	ptr += 2;
+	for (i = 0; i < (int) L_ARRAY_SIZE(tls_cipher_suite_pref); i++) {
+		*ptr++ = tls_cipher_suite_pref[i].id[0];
+		*ptr++ = tls_cipher_suite_pref[i].id[1];
+	}
+
+	*ptr++ = L_ARRAY_SIZE(tls_compression_pref);
+	for (i = 0; i < (int) L_ARRAY_SIZE(tls_compression_pref); i++)
+		*ptr++ = tls_compression_pref[i].id;
+
+	tls_tx_handshake(tls, TLS_CLIENT_HELLO, buf, ptr - buf);
+}
+
 LIB_EXPORT struct l_tls *l_tls_new(bool server,
 				l_tls_write_cb_t app_data_handler,
 				l_tls_write_cb_t tx_handler,
@@ -147,6 +221,10 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 	tls->ready_handle = ready_handler;
 	tls->disconnected = disconnect_handler;
 	tls->user_data = user_data;
+
+	/* If we're the client, start the handshake right away */
+	if (!tls->server)
+		tls_send_client_hello(tls);
 
 	return tls;
 }

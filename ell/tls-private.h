@@ -34,6 +34,16 @@ enum tls_cipher_type {
 	TLS_CIPHER_AEAD,
 };
 
+struct tls_cipher_suite {
+	uint8_t id[2];
+	const char *name;
+	int verify_data_length;
+};
+
+struct tls_compression_method {
+	int id;
+};
+
 enum tls_content_type {
 	TLS_CT_CHANGE_CIPHER_SPEC	= 20,
 	TLS_CT_ALERT			= 21,
@@ -68,6 +78,12 @@ struct l_tls {
 	/* Handshake protocol layer */
 
 	uint16_t negotiated_version;
+
+	/* SecurityParameters current and pending */
+
+	struct {
+		uint8_t client_random[32];
+	} pending;
 
 	enum tls_cipher_type cipher_type[2];
 	struct l_cipher *cipher[2];
