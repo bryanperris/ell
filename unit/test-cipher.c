@@ -57,12 +57,12 @@ static void test_aes(const void *data)
 
 	memcpy(buf, FIXED_STR, FIXED_LEN);
 
-	l_cipher_encrypt(cipher, buf, buf, 256);
+	l_cipher_encrypt(cipher, buf, buf, FIXED_LEN);
 
 	r = memcmp(buf, FIXED_STR, FIXED_LEN);
 	assert(r);
 
-	l_cipher_decrypt(cipher, buf, buf, 256);
+	l_cipher_decrypt(cipher, buf, buf, FIXED_LEN);
 
 	r = memcmp(buf, FIXED_STR, FIXED_LEN);
 	assert(!r);
@@ -110,12 +110,12 @@ static void test_arc4(const void *data)
 
 	memcpy(buf, FIXED_STR, FIXED_LEN);
 
-	l_cipher_encrypt(cipher, buf, buf, 256);
+	l_cipher_encrypt(cipher, buf, buf, FIXED_LEN);
 
 	r = memcmp(buf, FIXED_STR, FIXED_LEN);
 	assert(r);
 
-	l_cipher_decrypt(cipher, buf, buf, 256);
+	l_cipher_decrypt(cipher, buf, buf, FIXED_LEN);
 
 	r = memcmp(buf, FIXED_STR, FIXED_LEN);
 	assert(!r);
