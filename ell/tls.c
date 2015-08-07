@@ -105,6 +105,7 @@ static void tls_write_random(uint8_t *buf)
 
 static void tls_reset_handshake(struct l_tls *tls)
 {
+	memset(tls->pending.master_secret, 0, 48);
 	memset(tls->pending.key_block, 0, sizeof(tls->pending.key_block));
 
 	if (tls->peer_cert) {
@@ -543,6 +544,25 @@ static void tls_send_change_cipher_spec(struct l_tls *tls)
 
 static void tls_send_finished(struct l_tls *tls)
 {
+	uint8_t buf[512];
+	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
+	uint8_t seed[HANDSHAKE_HASH_SIZE];
+
+	/*
+	 * Same hash type as that used for the PRF, i.e. SHA256 unless an
+	 * exotic cipher suite was negotiated that dictates a different
+	 * hash for the PRF and for the Finished hash.  We don't support
+	 * any such ciphers so it's always SHA256.
+	 */
+	tls_get_handshake_hash(tls, seed);
+
+	tls12_prf(L_CHECKSUM_SHA256, 32, tls->pending.master_secret, 48,
+			tls->server ? "server finished" : "client finished",
+			seed, sizeof(seed),
+			ptr, tls->cipher_suite[1]->verify_data_length);
+	ptr += tls->cipher_suite[1]->verify_data_length;
+
+	tls_tx_handshake(tls, TLS_FINISHED, buf, ptr - buf);
 }
 
 static void tls_handle_client_hello(struct l_tls *tls,

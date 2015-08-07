@@ -150,6 +150,7 @@ struct l_tls {
 	struct {
 		struct tls_cipher_suite *cipher_suite;
 		struct tls_compression_method *compression_method;
+		uint8_t master_secret[48];
 		uint8_t client_random[32];
 		uint8_t server_random[32];
 		uint8_t key_block[136]; /* Max key block size per 6.3 v1.1 */
