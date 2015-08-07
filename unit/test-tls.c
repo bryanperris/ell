@@ -227,6 +227,195 @@ static void test_certificates(const void *data)
 	l_free(cacert);
 }
 
+struct tls_conn_test {
+	const char *server_cert_path;
+	const char *server_key_path;
+	const char *server_key_passphrase;
+	const char *server_ca_cert_path;
+	const char *server_expect_identity;
+	const char *client_cert_path;
+	const char *client_key_path;
+	const char *client_key_passphrase;
+	const char *client_ca_cert_path;
+	const char *client_expect_identity;
+};
+
+static const struct tls_conn_test tls_conn_test_no_auth = {
+	.server_cert_path = TESTDATADIR "/cert-server.pem",
+	.server_key_path = TESTDATADIR "/cert-server-key.pem",
+	.server_expect_identity = NULL,
+	.client_expect_identity = NULL,
+};
+
+static const struct tls_conn_test tls_conn_test_server_auth = {
+	.server_cert_path = TESTDATADIR "/cert-server.pem",
+	.server_key_path = TESTDATADIR "/cert-server-key.pem",
+	.server_expect_identity = NULL,
+	.client_ca_cert_path = TESTDATADIR "/cert-ca.pem",
+	.client_expect_identity = "Foo Example Organization",
+};
+
+static const struct tls_conn_test tls_conn_test_client_auth_attempt = {
+	.server_cert_path = TESTDATADIR "/cert-server.pem",
+	.server_key_path = TESTDATADIR "/cert-server-key.pem",
+	.server_ca_cert_path = TESTDATADIR "/cert-ca.pem",
+	.server_expect_identity = NULL,
+	.client_expect_identity = NULL,
+};
+
+static const struct tls_conn_test tls_conn_test_client_auth = {
+	.server_cert_path = TESTDATADIR "/cert-server.pem",
+	.server_key_path = TESTDATADIR "/cert-server-key.pem",
+	.server_ca_cert_path = TESTDATADIR "/cert-ca.pem",
+	.server_expect_identity = "Bar Example Organization",
+	.client_cert_path = TESTDATADIR "/cert-client.pem",
+	.client_key_path = TESTDATADIR "/cert-client-key.pem",
+	.client_expect_identity = NULL,
+};
+
+static const struct tls_conn_test tls_conn_test_full_auth_attempt = {
+	.server_cert_path = TESTDATADIR "/cert-server.pem",
+	.server_key_path = TESTDATADIR "/cert-server-key.pem",
+	.server_ca_cert_path = TESTDATADIR "/cert-ca.pem",
+	.server_expect_identity = NULL,
+	.client_ca_cert_path = TESTDATADIR "/cert-ca.pem",
+	.client_expect_identity = "Foo Example Organization",
+};
+
+static const struct tls_conn_test tls_conn_test_full_auth = {
+	.server_cert_path = TESTDATADIR "/cert-server.pem",
+	.server_key_path = TESTDATADIR "/cert-server-key.pem",
+	.server_ca_cert_path = TESTDATADIR "/cert-ca.pem",
+	.server_expect_identity = "Bar Example Organization",
+	.client_cert_path = TESTDATADIR "/cert-client.pem",
+	.client_key_path = TESTDATADIR "/cert-client-key.pem",
+	.client_ca_cert_path = TESTDATADIR "/cert-ca.pem",
+	.client_expect_identity = "Foo Example Organization",
+};
+
+#define identity_compare(a, b) ((!(a) && !(b)) || ((a) && (b) && !strcmp(a, b)))
+
+struct tls_test_state {
+	struct l_tls *tls;
+
+	bool ready, success;
+
+	uint8_t raw_buf[16384];
+	int raw_buf_len;
+
+	uint8_t plaintext_buf[128];
+	int plaintext_buf_len;
+
+	const char *send_data;
+	const char *expect_data;
+	const char *expect_peer;
+};
+
+static void tls_test_new_data(const uint8_t *data, size_t len, void *user_data)
+{
+	struct tls_test_state *s = user_data;
+
+	assert(s->ready);
+	assert(s->plaintext_buf_len + len <= strlen(s->expect_data));
+
+	memcpy(s->plaintext_buf + s->plaintext_buf_len, data, len);
+	s->plaintext_buf_len += len;
+
+	if (s->plaintext_buf_len == (int) strlen(s->expect_data) &&
+			!memcmp(s->plaintext_buf, s->expect_data,
+				s->plaintext_buf_len))
+		s->success = true;
+}
+
+static void tls_test_write(const uint8_t *data, size_t len, void *user_data)
+{
+	struct tls_test_state *s = user_data;
+
+	assert(s->raw_buf_len + len <= sizeof(s->raw_buf));
+
+	memcpy(s->raw_buf + s->raw_buf_len, data, len);
+	s->raw_buf_len += len;
+}
+
+static void tls_test_ready(const char *peer_identity, void *user_data)
+{
+	struct tls_test_state *s = user_data;
+
+	assert(!s->ready);
+	s->ready = true;
+
+	l_tls_write(s->tls, (const uint8_t *) s->send_data,
+			strlen(s->send_data));
+}
+
+static void tls_test_disconnected(enum l_tls_alert_desc reason, bool remote,
+					void *user_data)
+{
+	assert(false);
+}
+
+static void test_tls_test(const void *data)
+{
+	const struct tls_conn_test *test = data;
+	struct tls_test_state s[2] = {
+		{
+			.ready = false,
+			.success = false,
+			.raw_buf_len = 0,
+			.plaintext_buf_len = 0,
+			.send_data = "server to client",
+			.expect_data = "client to server",
+			.expect_peer = test->server_expect_identity,
+		},
+		{
+			.ready = false,
+			.success = false,
+			.raw_buf_len = 0,
+			.plaintext_buf_len = 0,
+			.send_data = "client to server",
+			.expect_data = "server to client",
+			.expect_peer = test->client_expect_identity,
+		},
+	};
+
+	/* Server */
+	s[0].tls = l_tls_new(true, tls_test_new_data, tls_test_write,
+				tls_test_ready, tls_test_disconnected, &s[0]);
+	/* Client */
+	s[1].tls = l_tls_new(false, tls_test_new_data, tls_test_write,
+				tls_test_ready, tls_test_disconnected, &s[1]);
+
+	assert(s[0].tls);
+	assert(s[1].tls);
+
+	l_tls_set_auth_data(s[0].tls, test->server_cert_path,
+				test->server_key_path,
+				test->server_key_passphrase);
+	l_tls_set_auth_data(s[1].tls, test->client_cert_path,
+				test->client_key_path,
+				test->client_key_passphrase);
+	l_tls_set_cacert(s[0].tls, test->server_ca_cert_path);
+	l_tls_set_cacert(s[1].tls, test->client_ca_cert_path);
+
+	while (1) {
+		if (s[0].raw_buf_len) {
+			l_tls_handle_rx(s[1].tls, s[0].raw_buf,
+					s[0].raw_buf_len);
+			s[0].raw_buf_len = 0;
+		} else if (s[1].raw_buf_len) {
+			l_tls_handle_rx(s[0].tls, s[1].raw_buf,
+					s[1].raw_buf_len);
+			s[1].raw_buf_len = 0;
+		} else
+			break;
+	}
+
+	assert(s[0].success && s[1].success);
+
+	l_tls_free(s[0].tls);
+	l_tls_free(s[1].tls);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -243,6 +432,19 @@ int main(int argc, char *argv[])
 			&tls12_prf_sha512_0);
 
 	l_test_add("Certificate chains", test_certificates, NULL);
+
+	l_test_add("TLS connection no auth", test_tls_test,
+			&tls_conn_test_no_auth);
+	l_test_add("TLS connection server auth", test_tls_test,
+			&tls_conn_test_server_auth);
+	l_test_add("TLS connection client auth attempt", test_tls_test,
+			&tls_conn_test_client_auth_attempt);
+	l_test_add("TLS connection client auth", test_tls_test,
+			&tls_conn_test_client_auth);
+	l_test_add("TLS connection full auth attempt", test_tls_test,
+			&tls_conn_test_full_auth_attempt);
+	l_test_add("TLS connection full auth", test_tls_test,
+			&tls_conn_test_full_auth);
 
 	return l_test_run();
 }
