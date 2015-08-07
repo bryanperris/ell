@@ -118,6 +118,9 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 	l_tls_set_cacert(tls, NULL);
 	l_tls_set_auth_data(tls, NULL, NULL, NULL);
 
+	if (tls->record_buf)
+		l_free(tls->record_buf);
+
 	l_free(tls);
 }
 

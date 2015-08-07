@@ -85,7 +85,8 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/base64.c \
 			ell/pem.c \
 			ell/tls-private.h \
-			ell/tls.c
+			ell/tls.c \
+			ell/tls-record.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)

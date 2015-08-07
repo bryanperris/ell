@@ -41,6 +41,12 @@ struct l_tls {
 	char *priv_key_path;
 	char *priv_key_passphrase;
 
+	/* Record layer */
+
+	uint8_t *record_buf;
+	int record_buf_len;
+	int record_buf_max_len;
+
 	bool ready;
 };
 
