@@ -141,9 +141,11 @@ struct l_tls {
 		struct tls_compression_method *compression_method;
 		uint8_t client_random[32];
 		uint8_t server_random[32];
+		uint8_t key_block[136]; /* Max key block size per 6.3 v1.1 */
 	} pending;
 
 	enum tls_cipher_type cipher_type[2];
+	struct tls_cipher_suite *cipher_suite[2];
 	struct l_cipher *cipher[2];
 	struct l_checksum *mac[2];
 	size_t mac_length[2];

@@ -103,6 +103,93 @@ static void tls_write_random(uint8_t *buf)
 	l_getrandom(buf + 4, 28);
 }
 
+static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx)
+{
+	struct tls_bulk_encryption_algorithm *enc;
+	struct tls_mac_algorithm *mac;
+	int key_offset;
+
+	if (tls->cipher[txrx]) {
+		l_cipher_free(tls->cipher[txrx]);
+		tls->cipher[txrx] = NULL;
+		tls->cipher_type[txrx] = TLS_CIPHER_STREAM;
+	}
+
+	if (tls->mac[txrx]) {
+		l_checksum_free(tls->mac[txrx]);
+		tls->mac[txrx] = NULL;
+	}
+
+	tls->mac_length[txrx] = 0;
+	tls->block_length[txrx] = 0;
+	tls->record_iv_length[txrx] = 0;
+
+	tls->seq_num[txrx] = 0;
+
+	tls->cipher_suite[txrx] = tls->pending.cipher_suite;
+	if (!tls->cipher_suite[txrx])
+		return true;
+
+	key_offset = 0;
+
+	if (tls->cipher_suite[txrx]->mac) {
+		mac = tls->cipher_suite[txrx]->mac;
+
+		/* Server write / client read is 2nd in the key block */
+		if ((tls->server && txrx) || (!tls->server && !txrx))
+			key_offset += mac->mac_length;
+
+		tls->mac[txrx] = l_checksum_new_hmac(mac->hmac_type,
+						tls->pending.key_block +
+						key_offset, mac->mac_length);
+
+		/* Wipe out the now unneeded part of the key block */
+		memset(tls->pending.key_block + key_offset, 0, mac->mac_length);
+
+		if (!tls->mac[txrx])
+			return false;
+
+		tls->mac_length[txrx] = mac->mac_length;
+
+		key_offset = 2 * mac->mac_length;
+	}
+
+	if (tls->cipher_suite[txrx]->encryption) {
+		enc = tls->cipher_suite[txrx]->encryption;
+
+		/* Server write / client read is 4th in the key block */
+		if ((tls->server && txrx) || (!tls->server && !txrx))
+			key_offset += enc->key_length;
+
+		tls->cipher[txrx] = l_cipher_new(enc->l_id,
+						tls->pending.key_block +
+						key_offset, enc->key_length);
+
+		/* Wipe out the now unneeded part of the key block */
+		memset(tls->pending.key_block + key_offset, 0, enc->key_length);
+
+		if (!tls->cipher[txrx])
+			return false;
+
+		tls->cipher_type[txrx] = enc->cipher_type;
+		if (enc->cipher_type == TLS_CIPHER_BLOCK) {
+			tls->record_iv_length[txrx] = enc->iv_length;
+			tls->block_length[txrx] = enc->block_length;
+		}
+	}
+
+	return true;
+}
+
+static void tls_reset_cipher_spec(struct l_tls *tls, bool txrx)
+{
+	/* Reset everything to the TLS_NULL_WITH_NULL_NULL state */
+
+	tls->pending.cipher_suite = NULL;
+
+	tls_change_cipher_spec(tls, txrx);
+}
+
 static struct tls_cipher_suite tls_cipher_suite_pref[] = {
 };
 
@@ -171,6 +258,9 @@ void tls_disconnect(struct l_tls *tls, enum l_tls_alert_desc desc,
 			enum l_tls_alert_desc local_desc)
 {
 	tls_send_alert(tls, true, desc);
+
+	tls_reset_cipher_spec(tls, 0);
+	tls_reset_cipher_spec(tls, 1);
 
 	tls->ready = false;
 
@@ -831,6 +921,9 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 
 	l_tls_set_cacert(tls, NULL);
 	l_tls_set_auth_data(tls, NULL, NULL, NULL);
+
+	tls_reset_cipher_spec(tls, 0);
+	tls_reset_cipher_spec(tls, 1);
 
 	if (tls->record_buf)
 		l_free(tls->record_buf);
