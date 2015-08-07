@@ -209,7 +209,106 @@ static void tls_reset_cipher_spec(struct l_tls *tls, bool txrx)
 	tls_change_cipher_spec(tls, txrx);
 }
 
+static struct tls_key_exchange_algorithm tls_rsa = {
+	.id = 1, /* RSA_sign */
+	.certificate_check = true,
+};
+
+static struct tls_bulk_encryption_algorithm tls_rc4 = {
+	.cipher_type = TLS_CIPHER_STREAM,
+	.l_id = L_CIPHER_ARC4,
+	.key_length = 16,
+}, tls_aes128 = {
+	.cipher_type = TLS_CIPHER_BLOCK,
+	.l_id = L_CIPHER_AES_CBC,
+	.key_length = 16,
+	.iv_length = 16,
+	.block_length = 16,
+}, tls_aes256 = {
+	.cipher_type = TLS_CIPHER_BLOCK,
+	.l_id = L_CIPHER_AES_CBC,
+	.key_length = 32,
+	.iv_length = 16,
+	.block_length = 16,
+}, tls_3des_ede = {
+	.cipher_type = TLS_CIPHER_BLOCK,
+	.l_id = L_CIPHER_DES3_EDE_CBC,
+	.key_length = 24,
+	.iv_length = 8,
+	.block_length = 8,
+};
+
+static struct tls_mac_algorithm tls_md5 = {
+	.id = 1,
+	.hmac_type = L_CHECKSUM_MD5,
+	.mac_length = 16,
+}, tls_sha = {
+	.id = 2,
+	.hmac_type = L_CHECKSUM_SHA1,
+	.mac_length = 20,
+}, tls_sha256 = {
+	.id = 4,
+	.hmac_type = L_CHECKSUM_SHA256,
+	.mac_length = 32,
+};
+
 static struct tls_cipher_suite tls_cipher_suite_pref[] = {
+	{
+		.id = { 0x00, 0x35 },
+		.name = "TLS_RSA_WITH_AES_256_CBC_SHA",
+		.verify_data_length = 12,
+		.encryption = &tls_aes256,
+		.mac = &tls_sha,
+		.key_xchg = &tls_rsa,
+	},
+	{
+		.id = { 0x00, 0x2f },
+		.name = "TLS_RSA_WITH_AES_128_CBC_SHA",
+		.verify_data_length = 12,
+		.encryption = &tls_aes128,
+		.mac = &tls_sha,
+		.key_xchg = &tls_rsa,
+	},
+	{
+		.id = { 0x00, 0x3d },
+		.name = "TLS_RSA_WITH_AES_256_CBC_SHA256",
+		.verify_data_length = 12,
+		.encryption = &tls_aes256,
+		.mac = &tls_sha256,
+		.key_xchg = &tls_rsa,
+	},
+	{
+		.id = { 0x00, 0x3c },
+		.name = "TLS_RSA_WITH_AES_128_CBC_SHA256",
+		.verify_data_length = 12,
+		.encryption = &tls_aes128,
+		.mac = &tls_sha256,
+		.key_xchg = &tls_rsa,
+	},
+	{
+		.id = { 0x00, 0x0a },
+		.name = "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+		.verify_data_length = 12,
+		.encryption = &tls_3des_ede,
+		.mac = &tls_sha,
+		.key_xchg = &tls_rsa,
+	},
+	{
+		.id = { 0x00, 0x05 },
+		.name = "TLS_RSA_WITH_RC4_128_SHA",
+		.verify_data_length = 12,
+		.encryption = &tls_rc4,
+		.mac = &tls_sha,
+		.key_xchg = &tls_rsa,
+	},
+	{
+		.id = { 0x00, 0x04 },
+		.name = "TLS_RSA_WITH_RC4_128_MD5",
+		.verify_data_length = 12,
+		.encryption = &tls_rc4,
+		.mac = &tls_md5,
+		.key_xchg = &tls_rsa,
+	},
 };
 
 static struct tls_cipher_suite *tls_find_cipher_suite(const uint8_t *id)
@@ -439,6 +538,7 @@ static bool tls_send_certificate(struct l_tls *tls)
 }
 
 static uint8_t tls_cert_type_pref[] = {
+	1, /* RSA_sign */
 };
 
 struct tls_signature_hash_algorithms {
@@ -447,6 +547,11 @@ struct tls_signature_hash_algorithms {
 };
 
 static struct tls_signature_hash_algorithms tls_signature_hash_pref[] = {
+	{ 6, 1 }, /* SHA512 + RSA */
+	{ 5, 1 }, /* SHA384 + RSA */
+	{ 4, 1 }, /* SHA256 + RSA */
+	{ 2, 1 }, /* SHA1 + RSA */
+	{ 1, 1 }, /* MD5 + RSA */
 };
 
 static bool tls_send_certificate_request(struct l_tls *tls)
