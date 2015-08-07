@@ -90,6 +90,19 @@ void tls12_prf(enum l_checksum_type type, size_t hash_len,
 	l_checksum_free(hmac);
 }
 
+enum tls_handshake_type {
+	TLS_HELLO_REQUEST	= 0,
+	TLS_CLIENT_HELLO	= 1,
+	TLS_SERVER_HELLO	= 2,
+	TLS_CERTIFICATE		= 11,
+	TLS_SERVER_KEY_EXCHANGE	= 12,
+	TLS_CERTIFICATE_REQUEST	= 13,
+	TLS_SERVER_HELLO_DONE	= 14,
+	TLS_CERTIFICATE_VERIFY	= 15,
+	TLS_CLIENT_KEY_EXCHANGE	= 16,
+	TLS_FINISHED		= 20,
+};
+
 static void tls_send_alert(struct l_tls *tls, bool fatal,
 				enum l_tls_alert_desc alert_desc)
 {
