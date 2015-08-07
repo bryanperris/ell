@@ -90,11 +90,14 @@ struct l_tls {
 
 	enum tls_handshake_state state;
 
+	uint16_t client_version;
 	uint16_t negotiated_version;
 
 	/* SecurityParameters current and pending */
 
 	struct {
+		struct tls_cipher_suite *cipher_suite;
+		struct tls_compression_method *compression_method;
 		uint8_t client_random[32];
 	} pending;
 

@@ -102,12 +102,36 @@ static void tls_write_random(uint8_t *buf)
 static struct tls_cipher_suite tls_cipher_suite_pref[] = {
 };
 
+static struct tls_cipher_suite *tls_find_cipher_suite(const uint8_t *id)
+{
+	int i;
+
+	for (i = 0; i < (int) L_ARRAY_SIZE(tls_cipher_suite_pref); i++)
+		if (tls_cipher_suite_pref[i].id[0] == id[0] &&
+				tls_cipher_suite_pref[i].id[1] == id[1])
+			return &tls_cipher_suite_pref[i];
+
+	return NULL;
+}
+
 static struct tls_compression_method tls_compression_pref[] = {
 	/* CompressionMethod.null */
 	{
 		0,
 	},
 };
+
+static struct tls_compression_method *tls_find_compression_method(
+							const uint8_t id)
+{
+	int i;
+
+	for (i = 0; i < (int) L_ARRAY_SIZE(tls_compression_pref); i++)
+		if (tls_compression_pref[i].id == id)
+			return &tls_compression_pref[i];
+
+	return NULL;
+}
 
 enum tls_handshake_type {
 	TLS_HELLO_REQUEST	= 0,
@@ -207,10 +231,145 @@ static void tls_send_client_hello(struct l_tls *tls)
 	tls_tx_handshake(tls, TLS_CLIENT_HELLO, buf, ptr - buf);
 }
 
+static void tls_handle_client_hello(struct l_tls *tls,
+					const uint8_t *buf, size_t len)
+{
+	uint16_t cipher_suites_size;
+	uint8_t session_id_size, compression_methods_size;
+	const uint8_t *cipher_suites;
+	const uint8_t *compression_methods;
+
+	/* Length checks */
+
+	if (len < 2 + 32 + 1)
+		goto decode_error;
+	memcpy(tls->pending.client_random, buf + 2, 32);
+	session_id_size = buf[34];
+	len -= 35;
+
+	if (len < (size_t) session_id_size + 4)
+		goto decode_error;
+	len -= session_id_size + 2;
+
+	cipher_suites_size = l_get_be16(buf + 35 + session_id_size);
+	cipher_suites = buf + 37 + session_id_size;
+	if (len < (size_t) cipher_suites_size + 2 ||
+			(cipher_suites_size & 1) || cipher_suites_size == 0)
+		goto decode_error;
+	len -= cipher_suites_size + 1;
+
+	compression_methods_size = cipher_suites[cipher_suites_size];
+	compression_methods = cipher_suites + cipher_suites_size + 1;
+	if (len < (size_t) compression_methods_size ||
+			compression_methods == 0)
+		goto decode_error;
+	len -= compression_methods_size;
+
+	if (len) {
+		uint16_t extensions_size;
+
+		if (len < 2 || len > 2 + 65535)
+			goto decode_error;
+
+		extensions_size = l_get_be16(compression_methods +
+						compression_methods_size);
+		len -= 2;
+
+		if (len != extensions_size)
+			goto decode_error;
+
+		/* TODO: validate each extension in the vector, 7.4.1.4 */
+		/* TODO: check for duplicates? */
+	}
+
+	/*
+	 * Note: if the client is supplying a SessionID we know it is false
+	 * because our server implementation never generates any SessionIDs
+	 * yet so either the client is attempting something strange or was
+	 * trying to connect somewhere else.  We might want to throw an error.
+	 */
+
+	/*
+	 * TODO: Obligatory in 1.2: check for signature_algorithms extension,
+	 * store the list of algorithms for later checking in
+	 * tls_send_certificate on both server and client sides.  If not
+	 * present assume only SHA1+RSA (7.4.1.4.1).
+	 */
+
+	/* Save client_version for Premaster Secret verification */
+	tls->client_version = l_get_be16(buf);
+
+	if (tls->client_version < TLS_MIN_VERSION) {
+		tls_disconnect(tls, TLS_ALERT_PROTOCOL_VERSION, 0);
+		return;
+	}
+	tls->negotiated_version = TLS_VERSION < tls->client_version ?
+		TLS_VERSION : tls->client_version;
+
+	/* Select a cipher suite according to client's preference list */
+
+	while (cipher_suites_size) {
+		/*
+		 * TODO: filter supported cipher suites by the certificate/key
+		 * type that was submitted by tls_set_auth_data() if any.
+		 * Perhaps just call cipher_suite->verify_cert_type() on each
+		 * cipher suite passing a pre-parsed certificate ASN.1 struct.
+		 */
+		tls->pending.cipher_suite =
+			tls_find_cipher_suite(cipher_suites);
+		if (tls->pending.cipher_suite)
+			break;
+
+		cipher_suites += 2;
+		cipher_suites_size -= 2;
+	}
+	if (!cipher_suites_size) {
+		tls_disconnect(tls, TLS_ALERT_HANDSHAKE_FAIL, 0);
+		return;
+	}
+
+	/* Select a compression method */
+
+	/* CompressionMethod.null must be present in the vector */
+	if (!memchr(compression_methods, 0, compression_methods_size))
+		goto decode_error;
+
+	while (compression_methods_size) {
+		tls->pending.compression_method =
+			tls_find_compression_method(*compression_methods);
+		if (tls->pending.compression_method)
+			break;
+
+		compression_methods++;
+		compression_methods_size--;
+	}
+
+	return;
+
+decode_error:
+	tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+}
+
 static void tls_handle_handshake(struct l_tls *tls, int type,
 					const uint8_t *buf, size_t len)
 {
 	switch (type) {
+	case TLS_CLIENT_HELLO:
+		if (!tls->server) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+			break;
+		}
+
+		if (tls->state != TLS_HANDSHAKE_WAIT_HELLO &&
+				tls->state != TLS_HANDSHAKE_DONE) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+			break;
+		}
+
+		tls_handle_client_hello(tls, buf, len);
+
+		break;
+
 	default:
 		tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
 	}
