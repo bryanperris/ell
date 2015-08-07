@@ -393,6 +393,62 @@ decode_error:
 	tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
 }
 
+static void tls_handle_server_hello(struct l_tls *tls,
+					const uint8_t *buf, size_t len)
+{
+	uint8_t session_id_size, cipher_suite_id[2], compression_method_id;
+
+	/* Length checks */
+
+	if (len < 2 + 32 + 1)
+		goto decode_error;
+	memcpy(tls->pending.server_random, buf + 2, 32);
+	session_id_size = buf[34];
+	len -= 35;
+
+	if (len < (size_t) session_id_size + 2 + 1)
+		goto decode_error;
+	cipher_suite_id[0] = buf[35 + session_id_size + 0];
+	cipher_suite_id[1] = buf[35 + session_id_size + 1];
+	compression_method_id = buf[35 + session_id_size + 2];
+	len -= session_id_size + 2 + 1;
+
+	if (len != 0) { /* We know we haven't solicited any extensions */
+		tls_disconnect(tls, TLS_ALERT_UNSUPPORTED_EXTENSION, 0);
+		return;
+	}
+
+	tls->negotiated_version = l_get_be16(buf);
+
+	if (tls->negotiated_version < TLS_MIN_VERSION ||
+			tls->negotiated_version > TLS_VERSION) {
+		tls_disconnect(tls, tls->negotiated_version < TLS_MIN_VERSION ?
+				TLS_ALERT_PROTOCOL_VERSION :
+				TLS_ALERT_ILLEGAL_PARAM, 0);
+		return;
+	}
+
+	/* Set the new cipher suite and compression method structs */
+
+	tls->pending.cipher_suite = tls_find_cipher_suite(cipher_suite_id);
+	if (!tls->pending.cipher_suite) {
+		tls_disconnect(tls, TLS_ALERT_HANDSHAKE_FAIL, 0);
+		return;
+	}
+
+	tls->pending.compression_method =
+		tls_find_compression_method(compression_method_id);
+	if (!tls->pending.compression_method) {
+		tls_disconnect(tls, TLS_ALERT_HANDSHAKE_FAIL, 0);
+		return;
+	}
+
+	return;
+
+decode_error:
+	tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+}
+
 static void tls_handle_handshake(struct l_tls *tls, int type,
 					const uint8_t *buf, size_t len)
 {
@@ -410,6 +466,21 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 		}
 
 		tls_handle_client_hello(tls, buf, len);
+
+		break;
+
+	case TLS_SERVER_HELLO:
+		if (tls->server) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+			break;
+		}
+
+		if (tls->state != TLS_HANDSHAKE_WAIT_HELLO) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+			break;
+		}
+
+		tls_handle_server_hello(tls, buf, len);
 
 		break;
 
