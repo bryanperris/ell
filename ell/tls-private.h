@@ -34,10 +34,43 @@ enum tls_cipher_type {
 	TLS_CIPHER_AEAD,
 };
 
+struct tls_bulk_encryption_algorithm {
+	enum tls_cipher_type cipher_type;
+	enum l_cipher_type l_id;
+	size_t key_length;
+	size_t iv_length;
+	size_t block_length;
+};
+
+struct tls_key_exchange_algorithm {
+	uint8_t id;
+
+	bool certificate_check;
+
+	bool (*send_client_key_exchange)(struct l_tls *tls);
+	void (*handle_client_key_exchange)(struct l_tls *tls,
+						const uint8_t *buf, size_t len);
+
+	bool (*sign)(struct l_tls *tls, uint8_t **out,
+			const uint8_t *hash);
+	bool (*verify)(struct l_tls *tls, const uint8_t *in, size_t len,
+			const uint8_t *hash);
+};
+
+struct tls_mac_algorithm {
+	uint8_t id;
+	enum l_checksum_type hmac_type;
+	size_t mac_length;
+};
+
 struct tls_cipher_suite {
 	uint8_t id[2];
 	const char *name;
 	int verify_data_length;
+
+	struct tls_bulk_encryption_algorithm *encryption;
+	struct tls_key_exchange_algorithm *key_xchg;
+	struct tls_mac_algorithm *mac;
 };
 
 struct tls_compression_method {

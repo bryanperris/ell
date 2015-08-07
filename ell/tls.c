@@ -30,6 +30,7 @@
 #include "private.h"
 #include "tls.h"
 #include "checksum.h"
+#include "cipher.h"
 #include "tls-private.h"
 
 void tls10_prf(const uint8_t *secret, size_t secret_len,
