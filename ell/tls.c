@@ -231,6 +231,30 @@ static void tls_send_client_hello(struct l_tls *tls)
 	tls_tx_handshake(tls, TLS_CLIENT_HELLO, buf, ptr - buf);
 }
 
+static void tls_send_server_hello(struct l_tls *tls)
+{
+	uint8_t buf[128];
+	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
+
+	/* Fill in the Server Hello body */
+
+	*ptr++ = tls->negotiated_version >> 8;
+	*ptr++ = tls->negotiated_version >> 0;
+
+	tls_write_random(tls->pending.server_random);
+	memcpy(ptr, tls->pending.server_random, 32);
+	ptr += 32;
+
+	*ptr++ = 0; /* Sessions are not cached */
+
+	*ptr++ = tls->pending.cipher_suite->id[0];
+	*ptr++ = tls->pending.cipher_suite->id[1];
+
+	*ptr++ = tls->pending.compression_method->id;
+
+	tls_tx_handshake(tls, TLS_SERVER_HELLO, buf, ptr - buf);
+}
+
 static void tls_handle_client_hello(struct l_tls *tls,
 					const uint8_t *buf, size_t len)
 {
@@ -360,6 +384,8 @@ static void tls_handle_client_hello(struct l_tls *tls,
 		compression_methods++;
 		compression_methods_size--;
 	}
+
+	tls_send_server_hello(tls);
 
 	return;
 

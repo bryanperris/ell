@@ -99,6 +99,7 @@ struct l_tls {
 		struct tls_cipher_suite *cipher_suite;
 		struct tls_compression_method *compression_method;
 		uint8_t client_random[32];
+		uint8_t server_random[32];
 	} pending;
 
 	enum tls_cipher_type cipher_type[2];
