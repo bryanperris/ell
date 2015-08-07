@@ -209,9 +209,15 @@ static void tls_reset_cipher_spec(struct l_tls *tls, bool txrx)
 	tls_change_cipher_spec(tls, txrx);
 }
 
+static bool tls_rsa_validate_cert_key(struct tls_cert *cert)
+{
+	return tls_cert_get_pubkey_type(cert) == TLS_CERT_KEY_RSA;
+}
+
 static struct tls_key_exchange_algorithm tls_rsa = {
 	.id = 1, /* RSA_sign */
 	.certificate_check = true,
+	.validate_cert_key_type = tls_rsa_validate_cert_key,
 };
 
 static struct tls_bulk_encryption_algorithm tls_rc4 = {
@@ -1628,6 +1634,21 @@ struct tls_cert *tls_cert_load_file(const char *filename)
 	return cert;
 }
 
+struct asn1_oid {
+	uint8_t asn1_len;
+	uint8_t asn1[10];
+};
+
+static const struct pkcs1_encryption_oid {
+	enum tls_cert_key_type key_type;
+	struct asn1_oid oid;
+} pkcs1_encryption_oids[] = {
+	{ /* rsaEncryption */
+		TLS_CERT_KEY_RSA,
+		{ 9, { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01 } },
+	},
+};
+
 void tls_cert_free_certchain(struct tls_cert *cert)
 {
 	struct tls_cert *next;
@@ -1659,4 +1680,33 @@ uint8_t *tls_cert_find_pubkey(struct tls_cert *cert, int *pubkey_len)
 
 	*pubkey_len = len;
 	return key;
+}
+
+enum tls_cert_key_type tls_cert_get_pubkey_type(struct tls_cert *cert)
+{
+	uint8_t *key_type;
+	size_t key_type_len;
+	int i;
+
+	key_type = der_find_elem_by_path(cert->asn1, cert->size, ASN1_ID_OID,
+						&key_type_len,
+						X509_CERTIFICATE_POS,
+						X509_TBSCERTIFICATE_POS,
+						X509_TBSCERT_SUBJECT_KEY_POS,
+						X509_SUBJECT_KEY_ALGORITHM_POS,
+						X509_ALGORITHM_ID_ALGORITHM_POS,
+						-1);
+	if (!key_type)
+		return TLS_CERT_KEY_UNKNOWN;
+
+	for (i = 0; i < (int) L_ARRAY_SIZE(pkcs1_encryption_oids); i++)
+		if (key_type_len == pkcs1_encryption_oids[i].oid.asn1_len &&
+				!memcmp(key_type,
+					pkcs1_encryption_oids[i].oid.asn1,
+					key_type_len))
+			break;
+	if (i == L_ARRAY_SIZE(pkcs1_encryption_oids))
+		return TLS_CERT_KEY_UNKNOWN;
+
+	return pkcs1_encryption_oids[i].key_type;
 }

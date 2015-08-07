@@ -202,8 +202,15 @@ struct tls_cert {
 	struct tls_cert *issuer;
 };
 
+enum tls_cert_key_type {
+	TLS_CERT_KEY_RSA,
+	TLS_CERT_KEY_UNKNOWN,
+};
+
 struct tls_cert *tls_cert_load_file(const char *filename);
 
 void tls_cert_free_certchain(struct tls_cert *cert);
 
 uint8_t *tls_cert_find_pubkey(struct tls_cert *cert, int *pubkey_len);
+
+enum tls_cert_key_type tls_cert_get_pubkey_type(struct tls_cert *cert);
