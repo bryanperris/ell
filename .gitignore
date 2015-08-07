@@ -47,6 +47,7 @@ unit/test-random
 unit/test-util
 unit/test-uintset
 unit/test-base64
+unit/test-tls
 unit/*.log
 unit/*.trs
 examples/dbus-service
