@@ -382,6 +382,16 @@ static bool tls_send_certificate_request(struct l_tls *tls)
 	return true;
 }
 
+static void tls_send_server_hello_done(struct l_tls *tls)
+{
+	uint8_t buf[32];
+
+	/* No body */
+
+	tls_tx_handshake(tls, TLS_SERVER_HELLO_DONE, buf,
+				TLS_HANDSHAKE_HEADER_SIZE);
+}
+
 static void tls_handle_client_hello(struct l_tls *tls,
 					const uint8_t *buf, size_t len)
 {
@@ -524,6 +534,14 @@ static void tls_handle_client_hello(struct l_tls *tls,
 			tls->ca_cert_path)
 		if (!tls_send_certificate_request(tls))
 			return;
+
+	tls_send_server_hello_done(tls);
+
+	if (tls->pending.cipher_suite->key_xchg->certificate_check &&
+			tls->ca_cert_path)
+		tls->state = TLS_HANDSHAKE_WAIT_CERTIFICATE;
+	else
+		tls->state = TLS_HANDSHAKE_WAIT_KEY_EXCHANGE;
 
 	return;
 
