@@ -137,10 +137,12 @@ struct l_tls {
 
 	enum tls_handshake_state state;
 	struct l_checksum *handshake_hash;
+	uint8_t prev_digest[HANDSHAKE_HASH_SIZE];
 
 	uint16_t client_version;
 	uint16_t negotiated_version;
 	bool cert_requested, cert_sent;
+	bool peer_authenticated;
 	struct tls_cert *peer_cert;
 	uint8_t *peer_pubkey;
 	size_t peer_pubkey_length;

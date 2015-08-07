@@ -935,6 +935,34 @@ static void tls_handle_server_hello_done(struct l_tls *tls,
 	tls->state = TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC;
 }
 
+static void tls_handle_certificate_verify(struct l_tls *tls,
+						const uint8_t *buf, size_t len)
+{
+	if (!tls->pending.cipher_suite->key_xchg->verify(tls, buf, len,
+							tls->prev_digest))
+		return;
+
+	/*
+	 * The client's certificate is now verified based on the following
+	 * logic:
+	 *   - If we received an (expected) Certificate Verify, we must have
+	 *     sent a Certificate Request.
+	 *   - If we sent a Certificate Request that's because
+	 *     tls->ca_cert_path is non-NULL.
+	 *   - If tls->ca_cert_path is non-NULL then tls_handle_certificate
+	 *     will have checked the whole certificate chain to be valid and
+	 *     additionally trusted by our CA if known.
+	 *   - Additionally cipher_suite->key_xchg->verify has just confirmed
+	 *     that the peer owns the end-entity certificate because it was
+	 *     able to sign the contents of the handshake messages and that
+	 *     signature could be verified with the public key from that
+	 *     certificate.
+	 */
+	tls->peer_authenticated = true;
+
+	tls->state = TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC;
+}
+
 static void tls_handle_handshake(struct l_tls *tls, int type,
 					const uint8_t *buf, size_t len)
 {
@@ -1004,6 +1032,16 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 		}
 
 		tls_handle_server_hello_done(tls, buf, len);
+
+		break;
+
+	case TLS_CERTIFICATE_VERIFY:
+		if (tls->state != TLS_HANDSHAKE_WAIT_CERTIFICATE_VERIFY) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+			break;
+		}
+
+		tls_handle_certificate_verify(tls, buf, len);
 
 		break;
 
@@ -1154,6 +1192,24 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 		return false;
 
 	case TLS_CT_HANDSHAKE:
+		/*
+		 * Corner case: When handling a Certificate Verify or a
+		 * Finished message we need access to the messages hash from
+		 * before this message was transmitted on the Tx side so we
+		 * can verify it matches the hash the sender included in the
+		 * message.  We save it here for that purpose.  Everywhere
+		 * else we need to update the hash before handling the new
+		 * message because 1. we may need the new hash to build our
+		 * own Certificate Verify or Finished messages, and 2. we
+		 * update the message hash with newly transmitted messages
+		 * inside tls_tx_handshake which may be called as part of
+		 * handling incoming message, and if we didn't call
+		 * l_checksum_update before, the calls would end up being
+		 * out of order.
+		 */
+		if (message[0] == TLS_CERTIFICATE_VERIFY ||
+				message[0] == TLS_FINISHED)
+			tls_get_handshake_hash(tls, tls->prev_digest);
 		l_checksum_update(tls->handshake_hash, message, len);
 
 		tls_handle_handshake(tls, message[0],
