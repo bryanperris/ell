@@ -263,6 +263,26 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 			int len, enum tls_content_type type, uint16_t version)
 {
 	switch (type) {
+	case TLS_CT_ALERT:
+		/* Verify AlertLevel */
+		if (message[0] != 0x01 && message[0] != 0x02) {
+			tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+
+			return false;
+		}
+
+		/*
+		 * On a fatal alert we are obligated to respond with a
+		 * fatal alert and disconnect but also not complain if
+		 * the connection has been torn down by the peer before
+		 * we were able to send our alert.  However on a non-fatal
+		 * alert (warning) we're also allowed to panic and send
+		 * a fatal alert, then disconnect, so we do that
+		 * regardless of the alert level.
+		 */
+		tls_disconnect(tls, TLS_ALERT_CLOSE_NOTIFY, message[1]);
+
+		return false;
 	case TLS_CT_APPLICATION_DATA:
 		if (!tls->ready) {
 			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
