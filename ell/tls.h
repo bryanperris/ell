@@ -75,6 +75,9 @@ struct l_tls *l_tls_new(bool server, l_tls_write_cb_t app_data_handler,
 
 void l_tls_free(struct l_tls *tls);
 
+/* Properly disconnect a connected session */
+void l_tls_close(struct l_tls *tls);
+
 /* Submit plaintext data to be encrypted and transmitted */
 void l_tls_write(struct l_tls *tls, const uint8_t *data, size_t len);
 

@@ -90,6 +90,17 @@ void tls12_prf(enum l_checksum_type type, size_t hash_len,
 	l_checksum_free(hmac);
 }
 
+static void tls_send_alert(struct l_tls *tls, bool fatal,
+				enum l_tls_alert_desc alert_desc)
+{
+	uint8_t buf[2];
+
+	buf[0] = fatal ? 2 : 1;
+	buf[1] = alert_desc;
+
+	tls_tx_record(tls, TLS_CT_ALERT, buf, 2);
+}
+
 /*
  * Callers make sure this is about the last function before returning
  * from the stack frames up to the exported library call so that the
@@ -99,6 +110,8 @@ void tls12_prf(enum l_checksum_type type, size_t hash_len,
 void tls_disconnect(struct l_tls *tls, enum l_tls_alert_desc desc,
 			enum l_tls_alert_desc local_desc)
 {
+	tls_send_alert(tls, true, desc);
+
 	tls->ready = false;
 
 	tls->disconnected(tls->user_data, local_desc ?: desc,
@@ -149,6 +162,11 @@ LIB_EXPORT void l_tls_write(struct l_tls *tls, const uint8_t *data, size_t len)
 	}
 
 	tls_tx_record(tls, TLS_CT_APPLICATION_DATA, data, len);
+}
+
+LIB_EXPORT void l_tls_close(struct l_tls *tls)
+{
+	tls_disconnect(tls, TLS_ALERT_CLOSE_NOTIFY, 0);
 }
 
 LIB_EXPORT void l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path)
