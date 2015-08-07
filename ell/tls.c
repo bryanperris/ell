@@ -325,6 +325,63 @@ static bool tls_send_certificate(struct l_tls *tls)
 	return true;
 }
 
+static uint8_t tls_cert_type_pref[] = {
+};
+
+struct tls_signature_hash_algorithms {
+	uint8_t hash_id;
+	uint8_t signature_id;
+};
+
+static struct tls_signature_hash_algorithms tls_signature_hash_pref[] = {
+};
+
+static bool tls_send_certificate_request(struct l_tls *tls)
+{
+	uint8_t *buf, *ptr, *dn_ptr;
+	int i;
+
+	buf = l_malloc(128 + L_ARRAY_SIZE(tls_cert_type_pref) +
+			2 * L_ARRAY_SIZE(tls_signature_hash_pref));
+	ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
+
+	/* Fill in the Certificate Request body */
+
+	*ptr++ = L_ARRAY_SIZE(tls_cert_type_pref);
+	for (i = 0; i < (int) L_ARRAY_SIZE(tls_cert_type_pref); i++)
+		*ptr++ = tls_cert_type_pref[i];
+
+	/*
+	 * This only makes sense as a variable-length field, assume there's
+	 * a typo in RFC5246 7.4.4 here.
+	 *
+	 * TODO: we support the full list of hash algorithms when used
+	 * in the client certificate chain but we can only verify the
+	 * Certificate Verify signature when the hash algorithm matches
+	 * HANDSHAKE_HASH_TYPE_TLS.  The values we include here will
+	 * affect both of these steps so revisit which set we're passing
+	 * here.
+	 *
+	 * TODO: not present in TLS 1.0
+	 */
+	l_put_be16(L_ARRAY_SIZE(tls_signature_hash_pref) * 2, ptr);
+	ptr += 2;
+	for (i = 0; i < (int) L_ARRAY_SIZE(tls_signature_hash_pref); i++) {
+		*ptr++ = tls_signature_hash_pref[i].hash_id;
+		*ptr++ = tls_signature_hash_pref[i].signature_id;
+	}
+
+	dn_ptr = ptr;
+	ptr += 2;				/* Leave space for sizes */
+	l_put_be16(0, dn_ptr);			/* DistinguishedNames size */
+
+	tls_tx_handshake(tls, TLS_CERTIFICATE_REQUEST, buf, ptr - buf);
+
+	l_free(buf);
+
+	return true;
+}
+
 static void tls_handle_client_hello(struct l_tls *tls,
 					const uint8_t *buf, size_t len)
 {
@@ -460,6 +517,12 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	if (tls->pending.cipher_suite->key_xchg->certificate_check &&
 			tls->cert_path)
 		if (!tls_send_certificate(tls))
+			return;
+
+	/* TODO: don't bother if configured to not authenticate client */
+	if (tls->pending.cipher_suite->key_xchg->certificate_check &&
+			tls->ca_cert_path)
+		if (!tls_send_certificate_request(tls))
 			return;
 
 	return;
