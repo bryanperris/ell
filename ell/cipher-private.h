@@ -35,3 +35,6 @@ uint8_t *extract_rsakey(uint8_t *pkcs1_key, size_t pkcs1_key_len,
 #define ASN1_ID_OID		ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x06)
 #define ASN1_ID_UTF8STRING	ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x0c)
 #define ASN1_ID_PRINTABLESTRING	ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x13)
+
+uint8_t *der_find_elem(uint8_t *buf, size_t len_in, int index,
+			uint8_t *tag, size_t *len_out);

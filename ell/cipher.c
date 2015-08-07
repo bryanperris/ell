@@ -300,8 +300,8 @@ static inline int parse_asn1_definite_length(const uint8_t **buf,
 }
 
 /* Return index'th element in a DER SEQUENCE */
-static uint8_t *der_find_elem(uint8_t *buf, size_t len_in, int index,
-				uint8_t *tag, size_t *len_out)
+uint8_t *der_find_elem(uint8_t *buf, size_t len_in, int index,
+			uint8_t *tag, size_t *len_out)
 {
 	int tlv_len;
 
