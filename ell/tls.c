@@ -103,6 +103,12 @@ static void tls_write_random(uint8_t *buf)
 	l_getrandom(buf + 4, 28);
 }
 
+static void tls_free_key(uint8_t *key, size_t size)
+{
+	memset(key, 0, size);
+	l_free(key);
+}
+
 static void tls_reset_handshake(struct l_tls *tls)
 {
 	memset(tls->pending.master_secret, 0, 48);
@@ -210,6 +216,8 @@ static void tls_reset_cipher_spec(struct l_tls *tls, bool txrx)
 }
 
 static bool tls_send_rsa_client_key_xchg(struct l_tls *tls);
+static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
+						const uint8_t *buf, size_t len);
 
 static bool tls_rsa_validate_cert_key(struct tls_cert *cert)
 {
@@ -221,6 +229,7 @@ static struct tls_key_exchange_algorithm tls_rsa = {
 	.certificate_check = true,
 	.validate_cert_key_type = tls_rsa_validate_cert_key,
 	.send_client_key_exchange = tls_send_rsa_client_key_xchg,
+	.handle_client_key_exchange = tls_handle_rsa_client_key_xchg,
 };
 
 static struct tls_bulk_encryption_algorithm tls_rc4 = {
@@ -1168,6 +1177,100 @@ static void tls_handle_server_hello_done(struct l_tls *tls,
 	tls_send_finished(tls);
 
 	tls->state = TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC;
+}
+
+static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
+						const uint8_t *buf, size_t len)
+{
+	uint8_t pre_master_secret[48], random_secret[46];
+	struct l_asymmetric_cipher *rsa_server_privkey;
+	uint8_t *privkey, *privkey_short;
+	size_t key_size, short_size;
+	bool result;
+
+	if (!tls->priv_key_path) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+				TLS_ALERT_BAD_CERT);
+
+		return;
+	}
+
+	privkey = l_pem_load_private_key(tls->priv_key_path,
+						tls->priv_key_passphrase,
+						&key_size);
+	if (!privkey) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+				TLS_ALERT_BAD_CERT);
+
+		return;
+	}
+
+	privkey_short = extract_rsakey(privkey, key_size, &short_size);
+	tls_free_key(privkey, key_size);
+
+	if (!privkey_short) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+				TLS_ALERT_BAD_CERT);
+
+		return;
+	}
+
+	rsa_server_privkey = l_asymmetric_cipher_new(L_CIPHER_RSA_PKCS1_V1_5,
+						privkey_short, short_size);
+	tls_free_key(privkey_short, short_size);
+
+	if (!rsa_server_privkey) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
+
+		return;
+	}
+
+	key_size = l_asymmetric_cipher_get_key_size(rsa_server_privkey);
+
+	if (len != key_size + 2) {
+		l_asymmetric_cipher_free(rsa_server_privkey);
+
+		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+
+		return;
+	}
+
+	len = l_get_be16(buf);
+
+	if (len != key_size) {
+		l_asymmetric_cipher_free(rsa_server_privkey);
+
+		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+
+		return;
+	}
+
+	result = l_asymmetric_cipher_decrypt(rsa_server_privkey, buf + 2,
+						pre_master_secret,
+						key_size, 48);
+	l_asymmetric_cipher_free(rsa_server_privkey);
+
+	/*
+	 * Assume correct premaster secret client version which according
+	 * to the TLS1.2 spec is unlikely in client implementations SSLv3
+	 * and prior.  Spec suggests either not supporting them or adding
+	 * a configurable override for <= SSLv3 clients.  For now we have
+	 * no need to support them.
+	 *
+	 * On any decode error randomise the Pre Master Secret as per the
+	 * countermeasures in 7.4.7.1 and don't generate any alerts.
+	 */
+	l_getrandom(random_secret, 46);
+
+	pre_master_secret[0] = tls->client_version >> 8;
+	pre_master_secret[1] = tls->client_version >> 0;
+
+	if (!result)
+		memcpy(pre_master_secret + 2, random_secret, 46);
+
+	tls_generate_master_secret(tls, pre_master_secret, 48);
+	memset(pre_master_secret, 0, 48);
+	memset(random_secret, 0, 46);
 }
 
 static void tls_handle_certificate_verify(struct l_tls *tls,
