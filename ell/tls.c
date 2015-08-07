@@ -923,6 +923,17 @@ struct tls_cert *tls_cert_load_file(const char *filename)
 	return cert;
 }
 
+void tls_cert_free_certchain(struct tls_cert *cert)
+{
+	struct tls_cert *next;
+
+	while (cert) {
+		next = cert->issuer;
+		l_free(cert);
+		cert = next;
+	}
+}
+
 uint8_t *tls_cert_find_pubkey(struct tls_cert *cert, int *pubkey_len)
 {
 	uint8_t *key;
