@@ -28,6 +28,12 @@
 #define TLS_VERSION	TLS_V12
 #define TLS_MIN_VERSION	TLS_V10
 
+enum tls_cipher_type {
+	TLS_CIPHER_STREAM,
+	TLS_CIPHER_BLOCK,
+	TLS_CIPHER_AEAD,
+};
+
 struct l_tls {
 	bool server;
 
@@ -46,6 +52,21 @@ struct l_tls {
 	uint8_t *record_buf;
 	int record_buf_len;
 	int record_buf_max_len;
+
+	uint16_t negotiated_version;
+
+	enum tls_cipher_type cipher_type[2];
+	struct l_cipher *cipher[2];
+	struct l_checksum *mac[2];
+	size_t mac_length[2];
+	size_t block_length[2];
+	size_t record_iv_length[2];
+	uint64_t seq_num[2];
+	/*
+	 * Some of the key and IV parts of the "current" state are kept
+	 * inside the cipher and mac states in the kernel so we don't
+	 * duplicate them here.
+	 */
 
 	bool ready;
 };
