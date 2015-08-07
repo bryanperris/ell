@@ -565,6 +565,31 @@ static void tls_send_finished(struct l_tls *tls)
 	tls_tx_handshake(tls, TLS_FINISHED, buf, ptr - buf);
 }
 
+static bool tls_verify_finished(struct l_tls *tls, const uint8_t *received,
+				size_t len)
+{
+	uint8_t expected[tls->cipher_suite[0]->verify_data_length];
+
+	if (len != (size_t) tls->cipher_suite[0]->verify_data_length) {
+		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+
+		return false;
+	}
+
+	tls12_prf(L_CHECKSUM_SHA256, 32, tls->pending.master_secret, 48,
+			tls->server ? "client finished" : "server finished",
+			tls->prev_digest, HANDSHAKE_HASH_SIZE,
+			expected, tls->cipher_suite[0]->verify_data_length);
+
+	if (memcmp(received, expected, len)) {
+		tls_disconnect(tls, TLS_ALERT_DECRYPT_ERROR, 0);
+
+		return false;
+	}
+
+	return true;
+}
+
 static void tls_handle_client_hello(struct l_tls *tls,
 					const uint8_t *buf, size_t len)
 {
@@ -963,6 +988,22 @@ static void tls_handle_certificate_verify(struct l_tls *tls,
 	tls->state = TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC;
 }
 
+static void tls_finished(struct l_tls *tls)
+{
+	char *peer_identity = NULL;
+
+	/* Free up the resources used in the handshake */
+	tls_reset_handshake(tls);
+
+	tls->state = TLS_HANDSHAKE_DONE;
+	tls->ready = true;
+
+	tls->ready_handle(tls->user_data, peer_identity);
+
+	if (peer_identity)
+		l_free(peer_identity);
+}
+
 static void tls_handle_handshake(struct l_tls *tls, int type,
 					const uint8_t *buf, size_t len)
 {
@@ -1070,6 +1111,49 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 			tls->state = TLS_HANDSHAKE_WAIT_CERTIFICATE_VERIFY;
 		else
 			tls->state = TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC;
+
+		break;
+
+	case TLS_FINISHED:
+		if (tls->state != TLS_HANDSHAKE_WAIT_FINISHED) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+			break;
+		}
+
+		if (!tls_verify_finished(tls, buf, len))
+			break;
+
+		if (tls->server) {
+			tls_send_change_cipher_spec(tls);
+			if (!tls_change_cipher_spec(tls, 1)) {
+				tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+						0);
+				break;
+			}
+			tls_send_finished(tls);
+		}
+
+		/*
+		 * On the client, the server's certificate is only now
+		 * verified, based on the following logic:
+		 *  - tls->ca_cert_path is non-NULL so tls_handle_certificate
+		 *    (always called on the client) must have veritifed the
+		 *    server's certificate chain to be valid and additionally
+		 *    trusted by our CA.
+		 *  - the correct receival of this Finished message confirms
+		 *    that the peer owns the end-entity certificate because
+		 *    it was able to decrypt the master secret which we had
+		 *    encrypted with the public key from that certificate, and
+		 *    the posession of the master secret in turn is verified
+		 *    by both the successful decryption and the MAC of this
+		 *    message (either should be enough).
+		 */
+		if (!tls->server && tls->cipher_suite[0]->key_xchg->
+				certificate_check &&
+				tls->ca_cert_path)
+			tls->peer_authenticated = true;
+
+		tls_finished(tls);
 
 		break;
 
