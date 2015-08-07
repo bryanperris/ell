@@ -30,10 +30,13 @@
 #include "checksum.h"
 #include "cipher.h"
 #include "tls-private.h"
+#include "random.h"
 
 /* Implementation-specific max Record Layer fragment size (must be < 16kB) */
 #define TX_RECORD_MAX_LEN	4096
 
+/* TLSPlaintext + TLSCompressed + TLSCiphertext headers + seq_num sizes */
+#define TX_RECORD_MAX_HEADERS	(5 + 5 + 8 + 5)
 #define TX_RECORD_MAX_MAC	64
 
 /* Head room and tail room for the buffer passed to the cipher */
@@ -62,6 +65,103 @@ static void tls_tx_record_plaintext(struct l_tls *tls,
 					uint8_t *plaintext,
 					uint16_t plaintext_len)
 {
+	uint8_t *compressed;
+	uint16_t compressed_len;
+	uint8_t *cipher_input;
+	uint16_t cipher_input_len;
+	uint8_t *ciphertext;
+	uint16_t ciphertext_len;
+	uint8_t padding_length;
+	uint8_t buf[TX_RECORD_HEADROOM + TX_RECORD_MAX_LEN +
+				TX_RECORD_TAILROOM];
+	int offset;
+
+	/*
+	 * TODO: if DEFLATE is selected in current state, use a new buffer
+	 * on stack to write a TLSCompressed structure there, otherwise use
+	 * the provided buffer.  Since only null compression is supported
+	 * today we always use the provided buffer.
+	 */
+	compressed_len = plaintext_len - 5;
+	compressed = plaintext;
+
+	/* Build a TLSCompressed struct */
+	compressed[0] = plaintext[0]; /* Copy type and version fields */
+	compressed[1] = plaintext[1];
+	compressed[2] = plaintext[2];
+	compressed[3] = compressed_len >> 8;
+	compressed[4] = compressed_len >> 0;
+
+	switch (tls->cipher_type[1]) {
+	case TLS_CIPHER_STREAM:
+		/* Append the MAC after TLSCompressed.fragment, if needed */
+		tls_write_mac(tls, compressed, compressed_len + 5,
+				compressed + compressed_len + 5, true);
+
+		cipher_input = compressed + 5;
+		cipher_input_len = compressed_len + tls->mac_length[1];
+
+		if (!tls->cipher[1]) {
+			ciphertext = cipher_input;
+			ciphertext_len = cipher_input_len;
+		} else {
+			ciphertext = buf + TX_RECORD_HEADROOM;
+			ciphertext_len = cipher_input_len;
+			l_cipher_encrypt(tls->cipher[1], cipher_input,
+						ciphertext, cipher_input_len);
+		}
+
+		break;
+
+	case TLS_CIPHER_BLOCK:
+		/* Append the MAC after TLSCompressed.fragment, if needed */
+		cipher_input = compressed + 5;
+		tls_write_mac(tls, compressed, compressed_len + 5,
+				cipher_input + compressed_len, true);
+		cipher_input_len = compressed_len + tls->mac_length[1];
+
+		/* Add minimum padding */
+		padding_length = (~cipher_input_len) &
+			(tls->block_length[1] - 1);
+		memset(cipher_input + cipher_input_len, padding_length,
+				padding_length + 1);
+		cipher_input_len += padding_length + 1;
+
+		/* Generate an IV */
+		ciphertext = buf + TX_RECORD_HEADROOM;
+
+		offset = 0;
+
+		if (tls->negotiated_version >= TLS_V12) {
+			l_getrandom(ciphertext, tls->record_iv_length[1]);
+
+			l_cipher_set_iv(tls->cipher[1], ciphertext,
+					tls->record_iv_length[1]);
+
+			offset = tls->record_iv_length[1];
+		}
+
+		l_cipher_encrypt(tls->cipher[1], cipher_input,
+					ciphertext + offset, cipher_input_len);
+		ciphertext_len = offset + cipher_input_len;
+
+		break;
+
+	case TLS_CIPHER_AEAD:
+		/* No AEAD ciphers supported today */
+	default:
+		return;
+	}
+
+	/* Build a TLSCiphertext struct */
+	ciphertext -= 5;
+	ciphertext[0] = plaintext[0]; /* Copy type and version fields */
+	ciphertext[1] = plaintext[1];
+	ciphertext[2] = plaintext[2];
+	ciphertext[3] = ciphertext_len >> 8;
+	ciphertext[4] = ciphertext_len >> 0;
+
+	tls->tx(tls->user_data, ciphertext, ciphertext_len + 5);
 }
 
 void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
