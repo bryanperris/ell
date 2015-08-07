@@ -220,6 +220,8 @@ static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
 						const uint8_t *buf, size_t len);
 
 static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out, const uint8_t *hash);
+static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
+				const uint8_t *hash);
 
 static bool tls_rsa_validate_cert_key(struct tls_cert *cert)
 {
@@ -233,6 +235,7 @@ static struct tls_key_exchange_algorithm tls_rsa = {
 	.send_client_key_exchange = tls_send_rsa_client_key_xchg,
 	.handle_client_key_exchange = tls_handle_rsa_client_key_xchg,
 	.sign = tls_rsa_sign,
+	.verify = tls_rsa_verify,
 };
 
 static struct tls_bulk_encryption_algorithm tls_rc4 = {
@@ -858,6 +861,61 @@ static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out, const uint8_t *hash)
 	l_asymmetric_cipher_free(rsa_privkey);
 
 	return result;
+}
+
+static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
+				const uint8_t *hash)
+{
+	struct l_asymmetric_cipher *rsa_client_pubkey;
+	size_t key_size;
+	bool result;
+	uint8_t expected[HANDSHAKE_HASH_SIZE + 32];
+	size_t expected_len;
+	uint8_t *digest_info;
+
+	if (len < 4 || (size_t) l_get_be16(in + 2) + 4 != len) {
+		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+
+		return false;
+	}
+
+	rsa_client_pubkey = l_asymmetric_cipher_new(L_CIPHER_RSA_PKCS1_V1_5,
+						tls->peer_pubkey,
+						tls->peer_pubkey_length);
+	if (!rsa_client_pubkey) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
+
+		return false;
+	}
+
+	key_size = l_asymmetric_cipher_get_key_size(rsa_client_pubkey);
+
+	/* Only the default hash type supported */
+	if (len != 4 + key_size ||
+			in[0] != HANDSHAKE_HASH_TYPE_TLS ||
+			in[1] != 1 /* RSA_sign */) {
+		tls_disconnect(tls, TLS_ALERT_DECRYPT_ERROR, 0);
+
+		return false;
+	}
+
+	pkcs1_write_digest_info(HANDSHAKE_HASH_TYPE, expected, &expected_len,
+				hash, HANDSHAKE_HASH_SIZE);
+	digest_info = alloca(key_size);
+
+	result = l_asymmetric_cipher_verify(rsa_client_pubkey, in + 4,
+						digest_info,
+						key_size, expected_len);
+
+	l_asymmetric_cipher_free(rsa_client_pubkey);
+
+	if (!result || memcmp(digest_info, expected, expected_len)) {
+		tls_disconnect(tls, TLS_ALERT_DECRYPT_ERROR, 0);
+
+		return false;
+	}
+
+	return true;
 }
 
 static void tls_get_handshake_hash(struct l_tls *tls, uint8_t *out)
