@@ -185,6 +185,9 @@ static bool operate_cipher(int sk, __u32 operation,
 	struct cmsghdr *c_msg;
 	struct iovec iov;
 
+	memset(&c_msg_buf, 0, sizeof(c_msg_buf));
+	memset(&msg, 0, sizeof(msg));
+
 	msg.msg_control = c_msg_buf;
 	msg.msg_controllen = sizeof(c_msg_buf);
 
@@ -244,6 +247,7 @@ LIB_EXPORT bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
 	if (unlikely(!cipher))
 		return false;
 
+	memset(&c_msg_buf, 0, sizeof(c_msg_buf));
 	memset(&msg, 0, sizeof(struct msghdr));
 
 	msg.msg_control = c_msg_buf;
@@ -425,7 +429,8 @@ uint8_t *extract_rsakey(uint8_t *pkcs1_key, size_t pkcs1_key_len,
 	*out_len = 1 + (n_len >= 0x80 ? n_len >= 0x100 ? 3 : 2 : 1) + n_len +
 		1 + (e_len >= 0x80 ? e_len >= 0x100 ? 3 : 2 : 1) + e_len +
 		1 + (d_len >= 0x80 ? d_len >= 0x100 ? 3 : 2 : 1) + d_len;
-	ptr = key = l_malloc(*out_len);
+	ptr = key = l_malloc(*out_len +
+		1 + (*out_len >= 0x80 ? *out_len >= 0x100 ? 3 : 2 : 1));
 
 	*ptr++ = ASN1_ID_SEQUENCE;
 	write_asn1_definite_length(&ptr, *out_len);
