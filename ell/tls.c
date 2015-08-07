@@ -1007,6 +1007,34 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 
 		break;
 
+	case TLS_CLIENT_KEY_EXCHANGE:
+		if (!tls->server) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+			break;
+		}
+
+		if (tls->state != TLS_HANDSHAKE_WAIT_KEY_EXCHANGE) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+			break;
+		}
+
+		tls->pending.cipher_suite->key_xchg->handle_client_key_exchange(
+								tls, buf, len);
+
+		/*
+		 * If we accepted a client Certificate message with a
+		 * certificate that has signing capability (TODO: check
+		 * usage bitmask), Certiifcate Verify is received next.  It
+		 * sounds as if this is mandatory for the client although
+		 * this isn't 100% clear.
+		 */
+		if (tls->peer_pubkey)
+			tls->state = TLS_HANDSHAKE_WAIT_CERTIFICATE_VERIFY;
+		else
+			tls->state = TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC;
+
+		break;
+
 	default:
 		tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
 	}
