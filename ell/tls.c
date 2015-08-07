@@ -219,6 +219,8 @@ static bool tls_send_rsa_client_key_xchg(struct l_tls *tls);
 static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
 						const uint8_t *buf, size_t len);
 
+static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out, const uint8_t *hash);
+
 static bool tls_rsa_validate_cert_key(struct tls_cert *cert)
 {
 	return tls_cert_get_pubkey_type(cert) == TLS_CERT_KEY_RSA;
@@ -230,6 +232,7 @@ static struct tls_key_exchange_algorithm tls_rsa = {
 	.validate_cert_key_type = tls_rsa_validate_cert_key,
 	.send_client_key_exchange = tls_send_rsa_client_key_xchg,
 	.handle_client_key_exchange = tls_handle_rsa_client_key_xchg,
+	.sign = tls_rsa_sign,
 };
 
 static struct tls_bulk_encryption_algorithm tls_rc4 = {
@@ -372,6 +375,65 @@ enum tls_handshake_type {
 	TLS_CLIENT_KEY_EXCHANGE	= 16,
 	TLS_FINISHED		= 20,
 };
+
+static const uint8_t pkcs1_digest_info_md5_start[] = {
+	0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d,
+	0x02, 0x05, 0x05, 0x00, 0x04, 0x10,
+};
+static const uint8_t pkcs1_digest_info_sha1_start[] = {
+	0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b, 0x0e, 0x03, 0x02, 0x1a, 0x05,
+	0x00, 0x04, 0x14,
+};
+static const uint8_t pkcs1_digest_info_sha256_start[] = {
+	0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03,
+	0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20,
+};
+static const uint8_t pkcs1_digest_info_sha384_start[] = {
+	0x30, 0x41, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03,
+	0x04, 0x02, 0x02, 0x05, 0x00, 0x04, 0x30,
+};
+static const uint8_t pkcs1_digest_info_sha512_start[] = {
+	0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03,
+	0x04, 0x02, 0x03, 0x05, 0x00, 0x04, 0x40,
+};
+
+static void pkcs1_write_digest_info(enum l_checksum_type type,
+					uint8_t *out, size_t *out_len,
+					const uint8_t *hash, size_t hash_len)
+{
+	switch (type) {
+	case L_CHECKSUM_MD5:
+		memcpy(out, pkcs1_digest_info_md5_start,
+				sizeof(pkcs1_digest_info_md5_start));
+		*out_len = sizeof(pkcs1_digest_info_md5_start);
+		break;
+	case L_CHECKSUM_SHA1:
+		memcpy(out, pkcs1_digest_info_sha1_start,
+				sizeof(pkcs1_digest_info_sha1_start));
+		*out_len = sizeof(pkcs1_digest_info_sha1_start);
+		break;
+	case L_CHECKSUM_SHA256:
+		memcpy(out, pkcs1_digest_info_sha256_start,
+				sizeof(pkcs1_digest_info_sha256_start));
+		*out_len = sizeof(pkcs1_digest_info_sha256_start);
+		break;
+	case L_CHECKSUM_SHA384:
+		memcpy(out, pkcs1_digest_info_sha384_start,
+				sizeof(pkcs1_digest_info_sha384_start));
+		*out_len = sizeof(pkcs1_digest_info_sha384_start);
+		break;
+	case L_CHECKSUM_SHA512:
+		memcpy(out, pkcs1_digest_info_sha512_start,
+				sizeof(pkcs1_digest_info_sha512_start));
+		*out_len = sizeof(pkcs1_digest_info_sha512_start);
+		break;
+	default:
+		abort();
+	}
+
+	memcpy(out + *out_len, hash, hash_len);
+	*out_len += hash_len;
+}
 
 static void tls_send_alert(struct l_tls *tls, bool fatal,
 				enum l_tls_alert_desc alert_desc)
@@ -722,6 +784,80 @@ static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
 	memset(pre_master_secret, 0, 48);
 
 	return true;
+}
+
+static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out, const uint8_t *hash)
+{
+	struct l_asymmetric_cipher *rsa_privkey;
+	uint8_t *privkey, *privkey_short;
+	size_t key_size, short_size;
+	bool result;
+	uint8_t digest_info[HANDSHAKE_HASH_SIZE + 32];
+	size_t digest_info_len;
+
+	if (!tls->priv_key_path) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+				TLS_ALERT_BAD_CERT);
+
+		return false;
+	}
+
+	privkey = l_pem_load_private_key(tls->priv_key_path,
+						tls->priv_key_passphrase,
+						&key_size);
+	if (!privkey) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+				TLS_ALERT_BAD_CERT);
+
+		return false;
+	}
+
+	privkey_short = extract_rsakey(privkey, key_size, &short_size);
+	tls_free_key(privkey, key_size);
+
+	if (!privkey_short) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+				TLS_ALERT_BAD_CERT);
+
+		return false;
+	}
+
+	rsa_privkey = l_asymmetric_cipher_new(L_CIPHER_RSA_PKCS1_V1_5,
+						privkey_short, short_size);
+	tls_free_key(privkey_short, short_size);
+
+	if (!rsa_privkey) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
+
+		return false;
+	}
+
+	key_size = l_asymmetric_cipher_get_key_size(rsa_privkey);
+
+	/*
+	 * TODO: According to 4.7 we need to support at least two forms
+	 * of the signed content here and at least three in the verification:
+	 *  - pre 1.2 version which didn't use the DigestInfo form at all,
+	 *  - DigestInfo with NULL AlgorithmIdentifier.parameters,
+	 *  - DigestInfo with empty AlgorithmIdentifier.parameters.
+	 *
+	 * Additionally PKCS#1 now says BER is used in place of DER for
+	 * DigestInfo encoding which adds more ambiguity in the encoding.
+	 */
+	pkcs1_write_digest_info(HANDSHAKE_HASH_TYPE,
+				digest_info, &digest_info_len,
+				hash, HANDSHAKE_HASH_SIZE);
+
+	(*out)[0] = HANDSHAKE_HASH_TYPE_TLS;
+	(*out)[1] = 1;	/* RSA_sign */
+	l_put_be16(key_size, *out + 2);
+	result = l_asymmetric_cipher_sign(rsa_privkey, digest_info, *out + 4,
+						digest_info_len, key_size);
+	*out += key_size + 4;
+
+	l_asymmetric_cipher_free(rsa_privkey);
+
+	return result;
 }
 
 static void tls_get_handshake_hash(struct l_tls *tls, uint8_t *out)
