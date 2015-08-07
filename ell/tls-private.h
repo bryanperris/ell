@@ -34,6 +34,13 @@ enum tls_cipher_type {
 	TLS_CIPHER_AEAD,
 };
 
+enum tls_content_type {
+	TLS_CT_CHANGE_CIPHER_SPEC	= 20,
+	TLS_CT_ALERT			= 21,
+	TLS_CT_HANDSHAKE		= 22,
+	TLS_CT_APPLICATION_DATA		= 23,
+};
+
 struct l_tls {
 	bool server;
 
@@ -52,6 +59,13 @@ struct l_tls {
 	uint8_t *record_buf;
 	int record_buf_len;
 	int record_buf_max_len;
+
+	uint8_t *message_buf;
+	int message_buf_len;
+	int message_buf_max_len;
+	enum tls_content_type message_content_type;
+
+	/* Handshake protocol layer */
 
 	uint16_t negotiated_version;
 

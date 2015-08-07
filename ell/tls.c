@@ -136,6 +136,9 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 	if (tls->record_buf)
 		l_free(tls->record_buf);
 
+	if (tls->message_buf)
+		l_free(tls->message_buf);
+
 	l_free(tls);
 }
 

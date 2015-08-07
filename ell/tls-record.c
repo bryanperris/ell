@@ -54,6 +54,106 @@ static void tls_write_mac(struct l_tls *tls, uint8_t *compressed,
 static bool tls_handle_plaintext(struct l_tls *tls, const uint8_t *plaintext,
 					int len, uint8_t type, uint16_t version)
 {
+	int header_len, need_len;
+	int chunk_len;
+
+	uint32_t hs_len;
+
+	if (len > (1 << 14)) {
+		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+
+		return false;
+	}
+
+	switch (type) {
+	/*
+	 * We need to perform input reassembly twice at different levels:
+	 * once to make sure we're handling complete TLSCiphertext messages,
+	 * in l_tls_handle_rx(), and again here so that the Alert and
+	 * Handshake message type handlers deal with complete messages.
+	 * This does not affect ChangeCipherSpec messages because they're
+	 * just a single byte and there are never more than one such message
+	 * in a row.  Similarly it doesn't affect application data because
+	 * the application is not guaranteed that message boundaries are
+	 * preserved in any way and we don't know its message lengths anyway.
+	 * It does affect Alert because these messages are 2 byte long and
+	 * could potentially be split over two TLSPlaintext messages but
+	 * there are never more than one Alert in a TLSPlaintext for the same
+	 * reason as with ChangeCipherSpec.  Handshake messages are the
+	 * most affected although the need to do the reassembly twice still
+	 * seems wasteful considering most of these messages are sent in
+	 * plaintext and TLSCiphertext maps to TLSPlaintext records.
+	 */
+	case TLS_CT_ALERT:
+	case TLS_CT_HANDSHAKE:
+		break;
+
+	default:
+		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+
+		return false;
+	}
+
+	if (tls->message_buf_len && type != tls->message_content_type) {
+		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+
+		return false;
+	}
+	tls->message_content_type = type;
+
+	while (1) {
+		/* Do we have a full header in tls->message_buf? */
+		header_len = (type == TLS_CT_ALERT) ? 2 : 4;
+		need_len = header_len;
+
+		if (tls->message_buf_len >= header_len) {
+			if (type == TLS_CT_HANDSHAKE) {
+				hs_len = (tls->message_buf[1] << 16) |
+					(tls->message_buf[2] << 8) |
+					(tls->message_buf[3] << 0);
+				if (hs_len > (1 << 14)) {
+					tls_disconnect(tls,
+						TLS_ALERT_DECODE_ERROR, 0);
+
+					return false;
+				}
+
+				need_len += hs_len;
+			}
+
+			/* Do we have a full structure? */
+			if (tls->message_buf_len == need_len) {
+				tls->message_buf_len = 0;
+
+				continue;
+			}
+
+			if (!len)
+				break;
+		}
+
+		/* Try to fill up tls->message_buf up to need_len */
+		if (tls->message_buf_max_len < need_len) {
+			tls->message_buf_max_len = need_len;
+			tls->message_buf =
+				l_realloc(tls->message_buf, need_len);
+		}
+
+		need_len -= tls->message_buf_len;
+		chunk_len = need_len;
+		if (len < chunk_len)
+			chunk_len = len;
+
+		memcpy(tls->message_buf + tls->message_buf_len, plaintext,
+				chunk_len);
+		tls->message_buf_len += chunk_len;
+		plaintext += chunk_len;
+		len -= chunk_len;
+
+		if (chunk_len < need_len)
+			break;
+	}
+
 	return true;
 }
 
