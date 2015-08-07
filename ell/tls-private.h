@@ -99,6 +99,16 @@ enum tls_content_type {
 	TLS_CT_APPLICATION_DATA		= 23,
 };
 
+/*
+ * Decide the hash for the Certificate Verify digital signature and the
+ * Finished PRF seed so we don't have to accumulate all of messages full
+ * contents until the Finished message.  If we're sent a hash of different
+ * type and need to verify we'll give up.
+ */
+#define HANDSHAKE_HASH_TYPE	L_CHECKSUM_SHA256
+#define HANDSHAKE_HASH_SIZE	32
+#define HANDSHAKE_HASH_TYPE_TLS	4
+
 struct l_tls {
 	bool server;
 
@@ -126,6 +136,7 @@ struct l_tls {
 	/* Handshake protocol layer */
 
 	enum tls_handshake_state state;
+	struct l_checksum *handshake_hash;
 
 	uint16_t client_version;
 	uint16_t negotiated_version;

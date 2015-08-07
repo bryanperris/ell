@@ -114,6 +114,8 @@ static void tls_reset_handshake(struct l_tls *tls)
 		tls->peer_pubkey = NULL;
 	}
 
+	l_checksum_reset(tls->handshake_hash);
+
 	tls->state = TLS_HANDSHAKE_WAIT_HELLO;
 	tls->cert_requested = 0;
 	tls->cert_sent = 0;
@@ -297,6 +299,8 @@ static void tls_tx_handshake(struct l_tls *tls, int type, uint8_t *buf,
 	buf[1] = (length - TLS_HANDSHAKE_HEADER_SIZE) >> 16;
 	buf[2] = (length - TLS_HANDSHAKE_HEADER_SIZE) >>  8;
 	buf[3] = (length - TLS_HANDSHAKE_HEADER_SIZE) >>  0;
+
+	l_checksum_update(tls->handshake_hash, buf, length);
 
 	tls_tx_record(tls, TLS_CT_HANDSHAKE, buf, length);
 }
@@ -500,8 +504,33 @@ static void tls_send_server_hello_done(struct l_tls *tls)
 				TLS_HANDSHAKE_HEADER_SIZE);
 }
 
+static void tls_get_handshake_hash(struct l_tls *tls, uint8_t *out)
+{
+	struct l_checksum *hash = l_checksum_clone(tls->handshake_hash);
+
+	if (!hash)
+		return;
+
+	l_checksum_get_digest(hash, out, HANDSHAKE_HASH_SIZE);
+
+	l_checksum_free(hash);
+}
+
 static bool tls_send_certificate_verify(struct l_tls *tls)
 {
+	uint8_t buf[2048];
+	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
+	uint8_t hash[HANDSHAKE_HASH_SIZE];
+
+	/* Fill in the Certificate Verify body */
+
+	tls_get_handshake_hash(tls, hash);
+
+	if (!tls->pending.cipher_suite->key_xchg->sign(tls, &ptr, hash))
+		return false;
+
+	tls_tx_handshake(tls, TLS_CERTIFICATE_VERIFY, buf, ptr - buf);
+
 	return true;
 }
 
@@ -980,6 +1009,12 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 	tls->disconnected = disconnect_handler;
 	tls->user_data = user_data;
 
+	tls->handshake_hash = l_checksum_new(HANDSHAKE_HASH_TYPE);
+	if (!tls->handshake_hash) {
+		l_free(tls);
+		return NULL;
+	}
+
 	/* If we're the client, start the handshake right away */
 	if (!tls->server)
 		tls_send_client_hello(tls);
@@ -1007,6 +1042,8 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 
 	if (tls->message_buf)
 		l_free(tls->message_buf);
+
+	l_checksum_free(tls->handshake_hash);
 
 	l_free(tls);
 }
@@ -1069,6 +1106,8 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 		return false;
 
 	case TLS_CT_HANDSHAKE:
+		l_checksum_update(tls->handshake_hash, message, len);
+
 		tls_handle_handshake(tls, message[0],
 					message + TLS_HANDSHAKE_HEADER_SIZE,
 					len - TLS_HANDSHAKE_HEADER_SIZE);
