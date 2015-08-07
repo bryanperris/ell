@@ -210,6 +210,23 @@ static void test_tls12_prf(const void *data)
 	assert(!memcmp(out_buf, test->expected, test->out_len));
 }
 
+static void test_certificates(const void *data)
+{
+	struct tls_cert *cert;
+	struct tls_cert *cacert;
+
+	cert = tls_cert_load_file(TESTDATADIR "/cert-server.pem");
+	assert(cert);
+
+	cacert = tls_cert_load_file(TESTDATADIR "/cert-ca.pem");
+	assert(cacert);
+
+	assert(tls_cert_verify_certchain(cert, cacert));
+
+	l_free(cert);
+	l_free(cacert);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -224,6 +241,8 @@ int main(int argc, char *argv[])
 
 	l_test_add("TLS 1.2 PRF with SHA512", test_tls12_prf,
 			&tls12_prf_sha512_0);
+
+	l_test_add("Certificate chains", test_certificates, NULL);
 
 	return l_test_run();
 }
