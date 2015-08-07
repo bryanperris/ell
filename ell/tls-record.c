@@ -265,6 +265,11 @@ static bool tls_handle_plaintext(struct l_tls *tls, const uint8_t *plaintext,
 
 			/* Do we have a full structure? */
 			if (tls->message_buf_len == need_len) {
+				if (!tls_handle_message(tls, tls->message_buf,
+							need_len, type,
+							version))
+					return false;
+
 				tls->message_buf_len = 0;
 
 				continue;
