@@ -103,6 +103,22 @@ static void tls_write_random(uint8_t *buf)
 	l_getrandom(buf + 4, 28);
 }
 
+static void tls_reset_handshake(struct l_tls *tls)
+{
+	memset(tls->pending.key_block, 0, sizeof(tls->pending.key_block));
+
+	if (tls->peer_cert) {
+		l_free(tls->peer_cert);
+
+		tls->peer_cert = NULL;
+		tls->peer_pubkey = NULL;
+	}
+
+	tls->state = TLS_HANDSHAKE_WAIT_HELLO;
+	tls->cert_requested = 0;
+	tls->cert_sent = 0;
+}
+
 static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx)
 {
 	struct tls_bulk_encryption_algorithm *enc;
@@ -258,6 +274,8 @@ void tls_disconnect(struct l_tls *tls, enum l_tls_alert_desc desc,
 			enum l_tls_alert_desc local_desc)
 {
 	tls_send_alert(tls, true, desc);
+
+	tls_reset_handshake(tls);
 
 	tls_reset_cipher_spec(tls, 0);
 	tls_reset_cipher_spec(tls, 1);
@@ -921,6 +939,8 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 
 	l_tls_set_cacert(tls, NULL);
 	l_tls_set_auth_data(tls, NULL, NULL, NULL);
+
+	tls_reset_handshake(tls);
 
 	tls_reset_cipher_spec(tls, 0);
 	tls_reset_cipher_spec(tls, 1);
