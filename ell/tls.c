@@ -720,6 +720,17 @@ done:
 	tls_cert_free_certchain(certchain);
 }
 
+static void tls_handle_certificate_request(struct l_tls *tls,
+						const uint8_t *buf, size_t len)
+{
+	tls->cert_requested = 1;
+
+	/*
+	 * TODO: parse and save key type, signature algorithms and DNs list
+	 * for use in tls_send_certificate.
+	 */
+}
+
 static void tls_handle_handshake(struct l_tls *tls, int type,
 					const uint8_t *buf, size_t len)
 {
@@ -762,6 +773,23 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 		}
 
 		tls_handle_certificate(tls, buf, len);
+
+		break;
+
+	case TLS_CERTIFICATE_REQUEST:
+		/*
+		 * Server sends this optionally so in the WAIT_HELLO_DONE
+		 * state we accept either this or a Server Hello Done (below).
+		 */
+		if (tls->state != TLS_HANDSHAKE_WAIT_HELLO_DONE ||
+				tls->cert_requested ||
+				!tls->pending.cipher_suite->key_xchg->
+				certificate_check) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+			break;
+		}
+
+		tls_handle_certificate_request(tls, buf, len);
 
 		break;
 
