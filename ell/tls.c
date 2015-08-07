@@ -600,10 +600,124 @@ static void tls_handle_server_hello(struct l_tls *tls,
 		return;
 	}
 
+	if (tls->pending.cipher_suite->key_xchg->certificate_check)
+		tls->state = TLS_HANDSHAKE_WAIT_CERTIFICATE;
+	else
+		tls->state = TLS_HANDSHAKE_WAIT_KEY_EXCHANGE;
+
 	return;
 
 decode_error:
 	tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+}
+
+static void tls_handle_certificate(struct l_tls *tls,
+					const uint8_t *buf, size_t len)
+{
+	int total, cert_len, pubkey_len;
+	struct tls_cert *certchain = NULL, **tail = &certchain;
+	struct tls_cert *ca_cert = NULL;
+	uint8_t *pubkey;
+
+	/* Length checks */
+
+	total = *buf++ << 16;
+	total |= *buf++ << 8;
+	total |= *buf++ << 0;
+	if ((size_t) total + 3 != len)
+		goto decode_error;
+
+	while (total) {
+		cert_len = *buf++ << 16;
+		cert_len |= *buf++ << 8;
+		cert_len |= *buf++ << 0;
+
+		if (cert_len + 3 > total)
+			goto decode_error;
+
+		*tail = l_malloc(sizeof(struct tls_cert) + cert_len);
+		(*tail)->size = cert_len;
+		(*tail)->asn1 = (void *) (*tail + 1);
+		(*tail)->issuer = NULL;
+
+		memcpy(*tail + 1, buf, cert_len);
+
+		tail = &(*tail)->issuer;
+
+		buf += cert_len;
+		total -= cert_len + 3;
+	}
+
+	/*
+	 * "Note that a client MAY send no certificates if it does not have any
+	 * appropriate certificate to send in response to the server's
+	 * authentication request." -- for now we unconditionally accept
+	 * an empty certificate chain from the client.  Later on we need to
+	 * make this configurable, if we don't want to authenticate the
+	 * client then also don't bother sending a Certificate Request.
+	 */
+	if (!certchain) {
+		if (!tls->server) {
+			tls_disconnect(tls, TLS_ALERT_HANDSHAKE_FAIL, 0);
+
+			goto done;
+		}
+
+		tls->state = TLS_HANDSHAKE_WAIT_KEY_EXCHANGE;
+
+		goto done;
+	}
+
+	/*
+	 * RFC5246 7.4.2:
+	 * "The end entity certificate's public key (and associated
+	 * restrictions) MUST be compatible with the selected key exchange
+	 * algorithm."
+	 */
+	if (!tls->pending.cipher_suite->key_xchg->
+			validate_cert_key_type(certchain)) {
+		tls_disconnect(tls, TLS_ALERT_UNSUPPORTED_CERT, 0);
+
+		goto done;
+	}
+
+	/*
+	 * Save the public key from the certificate for use in premaster
+	 * secret encryption.
+	 */
+	pubkey = tls_cert_find_pubkey(certchain, &pubkey_len);
+	if (!pubkey) {
+		tls_disconnect(tls, TLS_ALERT_UNSUPPORTED_CERT, 0);
+
+		goto done;
+	}
+
+	if (pubkey) {
+		/* Save the end-entity cert and free the rest of the chain */
+		tls->peer_cert = certchain;
+		tls_cert_free_certchain(certchain->issuer);
+		certchain->issuer = NULL;
+		certchain = NULL;
+
+		tls->peer_pubkey = pubkey;
+		tls->peer_pubkey_length = pubkey_len;
+	}
+
+	if (tls->server)
+		tls->state = TLS_HANDSHAKE_WAIT_KEY_EXCHANGE;
+	else
+		tls->state = TLS_HANDSHAKE_WAIT_HELLO_DONE;
+
+	goto done;
+
+decode_error:
+	tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+
+done:
+	if (ca_cert)
+		l_free(ca_cert);
+
+	tls_cert_free_certchain(certchain);
 }
 
 static void tls_handle_handshake(struct l_tls *tls, int type,
@@ -638,6 +752,16 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 		}
 
 		tls_handle_server_hello(tls, buf, len);
+
+		break;
+
+	case TLS_CERTIFICATE:
+		if (tls->state != TLS_HANDSHAKE_WAIT_CERTIFICATE) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+			break;
+		}
+
+		tls_handle_certificate(tls, buf, len);
 
 		break;
 

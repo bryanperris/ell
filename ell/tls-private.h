@@ -28,6 +28,8 @@
 #define TLS_VERSION	TLS_V12
 #define TLS_MIN_VERSION	TLS_V10
 
+struct tls_cert;
+
 enum tls_cipher_type {
 	TLS_CIPHER_STREAM,
 	TLS_CIPHER_BLOCK,
@@ -46,6 +48,8 @@ struct tls_key_exchange_algorithm {
 	uint8_t id;
 
 	bool certificate_check;
+
+	bool (*validate_cert_key_type)(struct tls_cert *cert);
 
 	bool (*send_client_key_exchange)(struct l_tls *tls);
 	void (*handle_client_key_exchange)(struct l_tls *tls,
@@ -126,6 +130,9 @@ struct l_tls {
 	uint16_t client_version;
 	uint16_t negotiated_version;
 	bool cert_requested, cert_sent;
+	struct tls_cert *peer_cert;
+	uint8_t *peer_pubkey;
+	size_t peer_pubkey_length;
 
 	/* SecurityParameters current and pending */
 
