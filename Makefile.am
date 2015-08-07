@@ -37,7 +37,8 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/cipher.h \
 			ell/random.h \
 			ell/uintset.h \
-			ell/base64.h
+			ell/base64.h \
+			ell/pem.h
 
 lib_LTLIBRARIES = ell/libell.la
 
@@ -78,7 +79,8 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/cipher-private.h \
 			ell/random.c \
 			ell/uintset.c \
-			ell/base64.c
+			ell/base64.c \
+			ell/pem.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)
