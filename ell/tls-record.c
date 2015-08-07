@@ -31,7 +31,14 @@
 #include "cipher.h"
 #include "tls-private.h"
 
+/* Implementation-specific max Record Layer fragment size (must be < 16kB) */
+#define TX_RECORD_MAX_LEN	4096
+
 #define TX_RECORD_MAX_MAC	64
+
+/* Head room and tail room for the buffer passed to the cipher */
+#define TX_RECORD_HEADROOM	TX_RECORD_MAX_HEADERS
+#define TX_RECORD_TAILROOM	TX_RECORD_MAX_MAC
 
 static void tls_write_mac(struct l_tls *tls, uint8_t *compressed,
 				uint16_t compressed_len, uint8_t *out_buf,
@@ -48,6 +55,41 @@ static void tls_write_mac(struct l_tls *tls, uint8_t *compressed,
 		l_checksum_update(tls->mac[txrx], in_buf, compressed_len + 8);
 		l_checksum_get_digest(tls->mac[txrx], out_buf,
 					tls->mac_length[txrx]);
+	}
+}
+
+static void tls_tx_record_plaintext(struct l_tls *tls,
+					uint8_t *plaintext,
+					uint16_t plaintext_len)
+{
+}
+
+void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
+			const uint8_t *data, size_t len)
+{
+	uint8_t buf[TX_RECORD_HEADROOM + TX_RECORD_MAX_LEN +
+				TX_RECORD_TAILROOM];
+	uint8_t *fragment, *plaintext;
+	uint16_t fragment_len;
+
+	while (len) {
+		fragment = buf + TX_RECORD_HEADROOM;
+		fragment_len = len < TX_RECORD_MAX_LEN ?
+			len : TX_RECORD_MAX_LEN;
+
+		/* Build a TLSPlaintext struct */
+		plaintext = fragment - 5;
+		plaintext[0] = type;
+		plaintext[1] = (uint8_t) (TLS_VERSION >> 8);
+		plaintext[2] = (uint8_t) (TLS_VERSION >> 0);
+		plaintext[3] = fragment_len >> 8;
+		plaintext[4] = fragment_len >> 0;
+		memcpy(plaintext + 5, data, fragment_len);
+
+		tls_tx_record_plaintext(tls, plaintext, fragment_len + 5);
+
+		data += fragment_len;
+		len -= fragment_len;
 	}
 }
 
