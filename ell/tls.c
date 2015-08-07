@@ -500,6 +500,22 @@ static void tls_send_server_hello_done(struct l_tls *tls)
 				TLS_HANDSHAKE_HEADER_SIZE);
 }
 
+static bool tls_send_certificate_verify(struct l_tls *tls)
+{
+	return true;
+}
+
+static void tls_send_change_cipher_spec(struct l_tls *tls)
+{
+	uint8_t buf = 1;
+
+	tls_tx_record(tls, TLS_CT_CHANGE_CIPHER_SPEC, &buf, 1);
+}
+
+static void tls_send_finished(struct l_tls *tls)
+{
+}
+
 static void tls_handle_client_hello(struct l_tls *tls,
 					const uint8_t *buf, size_t len)
 {
@@ -839,6 +855,33 @@ static void tls_handle_certificate_request(struct l_tls *tls,
 	 */
 }
 
+static void tls_handle_server_hello_done(struct l_tls *tls,
+						const uint8_t *buf, size_t len)
+{
+	if (len) {
+		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+
+		return;
+	}
+
+	if (tls->cert_requested)
+		if (!tls_send_certificate(tls))
+			return;
+	if (!tls->pending.cipher_suite->key_xchg->send_client_key_exchange(tls))
+		return;
+	if (tls->cert_sent)
+		if (!tls_send_certificate_verify(tls))
+			return;
+	tls_send_change_cipher_spec(tls);
+	if (!tls_change_cipher_spec(tls, 1)) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
+		return;
+	}
+	tls_send_finished(tls);
+
+	tls->state = TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC;
+}
+
 static void tls_handle_handshake(struct l_tls *tls, int type,
 					const uint8_t *buf, size_t len)
 {
@@ -898,6 +941,16 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 		}
 
 		tls_handle_certificate_request(tls, buf, len);
+
+		break;
+
+	case TLS_SERVER_HELLO_DONE:
+		if (tls->state != TLS_HANDSHAKE_WAIT_HELLO_DONE) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+			break;
+		}
+
+		tls_handle_server_hello_done(tls, buf, len);
 
 		break;
 
