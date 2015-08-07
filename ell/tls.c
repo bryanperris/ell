@@ -947,6 +947,29 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 			int len, enum tls_content_type type, uint16_t version)
 {
 	switch (type) {
+	case TLS_CT_CHANGE_CIPHER_SPEC:
+		if (len != 1 || message[0] != 0x01) {
+			tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+
+			return false;
+		}
+
+		if (tls->state != TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC) {
+			tls_disconnect(tls, TLS_ALERT_UNEXPECTED_MESSAGE, 0);
+
+			return false;
+		}
+
+		if (!tls_change_cipher_spec(tls, 0)) {
+			tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
+
+			return false;
+		}
+
+		tls->state = TLS_HANDSHAKE_WAIT_FINISHED;
+
+		break;
+
 	case TLS_CT_ALERT:
 		/* Verify AlertLevel */
 		if (message[0] != 0x01 && message[0] != 0x02) {

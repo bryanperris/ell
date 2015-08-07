@@ -207,6 +207,7 @@ static bool tls_handle_plaintext(struct l_tls *tls, const uint8_t *plaintext,
 	}
 
 	switch (type) {
+	case TLS_CT_CHANGE_CIPHER_SPEC:
 	case TLS_CT_APPLICATION_DATA:
 		return tls_handle_message(tls, plaintext, len, type, version);
 
