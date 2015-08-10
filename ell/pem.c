@@ -169,6 +169,13 @@ static uint8_t *pem_load_buffer(const uint8_t *buf, size_t buf_len, int index,
 	return NULL;
 }
 
+LIB_EXPORT uint8_t *l_pem_load_buffer(const uint8_t *buf, size_t buf_len,
+					int index, char **type_label,
+					size_t *out_len)
+{
+	return pem_load_buffer(buf, buf_len, index, type_label, out_len);
+}
+
 LIB_EXPORT uint8_t *l_pem_load_file(const char *filename, int index,
 					char **type_label, size_t *len)
 {
