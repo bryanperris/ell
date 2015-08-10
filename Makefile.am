@@ -128,6 +128,7 @@ unit_tests = unit/test-unit \
 			unit/test-util \
 			unit/test-uintset \
 			unit/test-base64 \
+			unit/test-pem \
 			unit/test-tls
 
 if MAINTAINER_MODE
@@ -189,6 +190,8 @@ unit_test_random_LDADD = ell/libell-private.la
 unit_test_util_LDADD = ell/libell-private.la
 
 unit_test_uintset_LDADD = ell/libell-private.la
+
+unit_test_pem_LDADD = ell/libell-private.la
 
 unit_test_base64_LDADD = ell/libell-private.la
 
