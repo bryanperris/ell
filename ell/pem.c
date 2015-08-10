@@ -74,8 +74,10 @@ static const uint8_t *is_start_boundary(const uint8_t *buf, size_t buf_len,
 		end++;
 		prev_special = special;
 	}
-	/* Rewind to the first '-' */
-	end--;
+
+	/* Rewind to the first '-', but handle empty labels */
+	if (end != start)
+		end--;
 
 	/* Check we have a "-----" (RFC7468 section 2) */
 	if (end + 5 > buf + buf_len || memcmp(end, "-----", 5))
