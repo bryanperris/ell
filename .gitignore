@@ -26,6 +26,7 @@ unit/test-string
 unit/test-utf8
 unit/test-main
 unit/test-io
+unit/test-ringbuf
 unit/test-plugin
 unit/test-checksum
 unit/test-settings
