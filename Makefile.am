@@ -26,6 +26,7 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/signal.h \
 			ell/timeout.h \
 			ell/io.h \
+			ell/ringbuf.h \
 			ell/log.h \
 			ell/plugin.h \
 			ell/checksum.h \
@@ -57,6 +58,7 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/signal.c \
 			ell/timeout.c \
 			ell/io.c \
+			ell/ringbuf.c \
 			ell/log.c \
 			ell/plugin.c \
 			ell/checksum.c \
