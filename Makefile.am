@@ -109,6 +109,7 @@ unit_tests = unit/test-unit \
 			unit/test-utf8 \
 			unit/test-main \
 			unit/test-io \
+			unit/test-ringbuf \
 			unit/test-plugin \
 			unit/test-checksum \
 			unit/test-settings \
@@ -152,6 +153,8 @@ unit_test_utf8_LDADD = ell/libell-private.la
 unit_test_main_LDADD = ell/libell-private.la
 
 unit_test_io_LDADD = ell/libell-private.la
+
+unit_test_ringbuf_LDADD = ell/libell-private.la
 
 unit_test_plugin_LDADD = ell/libell-private.la -ldl
 
