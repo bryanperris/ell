@@ -162,6 +162,17 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 			return false;
 		}
 
+		/*
+		 * RFC 5246, page 24:
+		 * In order to defend against this attack, implementations
+		 * MUST ensure that record processing time is essentially the
+		 * same whether or not the padding is correct.  In general,
+		 * the best way to do this is to compute the MAC even if the
+		 * padding is incorrect, and only then reject the packet.  For
+		 * instance, if the pad appears to be incorrect, the
+		 * implementation might assume a zero-length pad and then
+		 * compute the MAC.
+		 */
 		padding_len = compressed[13 + cipher_output_len - 1];
 		error = 0;
 		if (padding_len + tls->mac_length[0] + 1 >=
