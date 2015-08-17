@@ -102,4 +102,4 @@ void tls_disconnect(struct l_tls *tls, enum l_tls_alert_desc desc,
 void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
 			const uint8_t *data, size_t len);
 bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
-			int len, uint8_t type, uint16_t version);
+			int len, enum tls_content_type type, uint16_t version);
