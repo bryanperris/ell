@@ -203,7 +203,6 @@ static bool tls_handle_plaintext(struct l_tls *tls, const uint8_t *plaintext,
 
 	if (len > (1 << 14)) {
 		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
-
 		return false;
 	}
 
@@ -232,15 +231,14 @@ static bool tls_handle_plaintext(struct l_tls *tls, const uint8_t *plaintext,
 
 	default:
 		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
-
 		return false;
 	}
 
 	if (tls->message_buf_len && type != tls->message_content_type) {
 		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
-
 		return false;
 	}
+
 	tls->message_content_type = type;
 
 	while (1) {
@@ -256,7 +254,6 @@ static bool tls_handle_plaintext(struct l_tls *tls, const uint8_t *plaintext,
 				if (hs_len > (1 << 14)) {
 					tls_disconnect(tls,
 						TLS_ALERT_DECODE_ERROR, 0);
-
 					return false;
 				}
 
@@ -315,19 +312,16 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 
 	if (fragment_len > (1 << 14) + 2048) {
 		tls_disconnect(tls, TLS_ALERT_RECORD_OVERFLOW, 0);
-
 		return false;
 	}
 
 	if (version < TLS_MIN_VERSION || version > TLS_VERSION) {
 		tls_disconnect(tls, TLS_ALERT_PROTOCOL_VERSION, 0);
-
 		return false;
 	}
 
 	if (fragment_len < tls->mac_length[0]) {
 		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
-
 		return false;
 	}
 
@@ -349,7 +343,6 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 						compressed + 13,
 						cipher_output_len)) {
 			tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
-
 			return false;
 		}
 
@@ -360,7 +353,6 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 		if (tls->mac_length && memcmp(mac_buf, compressed + 13 +
 					compressed_len, tls->mac_length[0])) {
 			tls_disconnect(tls, TLS_ALERT_BAD_RECORD_MAC, 0);
-
 			return false;
 		}
 
@@ -375,7 +367,6 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 
 		if (fragment_len <= tls->mac_length[0] + i) {
 			tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
-
 			return false;
 		}
 
@@ -383,7 +374,6 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 
 		if (cipher_output_len % tls->block_length[0] != 0) {
 			tls_disconnect(tls, TLS_ALERT_BAD_RECORD_MAC, 0);
-
 			return false;
 		}
 
@@ -393,14 +383,12 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 						tls->record_iv_length[0])) {
 				tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
 						0);
-
 				return false;
 			}
 
 		if (!l_cipher_decrypt(tls->cipher[0], tls->record_buf + 5 + i,
 					compressed + 13, cipher_output_len)) {
 			tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
-
 			return false;
 		}
 
@@ -440,7 +428,6 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 					compressed_len, tls->mac_length[0])) ||
 				error) {
 			tls_disconnect(tls, TLS_ALERT_BAD_RECORD_MAC, 0);
-
 			return false;
 		}
 
