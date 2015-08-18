@@ -239,7 +239,7 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	const uint8_t *cipher_suites;
 	const uint8_t *compression_methods;
 
-	/* Length checks */
+	/* Do we have enough for ProtocolVersion + Random + SessionID size? */
 	if (len < 2 + 32 + 1)
 		goto decode_error;
 
@@ -247,6 +247,10 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	session_id_size = buf[34];
 	len -= 35;
 
+	/*
+	 * Do we have enough to hold the actual session ID + 2 byte field for
+	 * cipher_suite len + minimum of a single cipher suite identifier
+	 */
 	if (len < (size_t) session_id_size + 4)
 		goto decode_error;
 
@@ -255,6 +259,11 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	cipher_suites_size = l_get_be16(buf + 35 + session_id_size);
 	cipher_suites = buf + 37 + session_id_size;
 
+	/*
+	 * Check that size is not odd, more than 0 and we have enough
+	 * data in the packet for cipher_suites_size + 2 bytes for
+	 * compression_methods_size + a single compression method
+	 */
 	if (len < (size_t) cipher_suites_size + 2 ||
 			(cipher_suites_size & 1) || cipher_suites_size == 0)
 		goto decode_error;
