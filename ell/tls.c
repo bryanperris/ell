@@ -398,7 +398,7 @@ static void tls_handle_server_hello(struct l_tls *tls,
 {
 	uint8_t session_id_size, cipher_suite_id[2], compression_method_id;
 
-	/* Length checks */
+	/* Do we have enough for ProtocolVersion + Random + SessionID len ? */
 	if (len < 2 + 32 + 1)
 		goto decode_error;
 
@@ -406,6 +406,7 @@ static void tls_handle_server_hello(struct l_tls *tls,
 	session_id_size = buf[34];
 	len -= 35;
 
+	/* Do we have enough for SessionID + CipherSuite ID + Compression ID */
 	if (len < (size_t) session_id_size + 2 + 1)
 		goto decode_error;
 
