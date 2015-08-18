@@ -265,17 +265,16 @@ static bool tls_send_certificate(struct l_tls *tls)
 	struct tls_cert *cert, *i;
 	size_t total;
 
-	if (tls->cert_path) {
+	if (tls->cert_path)
 		cert = tls_cert_load_file(tls->cert_path);
-
-		if (tls->server && !cert) {
-			tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
-					TLS_ALERT_BAD_CERT);
-
-			return false;
-		}
-	} else
+	else
 		cert = NULL;
+
+	if (tls->server && !cert) {
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+						TLS_ALERT_BAD_CERT);
+		return false;
+	}
 
 	/*
 	 * TODO: check that the certificate is compatible with hash and
