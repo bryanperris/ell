@@ -274,7 +274,7 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	compression_methods = cipher_suites + cipher_suites_size + 1;
 
 	if (len < (size_t) compression_methods_size ||
-			compression_methods == 0)
+			compression_methods_size == 0)
 		goto decode_error;
 
 	len -= compression_methods_size;
