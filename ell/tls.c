@@ -240,29 +240,34 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	const uint8_t *compression_methods;
 
 	/* Length checks */
-
 	if (len < 2 + 32 + 1)
 		goto decode_error;
+
 	memcpy(tls->pending.client_random, buf + 2, 32);
 	session_id_size = buf[34];
 	len -= 35;
 
 	if (len < (size_t) session_id_size + 4)
 		goto decode_error;
+
 	len -= session_id_size + 2;
 
 	cipher_suites_size = l_get_be16(buf + 35 + session_id_size);
 	cipher_suites = buf + 37 + session_id_size;
+
 	if (len < (size_t) cipher_suites_size + 2 ||
 			(cipher_suites_size & 1) || cipher_suites_size == 0)
 		goto decode_error;
+
 	len -= cipher_suites_size + 1;
 
 	compression_methods_size = cipher_suites[cipher_suites_size];
 	compression_methods = cipher_suites + cipher_suites_size + 1;
+
 	if (len < (size_t) compression_methods_size ||
 			compression_methods == 0)
 		goto decode_error;
+
 	len -= compression_methods_size;
 
 	if (len) {
@@ -303,11 +308,11 @@ static void tls_handle_client_hello(struct l_tls *tls,
 		tls_disconnect(tls, TLS_ALERT_PROTOCOL_VERSION, 0);
 		return;
 	}
+
 	tls->negotiated_version = TLS_VERSION < tls->client_version ?
 		TLS_VERSION : tls->client_version;
 
 	/* Select a cipher suite according to client's preference list */
-
 	while (cipher_suites_size) {
 		/*
 		 * TODO: filter supported cipher suites by the certificate/key
@@ -316,13 +321,15 @@ static void tls_handle_client_hello(struct l_tls *tls,
 		 * cipher suite passing a pre-parsed certificate ASN.1 struct.
 		 */
 		tls->pending.cipher_suite =
-			tls_find_cipher_suite(cipher_suites);
+					tls_find_cipher_suite(cipher_suites);
+
 		if (tls->pending.cipher_suite)
 			break;
 
 		cipher_suites += 2;
 		cipher_suites_size -= 2;
 	}
+
 	if (!cipher_suites_size) {
 		tls_disconnect(tls, TLS_ALERT_HANDSHAKE_FAIL, 0);
 		return;
@@ -337,6 +344,7 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	while (compression_methods_size) {
 		tls->pending.compression_method =
 			tls_find_compression_method(*compression_methods);
+
 		if (tls->pending.compression_method)
 			break;
 
