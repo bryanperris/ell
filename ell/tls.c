@@ -399,15 +399,16 @@ static void tls_handle_server_hello(struct l_tls *tls,
 	uint8_t session_id_size, cipher_suite_id[2], compression_method_id;
 
 	/* Length checks */
-
 	if (len < 2 + 32 + 1)
 		goto decode_error;
+
 	memcpy(tls->pending.server_random, buf + 2, 32);
 	session_id_size = buf[34];
 	len -= 35;
 
 	if (len < (size_t) session_id_size + 2 + 1)
 		goto decode_error;
+
 	cipher_suite_id[0] = buf[35 + session_id_size + 0];
 	cipher_suite_id[1] = buf[35 + session_id_size + 1];
 	compression_method_id = buf[35 + session_id_size + 2];
@@ -429,7 +430,6 @@ static void tls_handle_server_hello(struct l_tls *tls,
 	}
 
 	/* Set the new cipher suite and compression method structs */
-
 	tls->pending.cipher_suite = tls_find_cipher_suite(cipher_suite_id);
 	if (!tls->pending.cipher_suite) {
 		tls_disconnect(tls, TLS_ALERT_HANDSHAKE_FAIL, 0);
