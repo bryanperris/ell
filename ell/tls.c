@@ -193,12 +193,14 @@ static void tls_send_client_hello(struct l_tls *tls)
 	 */
 	l_put_be16(L_ARRAY_SIZE(tls_cipher_suite_pref) * 2, ptr);
 	ptr += 2;
+
 	for (i = 0; i < (int) L_ARRAY_SIZE(tls_cipher_suite_pref); i++) {
 		*ptr++ = tls_cipher_suite_pref[i].id[0];
 		*ptr++ = tls_cipher_suite_pref[i].id[1];
 	}
 
 	*ptr++ = L_ARRAY_SIZE(tls_compression_pref);
+
 	for (i = 0; i < (int) L_ARRAY_SIZE(tls_compression_pref); i++)
 		*ptr++ = tls_compression_pref[i].id;
 
