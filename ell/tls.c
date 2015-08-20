@@ -860,23 +860,27 @@ static void tls_handle_server_hello_done(struct l_tls *tls,
 {
 	if (len) {
 		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
-
 		return;
 	}
 
 	if (tls->cert_requested)
 		if (!tls_send_certificate(tls))
 			return;
+
 	if (!tls->pending.cipher_suite->key_xchg->send_client_key_exchange(tls))
 		return;
+
 	if (tls->cert_sent)
 		if (!tls_send_certificate_verify(tls))
 			return;
+
 	tls_send_change_cipher_spec(tls);
+
 	if (!tls_change_cipher_spec(tls, 1)) {
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
 		return;
 	}
+
 	tls_send_finished(tls);
 
 	tls->state = TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC;
