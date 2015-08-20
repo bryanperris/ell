@@ -198,8 +198,8 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 
 struct tls_cert {
 	size_t size;
-	uint8_t *asn1;
 	struct tls_cert *issuer;
+	uint8_t asn1[0];
 };
 
 enum tls_cert_key_type {

@@ -1248,10 +1248,8 @@ static void tls_handle_certificate(struct l_tls *tls,
 
 		*tail = l_malloc(sizeof(struct tls_cert) + cert_len);
 		(*tail)->size = cert_len;
-		(*tail)->asn1 = (void *) (*tail + 1);
 		(*tail)->issuer = NULL;
-
-		memcpy(*tail + 1, buf, cert_len);
+		memcpy((*tail)->asn1, buf, cert_len);
 
 		tail = &(*tail)->issuer;
 
@@ -2021,10 +2019,9 @@ struct tls_cert *tls_cert_load_file(const char *filename)
 
 	cert = l_malloc(sizeof(struct tls_cert) + len);
 	cert->size = len;
-	cert->asn1 = (void *) cert + sizeof(*cert);
 	cert->issuer = NULL;
-
 	memcpy(cert->asn1, der, len);
+
 	l_free(der);
 
 	return cert;
