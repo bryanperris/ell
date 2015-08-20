@@ -1705,6 +1705,7 @@ enum tls_cert_key_type tls_cert_get_pubkey_type(struct tls_cert *cert)
 					pkcs1_encryption_oids[i].oid.asn1,
 					key_type_len))
 			break;
+
 	if (i == L_ARRAY_SIZE(pkcs1_encryption_oids))
 		return TLS_CERT_KEY_UNKNOWN;
 
