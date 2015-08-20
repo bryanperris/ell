@@ -1314,7 +1314,15 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 		if (message[0] == TLS_CERTIFICATE_VERIFY ||
 				message[0] == TLS_FINISHED)
 			tls_get_handshake_hash(tls, tls->prev_digest);
-		l_checksum_update(tls->handshake_hash, message, len);
+
+		/*
+		 * RFC 5246, Section 7.4.1.1:
+		 * This message MUST NOT be included in the message hashes
+		 * that are maintained throughout the handshake and used in
+		 * the Finished messages and the certificate verify message.
+		 */
+		if (message[0] != TLS_HELLO_REQUEST)
+			l_checksum_update(tls->handshake_hash, message, len);
 
 		tls_handle_handshake(tls, message[0],
 					message + TLS_HANDSHAKE_HEADER_SIZE,
