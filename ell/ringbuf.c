@@ -1,8 +1,8 @@
 /*
  *
- *  BlueZ - Bluetooth protocol stack for Linux
+ *  Embedded Linux library
  *
- *  Copyright (C) 2012-2014  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2011-2015  Intel Corporation. All rights reserved.
  *
  *
  *  This library is free software; you can redistribute it and/or
