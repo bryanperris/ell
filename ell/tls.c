@@ -2068,18 +2068,6 @@ struct tls_cert *tls_cert_load_file(const char *filename)
 bool tls_cert_find_certchain(struct tls_cert *cert,
 				const char *cacert_filename)
 {
-	/*
-	 * TODO: Load the CA certificate and find a chain from cert up to
-	 * that CA certificate, store that entire chain in a linked list using
-	 * the .issuer fields in each certificate.  We might also want to
-	 * accept a directory of trusted CA certs (/etc/ssl/certs by default)
-	 * and find a chain to any of those CAs.
-	 *
-	 * This is unimplemented which means that only certificates issued
-	 * directly by given root CA will work as they're already complete
-	 * certchains.
-	 */
-
 	return true;
 }
 

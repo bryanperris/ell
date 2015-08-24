@@ -53,6 +53,30 @@ Kernel Crypto
   Complexity: C2
 
 
+TLS Support
+===========
+
+- Implement tls_cert_find_certchain
+
+  When the server sends its certificate, it should be sending the full
+  certificate chain, where each certificate directly verifies the preceding one
+  in the list.  The root CA certificate can be optionally omitted.
+
+  Since we are given a server certificate and a location with all CA
+  certificates we need to find a cert chain path to satisfy the above
+  condition.  The location can either be a directory (e.g. /etc/ssl/certs),
+  or a PEM file with all CA certificates concatenated inside.
+
+  Alternatively, we can assume that the user would be providing a certchain
+  file with the entire server certchain in some file format (e.g. PEM) which
+  contains all the required certificates concatenated into a single file.
+
+  The client certificate might require similar handling.
+
+  Priority: Medium
+  Complexity: C2
+
+
 Big endian support
 ==================
 
