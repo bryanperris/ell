@@ -55,12 +55,11 @@ enum l_tls_alert_desc {
 	TLS_ALERT_UNSUPPORTED_EXTENSION	= 110,
 };
 
-typedef void (*l_tls_write_cb_t)(void *user_data, const uint8_t *data,
-					size_t len);
-typedef void (*l_tls_ready_cb_t)(void *user_data, const char *peer_identity);
-typedef void (*l_tls_disconnect_cb_t)(void *user_data,
-					enum l_tls_alert_desc reason,
-					bool remote);
+typedef void (*l_tls_write_cb_t)(const uint8_t *data, size_t len,
+					void *user_data);
+typedef void (*l_tls_ready_cb_t)(const char *peer_identity, void *user_data);
+typedef void (*l_tls_disconnect_cb_t)(enum l_tls_alert_desc reason,
+					bool remote, void *user_data);
 
 /*
  * app_data_handler gets called with newly received decrypted data.

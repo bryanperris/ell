@@ -467,8 +467,8 @@ void tls_disconnect(struct l_tls *tls, enum l_tls_alert_desc desc,
 
 	tls->ready = false;
 
-	tls->disconnected(tls->user_data, local_desc ?: desc,
-				local_desc && !desc);
+	tls->disconnected(local_desc ?: desc, local_desc && !desc,
+				tls->user_data);
 }
 
 #define TLS_HANDSHAKE_HEADER_SIZE	4
@@ -1543,7 +1543,7 @@ static void tls_finished(struct l_tls *tls)
 	tls->state = TLS_HANDSHAKE_DONE;
 	tls->ready = true;
 
-	tls->ready_handle(tls->user_data, peer_identity);
+	tls->ready_handle(peer_identity, tls->user_data);
 
 	if (peer_identity)
 		l_free(peer_identity);
@@ -1882,7 +1882,7 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 			return false;
 		}
 
-		tls->rx(tls->user_data, message, len);
+		tls->rx(message, len, tls->user_data);
 
 		return true;
 	}

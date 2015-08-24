@@ -161,7 +161,7 @@ static void tls_tx_record_plaintext(struct l_tls *tls,
 	ciphertext[3] = ciphertext_len >> 8;
 	ciphertext[4] = ciphertext_len >> 0;
 
-	tls->tx(tls->user_data, ciphertext, ciphertext_len + 5);
+	tls->tx(ciphertext, ciphertext_len + 5, tls->user_data);
 }
 
 void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
