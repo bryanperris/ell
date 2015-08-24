@@ -60,16 +60,15 @@ static bool https_io_read(struct l_io *io, void *user_data)
 	return true;
 }
 
-static void https_tls_disconnected(void *user_data,
-					enum l_tls_alert_desc reason,
-					bool remote)
+static void https_tls_disconnected(enum l_tls_alert_desc reason, bool remote,
+					void *user_data)
 {
 	if (reason)
 		printf("TLS error: %s\n", l_tls_alert_to_str(reason));
 	l_main_quit();
 }
 
-static void https_new_data(void *user_data, const uint8_t *data, size_t len)
+static void https_new_data(const uint8_t *data, size_t len, void *user_data)
 {
 	char *reply = "HTTP/1.1 200 OK\r\n"
 		"Content-Type: text/plain\r\n"
@@ -85,7 +84,7 @@ static void https_new_data(void *user_data, const uint8_t *data, size_t len)
 	}
 }
 
-static void https_tls_write(void *user_data, const uint8_t *data, size_t len)
+static void https_tls_write(const uint8_t *data, size_t len, void *user_data)
 {
 	int r;
 
@@ -100,7 +99,7 @@ static void https_tls_write(void *user_data, const uint8_t *data, size_t len)
 	}
 }
 
-static void https_tls_ready(void *user_data, const char *peer_identity)
+static void https_tls_ready(const char *peer_identity, void *user_data)
 {
 	if (peer_identity)
 		printf("Client authenticated as %s\n", peer_identity);
