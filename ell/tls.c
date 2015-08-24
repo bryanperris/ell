@@ -1817,7 +1817,7 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 
 		tls->state = TLS_HANDSHAKE_WAIT_FINISHED;
 
-		break;
+		return true;
 
 	case TLS_CT_ALERT:
 		/* Verify AlertLevel */
@@ -1873,7 +1873,7 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 					message + TLS_HANDSHAKE_HEADER_SIZE,
 					len - TLS_HANDSHAKE_HEADER_SIZE);
 
-		break;
+		return true;
 
 	case TLS_CT_APPLICATION_DATA:
 		if (!tls->ready) {
@@ -1884,12 +1884,10 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 
 		tls->rx(tls->user_data, message, len);
 
-		break;
-	default:
-		return false;
+		return true;
 	}
 
-	return true;
+	return false;
 }
 
 LIB_EXPORT void l_tls_close(struct l_tls *tls)
