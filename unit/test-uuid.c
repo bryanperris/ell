@@ -57,18 +57,23 @@ static void test_v3(const void *data)
 	r = l_uuid_v3(L_UUID_NAMESPACE_DNS, dns, strlen(dns), uuid);
 	assert(r);
 	assert(!memcmp(uuid, dns_expected, 16));
+	assert(l_uuid_is_valid(uuid));
+	assert(l_uuid_get_version(uuid) == L_UUID_VERSION_3_MD5);
 
 	r = l_uuid_v3(L_UUID_NAMESPACE_URL, url, strlen(url), uuid);
 	assert(r);
 	assert(!memcmp(uuid, url_expected, 16));
+	assert(l_uuid_is_valid(uuid));
 
 	r = l_uuid_v3(L_UUID_NAMESPACE_OID, oid, strlen(oid), uuid);
 	assert(r);
 	assert(!memcmp(uuid, oid_expected, 16));
+	assert(l_uuid_is_valid(uuid));
 
 	r = l_uuid_v3(L_UUID_NAMESPACE_X500, x500, strlen(x500), uuid);
 	assert(r);
 	assert(!memcmp(uuid, x500_expected, 16));
+	assert(l_uuid_is_valid(uuid));
 }
 
 static void test_v4(const void *data)
@@ -79,9 +84,12 @@ static void test_v4(const void *data)
 
 	r = l_uuid_v4(uuid1);
 	assert(r);
+	assert(l_uuid_is_valid(uuid1));
+	assert(l_uuid_get_version(uuid1) == L_UUID_VERSION_4_RANDOM);
 
 	r = l_uuid_v4(uuid2);
 	assert(r);
+	assert(l_uuid_is_valid(uuid2));
 
 	assert(memcmp(uuid1, uuid2, 16));
 }
@@ -114,18 +122,23 @@ static void test_v5(const void *data)
 	r = l_uuid_v5(L_UUID_NAMESPACE_DNS, dns, strlen(dns), uuid);
 	assert(r);
 	assert(!memcmp(uuid, dns_expected, 16));
+	assert(l_uuid_is_valid(uuid));
+	assert(l_uuid_get_version(uuid) == L_UUID_VERSION_5_SHA1);
 
 	r = l_uuid_v5(L_UUID_NAMESPACE_URL, url, strlen(url), uuid);
 	assert(r);
 	assert(!memcmp(uuid, url_expected, 16));
+	assert(l_uuid_is_valid(uuid));
 
 	r = l_uuid_v5(L_UUID_NAMESPACE_OID, oid, strlen(oid), uuid);
 	assert(r);
 	assert(!memcmp(uuid, oid_expected, 16));
+	assert(l_uuid_is_valid(uuid));
 
 	r = l_uuid_v5(L_UUID_NAMESPACE_X500, x500, strlen(x500), uuid);
 	assert(r);
 	assert(!memcmp(uuid, x500_expected, 16));
+	assert(l_uuid_is_valid(uuid));
 }
 
 int main(int argc, char *argv[])
