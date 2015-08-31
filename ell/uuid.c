@@ -193,3 +193,11 @@ LIB_EXPORT bool l_uuid_is_valid(const uint8_t uuid[16])
 
 	return true;
 }
+
+LIB_EXPORT enum l_uuid_version l_uuid_get_version(const uint8_t uuid[16])
+{
+	unsigned int version;
+
+	version = uuid[6] >> 4;
+	return version;
+}
