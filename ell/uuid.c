@@ -164,3 +164,32 @@ bool l_uuid_v4(uint8_t out_uuid[16])
 
 	return true;
 }
+
+/**
+ * l_uuid_is_valid:
+ * @uuid: UUID to check.
+ *
+ * Checks whether the given UUID is valid according to RFC 4122.  This function
+ * checks that the version field is set properly and the variant of the UUID
+ * is set to RFC 4122.
+ *
+ * Returns: Whether the UUID is valid
+ **/
+LIB_EXPORT bool l_uuid_is_valid(const uint8_t uuid[16])
+{
+	unsigned int version;
+	unsigned int variant;
+
+	if (!uuid)
+		return false;
+
+	variant = uuid[8] >> 6;
+	if (variant != 2)
+		return false;
+
+	version = uuid[6] >> 4;
+	if (version < 1 || version > 5)
+		return false;
+
+	return true;
+}

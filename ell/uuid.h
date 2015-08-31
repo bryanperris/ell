@@ -41,6 +41,8 @@ bool l_uuid_v4(uint8_t out_uuid[16]);
 bool l_uuid_v5(const uint8_t nsid[16], const void *name, size_t name_size,
 			uint8_t out_uuid[16]);
 
+bool l_uuid_is_valid(const uint8_t uuid[16]);
+
 #ifdef __cplusplus
 }
 #endif
