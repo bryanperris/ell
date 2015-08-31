@@ -136,7 +136,8 @@ unit_tests = unit/test-unit \
 			unit/test-uintset \
 			unit/test-base64 \
 			unit/test-pem \
-			unit/test-tls
+			unit/test-tls \
+			unit/test-uuid
 
 if MAINTAINER_MODE
 noinst_PROGRAMS += $(unit_tests)
@@ -205,6 +206,8 @@ unit_test_pem_LDADD = ell/libell-private.la
 unit_test_base64_LDADD = ell/libell-private.la
 
 unit_test_tls_LDADD = ell/libell-private.la
+
+unit_test_uuid_LDADD = ell/libell-private.la
 
 if MAINTAINER_MODE
 noinst_LTLIBRARIES += unit/example-plugin.la
