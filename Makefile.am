@@ -40,7 +40,8 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/uintset.h \
 			ell/base64.h \
 			ell/pem.h \
-			ell/tls.h
+			ell/tls.h \
+			ell/uuid.h
 
 lib_LTLIBRARIES = ell/libell.la
 
@@ -86,7 +87,8 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/pem.c \
 			ell/tls-private.h \
 			ell/tls.c \
-			ell/tls-record.c
+			ell/tls-record.c \
+			ell/uuid.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)
