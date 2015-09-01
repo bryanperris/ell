@@ -141,6 +141,23 @@ static void test_v5(const void *data)
 	assert(l_uuid_is_valid(uuid));
 }
 
+static void test_to_string(const void *data)
+{
+	uint8_t uuid[16];
+	bool r;
+	const char *dns = "01.org";
+	const char *expected_uuid = "65fcc697-0776-5bf9-8573-72a51080c7de";
+	char buf[64];
+
+	r = l_uuid_v5(L_UUID_NAMESPACE_DNS, dns, strlen(dns), uuid);
+	assert(r);
+
+	r = l_uuid_to_string(uuid, buf, sizeof(buf));
+	assert(r);
+
+	assert(!strcmp(buf, expected_uuid));
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -148,6 +165,7 @@ int main(int argc, char *argv[])
 	l_test_add("/uuid/v3", test_v3, NULL);
 	l_test_add("/uuid/v4", test_v4, NULL);
 	l_test_add("/uuid/v5", test_v5, NULL);
+	l_test_add("/uuid/to string", test_to_string, NULL);
 
 	return l_test_run();
 
