@@ -52,6 +52,8 @@ bool l_uuid_v5(const uint8_t nsid[16], const void *name, size_t name_size,
 bool l_uuid_is_valid(const uint8_t uuid[16]);
 enum l_uuid_version l_uuid_get_version(const uint8_t uuid[16]);
 
+bool l_uuid_to_string(const uint8_t uuid[16], char *dest, size_t dest_size);
+
 #ifdef __cplusplus
 }
 #endif
