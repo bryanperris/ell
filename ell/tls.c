@@ -871,29 +871,26 @@ static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out,
 
 	key_size = l_asymmetric_cipher_get_key_size(rsa_privkey);
 
-	/*
-	 * TODO: According to 4.7 we need to support at least two forms
-	 * of the signed content here and at least three in the verification:
-	 *  - pre 1.2 version which didn't use the DigestInfo form at all,
-	 *  - DigestInfo with NULL AlgorithmIdentifier.parameters,
-	 *  - DigestInfo with empty AlgorithmIdentifier.parameters.
-	 *
-	 * Additionally PKCS#1 now says BER is used in place of DER for
-	 * DigestInfo encoding which adds more ambiguity in the encoding.
-	 */
-	hash_type = &tls_handshake_hash_data[HANDSHAKE_HASH_TLS12];
-	get_hash(tls, hash_type->tls_id, hash, NULL, NULL);
+	if (tls->negotiated_version >= TLS_V12) {
+		hash_type = &tls_handshake_hash_data[HANDSHAKE_HASH_TLS12];
+		get_hash(tls, hash_type->tls_id, hash, NULL, NULL);
 
-	pkcs1_write_digest_info(hash_type->l_id,
-				sign_input, &sign_input_len,
-				hash, hash_type->length);
+		pkcs1_write_digest_info(hash_type->l_id,
+					sign_input, &sign_input_len,
+					hash, hash_type->length);
 
-	(*out)[0] = hash_type->tls_id;
-	(*out)[1] = 1;	/* RSA_sign */
-	l_put_be16(key_size, *out + 2);
-	result = l_asymmetric_cipher_sign(rsa_privkey, sign_input, *out + 4,
+		*(*out)++ = hash_type->tls_id;
+		*(*out)++ = 1;	/* RSA_sign */
+	} else {
+		get_hash(tls, 1, sign_input + 0, NULL, NULL);	/* MD5 */
+		get_hash(tls, 2, sign_input + 16, NULL, NULL);	/* SHA1 */
+		sign_input_len = 36;
+	}
+
+	l_put_be16(key_size, *out);
+	result = l_asymmetric_cipher_sign(rsa_privkey, sign_input, *out + 2,
 						sign_input_len, key_size);
-	*out += key_size + 4;
+	*out += key_size + 2;
 
 	l_asymmetric_cipher_free(rsa_privkey);
 
@@ -912,8 +909,15 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 	uint8_t expected[HANDSHAKE_HASH_MAX_SIZE * 2 + 32];
 	size_t expected_len;
 	uint8_t *digest_info;
+	unsigned int offset;
 
-	if (len < 4 || (size_t) l_get_be16(in + 2) + 4 != len) {
+	/* 2 bytes for SignatureAndHashAlgorithm if version >= 1.2 */
+	offset = 2;
+	if (tls->negotiated_version < TLS_V12)
+		offset = 0;
+
+	if (len < offset + 2 ||
+			(size_t) l_get_be16(in + offset) + offset + 2 != len) {
 		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
 
 		return false;
@@ -931,27 +935,48 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 	key_size = l_asymmetric_cipher_get_key_size(rsa_client_pubkey);
 
 	/* Only the default hash type supported */
-	if (len != 4 + key_size) {
+	if (len != offset + 2 + key_size) {
 		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
 
 		goto err_free_rsa;
 	}
 
-	/* Only RSA supported */
-	if (in[1] != 1 /* RSA_sign */) {
-		tls_disconnect(tls, TLS_ALERT_DECRYPT_ERROR, 0);
+	if (tls->negotiated_version >= TLS_V12) {
+		/* Only RSA supported */
+		if (in[1] != 1 /* RSA_sign */) {
+			tls_disconnect(tls, TLS_ALERT_DECRYPT_ERROR, 0);
 
-		goto err_free_rsa;
+			goto err_free_rsa;
+		}
+
+		if (!get_hash(tls, in[0], hash, &hash_len, &hash_type)) {
+			tls_disconnect(tls, TLS_ALERT_DECRYPT_ERROR, 0);
+
+			goto err_free_rsa;
+		}
+
+		/*
+		 * TODO: According to 4.7 we need to support at least two forms
+		 * of the signed content in the verification:
+		 *  - DigestInfo with NULL AlgorithmIdentifier.parameters,
+		 *  - DigestInfo with empty AlgorithmIdentifier.parameters.
+		 *
+		 * Additionally PKCS#1 now says BER is used in place of DER for
+		 * DigestInfo encoding which adds more ambiguity in the
+		 * encoding.
+		 */
+		pkcs1_write_digest_info(hash_type, expected, &expected_len,
+					hash, hash_len);
+	} else {
+		get_hash(tls, 1, expected + 0, NULL, NULL);	/* MD5 */
+		get_hash(tls, 2, expected + 16, NULL, NULL);	/* SHA1 */
+		expected_len = 36;
+
+		/*
+		 * TODO: in TLS 1.0 the block type 0 is also valid, while
+		 * l_asymmetric_cipher_verify will only accept block type 1.
+		 */
 	}
-
-	if (!get_hash(tls, in[0], hash, &hash_len, &hash_type)) {
-		tls_disconnect(tls, TLS_ALERT_DECRYPT_ERROR, 0);
-
-		goto err_free_rsa;
-	}
-
-	pkcs1_write_digest_info(hash_type, expected, &expected_len,
-				hash, hash_len);
 
 	digest_info = alloca(expected_len);
 
