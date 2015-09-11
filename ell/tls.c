@@ -920,7 +920,7 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 
 	pkcs1_write_digest_info(HANDSHAKE_HASH_TYPE, expected, &expected_len,
 				hash, HANDSHAKE_HASH_SIZE);
-	digest_info = alloca(key_size);
+	digest_info = alloca(expected_len);
 
 	result = l_asymmetric_cipher_verify(rsa_client_pubkey, in + 4,
 						digest_info,
