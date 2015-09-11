@@ -111,6 +111,7 @@ static void tls_free_key(uint8_t *key, size_t size)
 
 static void tls_reset_handshake(struct l_tls *tls)
 {
+	int i;
 	memset(tls->pending.master_secret, 0, 48);
 	memset(tls->pending.key_block, 0, sizeof(tls->pending.key_block));
 
@@ -121,7 +122,8 @@ static void tls_reset_handshake(struct l_tls *tls)
 		tls->peer_pubkey = NULL;
 	}
 
-	l_checksum_reset(tls->handshake_hash);
+	for (i = 0; i < __HANDSHAKE_HASH_COUNT; i++)
+		l_checksum_reset(tls->handshake_hash[i]);
 
 	tls->state = TLS_HANDSHAKE_WAIT_HELLO;
 	tls->cert_requested = 0;
@@ -219,9 +221,10 @@ static bool tls_send_rsa_client_key_xchg(struct l_tls *tls);
 static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
 						const uint8_t *buf, size_t len);
 
-static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out, const uint8_t *hash);
+static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out,
+				tls_get_hash_t get_hash);
 static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
-				const uint8_t *hash);
+				tls_get_hash_t get_hash);
 
 static bool tls_rsa_validate_cert_key(struct tls_cert *cert)
 {
@@ -366,6 +369,12 @@ static struct tls_compression_method *tls_find_compression_method(
 	return NULL;
 }
 
+static const struct tls_hash_algorithm tls_handshake_hash_data[] = {
+	[HANDSHAKE_HASH_SHA256]	= { 4, L_CHECKSUM_SHA256, 32 },
+	[HANDSHAKE_HASH_MD5]	= { 1, L_CHECKSUM_MD5, 16 },
+	[HANDSHAKE_HASH_SHA1]	= { 2, L_CHECKSUM_SHA1, 20 },
+};
+
 enum tls_handshake_type {
 	TLS_HELLO_REQUEST	= 0,
 	TLS_CLIENT_HELLO	= 1,
@@ -476,6 +485,8 @@ void tls_disconnect(struct l_tls *tls, enum l_tls_alert_desc desc,
 static void tls_tx_handshake(struct l_tls *tls, int type, uint8_t *buf,
 				size_t length)
 {
+	int i;
+
 	/* Fill in the handshake header */
 
 	buf[0] = type;
@@ -483,7 +494,8 @@ static void tls_tx_handshake(struct l_tls *tls, int type, uint8_t *buf,
 	buf[2] = (length - TLS_HANDSHAKE_HEADER_SIZE) >>  8;
 	buf[3] = (length - TLS_HANDSHAKE_HEADER_SIZE) >>  0;
 
-	l_checksum_update(tls->handshake_hash, buf, length);
+	for (i = 0; i < __HANDSHAKE_HASH_COUNT; i++)
+		l_checksum_update(tls->handshake_hash[i], buf, length);
 
 	tls_tx_record(tls, TLS_CT_HANDSHAKE, buf, length);
 }
@@ -678,7 +690,7 @@ static bool tls_send_certificate_request(struct l_tls *tls)
 	 * TODO: we support the full list of hash algorithms when used
 	 * in the client certificate chain but we can only verify the
 	 * Certificate Verify signature when the hash algorithm matches
-	 * HANDSHAKE_HASH_TYPE_TLS.  The values we include here will
+	 * one of HANDSHAKE_HASH_*.  The values we include here will
 	 * affect both of these steps so revisit which set we're passing
 	 * here.
 	 *
@@ -808,14 +820,17 @@ static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
 	return true;
 }
 
-static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out, const uint8_t *hash)
+static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out,
+				tls_get_hash_t get_hash)
 {
 	struct l_asymmetric_cipher *rsa_privkey;
 	uint8_t *privkey, *privkey_short;
 	size_t key_size, short_size;
 	bool result;
-	uint8_t digest_info[HANDSHAKE_HASH_SIZE + 32];
-	size_t digest_info_len;
+	const struct tls_hash_algorithm *hash_type;
+	uint8_t hash[HANDSHAKE_HASH_MAX_SIZE];
+	uint8_t sign_input[HANDSHAKE_HASH_MAX_SIZE * 2 + 32];
+	size_t sign_input_len;
 
 	if (!tls->priv_key_path) {
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
@@ -866,15 +881,18 @@ static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out, const uint8_t *hash)
 	 * Additionally PKCS#1 now says BER is used in place of DER for
 	 * DigestInfo encoding which adds more ambiguity in the encoding.
 	 */
-	pkcs1_write_digest_info(HANDSHAKE_HASH_TYPE,
-				digest_info, &digest_info_len,
-				hash, HANDSHAKE_HASH_SIZE);
+	hash_type = &tls_handshake_hash_data[HANDSHAKE_HASH_TLS12];
+	get_hash(tls, hash_type->tls_id, hash, NULL, NULL);
 
-	(*out)[0] = HANDSHAKE_HASH_TYPE_TLS;
+	pkcs1_write_digest_info(hash_type->l_id,
+				sign_input, &sign_input_len,
+				hash, hash_type->length);
+
+	(*out)[0] = hash_type->tls_id;
 	(*out)[1] = 1;	/* RSA_sign */
 	l_put_be16(key_size, *out + 2);
-	result = l_asymmetric_cipher_sign(rsa_privkey, digest_info, *out + 4,
-						digest_info_len, key_size);
+	result = l_asymmetric_cipher_sign(rsa_privkey, sign_input, *out + 4,
+						sign_input_len, key_size);
 	*out += key_size + 4;
 
 	l_asymmetric_cipher_free(rsa_privkey);
@@ -883,12 +901,15 @@ static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out, const uint8_t *hash)
 }
 
 static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
-				const uint8_t *hash)
+				tls_get_hash_t get_hash)
 {
 	struct l_asymmetric_cipher *rsa_client_pubkey;
 	size_t key_size;
 	bool result;
-	uint8_t expected[HANDSHAKE_HASH_SIZE + 32];
+	uint8_t hash[HANDSHAKE_HASH_MAX_SIZE];
+	size_t hash_len;
+	enum l_checksum_type hash_type;
+	uint8_t expected[HANDSHAKE_HASH_MAX_SIZE * 2 + 32];
 	size_t expected_len;
 	uint8_t *digest_info;
 
@@ -910,16 +931,28 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 	key_size = l_asymmetric_cipher_get_key_size(rsa_client_pubkey);
 
 	/* Only the default hash type supported */
-	if (len != 4 + key_size ||
-			in[0] != HANDSHAKE_HASH_TYPE_TLS ||
-			in[1] != 1 /* RSA_sign */) {
-		tls_disconnect(tls, TLS_ALERT_DECRYPT_ERROR, 0);
+	if (len != 4 + key_size) {
+		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
 
-		return false;
+		goto err_free_rsa;
 	}
 
-	pkcs1_write_digest_info(HANDSHAKE_HASH_TYPE, expected, &expected_len,
-				hash, HANDSHAKE_HASH_SIZE);
+	/* Only RSA supported */
+	if (in[1] != 1 /* RSA_sign */) {
+		tls_disconnect(tls, TLS_ALERT_DECRYPT_ERROR, 0);
+
+		goto err_free_rsa;
+	}
+
+	if (!get_hash(tls, in[0], hash, &hash_len, &hash_type)) {
+		tls_disconnect(tls, TLS_ALERT_DECRYPT_ERROR, 0);
+
+		goto err_free_rsa;
+	}
+
+	pkcs1_write_digest_info(hash_type, expected, &expected_len,
+				hash, hash_len);
+
 	digest_info = alloca(expected_len);
 
 	result = l_asymmetric_cipher_verify(rsa_client_pubkey, in + 4,
@@ -935,31 +968,58 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 	}
 
 	return true;
+
+err_free_rsa:
+	l_asymmetric_cipher_free(rsa_client_pubkey);
+
+	return false;
 }
 
-static void tls_get_handshake_hash(struct l_tls *tls, uint8_t *out)
+static void tls_get_handshake_hash(struct l_tls *tls,
+					enum handshake_hash_type type,
+					uint8_t *out)
 {
-	struct l_checksum *hash = l_checksum_clone(tls->handshake_hash);
+	struct l_checksum *hash = l_checksum_clone(tls->handshake_hash[type]);
 
 	if (!hash)
 		return;
 
-	l_checksum_get_digest(hash, out, HANDSHAKE_HASH_SIZE);
+	l_checksum_get_digest(hash, out, tls_handshake_hash_data[type].length);
 
 	l_checksum_free(hash);
+}
+
+static bool tls_get_handshake_hash_by_id(struct l_tls *tls, uint8_t hash_id,
+					uint8_t *out, size_t *len,
+					enum l_checksum_type *type)
+{
+	enum handshake_hash_type hash;
+
+	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+		if (tls_handshake_hash_data[hash].tls_id == hash_id) {
+			tls_get_handshake_hash(tls, hash, out);
+
+			if (len)
+				*len = tls_handshake_hash_data[hash].length;
+
+			if (type)
+				*type = tls_handshake_hash_data[hash].l_id;
+
+			return true;
+		}
+
+	return false;
 }
 
 static bool tls_send_certificate_verify(struct l_tls *tls)
 {
 	uint8_t buf[2048];
 	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
-	uint8_t hash[HANDSHAKE_HASH_SIZE];
 
 	/* Fill in the Certificate Verify body */
 
-	tls_get_handshake_hash(tls, hash);
-
-	if (!tls->pending.cipher_suite->key_xchg->sign(tls, &ptr, hash))
+	if (!tls->pending.cipher_suite->key_xchg->sign(tls, &ptr,
+						tls_get_handshake_hash_by_id))
 		return false;
 
 	tls_tx_handshake(tls, TLS_CERTIFICATE_VERIFY, buf, ptr - buf);
@@ -978,7 +1038,8 @@ static void tls_send_finished(struct l_tls *tls)
 {
 	uint8_t buf[512];
 	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
-	uint8_t seed[HANDSHAKE_HASH_SIZE];
+	uint8_t seed[HANDSHAKE_HASH_MAX_SIZE * 2];
+	size_t seed_len;
 
 	/*
 	 * Same hash type as that used for the PRF, i.e. SHA256 unless an
@@ -986,7 +1047,8 @@ static void tls_send_finished(struct l_tls *tls)
 	 * hash for the PRF and for the Finished hash.  We don't support
 	 * any such ciphers so it's always SHA256.
 	 */
-	tls_get_handshake_hash(tls, seed);
+	tls_get_handshake_hash(tls, HANDSHAKE_HASH_TLS12, seed);
+	seed_len = tls_handshake_hash_data[HANDSHAKE_HASH_TLS12].length;
 
 	tls12_prf(L_CHECKSUM_SHA256, 32, tls->pending.master_secret, 48,
 			tls->server ? "server finished" : "client finished",
@@ -1001,6 +1063,8 @@ static bool tls_verify_finished(struct l_tls *tls, const uint8_t *received,
 				size_t len)
 {
 	uint8_t expected[tls->cipher_suite[0]->verify_data_length];
+	uint8_t *seed;
+	size_t seed_len;
 
 	if (len != (size_t) tls->cipher_suite[0]->verify_data_length) {
 		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
@@ -1008,9 +1072,11 @@ static bool tls_verify_finished(struct l_tls *tls, const uint8_t *received,
 		return false;
 	}
 
+	seed = tls->prev_digest[HANDSHAKE_HASH_TLS12];
+	seed_len = tls_handshake_hash_data[HANDSHAKE_HASH_TLS12].length;
 	tls12_prf(L_CHECKSUM_SHA256, 32, tls->pending.master_secret, 48,
 			tls->server ? "client finished" : "server finished",
-			tls->prev_digest, HANDSHAKE_HASH_SIZE,
+			seed, seed_len,
 			expected, tls->cipher_suite[0]->verify_data_length);
 
 	if (memcmp(received, expected, len)) {
@@ -1505,11 +1571,35 @@ static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
 	memset(random_secret, 0, 46);
 }
 
+static bool tls_get_prev_digest_by_id(struct l_tls *tls, uint8_t hash_id,
+					uint8_t *out, size_t *out_len,
+					enum l_checksum_type *type)
+{
+	enum handshake_hash_type hash;
+	size_t len;
+
+	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+		if (tls_handshake_hash_data[hash].tls_id == hash_id) {
+			len = tls_handshake_hash_data[hash].length;
+			memcpy(out, tls->prev_digest[hash], len);
+
+			if (out_len)
+				*out_len = len;
+
+			if (type)
+				*type = tls_handshake_hash_data[hash].l_id;
+
+			return len;
+		}
+
+	return 0;
+}
+
 static void tls_handle_certificate_verify(struct l_tls *tls,
 						const uint8_t *buf, size_t len)
 {
 	if (!tls->pending.cipher_suite->key_xchg->verify(tls, buf, len,
-							tls->prev_digest))
+						tls_get_prev_digest_by_id))
 		return;
 
 	/*
@@ -1735,6 +1825,7 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 				void *user_data)
 {
 	struct l_tls *tls;
+	enum handshake_hash_type hash;
 
 	tls = l_new(struct l_tls, 1);
 	tls->server = server;
@@ -1744,10 +1835,12 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 	tls->disconnected = disconnect_handler;
 	tls->user_data = user_data;
 
-	tls->handshake_hash = l_checksum_new(HANDSHAKE_HASH_TYPE);
-	if (!tls->handshake_hash) {
-		l_free(tls);
-		return NULL;
+	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++) {
+		tls->handshake_hash[hash] = l_checksum_new(
+				tls_handshake_hash_data[hash].l_id);
+
+		if (!tls->handshake_hash[hash])
+			goto err;
 	}
 
 	/* If we're the client, start the handshake right away */
@@ -1757,10 +1850,21 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 	tls->state = TLS_HANDSHAKE_WAIT_HELLO;
 
 	return tls;
+
+err:
+	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+		if (tls->handshake_hash[hash])
+			l_checksum_free(tls->handshake_hash[hash]);
+
+	l_free(tls);
+
+	return NULL;
 }
 
 LIB_EXPORT void l_tls_free(struct l_tls *tls)
 {
+	enum handshake_hash_type hash;
+
 	if (unlikely(!tls))
 		return;
 
@@ -1778,7 +1882,8 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 	if (tls->message_buf)
 		l_free(tls->message_buf);
 
-	l_checksum_free(tls->handshake_hash);
+	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+		l_checksum_free(tls->handshake_hash[hash]);
 
 	l_free(tls);
 }
@@ -1795,6 +1900,8 @@ LIB_EXPORT void l_tls_write(struct l_tls *tls, const uint8_t *data, size_t len)
 bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 			int len, enum tls_content_type type, uint16_t version)
 {
+	enum handshake_hash_type hash;
+
 	switch (type) {
 	case TLS_CT_CHANGE_CIPHER_SPEC:
 		if (len != 1 || message[0] != 0x01) {
@@ -1858,7 +1965,9 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 		 */
 		if (message[0] == TLS_CERTIFICATE_VERIFY ||
 				message[0] == TLS_FINISHED)
-			tls_get_handshake_hash(tls, tls->prev_digest);
+			for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+				tls_get_handshake_hash(tls, hash,
+							tls->prev_digest[hash]);
 
 		/*
 		 * RFC 5246, Section 7.4.1.1:
@@ -1867,7 +1976,9 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 		 * the Finished messages and the certificate verify message.
 		 */
 		if (message[0] != TLS_HELLO_REQUEST)
-			l_checksum_update(tls->handshake_hash, message, len);
+			for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+				l_checksum_update(tls->handshake_hash[hash],
+							message, len);
 
 		tls_handle_handshake(tls, message[0],
 					message + TLS_HANDSHAKE_HEADER_SIZE,

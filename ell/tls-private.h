@@ -44,6 +44,16 @@ struct tls_bulk_encryption_algorithm {
 	size_t block_length;
 };
 
+struct tls_hash_algorithm {
+	uint8_t tls_id;
+	enum l_checksum_type l_id;
+	size_t length;
+};
+
+typedef bool (*tls_get_hash_t)(struct l_tls *tls, uint8_t tls_id,
+				uint8_t *out, size_t *len,
+				enum l_checksum_type *type);
+
 struct tls_key_exchange_algorithm {
 	uint8_t id;
 
@@ -56,9 +66,9 @@ struct tls_key_exchange_algorithm {
 						const uint8_t *buf, size_t len);
 
 	bool (*sign)(struct l_tls *tls, uint8_t **out,
-			const uint8_t *hash);
+			tls_get_hash_t get_hash);
 	bool (*verify)(struct l_tls *tls, const uint8_t *in, size_t len,
-			const uint8_t *hash);
+			tls_get_hash_t get_hash);
 };
 
 struct tls_mac_algorithm {
@@ -100,14 +110,24 @@ enum tls_content_type {
 };
 
 /*
- * Decide the hash for the Certificate Verify digital signature and the
- * Finished PRF seed so we don't have to accumulate all of messages full
- * contents until the Finished message.  If we're sent a hash of different
- * type and need to verify we'll give up.
+ * Support the minimum required set of handshake hash types for the
+ * Certificate Verify digital signature and the Finished PRF seed so we
+ * don't have to accumulate all of messages full contents until the
+ * Finished message.  If we're sent a hash of a different type (in TLS 1.2+)
+ * and need to verify we'll give up.
+ * SHA1 and MD5 are explicitly required by versions < 1.2 and 1.2 requires
+ * that the Finished hash is the same as used for the PRF, which in all
+ * our supported cipher suites is defined to be SHA256.
  */
-#define HANDSHAKE_HASH_TYPE	L_CHECKSUM_SHA256
-#define HANDSHAKE_HASH_SIZE	32
-#define HANDSHAKE_HASH_TYPE_TLS	4
+enum handshake_hash_type {
+	HANDSHAKE_HASH_SHA256,
+	HANDSHAKE_HASH_MD5,
+	HANDSHAKE_HASH_SHA1,
+	__HANDSHAKE_HASH_COUNT,
+};
+#define HANDSHAKE_HASH_MAX_SIZE	32
+
+#define HANDSHAKE_HASH_TLS12 HANDSHAKE_HASH_SHA256
 
 struct l_tls {
 	bool server;
@@ -136,8 +156,8 @@ struct l_tls {
 	/* Handshake protocol layer */
 
 	enum tls_handshake_state state;
-	struct l_checksum *handshake_hash;
-	uint8_t prev_digest[HANDSHAKE_HASH_SIZE];
+	struct l_checksum *handshake_hash[__HANDSHAKE_HASH_COUNT];
+	uint8_t prev_digest[__HANDSHAKE_HASH_COUNT][HANDSHAKE_HASH_MAX_SIZE];
 
 	uint16_t client_version;
 	uint16_t negotiated_version;
