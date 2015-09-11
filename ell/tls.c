@@ -96,6 +96,20 @@ void tls12_prf(enum l_checksum_type type, size_t hash_len,
 	l_checksum_free(hmac);
 }
 
+static void tls_prf_get_bytes(struct l_tls *tls,
+				enum l_checksum_type type, size_t hash_len,
+				const uint8_t *secret, size_t secret_len,
+				const char *label,
+				const uint8_t *seed, size_t seed_len,
+				uint8_t *buf, size_t len)
+{
+	if (tls->negotiated_version >= TLS_V12)
+		tls12_prf(type, hash_len, secret, secret_len, label,
+				seed, seed_len, buf, len);
+	else
+		tls10_prf(secret, secret_len, label, seed, seed_len, buf, len);
+}
+
 static void tls_write_random(uint8_t *buf)
 {
 	l_put_be32(time(NULL), buf);
@@ -734,24 +748,38 @@ static void tls_generate_master_secret(struct l_tls *tls,
 	memcpy(seed +  0, tls->pending.client_random, 32);
 	memcpy(seed + 32, tls->pending.server_random, 32);
 
-	tls12_prf(L_CHECKSUM_SHA256, 32,
-			pre_master_secret, pre_master_secret_len,
-			"master secret", seed, 64,
-			tls->pending.master_secret, 48);
+	tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
+				pre_master_secret, pre_master_secret_len,
+				"master secret", seed, 64,
+				tls->pending.master_secret, 48);
 
 	/* Directly generate the key block while we're at it */
+	key_block_size = 0;
 
-	/* 2x fixed_IV_length to be added for AEAD suppot */
-	key_block_size = 2 * tls->pending.cipher_suite->encryption->key_length +
-		2 * tls->pending.cipher_suite->mac->mac_length;
+	if (tls->pending.cipher_suite->encryption)
+		key_block_size += 2 *
+			tls->pending.cipher_suite->encryption->key_length;
+
+	if (tls->pending.cipher_suite->mac)
+		key_block_size += 2 *
+			tls->pending.cipher_suite->mac->mac_length;
+
+	if (tls->pending.cipher_suite->encryption &&
+			tls->negotiated_version <= TLS_V10 &&
+			tls->pending.cipher_suite->encryption->cipher_type ==
+			TLS_CIPHER_BLOCK)
+		key_block_size += 2 *
+			tls->pending.cipher_suite->encryption->iv_length;
+	/* Note: 2x fixed_IV_length also needed for AEAD ciphers */
 
 	/* Reverse order from the master secret seed */
 	memcpy(seed +  0, tls->pending.server_random, 32);
 	memcpy(seed + 32, tls->pending.client_random, 32);
 
-	tls12_prf(L_CHECKSUM_SHA256, 32, tls->pending.master_secret, 48,
-			"key expansion", seed, 64,
-			tls->pending.key_block, key_block_size);
+	tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
+				tls->pending.master_secret, 48,
+				"key expansion", seed, 64,
+				tls->pending.key_block, key_block_size);
 
 	memset(seed, 0, 64);
 	memset(tls->pending.client_random, 0, 32);
@@ -1082,10 +1110,12 @@ static void tls_send_finished(struct l_tls *tls)
 		seed_len = 36;
 	}
 
-	tls12_prf(L_CHECKSUM_SHA256, 32, tls->pending.master_secret, 48,
-			tls->server ? "server finished" : "client finished",
-			seed, sizeof(seed),
-			ptr, tls->cipher_suite[1]->verify_data_length);
+	tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
+				tls->pending.master_secret, 48,
+				tls->server ? "server finished" :
+				"client finished",
+				seed, seed_len,
+				ptr, tls->cipher_suite[1]->verify_data_length);
 	ptr += tls->cipher_suite[1]->verify_data_length;
 
 	tls_tx_handshake(tls, TLS_FINISHED, buf, ptr - buf);
@@ -1114,10 +1144,13 @@ static bool tls_verify_finished(struct l_tls *tls, const uint8_t *received,
 		seed_len = 36;
 	}
 
-	tls12_prf(L_CHECKSUM_SHA256, 32, tls->pending.master_secret, 48,
-			tls->server ? "client finished" : "server finished",
-			seed, seed_len,
-			expected, tls->cipher_suite[0]->verify_data_length);
+	tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
+				tls->pending.master_secret, 48,
+				tls->server ? "client finished" :
+				"server finished",
+				seed, seed_len,
+				expected,
+				tls->cipher_suite[0]->verify_data_length);
 
 	if (memcmp(received, expected, len)) {
 		tls_disconnect(tls, TLS_ALERT_DECRYPT_ERROR, 0);
