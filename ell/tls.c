@@ -1041,14 +1041,21 @@ static void tls_send_finished(struct l_tls *tls)
 	uint8_t seed[HANDSHAKE_HASH_MAX_SIZE * 2];
 	size_t seed_len;
 
-	/*
-	 * Same hash type as that used for the PRF, i.e. SHA256 unless an
-	 * exotic cipher suite was negotiated that dictates a different
-	 * hash for the PRF and for the Finished hash.  We don't support
-	 * any such ciphers so it's always SHA256.
-	 */
-	tls_get_handshake_hash(tls, HANDSHAKE_HASH_TLS12, seed);
-	seed_len = tls_handshake_hash_data[HANDSHAKE_HASH_TLS12].length;
+	if (tls->negotiated_version >= TLS_V12) {
+		/*
+		 * Same hash type as that used for the PRF, i.e. SHA256
+		 * unless an exotic cipher suite was negotiated that
+		 * dictates a different hash for the PRF and for the
+		 * Finished hash.  We don't support any such ciphers so
+		 * it's always SHA256.
+		 */
+		tls_get_handshake_hash(tls, HANDSHAKE_HASH_TLS12, seed);
+		seed_len = tls_handshake_hash_data[HANDSHAKE_HASH_TLS12].length;
+	} else {
+		tls_get_handshake_hash(tls, HANDSHAKE_HASH_MD5, seed + 0);
+		tls_get_handshake_hash(tls, HANDSHAKE_HASH_SHA1, seed + 16);
+		seed_len = 36;
+	}
 
 	tls12_prf(L_CHECKSUM_SHA256, 32, tls->pending.master_secret, 48,
 			tls->server ? "server finished" : "client finished",
@@ -1072,8 +1079,16 @@ static bool tls_verify_finished(struct l_tls *tls, const uint8_t *received,
 		return false;
 	}
 
-	seed = tls->prev_digest[HANDSHAKE_HASH_TLS12];
-	seed_len = tls_handshake_hash_data[HANDSHAKE_HASH_TLS12].length;
+	if (tls->negotiated_version >= TLS_V12) {
+		seed = tls->prev_digest[HANDSHAKE_HASH_TLS12];
+		seed_len = tls_handshake_hash_data[HANDSHAKE_HASH_TLS12].length;
+	} else {
+		seed = alloca(36);
+		memcpy(seed + 0, tls->prev_digest[HANDSHAKE_HASH_MD5], 16);
+		memcpy(seed + 16, tls->prev_digest[HANDSHAKE_HASH_SHA1], 20);
+		seed_len = 36;
+	}
+
 	tls12_prf(L_CHECKSUM_SHA256, 32, tls->pending.master_secret, 48,
 			tls->server ? "client finished" : "server finished",
 			seed, seed_len,
