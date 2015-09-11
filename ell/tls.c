@@ -685,7 +685,7 @@ static struct tls_signature_hash_algorithms tls_signature_hash_pref[] = {
 static bool tls_send_certificate_request(struct l_tls *tls)
 {
 	uint8_t *buf, *ptr, *dn_ptr;
-	int i;
+	unsigned int i;
 
 	buf = l_malloc(128 + L_ARRAY_SIZE(tls_cert_type_pref) +
 			2 * L_ARRAY_SIZE(tls_signature_hash_pref));
@@ -694,7 +694,7 @@ static bool tls_send_certificate_request(struct l_tls *tls)
 	/* Fill in the Certificate Request body */
 
 	*ptr++ = L_ARRAY_SIZE(tls_cert_type_pref);
-	for (i = 0; i < (int) L_ARRAY_SIZE(tls_cert_type_pref); i++)
+	for (i = 0; i < L_ARRAY_SIZE(tls_cert_type_pref); i++)
 		*ptr++ = tls_cert_type_pref[i];
 
 	/*
@@ -707,14 +707,14 @@ static bool tls_send_certificate_request(struct l_tls *tls)
 	 * one of HANDSHAKE_HASH_*.  The values we include here will
 	 * affect both of these steps so revisit which set we're passing
 	 * here.
-	 *
-	 * TODO: not present in TLS 1.0
 	 */
-	l_put_be16(L_ARRAY_SIZE(tls_signature_hash_pref) * 2, ptr);
-	ptr += 2;
-	for (i = 0; i < (int) L_ARRAY_SIZE(tls_signature_hash_pref); i++) {
-		*ptr++ = tls_signature_hash_pref[i].hash_id;
-		*ptr++ = tls_signature_hash_pref[i].signature_id;
+	if (tls->negotiated_version >= TLS_V12) {
+		l_put_be16(L_ARRAY_SIZE(tls_signature_hash_pref) * 2, ptr);
+		ptr += 2;
+		for (i = 0; i < L_ARRAY_SIZE(tls_signature_hash_pref); i++) {
+			*ptr++ = tls_signature_hash_pref[i].hash_id;
+			*ptr++ = tls_signature_hash_pref[i].signature_id;
+		}
 	}
 
 	dn_ptr = ptr;
