@@ -179,6 +179,7 @@ void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
 				TX_RECORD_TAILROOM];
 	uint8_t *fragment, *plaintext;
 	uint16_t fragment_len;
+	uint16_t version = tls->negotiated_version ?: TLS_MIN_VERSION;
 
 	while (len) {
 		fragment = buf + TX_RECORD_HEADROOM;
@@ -188,8 +189,8 @@ void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
 		/* Build a TLSPlaintext struct */
 		plaintext = fragment - 5;
 		plaintext[0] = type;
-		plaintext[1] = (uint8_t) (TLS_VERSION >> 8);
-		plaintext[2] = (uint8_t) (TLS_VERSION >> 0);
+		plaintext[1] = (uint8_t) (version >> 8);
+		plaintext[2] = (uint8_t) (version >> 0);
 		plaintext[3] = fragment_len >> 8;
 		plaintext[4] = fragment_len >> 0;
 		memcpy(plaintext + 5, data, fragment_len);
@@ -333,7 +334,9 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 		return false;
 	}
 
-	if (version < TLS_MIN_VERSION || version > TLS_VERSION) {
+	if ((tls->negotiated_version && tls->negotiated_version != version) ||
+			(!tls->negotiated_version &&
+			 tls->record_buf[1] != 0x03 /* Appending E.1 */)) {
 		tls_disconnect(tls, TLS_ALERT_PROTOCOL_VERSION, 0);
 		return false;
 	}

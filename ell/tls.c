@@ -510,6 +510,7 @@ void tls_disconnect(struct l_tls *tls, enum l_tls_alert_desc desc,
 	tls_reset_cipher_spec(tls, 0);
 	tls_reset_cipher_spec(tls, 1);
 
+	tls->negotiated_version = 0;
 	tls->ready = false;
 
 	tls->disconnected(local_desc ?: desc, local_desc && !desc,
