@@ -217,6 +217,28 @@ static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx)
 			tls->record_iv_length[txrx] = enc->iv_length;
 			tls->block_length[txrx] = enc->block_length;
 		}
+
+		if ((tls->server && txrx) || (!tls->server && !txrx))
+			key_offset += enc->key_length;
+		else
+			key_offset += 2 * enc->key_length;
+	}
+
+	if (tls->negotiated_version <= TLS_V10 &&
+			tls->cipher_suite[txrx]->encryption &&
+			tls->cipher_suite[txrx]->encryption->cipher_type ==
+			TLS_CIPHER_BLOCK) {
+		enc = tls->cipher_suite[txrx]->encryption;
+
+		/* Server write / client read is 6th in the key block */
+		if ((tls->server && txrx) || (!tls->server && !txrx))
+			key_offset += enc->iv_length;
+
+		l_cipher_set_iv(tls->cipher[txrx], tls->pending.key_block +
+				key_offset, enc->iv_length);
+
+		/* Wipe out the now unneeded part of the key block */
+		memset(tls->pending.key_block + key_offset, 0, enc->iv_length);
 	}
 
 	return true;

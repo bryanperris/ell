@@ -74,6 +74,7 @@ static void tls_tx_record_plaintext(struct l_tls *tls,
 	uint8_t padding_length;
 	uint8_t buf[TX_RECORD_HEADROOM + TX_RECORD_MAX_LEN +
 				TX_RECORD_TAILROOM];
+	uint8_t iv[32];
 	int offset;
 
 	/*
@@ -137,6 +138,13 @@ static void tls_tx_record_plaintext(struct l_tls *tls,
 
 			l_cipher_set_iv(tls->cipher[1], ciphertext,
 					tls->record_iv_length[1]);
+
+			offset = tls->record_iv_length[1];
+		} else if (tls->negotiated_version >= TLS_V11) {
+			l_getrandom(iv, tls->record_iv_length[1]);
+
+			l_cipher_encrypt(tls->cipher[1], iv, ciphertext,
+						tls->record_iv_length[1]);
 
 			offset = tls->record_iv_length[1];
 		}
@@ -314,6 +322,7 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 	int cipher_output_len, error;
 	uint8_t *compressed;
 	int compressed_len;
+	uint8_t iv[32];
 
 	type = tls->record_buf[0];
 	version = l_get_be16(tls->record_buf + 1);
@@ -371,7 +380,7 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 
 	case TLS_CIPHER_BLOCK:
 		i = 0;
-		if (tls->negotiated_version >= TLS_V12)
+		if (tls->negotiated_version >= TLS_V11)
 			i = tls->record_iv_length[0];
 
 		if (fragment_len <= tls->mac_length[0] + i) {
@@ -382,13 +391,26 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 		cipher_output_len = fragment_len - i;
 
 		if (cipher_output_len % tls->block_length[0] != 0) {
+			/*
+			 * In strict TLS 1.0 TLS_ALERT_DECRYPT_FAIL_RESERVED
+			 * should be returned here but that was declared
+			 * unsafe in the TLS 1.1 spec.
+			 */
 			tls_disconnect(tls, TLS_ALERT_BAD_RECORD_MAC, 0);
 			return false;
 		}
 
-		if (tls->negotiated_version >= TLS_V12)
+		if (tls->negotiated_version >= TLS_V12) {
 			if (!l_cipher_set_iv(tls->cipher[0],
 						tls->record_buf + 5,
+						tls->record_iv_length[0])) {
+				tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
+						0);
+				return false;
+			}
+		} else if (tls->negotiated_version >= TLS_V11)
+			if (!l_cipher_decrypt(tls->cipher[0],
+						tls->record_buf + 5, iv,
 						tls->record_iv_length[0])) {
 				tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
 						0);
@@ -416,6 +438,11 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 		error = 0;
 		if (padding_len + tls->mac_length[0] + 1 >=
 				(size_t) cipher_output_len) {
+			/*
+			 * In strict TLS 1.0 TLS_ALERT_DECRYPT_FAIL_RESERVED
+			 * should be returned here but that was declared
+			 * unsafe in the TLS 1.1 spec.
+			 */
 			padding_len = 0;
 			error = 1;
 		}

@@ -175,7 +175,12 @@ struct l_tls {
 		uint8_t master_secret[48];
 		uint8_t client_random[32];
 		uint8_t server_random[32];
-		uint8_t key_block[136]; /* Max key block size per 6.3 v1.1 */
+		/*
+		 * Max key block size per 6.3 v1.1 is 136 bytes but if we
+		 * allow AES_256_CBC_SHA256 with v1.0 we get 128 per section
+		 * 6.3 v1.2 + two IVs of 32 bytes.
+		 */
+		uint8_t key_block[192];
 	} pending;
 
 	enum tls_cipher_type cipher_type[2];
