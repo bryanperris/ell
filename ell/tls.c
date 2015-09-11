@@ -2089,6 +2089,9 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 			return false;
 		}
 
+		if (!len)
+			return true;
+
 		tls->rx(message, len, tls->user_data);
 
 		return true;

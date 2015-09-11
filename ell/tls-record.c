@@ -439,7 +439,7 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 		 */
 		padding_len = compressed[13 + cipher_output_len - 1];
 		error = 0;
-		if (padding_len + tls->mac_length[0] + 1 >=
+		if (padding_len + tls->mac_length[0] + 1 >
 				(size_t) cipher_output_len) {
 			/*
 			 * In strict TLS 1.0 TLS_ALERT_DECRYPT_FAIL_RESERVED
