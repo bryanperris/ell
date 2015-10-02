@@ -1053,6 +1053,9 @@ LIB_EXPORT void l_genl_family_unref(struct l_genl_family *family)
 	l_queue_destroy(family->mcast_list, NULL);
 	family->mcast_list = NULL;
 
+	if (family->id > 0 && family->watch_vanished)
+		family->watch_vanished(family->watch_data);
+
 	if (family->watch_destroy)
 		family->watch_destroy(family->watch_data);
 
