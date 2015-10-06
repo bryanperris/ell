@@ -119,6 +119,8 @@ static bool name_from_namespace(int version, const uint8_t nsid[16],
 	out_uuid[8] &= 0x3f;
 	out_uuid[8] |= 0x80;
 
+	l_checksum_free(hash);
+
 	return true;
 }
 
