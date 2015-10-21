@@ -25,6 +25,7 @@
 #endif
 
 #include <assert.h>
+#include <limits.h>
 
 #include <ell/ell.h>
 
@@ -33,6 +34,10 @@ static void test_uintset(const void *data)
 	struct l_uintset *set;
 	int i;
 	bool r;
+
+	assert(l_uintset_get_min(NULL) == UINT_MAX);
+	assert(l_uintset_find_max(NULL) == UINT_MAX);
+	assert(l_uintset_find_min(NULL) == UINT_MAX);
 
 	set = l_uintset_new_from_range(1, 76);
 	assert(set);
