@@ -314,14 +314,15 @@ LIB_EXPORT uint32_t l_uintset_get_max(struct l_uintset *set)
  * @set: The set of numbers
  *
  * Returns: The minimum number that is not preset in the set.  If the set of
- * numbers is fully populated, returns l_uintset_get_max(set) + 1.
+ * numbers is fully populated, returns l_uintset_get_max(set) + 1. If @set is
+ * NULL returns UINT_MAX.
  **/
 LIB_EXPORT uint32_t l_uintset_find_unused_min(struct l_uintset *set)
 {
 	unsigned int bit;
 
 	if (unlikely(!set))
-		return set->max + 1;
+		return UINT_MAX;
 
 	bit = find_first_zero_bit(set->bits, set->size);
 
@@ -336,14 +337,14 @@ LIB_EXPORT uint32_t l_uintset_find_unused_min(struct l_uintset *set)
  * @set: The set of numbers
  *
  * Returns: The maximum number preset in the set.  If the set of numbers is
- * empty, or on error, returns l_uintset_get_max(set) + 1.
+ * empty returns l_uintset_get_max(set) + 1. If @set is NULL returns UINT_MAX.
  **/
 LIB_EXPORT uint32_t l_uintset_find_max(struct l_uintset *set)
 {
 	unsigned int bit;
 
 	if (unlikely(!set))
-		return set->max + 1;
+		return UINT_MAX;
 
 	bit = find_last_bit(set->bits, set->size);
 
@@ -358,14 +359,14 @@ LIB_EXPORT uint32_t l_uintset_find_max(struct l_uintset *set)
  * @set: The set of numbers
  *
  * Returns: The minimum number preset in the set.  If the set of numbers is
- * empty, or on error, returns l_uintset_get_max(set) + 1.
+ * empty returns l_uintset_get_max(set) + 1. If @set is NULL returns UINT_MAX.
  **/
 LIB_EXPORT uint32_t l_uintset_find_min(struct l_uintset *set)
 {
 	unsigned int bit;
 
 	if (unlikely(!set))
-		return set->max + 1;
+		return UINT_MAX;
 
 	bit = find_first_bit(set->bits, set->size);
 
