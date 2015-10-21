@@ -149,12 +149,13 @@ struct l_uintset {
 LIB_EXPORT struct l_uintset *l_uintset_new_from_range(uint32_t min,
 								uint32_t max)
 {
-	struct l_uintset *ret = l_new(struct l_uintset, 1);
+	struct l_uintset *ret;
 	unsigned int size = max - min + 1;
 
 	if (size > USHRT_MAX)
 		return NULL;
 
+	ret = l_new(struct l_uintset, 1);
 	ret->bits = l_new(unsigned long,
 				(size + BITS_PER_LONG - 1) / BITS_PER_LONG);
 	ret->size = size;
