@@ -93,14 +93,7 @@ LIB_EXPORT struct l_ringbuf *l_ringbuf_new(size_t size)
 	real_size = align_power2(size);
 
 	ringbuf = l_new(struct l_ringbuf, 1);
-	if (!ringbuf)
-		return NULL;
-
 	ringbuf->buffer = l_malloc(real_size);
-	if (!ringbuf->buffer) {
-		l_free(ringbuf);
-		return NULL;
-	}
 
 	ringbuf->size = real_size;
 	ringbuf->in = RINGBUF_RESET;
