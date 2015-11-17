@@ -126,7 +126,6 @@ static void tls_free_key(uint8_t *key, size_t size)
 static void tls_reset_handshake(struct l_tls *tls)
 {
 	int i;
-	memset(tls->pending.master_secret, 0, 48);
 	memset(tls->pending.key_block, 0, sizeof(tls->pending.key_block));
 
 	if (tls->peer_cert) {
@@ -142,6 +141,13 @@ static void tls_reset_handshake(struct l_tls *tls)
 	tls->state = TLS_HANDSHAKE_WAIT_HELLO;
 	tls->cert_requested = 0;
 	tls->cert_sent = 0;
+}
+
+static void tls_cleanup_handshake(struct l_tls *tls)
+{
+	memset(tls->pending.client_random, 0, 32);
+	memset(tls->pending.server_random, 0, 32);
+	memset(tls->pending.master_secret, 0, 48);
 }
 
 static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx)
@@ -506,6 +512,7 @@ void tls_disconnect(struct l_tls *tls, enum l_tls_alert_desc desc,
 	tls_send_alert(tls, true, desc);
 
 	tls_reset_handshake(tls);
+	tls_cleanup_handshake(tls);
 
 	tls_reset_cipher_spec(tls, 0);
 	tls_reset_cipher_spec(tls, 1);
@@ -805,8 +812,6 @@ static void tls_generate_master_secret(struct l_tls *tls,
 				tls->pending.key_block, key_block_size);
 
 	memset(seed, 0, 64);
-	memset(tls->pending.client_random, 0, 32);
-	memset(tls->pending.server_random, 0, 32);
 }
 
 static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
@@ -1731,6 +1736,8 @@ static void tls_finished(struct l_tls *tls)
 
 	tls->ready_handle(peer_identity, tls->user_data);
 
+	tls_cleanup_handshake(tls);
+
 	if (peer_identity)
 		l_free(peer_identity);
 }
@@ -1968,6 +1975,7 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 	l_tls_set_auth_data(tls, NULL, NULL, NULL);
 
 	tls_reset_handshake(tls);
+	tls_cleanup_handshake(tls);
 
 	tls_reset_cipher_spec(tls, 0);
 	tls_reset_cipher_spec(tls, 1);
