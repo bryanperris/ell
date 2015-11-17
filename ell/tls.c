@@ -123,9 +123,20 @@ static void tls_free_key(uint8_t *key, size_t size)
 	l_free(key);
 }
 
+static void tls_drop_handshake_hash(struct l_tls *tls,
+					enum handshake_hash_type hash)
+{
+	if (tls->handshake_hash[hash]) {
+		l_checksum_free(tls->handshake_hash[hash]);
+
+		tls->handshake_hash[hash] = NULL;
+	}
+}
+
 static void tls_reset_handshake(struct l_tls *tls)
 {
-	int i;
+	enum handshake_hash_type hash;
+
 	memset(tls->pending.key_block, 0, sizeof(tls->pending.key_block));
 
 	if (tls->peer_cert) {
@@ -135,8 +146,8 @@ static void tls_reset_handshake(struct l_tls *tls)
 		tls->peer_pubkey = NULL;
 	}
 
-	for (i = 0; i < __HANDSHAKE_HASH_COUNT; i++)
-		l_checksum_reset(tls->handshake_hash[i]);
+	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+		tls_drop_handshake_hash(tls, hash);
 
 	tls->state = TLS_HANDSHAKE_WAIT_HELLO;
 	tls->cert_requested = 0;
@@ -417,6 +428,29 @@ static const struct tls_hash_algorithm tls_handshake_hash_data[] = {
 	[HANDSHAKE_HASH_SHA1]	= { 2, L_CHECKSUM_SHA1, 20 },
 };
 
+static bool tls_init_handshake_hash(struct l_tls *tls)
+{
+	enum handshake_hash_type hash;
+
+	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++) {
+		if (tls->handshake_hash[hash])
+			goto err;
+
+		tls->handshake_hash[hash] = l_checksum_new(
+					tls_handshake_hash_data[hash].l_id);
+
+		if (!tls->handshake_hash[hash])
+			goto err;
+	}
+
+	return true;
+err:
+	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+		tls_drop_handshake_hash(tls, hash);
+
+	return false;
+}
+
 enum tls_handshake_type {
 	TLS_HELLO_REQUEST	= 0,
 	TLS_CLIENT_HELLO	= 1,
@@ -539,7 +573,8 @@ static void tls_tx_handshake(struct l_tls *tls, int type, uint8_t *buf,
 	buf[3] = (length - TLS_HANDSHAKE_HEADER_SIZE) >>  0;
 
 	for (i = 0; i < __HANDSHAKE_HASH_COUNT; i++)
-		l_checksum_update(tls->handshake_hash[i], buf, length);
+		if (tls->handshake_hash[i])
+			l_checksum_update(tls->handshake_hash[i], buf, length);
 
 	tls_tx_record(tls, TLS_CT_HANDSHAKE, buf, length);
 }
@@ -714,7 +749,7 @@ static struct tls_signature_hash_algorithms tls_signature_hash_pref[] = {
 
 static bool tls_send_certificate_request(struct l_tls *tls)
 {
-	uint8_t *buf, *ptr, *dn_ptr;
+	uint8_t *buf, *ptr, *dn_ptr, *signature_hash_ptr;
 	unsigned int i;
 
 	buf = l_malloc(128 + L_ARRAY_SIZE(tls_cert_type_pref) +
@@ -739,12 +774,15 @@ static bool tls_send_certificate_request(struct l_tls *tls)
 	 * here.
 	 */
 	if (tls->negotiated_version >= TLS_V12) {
-		l_put_be16(L_ARRAY_SIZE(tls_signature_hash_pref) * 2, ptr);
+		signature_hash_ptr = ptr;
 		ptr += 2;
+
 		for (i = 0; i < L_ARRAY_SIZE(tls_signature_hash_pref); i++) {
 			*ptr++ = tls_signature_hash_pref[i].hash_id;
 			*ptr++ = tls_signature_hash_pref[i].signature_id;
 		}
+
+		l_put_be16(ptr - (signature_hash_ptr + 2), signature_hash_ptr);
 	}
 
 	dn_ptr = ptr;
@@ -1077,7 +1115,8 @@ static bool tls_get_handshake_hash_by_id(struct l_tls *tls, uint8_t hash_id,
 	enum handshake_hash_type hash;
 
 	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
-		if (tls_handshake_hash_data[hash].tls_id == hash_id) {
+		if (tls_handshake_hash_data[hash].tls_id == hash_id &&
+				tls->handshake_hash[hash]) {
 			tls_get_handshake_hash(tls, hash, out);
 
 			if (len)
@@ -1680,7 +1719,8 @@ static bool tls_get_prev_digest_by_id(struct l_tls *tls, uint8_t hash_id,
 	size_t len;
 
 	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
-		if (tls_handshake_hash_data[hash].tls_id == hash_id) {
+		if (tls_handshake_hash_data[hash].tls_id == hash_id &&
+				tls->handshake_hash[hash]) {
 			len = tls_handshake_hash_data[hash].length;
 			memcpy(out, tls->prev_digest[hash], len);
 
@@ -1928,7 +1968,6 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 				void *user_data)
 {
 	struct l_tls *tls;
-	enum handshake_hash_type hash;
 
 	tls = l_new(struct l_tls, 1);
 	tls->server = server;
@@ -1938,30 +1977,20 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 	tls->disconnected = disconnect_handler;
 	tls->user_data = user_data;
 
-	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++) {
-		tls->handshake_hash[hash] = l_checksum_new(
-				tls_handshake_hash_data[hash].l_id);
-
-		if (!tls->handshake_hash[hash])
-			goto err;
-	}
-
 	/* If we're the client, start the handshake right away */
-	if (!tls->server)
+	if (!tls->server) {
+		if (!tls_init_handshake_hash(tls)) {
+			l_free(tls);
+
+			return NULL;
+		}
+
 		tls_send_client_hello(tls);
+	}
 
 	tls->state = TLS_HANDSHAKE_WAIT_HELLO;
 
 	return tls;
-
-err:
-	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
-		if (tls->handshake_hash[hash])
-			l_checksum_free(tls->handshake_hash[hash]);
-
-	l_free(tls);
-
-	return NULL;
 }
 
 LIB_EXPORT void l_tls_free(struct l_tls *tls)
@@ -1987,7 +2016,7 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 		l_free(tls->message_buf);
 
 	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
-		l_checksum_free(tls->handshake_hash[hash]);
+		tls_drop_handshake_hash(tls, hash);
 
 	l_free(tls);
 }
@@ -2052,6 +2081,13 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 		return false;
 
 	case TLS_CT_HANDSHAKE:
+		/* Start hashing the handshake contents on first message */
+		if (tls->server && message[0] == TLS_CLIENT_HELLO &&
+				(tls->state == TLS_HANDSHAKE_WAIT_HELLO ||
+				 tls->state != TLS_HANDSHAKE_DONE))
+			if (!tls_init_handshake_hash(tls))
+				return false;
+
 		/*
 		 * Corner case: When handling a Certificate Verify or a
 		 * Finished message we need access to the messages hash from
@@ -2069,9 +2105,13 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 		 */
 		if (message[0] == TLS_CERTIFICATE_VERIFY ||
 				message[0] == TLS_FINISHED)
-			for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+			for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++) {
+				if (!tls->handshake_hash[hash])
+					continue;
+
 				tls_get_handshake_hash(tls, hash,
 							tls->prev_digest[hash]);
+			}
 
 		/*
 		 * RFC 5246, Section 7.4.1.1:
@@ -2080,9 +2120,13 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 		 * the Finished messages and the certificate verify message.
 		 */
 		if (message[0] != TLS_HELLO_REQUEST)
-			for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+			for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++) {
+				if (!tls->handshake_hash[hash])
+					continue;
+
 				l_checksum_update(tls->handshake_hash[hash],
 							message, len);
+			}
 
 		tls_handle_handshake(tls, message[0],
 					message + TLS_HANDSHAKE_HEADER_SIZE,
