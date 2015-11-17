@@ -966,7 +966,7 @@ static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out,
 	key_size = l_asymmetric_cipher_get_key_size(rsa_privkey);
 
 	if (tls->negotiated_version >= TLS_V12) {
-		hash_type = &tls_handshake_hash_data[HANDSHAKE_HASH_TLS12];
+		hash_type = &tls_handshake_hash_data[tls->signature_hash];
 		get_hash(tls, hash_type->tls_id, hash, NULL, NULL);
 
 		pkcs1_write_digest_info(hash_type->l_id,
@@ -1578,12 +1578,94 @@ done:
 static void tls_handle_certificate_request(struct l_tls *tls,
 						const uint8_t *buf, size_t len)
 {
+	int cert_type_len, signature_hash_len, dn_len, i;
+	enum handshake_hash_type first_supported, hash;
+	const uint8_t *signature_hash_data;
+	uint8_t hash_id;
+
 	tls->cert_requested = 1;
 
+	cert_type_len = *buf++;
+	if (len < (size_t) 1 + cert_type_len + 2)
+		goto decode_error;
+
+	/* Skip certificate_types */
+	buf += cert_type_len;
+	len -= 1 + cert_type_len;
+
 	/*
-	 * TODO: parse and save key type, signature algorithms and DNs list
-	 * for use in tls_send_certificate.
+	 * TODO: parse and save certificate_types,
+	 * supported_signature_algorithms and certificate_authorities
+	 * lists for use in tls_send_certificate.
 	 */
+
+	if (tls->negotiated_version >= TLS_V12) {
+		/*
+		 * This only makes sense as a variable-length field, assume
+		 * there's a typo in RFC5246 7.4.4 here.
+		 */
+		signature_hash_len = l_get_be16(buf);
+		signature_hash_data = buf + 2;
+
+		if (len < (size_t) 2 + signature_hash_len + 2 ||
+				(signature_hash_len & 1))
+			goto decode_error;
+
+		len -= 2 + signature_hash_len;
+		buf += 2 + signature_hash_len;
+
+		/*
+		 * In 1.2 SHA256 is the default because that is most likely
+		 * to be supported in all the scenarios and optimal because
+		 * SHA256 is required independently for the Finished hash
+		 * meaning that we'll just need one hash type instead of
+		 * two.  If not available fall back to the first common
+		 * hash algorithm.
+		 */
+		first_supported = -1;
+
+		for (i = 0; i < signature_hash_len; i += 2) {
+			hash_id = signature_hash_data[i + 0];
+
+			/* Ignore hash types for signatures other than ours */
+			if (signature_hash_data[i + 1] != tls_rsa.id)
+				continue;
+
+			if (hash_id == tls_handshake_hash_data[
+						HANDSHAKE_HASH_SHA256].tls_id)
+				break;
+
+			if ((int) first_supported != -1)
+				continue;
+
+			for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+				if (hash_id == tls_handshake_hash_data[hash].
+						tls_id &&
+						tls->handshake_hash[hash]) {
+					first_supported = hash;
+					break;
+				}
+		}
+
+		if (i < signature_hash_len)
+			tls->signature_hash = HANDSHAKE_HASH_SHA256;
+		else if ((int) first_supported != -1)
+			tls->signature_hash = first_supported;
+		else {
+			tls_disconnect(tls, TLS_ALERT_UNSUPPORTED_CERT, 0);
+
+			return;
+		}
+	}
+
+	dn_len = l_get_be16(buf);
+	if ((size_t) 2 + dn_len != len)
+		goto decode_error;
+
+	return;
+
+decode_error:
+	tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
 }
 
 static void tls_handle_server_hello_done(struct l_tls *tls,
@@ -1976,6 +2058,8 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 	tls->ready_handle = ready_handler;
 	tls->disconnected = disconnect_handler;
 	tls->user_data = user_data;
+
+	tls->signature_hash = HANDSHAKE_HASH_SHA256;
 
 	/* If we're the client, start the handshake right away */
 	if (!tls->server) {

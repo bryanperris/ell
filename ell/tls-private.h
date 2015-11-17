@@ -166,6 +166,7 @@ struct l_tls {
 	struct tls_cert *peer_cert;
 	uint8_t *peer_pubkey;
 	size_t peer_pubkey_length;
+	enum handshake_hash_type signature_hash;
 
 	/* SecurityParameters current and pending */
 
