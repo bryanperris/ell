@@ -1135,12 +1135,19 @@ static bool tls_send_certificate_verify(struct l_tls *tls)
 {
 	uint8_t buf[2048];
 	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
+	int i;
 
 	/* Fill in the Certificate Verify body */
 
 	if (!tls->pending.cipher_suite->key_xchg->sign(tls, &ptr,
 						tls_get_handshake_hash_by_id))
 		return false;
+
+	/* Stop maintaining handshake message hashes other than SHA256. */
+	if (tls->negotiated_version >= TLS_V12)
+		for (i = 0; i < __HANDSHAKE_HASH_COUNT; i++)
+			if (i != HANDSHAKE_HASH_SHA256)
+				tls_drop_handshake_hash(tls, i);
 
 	tls_tx_handshake(tls, TLS_CERTIFICATE_VERIFY, buf, ptr - buf);
 
@@ -1235,6 +1242,7 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	uint8_t session_id_size, compression_methods_size;
 	const uint8_t *cipher_suites;
 	const uint8_t *compression_methods;
+	int i;
 
 	/* Do we have enough for ProtocolVersion + Random + SessionID size? */
 	if (len < 2 + 32 + 1)
@@ -1318,6 +1326,12 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	tls->negotiated_version = TLS_VERSION < tls->client_version ?
 		TLS_VERSION : tls->client_version;
 
+	/* Stop maintaining handshake message hashes other than MD1 and SHA. */
+	if (tls->negotiated_version < TLS_V12)
+		for (i = 0; i < __HANDSHAKE_HASH_COUNT; i++)
+			if (i != HANDSHAKE_HASH_SHA1 && i != HANDSHAKE_HASH_MD5)
+				tls_drop_handshake_hash(tls, i);
+
 	/* Select a cipher suite according to client's preference list */
 	while (cipher_suites_size) {
 		/*
@@ -1389,6 +1403,7 @@ static void tls_handle_server_hello(struct l_tls *tls,
 					const uint8_t *buf, size_t len)
 {
 	uint8_t session_id_size, cipher_suite_id[2], compression_method_id;
+	int i;
 
 	/* Do we have enough for ProtocolVersion + Random + SessionID len ? */
 	if (len < 2 + 32 + 1)
@@ -1421,6 +1436,12 @@ static void tls_handle_server_hello(struct l_tls *tls,
 				TLS_ALERT_ILLEGAL_PARAM, 0);
 		return;
 	}
+
+	/* Stop maintaining handshake message hashes other than MD1 and SHA. */
+	if (tls->negotiated_version < TLS_V12)
+		for (i = 0; i < __HANDSHAKE_HASH_COUNT; i++)
+			if (i != HANDSHAKE_HASH_SHA1 && i != HANDSHAKE_HASH_MD5)
+				tls_drop_handshake_hash(tls, i);
 
 	/* Set the new cipher suite and compression method structs */
 	tls->pending.cipher_suite = tls_find_cipher_suite(cipher_suite_id);
@@ -1656,6 +1677,16 @@ static void tls_handle_certificate_request(struct l_tls *tls,
 
 			return;
 		}
+
+		/*
+		 * We can now safely stop maintaining handshake message
+		 * hashes other than SHA256 and the one selected for
+		 * signing.
+		 */
+		for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+			if (hash != HANDSHAKE_HASH_SHA256 &&
+					hash != tls->signature_hash)
+				tls_drop_handshake_hash(tls, hash);
 	}
 
 	dn_len = l_get_be16(buf);
@@ -1821,9 +1852,17 @@ static bool tls_get_prev_digest_by_id(struct l_tls *tls, uint8_t hash_id,
 static void tls_handle_certificate_verify(struct l_tls *tls,
 						const uint8_t *buf, size_t len)
 {
+	int i;
+
 	if (!tls->pending.cipher_suite->key_xchg->verify(tls, buf, len,
 						tls_get_prev_digest_by_id))
 		return;
+
+	/* Stop maintaining handshake message hashes other than SHA256. */
+	if (tls->negotiated_version >= TLS_V12)
+		for (i = 0; i < __HANDSHAKE_HASH_COUNT; i++)
+			if (i != HANDSHAKE_HASH_SHA256)
+				tls_drop_handshake_hash(tls, i);
 
 	/*
 	 * The client's certificate is now verified based on the following
