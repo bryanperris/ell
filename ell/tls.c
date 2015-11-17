@@ -1067,8 +1067,14 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 		expected_len = 36;
 
 		/*
-		 * TODO: in TLS 1.0 the block type 0 is also valid, while
-		 * l_asymmetric_cipher_verify will only accept block type 1.
+		 * Within the RSA padding for signatures PKCS#1 1.5 allows
+		 * the block format to be either 0 or 1, while PKCS#1 2.0
+		 * mandates block type 1 making the signatures unambiguous.
+		 * The l_asymmetric_cipher_verify implementation only
+		 * accepts block type 1.
+		 * TODO: TLS 1.0 doesn't specify that block type must be 1
+		 * like TLS 1.2 does meaning that both PKCS#1 1.5 types are
+		 * probably allowed.
 		 */
 	}
 
