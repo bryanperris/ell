@@ -89,6 +89,11 @@ do {						\
 #error "Unknown byte order"
 #endif
 
+static inline uint8_t l_get_u8(const void *ptr)
+{
+	return *((const uint8_t *) ptr);
+}
+
 static inline uint16_t l_get_le16(const void *ptr)
 {
 	return L_LE16_TO_CPU(L_GET_UNALIGNED((const uint16_t *) ptr));
