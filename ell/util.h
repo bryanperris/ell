@@ -124,9 +124,14 @@ static inline uint64_t l_get_be64(const void *ptr)
 	return L_BE64_TO_CPU(L_GET_UNALIGNED((const uint64_t *) ptr));
 }
 
-static inline void l_put_le16(uint16_t val, void *dst)
+static inline void l_put_u8(uint8_t val, void *ptr)
 {
-	L_PUT_UNALIGNED(L_CPU_TO_LE16(val), (uint16_t *) dst);
+	*((uint8_t *) ptr) = val;
+}
+
+static inline void l_put_le16(uint16_t val, void *ptr)
+{
+	L_PUT_UNALIGNED(L_CPU_TO_LE16(val), (uint16_t *) ptr);
 }
 
 static inline void l_put_be16(uint16_t val, const void *ptr)
@@ -134,24 +139,24 @@ static inline void l_put_be16(uint16_t val, const void *ptr)
 	L_PUT_UNALIGNED(L_CPU_TO_BE16(val), (uint16_t *) ptr);
 }
 
-static inline void l_put_le32(uint32_t val, void *dst)
+static inline void l_put_le32(uint32_t val, void *ptr)
 {
-	L_PUT_UNALIGNED(L_CPU_TO_LE32(val), (uint32_t *) dst);
+	L_PUT_UNALIGNED(L_CPU_TO_LE32(val), (uint32_t *) ptr);
 }
 
-static inline void l_put_be32(uint32_t val, void *dst)
+static inline void l_put_be32(uint32_t val, void *ptr)
 {
-	L_PUT_UNALIGNED(L_CPU_TO_BE32(val), (uint32_t *) dst);
+	L_PUT_UNALIGNED(L_CPU_TO_BE32(val), (uint32_t *) ptr);
 }
 
-static inline void l_put_le64(uint64_t val, void *dst)
+static inline void l_put_le64(uint64_t val, void *ptr)
 {
-	L_PUT_UNALIGNED(L_CPU_TO_LE64(val), (uint64_t *) dst);
+	L_PUT_UNALIGNED(L_CPU_TO_LE64(val), (uint64_t *) ptr);
 }
 
-static inline void l_put_be64(uint64_t val, void *dst)
+static inline void l_put_be64(uint64_t val, void *ptr)
 {
-	L_PUT_UNALIGNED(L_CPU_TO_BE64(val), (uint64_t *) dst);
+	L_PUT_UNALIGNED(L_CPU_TO_BE64(val), (uint64_t *) ptr);
 }
 
 #define L_AUTO_CLEANUP_VAR(vartype,varname,destroy) \
