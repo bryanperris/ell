@@ -78,7 +78,7 @@ static void timeout_callback(int fd, uint32_t events, void *user_data)
 		timeout->callback(timeout, timeout->user_data);
 }
 
-static inline int timeout_set(int fd, unsigned int seconds)
+static inline int timeout_set(int fd, unsigned int seconds, long nanoseconds)
 {
 	struct itimerspec itimer;
 
@@ -86,7 +86,7 @@ static inline int timeout_set(int fd, unsigned int seconds)
 	itimer.it_interval.tv_sec = 0;
 	itimer.it_interval.tv_nsec = 0;
 	itimer.it_value.tv_sec = seconds;
-	itimer.it_value.tv_nsec = 0;
+	itimer.it_value.tv_nsec = nanoseconds;
 
 	return timerfd_settime(fd, 0, &itimer, NULL);
 }
@@ -109,6 +109,29 @@ LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
 			l_timeout_notify_cb_t callback,
 			void *user_data, l_timeout_destroy_cb_t destroy)
 {
+	return l_timeout_create_with_nanoseconds(seconds, 0, callback,
+							user_data, destroy);
+}
+
+/**
+ * l_timeout_create_with_nanoseconds:
+ * @seconds: number of seconds
+ * @nanoseconds: number of nanoseconds
+ * @callback: timeout callback function
+ * @user_data: user data provided to timeout callback function
+ * @destroy: destroy function for user data
+ *
+ * Create new timeout callback handling.
+ *
+ * The timeout will on fire once. The timeout handling needs to be rearmed
+ * with l_timeout_modify_with_nanoseconds() to trigger again.
+ *
+ * Returns: a newly allocated #l_timeout object
+ **/
+LIB_EXPORT struct l_timeout *l_timeout_create_with_nanoseconds(unsigned int seconds,
+			long nanoseconds, l_timeout_notify_cb_t callback,
+			void *user_data, l_timeout_destroy_cb_t destroy)
+{
 	struct l_timeout *timeout;
 
 	if (unlikely(!callback))
@@ -127,8 +150,8 @@ LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
 		return NULL;
 	}
 
-	if (seconds > 0) {
-		if (timeout_set(timeout->fd, seconds) < 0) {
+	if (seconds > 0 || nanoseconds > 0) {
+		if (timeout_set(timeout->fd, seconds, nanoseconds) < 0) {
 			close(timeout->fd);
 			l_free(timeout);
 			return NULL;
@@ -158,7 +181,32 @@ LIB_EXPORT void l_timeout_modify(struct l_timeout *timeout,
 		return;
 
 	if (seconds > 0) {
-		if (timeout_set(timeout->fd, seconds) < 0)
+		if (timeout_set(timeout->fd, seconds, 0) < 0)
+			return;
+	}
+
+	watch_modify(timeout->fd, EPOLLIN | EPOLLONESHOT, true);
+}
+
+/**
+ * l_timeout_modify_with_nanoseconds:
+ * @timeout: timeout object
+ * @seconds: number of seconds
+ * @nanoseconds: number of nanoseconds
+ *
+ * Modify an existing @timeout and rearm it.
+ **/
+LIB_EXPORT void l_timeout_modify_with_nanoseconds(struct l_timeout *timeout,
+					unsigned int seconds, long nanoseconds)
+{
+	if (unlikely(!timeout))
+		return;
+
+	if (unlikely(timeout->fd < 0))
+		return;
+
+	if (seconds > 0 || nanoseconds > 0) {
+		if (timeout_set(timeout->fd, seconds, nanoseconds) < 0)
 			return;
 	}
 
