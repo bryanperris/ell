@@ -120,14 +120,6 @@ unit_tests = unit/test-unit \
 			unit/test-netlink \
 			unit/test-genl \
 			unit/test-genl-msg \
-			unit/test-kdbus \
-			unit/test-dbus \
-			unit/test-dbus-util \
-			unit/test-dbus-message \
-			unit/test-dbus-service \
-			unit/test-dbus-watch \
-			unit/test-gvariant-util \
-			unit/test-gvariant-message \
 			unit/test-siphash \
 			unit/test-hwdb \
 			unit/test-cipher \
@@ -139,8 +131,17 @@ unit_tests = unit/test-unit \
 			unit/test-tls \
 			unit/test-uuid
 
+dbus_tests = unit/test-kdbus \
+			unit/test-dbus \
+			unit/test-dbus-util \
+			unit/test-dbus-message \
+			unit/test-dbus-service \
+			unit/test-dbus-watch \
+			unit/test-gvariant-util \
+			unit/test-gvariant-message
+
 if MAINTAINER_MODE
-noinst_PROGRAMS += $(unit_tests)
+noinst_PROGRAMS += $(unit_tests) $(dbus_tests)
 endif
 
 unit_test_unit_LDADD = ell/libell-private.la
@@ -234,6 +235,10 @@ examples_https_server_test_LDADD = ell/libell-private.la
 EXTRA_DIST = $(unit_test_data_files)
 
 TESTS = $(unit_tests)
+
+if DBUS_TESTS
+TESTS += $(dbus_tests)
+endif
 
 DISTCLEANFILES = $(unit_tests)
 
