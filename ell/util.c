@@ -293,9 +293,15 @@ LIB_EXPORT char **l_strsplit(const char *str, const char sep)
 
 	ret = l_new(char *, len + 1);
 
-	for (i = 0, p = str, len = 0; p[len]; len++) {
-		if (p[len] != sep)
+	i = 0;
+	p = str;
+	len = 0;
+
+	while (p[len]) {
+		if (p[len] != sep) {
+			len += 1;
 			continue;
+		}
 
 		ret[i++] = l_strndup(p, len);
 		p += len + 1;
@@ -347,9 +353,15 @@ LIB_EXPORT char **l_strsplit_set(const char *str, const char *separators)
 
 	ret = l_new(char *, len + 1);
 
-	for (i = 0, p = str, len = 0; p[len]; len++) {
-		if (sep_table[(unsigned char) p[len]] != true)
+	i = 0;
+	p = str;
+	len = 0;
+
+	while (p[len]) {
+		if (sep_table[(unsigned char) p[len]] != true) {
+			len += 1;
 			continue;
+		}
 
 		ret[i++] = l_strndup(p, len);
 		p += len + 1;
