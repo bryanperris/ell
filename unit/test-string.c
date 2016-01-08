@@ -124,6 +124,24 @@ static void test_strsplit(const void *test_data)
 	assert(!strcmp(strv[2], "bz"));
 	assert(strv[3] == NULL);
 	l_strfreev(strv);
+
+	strv = l_strsplit(":bar:::bz", ':');
+	assert(strv);
+	assert(!strcmp(strv[0], ""));
+	assert(!strcmp(strv[1], "bar"));
+	assert(!strcmp(strv[2], ""));
+	assert(!strcmp(strv[3], ""));
+	assert(!strcmp(strv[4], "bz"));
+	assert(strv[5] == NULL);
+	l_strfreev(strv);
+
+	strv = l_strsplit("Foo:bar:", ':');
+	assert(strv);
+	assert(!strcmp(strv[0], "Foo"));
+	assert(!strcmp(strv[1], "bar"));
+	assert(!strcmp(strv[2], ""));
+	assert(strv[3] == NULL);
+	l_strfreev(strv);
 }
 
 static void test_strsplit_set(const void *test_data)
@@ -136,6 +154,20 @@ static void test_strsplit_set(const void *test_data)
 	assert(!strcmp(strv[2], "Baz"));
 	assert(!strcmp(strv[3], "Blu"));
 	assert(strv[4] == NULL);
+	l_strfreev(strv);
+
+	strv = l_strsplit_set("Foo:bar,Baz Blu,:,Fee:Fie ", ":, ");
+	assert(strv);
+	assert(!strcmp(strv[0], "Foo"));
+	assert(!strcmp(strv[1], "bar"));
+	assert(!strcmp(strv[2], "Baz"));
+	assert(!strcmp(strv[3], "Blu"));
+	assert(!strcmp(strv[4], ""));
+	assert(!strcmp(strv[5], ""));
+	assert(!strcmp(strv[6], "Fee"));
+	assert(!strcmp(strv[7], "Fie"));
+	assert(!strcmp(strv[8], ""));
+	assert(strv[9] == NULL);
 	l_strfreev(strv);
 }
 
@@ -175,7 +207,7 @@ int main(int argc, char *argv[])
 	l_test_add("append_fixed test 2", test_fixed, &fixed_test2);
 	l_test_add("append_fixed test 3", test_fixed, &fixed_test3);
 
-	l_test_add("strplit", test_strsplit, NULL);
+	l_test_add("strsplit", test_strsplit, NULL);
 	l_test_add("strsplit_set", test_strsplit_set, NULL);
 
 	l_test_add("joinv", test_joinv, NULL);
