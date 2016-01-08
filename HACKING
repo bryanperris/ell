@@ -5,13 +5,13 @@ If you fixed a bug or you want to add support for something, patches are
 welcome! In order to ease the inclusion of your patch, it's important to follow
 some rules, otherwise it will likely be rejected by maintainers.
 
-iwd rules for submitting patches follow most of the rules used by Linux kernel
+ell rules for submitting patches follow most of the rules used by Linux kernel
 (https://www.kernel.org/doc/Documentation/SubmittingPatches) with some remarks:
 
 1) Do *not* add "Signed-off-by" lines in your commit messages. ell does not
 use them, so including them is actually an error.
 
-2) Be sure to follow the coding style rules of iwd. They are listed in
+2) Be sure to follow the coding style rules of ell. They are listed in
 doc/coding-style.txt.
 
 3) Split your patch according to the top-level directories. E.g.: if you added
