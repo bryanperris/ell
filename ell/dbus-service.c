@@ -660,6 +660,9 @@ void _dbus_object_tree_prune_node(struct object_node *node)
 		if (parent->children != NULL)
 			return;
 
+		if (parent->instances)
+			return;
+
 		node = parent;
 		parent = node->parent;
 	}
@@ -741,9 +744,11 @@ bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
 	if (instance)
 		interface_instance_free(instance);
 
-	if (l_queue_isempty(node->instances) && !node->children) {
+	if (l_queue_isempty(node->instances)) {
 		l_hashmap_remove(tree->objects, path);
-		_dbus_object_tree_prune_node(node);
+
+		if (!node->children)
+			_dbus_object_tree_prune_node(node);
 	}
 
 	return r;
