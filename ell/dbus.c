@@ -51,7 +51,6 @@
 
 #define DBUS_INTERFACE_DBUS		"org.freedesktop.DBus"
 #define DBUS_INTERFACE_INTROSPECTABLE	"org.freedesktop.DBus.Introspectable"
-#define DBUS_INTERFACE_PROPERTIES	"org.freedesktop.DBus.Properties"
 
 #define DBUS_MAXIMUM_MATCH_RULE_LENGTH	1024
 
