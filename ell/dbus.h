@@ -195,13 +195,22 @@ bool l_dbus_message_builder_append_from_iter(
 struct l_dbus_message *l_dbus_message_builder_finalize(
 					struct l_dbus_message_builder *builder);
 
-bool l_dbus_register_interface(struct l_dbus *dbus,
-				const char *path, const char *interface,
+bool l_dbus_register_interface(struct l_dbus *dbus, const char *interface,
 				l_dbus_interface_setup_func_t setup_func,
-				void *user_data,
-				l_dbus_destroy_func_t destroy);
-bool l_dbus_unregister_interface(struct l_dbus *dbus, const char *path,
+				l_dbus_destroy_func_t destroy,
+				bool handle_old_style_properties);
+bool l_dbus_unregister_interface(struct l_dbus *dbus, const char *interface);
+
+bool l_dbus_register_object(struct l_dbus *dbus, const char *path,
+				void *user_data, l_dbus_destroy_func_t destroy,
+				...);
+bool l_dbus_unregister_object(struct l_dbus *dbus, const char *object);
+
+bool l_dbus_object_add_interface(struct l_dbus *dbus, const char *object,
+					const char *interface, void *user_data);
+bool l_dbus_object_remove_interface(struct l_dbus *dbus, const char *object,
 					const char *interface);
+
 unsigned int l_dbus_add_disconnect_watch(struct l_dbus *dbus,
 					const char *name,
 					l_dbus_watch_func_t disconnect_func,

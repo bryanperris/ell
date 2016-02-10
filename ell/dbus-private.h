@@ -169,11 +169,25 @@ struct object_node *_dbus_object_tree_lookup(struct _dbus_object_tree *tree,
 						const char *path);
 void _dbus_object_tree_prune_node(struct object_node *node);
 
-bool _dbus_object_tree_register(struct _dbus_object_tree *tree,
-				const char *path, const char *interface,
+struct object_node *_dbus_object_tree_new_object(struct _dbus_object_tree *tree,
+						const char *path,
+						void *user_data,
+						void (*destroy) (void *));
+bool _dbus_object_tree_object_destroy(struct _dbus_object_tree *tree,
+						const char *path);
+
+bool _dbus_object_tree_register_interface(struct _dbus_object_tree *tree,
+				const char *interface,
 				void (*setup_func)(struct l_dbus_interface *),
-				void *user_data, void (*destroy) (void *));
-bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
+				void (*destroy) (void *),
+				bool old_style_properties);
+bool _dbus_object_tree_unregister_interface(struct _dbus_object_tree *tree,
+						const char *interface);
+
+bool _dbus_object_tree_add_interface(struct _dbus_object_tree *tree,
+					const char *path, const char *interface,
+					void *user_data);
+bool _dbus_object_tree_remove_interface(struct _dbus_object_tree *tree,
 					const char *path,
 					const char *interface);
 

@@ -72,6 +72,8 @@ struct l_dbus_interface {
 	struct l_queue *methods;
 	struct l_queue *signals;
 	struct l_queue *properties;
+	bool handle_old_style_properties;
+	void (*instance_destroy)(void *);
 	char name[];
 };
 
@@ -84,13 +86,14 @@ struct child_node {
 struct interface_instance {
 	struct l_dbus_interface *interface;
 	void *user_data;
-	void (*user_destroy) (void *);
 };
 
 struct object_node {
 	struct object_node *parent;
 	struct l_queue *instances;
 	struct child_node *children;
+	void *user_data;
+	void (*destroy) (void *);
 };
 
 struct _dbus_object_tree {
@@ -489,8 +492,8 @@ struct _dbus_property *_dbus_interface_find_property(struct l_dbus_interface *i,
 
 static void interface_instance_free(struct interface_instance *instance)
 {
-	if (instance->user_destroy)
-		instance->user_destroy(instance->user_data);
+	if (instance->interface->instance_destroy)
+		instance->interface->instance_destroy(instance->user_data);
 
 	l_free(instance);
 }
@@ -538,6 +541,9 @@ static void subtree_free(struct object_node *node)
 
 	l_queue_destroy(node->instances,
 			(l_queue_destroy_func_t) interface_instance_free);
+
+	if (node->destroy)
+		node->destroy(node->user_data);
 
 	l_free(node);
 }
@@ -658,69 +664,171 @@ void _dbus_object_tree_prune_node(struct object_node *node)
 	}
 }
 
-bool _dbus_object_tree_register(struct _dbus_object_tree *tree,
-				const char *path, const char *interface,
-				void (*setup_func)(struct l_dbus_interface *),
-				void *user_data, void (*destroy) (void *))
+struct object_node *_dbus_object_tree_new_object(struct _dbus_object_tree *tree,
+						const char *path,
+						void *user_data,
+						void (*destroy) (void *))
 {
-	struct object_node *object;
+	struct object_node *node;
+
+	if (!_dbus_valid_object_path(path))
+		return NULL;
+
+	if (l_hashmap_lookup(tree->objects, path))
+		return NULL;
+
+	node = _dbus_object_tree_makepath(tree, path);
+	node->user_data = user_data;
+	node->destroy = destroy;
+
+	/*
+	 * Registered objects in the tree are marked by being present in the
+	 * tree->objects hash and having non-null node->instances.  Remaining
+	 * nodes are intermediate path elements added and removed
+	 * automatically.
+	 */
+	node->instances = l_queue_new();
+
+	l_hashmap_insert(tree->objects, path, node);
+
+	return node;
+}
+
+bool _dbus_object_tree_object_destroy(struct _dbus_object_tree *tree,
+					const char *path)
+{
+	struct object_node *node;
+
+	node = l_hashmap_remove(tree->objects, path);
+	if (!node)
+		return false;
+
+	l_queue_destroy(node->instances,
+			(l_queue_destroy_func_t) interface_instance_free);
+	node->instances = NULL;
+
+	if (node->destroy) {
+		node->destroy(node->user_data);
+		node->destroy = NULL;
+	}
+
+	if (!node->children)
+		_dbus_object_tree_prune_node(node);
+
+	return true;
+}
+
+bool _dbus_object_tree_register_interface(struct _dbus_object_tree *tree,
+				const char *interface,
+				void (*setup_func)(struct l_dbus_interface *),
+				void (*destroy) (void *),
+				bool old_style_properties)
+{
 	struct l_dbus_interface *dbi;
-	const struct l_queue_entry *entry;
-	struct interface_instance *instance;
 
 	if (!_dbus_valid_interface(interface))
 		return false;
 
-	if (!_dbus_valid_object_path(path))
+	/*
+	 * Check to make sure we do not have this interface already
+	 * registered
+	 */
+	dbi = l_hashmap_lookup(tree->interfaces, interface);
+	if (dbi)
+		return false;
+
+	dbi = _dbus_interface_new(interface);
+	dbi->instance_destroy = destroy;
+	dbi->handle_old_style_properties = old_style_properties;
+
+	setup_func(dbi);
+
+	l_hashmap_insert(tree->interfaces, dbi->name, dbi);
+
+	return true;
+}
+
+struct interface_check {
+	struct _dbus_object_tree *tree;
+	const char *interface;
+};
+
+static void check_interface_used(const void *key, void *value, void *user_data)
+{
+	const char *path = key;
+	struct object_node *node = value;
+	struct interface_check *state = user_data;
+
+	if (!l_queue_find(node->instances, match_interface_instance,
+				(char *) state->interface))
+		return;
+
+	_dbus_object_tree_remove_interface(state->tree, path, state->interface);
+}
+
+bool _dbus_object_tree_unregister_interface(struct _dbus_object_tree *tree,
+						const char *interface_name)
+{
+	struct l_dbus_interface *interface;
+	struct interface_check state = { tree, interface_name };
+
+	interface = l_hashmap_lookup(tree->interfaces, interface_name);
+	if (!interface)
+		return false;
+
+	/* Check that the interface is not in use */
+	l_hashmap_foreach(tree->objects, check_interface_used, &state);
+
+	l_hashmap_remove(tree->interfaces, interface_name);
+
+	_dbus_interface_free(interface);
+
+	return true;
+}
+
+bool _dbus_object_tree_add_interface(struct _dbus_object_tree *tree,
+					const char *path, const char *interface,
+					void *user_data)
+{
+	struct object_node *object;
+	struct l_dbus_interface *dbi;
+	struct interface_instance *instance;
+
+	dbi = l_hashmap_lookup(tree->interfaces, interface);
+	if (!dbi)
 		return false;
 
 	object = l_hashmap_lookup(tree->objects, path);
 	if (!object) {
-		object = _dbus_object_tree_makepath(tree, path);
-		l_hashmap_insert(tree->objects, path, object);
+		object = _dbus_object_tree_new_object(tree, path, NULL, NULL);
+
+		if (!object)
+			return false;
 	}
 
 	/*
 	 * Check to make sure we do not have this interface already
 	 * registered for this object
 	 */
-	entry = l_queue_get_entries(object->instances);
-	while (entry) {
-		instance = entry->data;
-
-		if (!strcmp(instance->interface->name, interface))
-			return false;
-
-		entry = entry->next;
-	}
-
-	dbi = l_hashmap_lookup(tree->interfaces, interface);
-	if (!dbi) {
-		dbi = _dbus_interface_new(interface);
-		setup_func(dbi);
-		l_hashmap_insert(tree->interfaces, dbi->name, dbi);
-	}
+	if (l_queue_find(object->instances, match_interface_instance,
+				(char *) interface))
+		return false;
 
 	instance = l_new(struct interface_instance, 1);
 	instance->interface = dbi;
-	instance->user_destroy = destroy;
 	instance->user_data = user_data;
-
-	if (!object->instances)
-		object->instances = l_queue_new();
 
 	l_queue_push_tail(object->instances, instance);
 
 	return true;
 }
 
-bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
+bool _dbus_object_tree_remove_interface(struct _dbus_object_tree *tree,
 					const char *path,
 					const char *interface)
 {
 	struct object_node *node;
 	struct interface_instance *instance;
-	bool r;
 
 	node = l_hashmap_lookup(tree->objects, path);
 	if (!node)
@@ -728,20 +836,12 @@ bool _dbus_object_tree_unregister(struct _dbus_object_tree *tree,
 
 	instance = l_queue_remove_if(node->instances,
 			match_interface_instance, (char *) interface);
+	if (!instance)
+		return false;
 
-	r = instance ? true : false;
+	interface_instance_free(instance);
 
-	if (instance)
-		interface_instance_free(instance);
-
-	if (l_queue_isempty(node->instances)) {
-		l_hashmap_remove(tree->objects, path);
-
-		if (!node->children)
-			_dbus_object_tree_prune_node(node);
-	}
-
-	return r;
+	return true;
 }
 
 static void generate_interface_instance(void *data, void *user)

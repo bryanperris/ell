@@ -1219,11 +1219,28 @@ struct _dbus_object_tree *_dbus_get_tree(struct l_dbus *dbus)
 	return dbus->tree;
 }
 
+/**
+ * l_dbus_register_interface:
+ * @dbus: D-Bus connection as returned by @l_dbus_new*
+ * @interface: interface name string
+ * @setup_func: function that sets up the methods, signals and properties by
+ *              using the #dbus-service.h API.
+ * @destroy: optional destructor to be called every time an instance of this
+ *           interface is being removed from an object on this bus.
+ * @handle_old_style_properties: whether to automatically handle SetProperty and
+ *                               GetProperties for any properties registered by
+ *                               @setup_func.
+ *
+ * Registers an interface.  If successful the interface can then be added
+ * to any number of objects with @l_dbus_object_add_interface.
+ *
+ * Returns: whether the interface was successfully registered
+ **/
 LIB_EXPORT bool l_dbus_register_interface(struct l_dbus *dbus,
-				const char *path, const char *interface,
+				const char *interface,
 				l_dbus_interface_setup_func_t setup_func,
-				void *user_data,
-				l_dbus_destroy_func_t destroy)
+				l_dbus_destroy_func_t destroy,
+				bool handle_old_style_properties)
 {
 	if (unlikely(!dbus))
 		return false;
@@ -1231,12 +1248,12 @@ LIB_EXPORT bool l_dbus_register_interface(struct l_dbus *dbus,
 	if (unlikely(!dbus->tree))
 		return false;
 
-	return _dbus_object_tree_register(dbus->tree, path, interface,
-						setup_func, user_data, destroy);
+	return _dbus_object_tree_register_interface(dbus->tree, interface,
+						setup_func, destroy,
+						handle_old_style_properties);
 }
 
 LIB_EXPORT bool l_dbus_unregister_interface(struct l_dbus *dbus,
-						const char *path,
 						const char *interface)
 {
 	if (unlikely(!dbus))
@@ -1245,7 +1262,123 @@ LIB_EXPORT bool l_dbus_unregister_interface(struct l_dbus *dbus,
 	if (unlikely(!dbus->tree))
 		return false;
 
-	return _dbus_object_tree_unregister(dbus->tree, path, interface);
+	return _dbus_object_tree_unregister_interface(dbus->tree, interface);
+}
+
+/**
+ * l_dbus_register_object:
+ * @dbus: D-Bus connection
+ * @path: new object path
+ * @user_data: user pointer to be passed to @destroy if any
+ * @destroy: optional destructor to be called when object dropped from the tree
+ * @...: NULL-terminated list of 0 or more interfaces to be present on the
+ *       object from the moment of creation.  For every interface the interface
+ *       name string is expected followed by the @user_data pointer same as
+ *       would be passed as @l_dbus_object_add_interface's last two parameters.
+ *
+ * Create a new D-Bus object on the tree visible to D-Bus peers.  For example:
+ * 	success = l_dbus_register_object(bus, "/org/example/ExampleManager",
+ * 						NULL, NULL,
+ * 						"org.example.Manager",
+ * 						manager_data,
+ * 						NULL);
+ *
+ * Returns: whether the object path was successfully registered
+ **/
+LIB_EXPORT bool l_dbus_register_object(struct l_dbus *dbus, const char *path,
+					void *user_data,
+					l_dbus_destroy_func_t destroy, ...)
+{
+	va_list args;
+	const char *interface;
+	void *if_user_data;
+	bool r = true;;
+
+	if (unlikely(!dbus))
+		return false;
+
+	if (unlikely(!dbus->tree))
+		return false;
+
+	if (!_dbus_object_tree_new_object(dbus->tree, path, user_data, destroy))
+		return false;
+
+	va_start(args, destroy);
+	while ((interface = va_arg(args, const char *))) {
+		if_user_data = va_arg(args, void *);
+
+		if (!_dbus_object_tree_add_interface(dbus->tree, path,
+							interface,
+							if_user_data)) {
+			_dbus_object_tree_object_destroy(dbus->tree, path);
+			r = false;
+
+			break;
+		}
+	}
+	va_end(args);
+
+	return r;
+}
+
+LIB_EXPORT bool l_dbus_unregister_object(struct l_dbus *dbus,
+						const char *object)
+{
+	if (unlikely(!dbus))
+		return false;
+
+	if (unlikely(!dbus->tree))
+		return false;
+
+	return _dbus_object_tree_object_destroy(dbus->tree, object);
+}
+
+/**
+ * l_dbus_object_add_interface:
+ * @dbus: D-Bus connection
+ * @object: object path as passed to @l_dbus_register_object
+ * @interface: interface name as passed to @l_dbus_register_interface
+ * @user_data: user data pointer to be passed to any method and property
+ *             callbacks provided by the @setup_func and to the @destroy
+ *             callback as passed to @l_dbus_register_interface
+ *
+ * Creates an instance of given interface at the given path in the
+ * connection's object tree.  If no object was registered at this path
+ * before @l_dbus_register_object gets called automatically.
+ *
+ * The addition of an interface to the object may trigger a query of
+ * all the properties on this interface and
+ * #org.freedesktop.DBus.ObjectManager.InterfacesAdded signals.
+ *
+ * Returns: whether the interface was successfully added.
+ **/
+LIB_EXPORT bool l_dbus_object_add_interface(struct l_dbus *dbus,
+						const char *object,
+						const char *interface,
+						void *user_data)
+{
+	if (unlikely(!dbus))
+		return false;
+
+	if (unlikely(!dbus->tree))
+		return false;
+
+	return _dbus_object_tree_add_interface(dbus->tree, object, interface,
+						user_data);
+}
+
+LIB_EXPORT bool l_dbus_object_remove_interface(struct l_dbus *dbus,
+						const char *object,
+						const char *interface)
+{
+	if (unlikely(!dbus))
+		return false;
+
+	if (unlikely(!dbus->tree))
+		return false;
+
+	return _dbus_object_tree_remove_interface(dbus->tree, object,
+							interface);
 }
 
 void _dbus1_filter_format_match(struct dbus1_filter_data *data, char *rule,
