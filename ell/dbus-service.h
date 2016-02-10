@@ -46,12 +46,26 @@ enum l_dbus_signal_flag {
 
 enum l_dbus_property_flag {
 	L_DBUS_PROPERTY_FLAG_DEPRECATED = 1,
-	L_DBUS_PROPERTY_FLAG_WRITABLE	= 2,
 };
 
 typedef struct l_dbus_message *(*l_dbus_interface_method_cb_t) (struct l_dbus *,
 						struct l_dbus_message *message,
 						void *user_data);
+
+typedef void (*l_dbus_property_complete_cb_t) (struct l_dbus *,
+						struct l_dbus_message *,
+						struct l_dbus_message *error);
+
+typedef void (*l_dbus_property_set_cb_t) (struct l_dbus *,
+					struct l_dbus_message *message,
+					struct l_dbus_message_iter *new_value,
+					l_dbus_property_complete_cb_t complete,
+					void *user_data);
+
+typedef bool (*l_dbus_property_get_cb_t) (struct l_dbus *,
+					struct l_dbus_message *message,
+					struct l_dbus_message_builder *builder,
+					void *user_data);
 
 bool l_dbus_interface_method(struct l_dbus_interface *interface,
 				const char *name, uint32_t flags,
@@ -65,13 +79,12 @@ bool l_dbus_interface_signal(struct l_dbus_interface *interface,
 
 bool l_dbus_interface_property(struct l_dbus_interface *interface,
 				const char *name, uint32_t flags,
-				const char *signature);
-bool l_dbus_interface_ro_property(struct l_dbus_interface *interface,
-					const char *name,
-					const char *signature);
-bool l_dbus_interface_rw_property(struct l_dbus_interface *interface,
-					const char *name,
-					const char *signature);
+				const char *signature,
+				l_dbus_property_get_cb_t getter,
+				l_dbus_property_set_cb_t setter);
+
+void l_dbus_property_changed(struct l_dbus *dbus, const char *path,
+				const char *interface, const char *property);
 
 #ifdef __cplusplus
 }

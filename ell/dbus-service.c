@@ -61,6 +61,8 @@ struct _dbus_signal {
 };
 
 struct _dbus_property {
+	l_dbus_property_get_cb_t getter;
+	l_dbus_property_set_cb_t setter;
 	uint32_t flags;
 	unsigned char name_len;
 	char metainfo[];
@@ -191,7 +193,7 @@ void _dbus_property_introspection(struct _dbus_property *info,
 	l_string_append_printf(buf, "\t\t<property name=\"%s\" type=\"%s\" ",
 				info->metainfo, signature);
 
-	if (info->flags & L_DBUS_PROPERTY_FLAG_WRITABLE)
+	if (info->setter)
 		l_string_append(buf, "access=\"readwrite\"");
 	else
 		l_string_append(buf, "access=\"read\"");
@@ -375,7 +377,9 @@ LIB_EXPORT bool l_dbus_interface_signal(struct l_dbus_interface *interface,
 
 LIB_EXPORT bool l_dbus_interface_property(struct l_dbus_interface *interface,
 					const char *name, uint32_t flags,
-					const char *signature)
+					const char *signature,
+					l_dbus_property_get_cb_t getter,
+					l_dbus_property_set_cb_t setter)
 {
 	unsigned int metainfo_len;
 	struct _dbus_property *info;
@@ -384,7 +388,7 @@ LIB_EXPORT bool l_dbus_interface_property(struct l_dbus_interface *interface,
 	if (!_dbus_valid_method(name))
 		return false;
 
-	if (unlikely(!signature))
+	if (unlikely(!signature || !getter))
 		return false;
 
 	if (!_dbus_valid_signature(signature))
@@ -397,6 +401,8 @@ LIB_EXPORT bool l_dbus_interface_property(struct l_dbus_interface *interface,
 	info = l_malloc(sizeof(*info) + metainfo_len);
 	info->flags = flags;
 	info->name_len = strlen(name);
+	info->getter = getter;
+	info->setter = setter;
 
 	p = stpcpy(info->metainfo, name) + 1;
 	strcpy(p, signature);
@@ -404,22 +410,6 @@ LIB_EXPORT bool l_dbus_interface_property(struct l_dbus_interface *interface,
 	l_queue_push_tail(interface->properties, info);
 
 	return true;
-}
-
-LIB_EXPORT bool l_dbus_interface_ro_property(struct l_dbus_interface *interface,
-						const char *name,
-						const char *signature)
-{
-	return l_dbus_interface_property(interface, name, 0, signature);
-}
-
-LIB_EXPORT bool l_dbus_interface_rw_property(struct l_dbus_interface *interface,
-						const char *name,
-						const char *signature)
-{
-	return l_dbus_interface_property(interface, name,
-					L_DBUS_PROPERTY_FLAG_WRITABLE,
-					signature);
 }
 
 struct l_dbus_interface *_dbus_interface_new(const char *name)
@@ -852,4 +842,10 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 		l_dbus_send(dbus, reply);
 
 	return true;
+}
+
+LIB_EXPORT void l_dbus_property_changed(struct l_dbus *dbus, const char *path,
+					const char *interface,
+					const char *property)
+{
 }
