@@ -158,9 +158,14 @@ int main(int argc, char *argv[])
 	l_dbus_set_ready_handler(service, service_ready_callback,
 					service, NULL);
 
-	if (!l_dbus_register_interface(service, "/test", "org.test",
-					setup_test_interface, NULL, NULL)) {
+	if (!l_dbus_register_interface(service, "org.test",
+					setup_test_interface, NULL, false)) {
 		l_info("Unable to register interface");
+		goto error;
+	}
+
+	if (!l_dbus_object_add_interface(service, "/test", "org.test", NULL)) {
+		l_info("Unable to instantiate interface");
 		goto error;
 	}
 

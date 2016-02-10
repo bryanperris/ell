@@ -276,9 +276,10 @@ static void test_dbus_object_tree_introspection(const void *test_data)
 
 	tree = _dbus_object_tree_new();
 
-	_dbus_object_tree_register(tree, "/", "org.ofono.Manager",
-					build_manager_interface,
-					NULL, NULL);
+	_dbus_object_tree_register_interface(tree, "org.ofono.Manager",
+						build_manager_interface,
+						NULL, false);
+	_dbus_object_tree_add_interface(tree, "/", "org.ofono.Manager", NULL);
 
 	_dbus_object_tree_makepath(tree, "/phonesim");
 
@@ -298,9 +299,11 @@ static void test_dbus_object_tree_dispatch(const void *test_data)
 
 	tree = _dbus_object_tree_new();
 
-	_dbus_object_tree_register(tree, "/", "org.ofono.Manager",
-					build_manager_interface,
-					dummy_data, NULL);
+	_dbus_object_tree_register_interface(tree, "org.ofono.Manager",
+						build_manager_interface,
+						NULL, false);
+	_dbus_object_tree_add_interface(tree, "/", "org.ofono.Manager",
+					dummy_data);
 
 	message = _dbus_message_new_method_call(1, "org.ofono", "/",
 						"org.ofono.Manager",
@@ -313,6 +316,22 @@ static void test_dbus_object_tree_dispatch(const void *test_data)
 	l_dbus_message_unref(message);
 
 	_dbus_object_tree_free(tree);
+}
+
+static bool test_property_getter(struct l_dbus *dbus,
+					struct l_dbus_message *message,
+					struct l_dbus_message_builder *builder,
+					void *if_user_data)
+{
+	return true;
+}
+
+static void test_property_setter(struct l_dbus *dbus,
+					struct l_dbus_message *message,
+					struct l_dbus_message_iter *new_value,
+					l_dbus_property_complete_cb_t complete,
+					void *user_data)
+{
 }
 
 int main(int argc, char *argv[])
@@ -333,7 +352,9 @@ int main(int argc, char *argv[])
 
 	l_dbus_interface_signal(interface, "Changed", 0, "b", "new_value");
 
-	l_dbus_interface_rw_property(interface, "Bar", "y");
+	l_dbus_interface_property(interface, "Bar", 0, "y",
+					test_property_getter,
+					test_property_setter);
 
 	l_test_add("Test Frobate Introspection", test_introspect_method,
 			&frobate_test);
