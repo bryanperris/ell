@@ -197,6 +197,12 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 					struct l_dbus *dbus,
 					struct l_dbus_message *message);
 
+void _dbus_object_tree_property_changed(struct l_dbus *dbus,
+					const char *path,
+					const char *interface_name,
+					const char *property_name,
+					struct l_dbus_message_iter *variant);
+
 void _dbus_kernel_bloom_add(uint64_t filter[], size_t size, uint8_t num_hash,
 				const char *prefix, const char *str);
 void _dbus_kernel_bloom_add_parents(uint64_t filter[], size_t size,
