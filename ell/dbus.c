@@ -1214,6 +1214,11 @@ int _dbus_get_fd(struct l_dbus *dbus)
 	return l_io_get_fd(dbus->io);
 }
 
+struct _dbus_object_tree *_dbus_get_tree(struct l_dbus *dbus)
+{
+	return dbus->tree;
+}
+
 LIB_EXPORT bool l_dbus_register_interface(struct l_dbus *dbus,
 				const char *path, const char *interface,
 				l_dbus_interface_setup_func_t setup_func,

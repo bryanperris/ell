@@ -212,6 +212,7 @@ int _dbus_kernel_remove_match(int fd, uint64_t cookie);
 
 uint8_t _dbus_get_version(struct l_dbus *dbus);
 int _dbus_get_fd(struct l_dbus *dbus);
+struct _dbus_object_tree *_dbus_get_tree(struct l_dbus *dbus);
 
 struct dbus1_filter_data;
 
