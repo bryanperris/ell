@@ -583,11 +583,11 @@ static void object_manager_free(void *data)
 
 void _dbus_object_tree_free(struct _dbus_object_tree *tree)
 {
+	subtree_free(tree->root);
+
 	l_hashmap_destroy(tree->interfaces,
 			(l_hashmap_destroy_func_t) _dbus_interface_free);
 	l_hashmap_destroy(tree->objects, NULL);
-
-	subtree_free(tree->root);
 
 	l_queue_destroy(tree->object_managers, object_manager_free);
 
