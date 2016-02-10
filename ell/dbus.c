@@ -51,6 +51,7 @@
 
 #define DBUS_INTERFACE_DBUS		"org.freedesktop.DBus"
 #define DBUS_INTERFACE_INTROSPECTABLE	"org.freedesktop.DBus.Introspectable"
+#define DBUS_INTERFACE_OBJECT_MANAGER	"org.freedesktop.DBus.ObjectManager"
 
 #define DBUS_MAXIMUM_MATCH_RULE_LENGTH	1024
 
@@ -1378,6 +1379,19 @@ LIB_EXPORT bool l_dbus_object_remove_interface(struct l_dbus *dbus,
 
 	return _dbus_object_tree_remove_interface(dbus->tree, object,
 							interface);
+}
+
+LIB_EXPORT bool l_dbus_object_manager_enable(struct l_dbus *dbus)
+{
+	if (unlikely(!dbus))
+		return false;
+
+	if (unlikely(!dbus->tree))
+		return false;
+
+	return _dbus_object_tree_add_interface(dbus->tree, "/",
+						DBUS_INTERFACE_OBJECT_MANAGER,
+						dbus);
 }
 
 void _dbus1_filter_format_match(struct dbus1_filter_data *data, char *rule,
