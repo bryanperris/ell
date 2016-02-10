@@ -188,6 +188,10 @@ bool l_dbus_message_builder_enter_variant(
 bool l_dbus_message_builder_leave_variant(
 					struct l_dbus_message_builder *builder);
 
+bool l_dbus_message_builder_append_from_iter(
+					struct l_dbus_message_builder *builder,
+					struct l_dbus_message_iter *from);
+
 struct l_dbus_message *l_dbus_message_builder_finalize(
 					struct l_dbus_message_builder *builder);
 
