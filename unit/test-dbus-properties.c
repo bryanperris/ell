@@ -425,6 +425,78 @@ static void test_old_set(struct l_dbus *dbus, void *test_data)
 						NULL, NULL));
 }
 
+static void new_get_invalid_callback(struct l_dbus_message *message,
+					void *user_data)
+{
+	struct l_dbus_message *call;
+
+	test_assert(l_dbus_message_get_error(message, NULL, NULL));
+
+	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+					"org.freedesktop.DBus.Properties",
+					"GetAll");
+	test_assert(call);
+	test_assert(l_dbus_message_set_arguments(call, "s", "org.test"));
+
+	test_assert(l_dbus_send_with_reply(dbus, call, get_properties_callback,
+						NULL, NULL));
+}
+
+static void new_get_bad_if_callback(struct l_dbus_message *message,
+					void *user_data)
+{
+	struct l_dbus_message *call;
+
+	test_assert(l_dbus_message_get_error(message, NULL, NULL));
+
+	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+					"org.freedesktop.DBus.Properties",
+					"Get");
+	test_assert(call);
+	test_assert(l_dbus_message_set_arguments(call, "ss",
+							"org.test", "Invalid"));
+
+	test_assert(l_dbus_send_with_reply(dbus, call, new_get_invalid_callback,
+						NULL, NULL));
+}
+
+static void new_get_callback(struct l_dbus_message *message, void *user_data)
+{
+	struct l_dbus_message_iter variant;
+	const char *strval;
+	struct l_dbus_message *call;
+
+	test_assert(!l_dbus_message_get_error(message, NULL, NULL));
+	test_assert(l_dbus_message_get_arguments(message, "v", &variant));
+	test_assert(l_dbus_message_iter_get_variant(&variant, "s", &strval));
+	test_assert(!strcmp(strval, "foo"));
+
+	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+					"org.freedesktop.DBus.Properties",
+					"Get");
+	test_assert(call);
+	test_assert(l_dbus_message_set_arguments(call, "ss", "org.invalid",
+							"String"));
+
+	test_assert(l_dbus_send_with_reply(dbus, call, new_get_bad_if_callback,
+						NULL, NULL));
+}
+
+static void test_new_get(struct l_dbus *dbus, void *test_data)
+{
+	struct l_dbus_message *call =
+		l_dbus_message_new_method_call(dbus, "org.test", "/test",
+					"org.freedesktop.DBus.Properties",
+					"Get");
+
+	test_assert(call);
+	test_assert(l_dbus_message_set_arguments(call, "ss",
+							"org.test", "String"));
+
+	test_assert(l_dbus_send_with_reply(dbus, call, new_get_callback,
+						NULL, NULL));
+}
+
 int main(int argc, char *argv[])
 {
 	struct l_signal *signal;
@@ -483,6 +555,7 @@ int main(int argc, char *argv[])
 
 	test_add("Legacy properties get", test_old_get, NULL);
 	test_add("Legacy properties set", test_old_set, NULL);
+	test_add("org.freedesktop.DBus.Properties get", test_new_get, NULL);
 
 	l_main_run();
 
