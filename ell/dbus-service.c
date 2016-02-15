@@ -733,13 +733,24 @@ bool _dbus_object_tree_object_destroy(struct _dbus_object_tree *tree,
 					const char *path)
 {
 	struct object_node *node;
+	const struct l_queue_entry *entry;
+	const struct interface_instance *instance;
 
-	node = l_hashmap_remove(tree->objects, path);
+	node = l_hashmap_lookup(tree->objects, path);
 	if (!node)
 		return false;
 
-	l_queue_destroy(node->instances,
-			(l_queue_destroy_func_t) interface_instance_free);
+	while ((entry = l_queue_get_entries(node->instances))) {
+		instance = entry->data;
+
+		if (!_dbus_object_tree_remove_interface(tree, path,
+						instance->interface->name))
+			return false;
+	}
+
+	l_hashmap_remove(tree->objects, path);
+
+	l_queue_destroy(node->instances, NULL);
 	node->instances = NULL;
 
 	if (node->destroy) {
