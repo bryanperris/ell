@@ -765,7 +765,7 @@ bool _dbus_object_tree_object_destroy(struct _dbus_object_tree *tree,
 }
 
 /* Send the signals associated with a property value change */
-void _dbus_object_tree_property_changed(struct l_dbus *dbus,
+bool _dbus_object_tree_property_changed(struct l_dbus *dbus,
 					const char *path,
 					const char *interface_name,
 					const char *property_name,
@@ -782,12 +782,18 @@ void _dbus_object_tree_property_changed(struct l_dbus *dbus,
 	bool r;
 
 	object = l_hashmap_lookup(tree->objects, path);
+	if (!object)
+		return false;
 
 	instance = l_queue_find(object->instances, match_interface_instance,
 				interface_name);
+	if (!instance)
+		return false;
 
 	property = _dbus_interface_find_property(instance->interface,
 							property_name);
+	if (!property)
+		return false;
 
 	signature = property->metainfo + strlen(property->metainfo) + 1;
 
@@ -811,12 +817,14 @@ void _dbus_object_tree_property_changed(struct l_dbus *dbus,
 						instance->user_data);
 		}
 
-		l_dbus_message_builder_leave_variant(builder);
+		if (r) {
+			l_dbus_message_builder_leave_variant(builder);
 
-		l_dbus_message_builder_finalize(builder);
-		l_dbus_message_builder_destroy(builder);
-		if (r)
+			l_dbus_message_builder_finalize(builder);
 			l_dbus_send(dbus, signal);
+		}
+
+		l_dbus_message_builder_destroy(builder);
 	}
 
 	if (l_queue_find(object->instances, match_interface_instance,
@@ -844,17 +852,21 @@ void _dbus_object_tree_property_changed(struct l_dbus *dbus,
 						instance->user_data);
 		}
 
-		l_dbus_message_builder_leave_variant(builder);
-		l_dbus_message_builder_leave_dict(builder);
-		l_dbus_message_builder_leave_array(builder);
-		l_dbus_message_builder_enter_array(builder, "s");
-		l_dbus_message_builder_leave_array(builder);
+		if (r) {
+			l_dbus_message_builder_leave_variant(builder);
+			l_dbus_message_builder_leave_dict(builder);
+			l_dbus_message_builder_leave_array(builder);
+			l_dbus_message_builder_enter_array(builder, "s");
+			l_dbus_message_builder_leave_array(builder);
 
-		l_dbus_message_builder_finalize(builder);
-		l_dbus_message_builder_destroy(builder);
-		if (r)
+			l_dbus_message_builder_finalize(builder);
 			l_dbus_send(dbus, signal);
+		}
+
+		l_dbus_message_builder_destroy(builder);
 	}
+
+	return true;
 }
 
 static void set_property_complete(struct l_dbus *dbus,
@@ -1340,12 +1352,12 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 	return true;
 }
 
-LIB_EXPORT void l_dbus_property_changed(struct l_dbus *dbus, const char *path,
+LIB_EXPORT bool l_dbus_property_changed(struct l_dbus *dbus, const char *path,
 					const char *interface,
 					const char *property)
 {
-	_dbus_object_tree_property_changed(dbus, path, interface, property,
-						NULL);
+	return _dbus_object_tree_property_changed(dbus, path, interface,
+							property, NULL);
 }
 
 static struct l_dbus_message *properties_get(struct l_dbus *dbus,

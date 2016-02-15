@@ -197,7 +197,7 @@ bool _dbus_object_tree_dispatch(struct _dbus_object_tree *tree,
 					struct l_dbus *dbus,
 					struct l_dbus_message *message);
 
-void _dbus_object_tree_property_changed(struct l_dbus *dbus,
+bool _dbus_object_tree_property_changed(struct l_dbus *dbus,
 					const char *path,
 					const char *interface_name,
 					const char *property_name,

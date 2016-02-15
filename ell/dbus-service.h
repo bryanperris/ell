@@ -83,7 +83,7 @@ bool l_dbus_interface_property(struct l_dbus_interface *interface,
 				l_dbus_property_get_cb_t getter,
 				l_dbus_property_set_cb_t setter);
 
-void l_dbus_property_changed(struct l_dbus *dbus, const char *path,
+bool l_dbus_property_changed(struct l_dbus *dbus, const char *path,
 				const char *interface, const char *property);
 
 #ifdef __cplusplus
