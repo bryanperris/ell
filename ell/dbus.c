@@ -49,10 +49,6 @@
 
 #define DBUS_PATH_DBUS		"/org/freedesktop/DBus"
 
-#define DBUS_INTERFACE_DBUS		"org.freedesktop.DBus"
-#define DBUS_INTERFACE_INTROSPECTABLE	"org.freedesktop.DBus.Introspectable"
-#define DBUS_INTERFACE_OBJECT_MANAGER	"org.freedesktop.DBus.ObjectManager"
-
 #define DBUS_MAXIMUM_MATCH_RULE_LENGTH	1024
 
 enum auth_state {
@@ -408,7 +404,7 @@ static bool auth_write_handler(struct l_io *io, void *user_data)
 		message = l_dbus_message_new_method_call(dbus,
 							DBUS_SERVICE_DBUS,
 							DBUS_PATH_DBUS,
-							DBUS_INTERFACE_DBUS,
+							L_DBUS_INTERFACE_DBUS,
 							"Hello");
 		l_dbus_message_set_arguments(message, "");
 
@@ -1390,7 +1386,7 @@ LIB_EXPORT bool l_dbus_object_manager_enable(struct l_dbus *dbus)
 		return false;
 
 	return _dbus_object_tree_add_interface(dbus->tree, "/",
-						DBUS_INTERFACE_OBJECT_MANAGER,
+						L_DBUS_INTERFACE_OBJECT_MANAGER,
 						dbus);
 }
 
@@ -1471,7 +1467,7 @@ static void dbus1_send_match(struct l_dbus *dbus, const char *rule,
 	message = l_dbus_message_new_method_call(dbus,
 						DBUS_SERVICE_DBUS,
 						DBUS_PATH_DBUS,
-						DBUS_INTERFACE_DBUS,
+						L_DBUS_INTERFACE_DBUS,
 						method);
 
 	l_dbus_message_set_arguments(message, "s", rule);
@@ -1577,7 +1573,7 @@ LIB_EXPORT unsigned int l_dbus_add_disconnect_watch(struct l_dbus *dbus,
 
 	data = _dbus1_filter_data_get(dbus, _dbus1_name_owner_changed_filter,
 				DBUS_SERVICE_DBUS, DBUS_PATH_DBUS,
-				DBUS_INTERFACE_DBUS, "NameOwnerChanged",
+				L_DBUS_INTERFACE_DBUS, "NameOwnerChanged",
 				name,
 				disconnect_func,
 				user_data,

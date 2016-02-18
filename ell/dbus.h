@@ -32,6 +32,11 @@
 extern "C" {
 #endif
 
+#define L_DBUS_INTERFACE_DBUS		"org.freedesktop.DBus"
+#define L_DBUS_INTERFACE_INTROSPECTABLE	"org.freedesktop.DBus.Introspectable"
+#define L_DBUS_INTERFACE_PROPERTIES	"org.freedesktop.DBus.Properties"
+#define L_DBUS_INTERFACE_OBJECT_MANAGER	"org.freedesktop.DBus.ObjectManager"
+
 enum l_dbus_bus {
 	L_DBUS_SYSTEM_BUS,
 	L_DBUS_SESSION_BUS,

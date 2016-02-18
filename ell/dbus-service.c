@@ -50,9 +50,6 @@ static const char *static_introspectable =
 		"\t\t\t<arg name=\"xml\" type=\"s\" direction=\"out\"/>\n"
 		"\t\t</method>\n\t</interface>\n";
 
-#define DBUS_INTERFACE_PROPERTIES	"org.freedesktop.DBus.Properties"
-#define DBUS_INTERFACE_OBJECT_MANAGER	"org.freedesktop.DBus.ObjectManager"
-
 struct _dbus_method {
 	l_dbus_interface_method_cb_t cb;
 	uint32_t flags;
@@ -591,14 +588,14 @@ struct _dbus_object_tree *_dbus_object_tree_new()
 
 	tree->property_changes = l_queue_new();
 
-	_dbus_object_tree_register_interface(tree, DBUS_INTERFACE_PROPERTIES,
+	_dbus_object_tree_register_interface(tree, L_DBUS_INTERFACE_PROPERTIES,
 						properties_setup_func, NULL,
 						false);
 
 	tree->object_managers = l_queue_new();
 
 	_dbus_object_tree_register_interface(tree,
-						DBUS_INTERFACE_OBJECT_MANAGER,
+						L_DBUS_INTERFACE_OBJECT_MANAGER,
 						object_manager_setup_func, NULL,
 						false);
 
@@ -867,7 +864,7 @@ static struct l_dbus_message *build_interfaces_removed_signal(
 	const struct l_queue_entry *entry;
 
 	signal = l_dbus_message_new_signal(manager->dbus, manager->path,
-						DBUS_INTERFACE_OBJECT_MANAGER,
+						L_DBUS_INTERFACE_OBJECT_MANAGER,
 						"InterfacesRemoved");
 
 	builder = l_dbus_message_builder_new(signal);
@@ -896,7 +893,7 @@ static struct l_dbus_message *build_interfaces_added_signal(
 	const struct interface_instance *instance;
 
 	signal = l_dbus_message_new_signal(manager->dbus, manager->path,
-						DBUS_INTERFACE_OBJECT_MANAGER,
+						L_DBUS_INTERFACE_OBJECT_MANAGER,
 						"InterfacesAdded");
 
 	builder = l_dbus_message_builder_new(signal);
@@ -978,7 +975,7 @@ static struct l_dbus_message *build_properties_changed_signal(
 	const char *signature;
 
 	signal = l_dbus_message_new_signal(dbus, rec->path,
-						DBUS_INTERFACE_PROPERTIES,
+						L_DBUS_INTERFACE_PROPERTIES,
 						"PropertiesChanged");
 
 	builder = l_dbus_message_builder_new(signal);
@@ -1074,7 +1071,7 @@ static void emit_signals(struct l_idle *idle, void *user_data)
 
 		if (l_queue_find(property_changes_rec->object->instances,
 					match_interface_instance,
-					DBUS_INTERFACE_PROPERTIES)) {
+					L_DBUS_INTERFACE_PROPERTIES)) {
 			signal = build_properties_changed_signal(dbus,
 							property_changes_rec);
 			if (signal)
@@ -1420,7 +1417,7 @@ bool _dbus_object_tree_add_interface(struct _dbus_object_tree *tree,
 		schedule_emit_signals(manager->dbus);
 	}
 
-	if (!strcmp(interface, DBUS_INTERFACE_OBJECT_MANAGER)) {
+	if (!strcmp(interface, L_DBUS_INTERFACE_OBJECT_MANAGER)) {
 		manager = l_new(struct object_manager, 1);
 		manager->path = l_strdup(path);
 		manager->dbus = instance->user_data;
@@ -1463,7 +1460,7 @@ bool _dbus_object_tree_remove_interface(struct _dbus_object_tree *tree,
 
 	interface_instance_free(instance);
 
-	if (!strcmp(interface, DBUS_INTERFACE_OBJECT_MANAGER)) {
+	if (!strcmp(interface, L_DBUS_INTERFACE_OBJECT_MANAGER)) {
 		manager = l_queue_remove_if(tree->object_managers,
 						match_object_manager_path,
 						(char *) path);
