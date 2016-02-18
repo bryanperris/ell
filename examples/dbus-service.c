@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
 
 	l_dbus_method_call(dbus, "org.freedesktop.DBus",
 				"/org/freedesktop/DBus",
-				"org.freedesktop.DBus", "RequestName",
+				L_DBUS_INTERFACE_DBUS, "RequestName",
 				request_name_setup,
 				request_name_callback, NULL, NULL);
 
@@ -240,7 +240,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (!l_dbus_object_add_interface(dbus, "/test",
-				"org.freedesktop.DBus.Properties", NULL)) {
+					L_DBUS_INTERFACE_PROPERTIES, NULL)) {
 		l_info("Unable to instantiate the properties interface");
 		test_data_destroy(test);
 		goto cleanup;
