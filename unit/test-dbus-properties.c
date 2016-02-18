@@ -624,7 +624,7 @@ static void signal_timeout_callback(struct l_timeout *timeout, void *user_data)
 }
 
 static bool old_signal_received, new_signal_received;
-static const char *signal_string_value;
+static bool signal_success;
 
 static void test_signal_callback(struct l_dbus_message *message)
 {
@@ -646,7 +646,7 @@ static void test_signal_callback(struct l_dbus_message *message)
 		test_assert(!strcmp(property, "String"));
 		test_assert(l_dbus_message_iter_get_variant(&variant, "s",
 								&value));
-		test_assert(!strcmp(value, signal_string_value));
+		test_assert(!strcmp(value, "foo"));
 
 		test_assert(!old_signal_received);
 		old_signal_received = true;
@@ -665,7 +665,7 @@ static void test_signal_callback(struct l_dbus_message *message)
 		test_assert(!strcmp(property, "String"));
 		test_assert(l_dbus_message_iter_get_variant(&variant, "s",
 								&value));
-		test_assert(!strcmp(value, signal_string_value));
+		test_assert(!strcmp(value, "foo"));
 
 		test_assert(!l_dbus_message_iter_next_entry(&changed, &property,
 								&variant));
@@ -682,7 +682,9 @@ static void test_signal_callback(struct l_dbus_message *message)
 	l_timeout_remove(signal_timeout);
 	signal_timeout = NULL;
 
-	if (!strcmp(signal_string_value, "foo")) {
+	if (!signal_success) {
+		signal_success = true;
+
 		/* Now repeat the test for the signal triggered by Set */
 
 		old_signal_received = false;
@@ -691,8 +693,6 @@ static void test_signal_callback(struct l_dbus_message *message)
 		signal_timeout = l_timeout_create(1, signal_timeout_callback,
 							NULL, NULL);
 		test_assert(signal_timeout);
-
-		signal_string_value = "bar";
 
 		call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
 					"org.freedesktop.DBus.Properties",
@@ -720,8 +720,6 @@ static void test_property_signals(struct l_dbus *dbus, void *test_data)
 	signal_timeout = l_timeout_create(1, signal_timeout_callback,
 						NULL, NULL);
 	test_assert(signal_timeout);
-
-	signal_string_value = "foo";
 
 	test_assert(l_dbus_property_changed(dbus, "/test",
 						"org.test", "String"));
