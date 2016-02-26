@@ -118,7 +118,7 @@ struct interface_remove_record {
 	struct l_queue *interface_names;
 };
 
-struct property_changes {
+struct property_change_record {
 	char *path;
 	struct object_node *object;
 	struct interface_instance *instance;
@@ -559,9 +559,9 @@ static void interface_removed_record_free(void *data)
 	l_free(rec);
 }
 
-static void property_change_rec_free(void *data)
+static void property_change_record_free(void *data)
 {
-	struct property_changes *rec = data;
+	struct property_change_record *rec = data;
 
 	l_free(rec->path);
 	l_queue_destroy(rec->properties, NULL);
@@ -644,7 +644,7 @@ void _dbus_object_tree_free(struct _dbus_object_tree *tree)
 
 	l_queue_destroy(tree->object_managers, object_manager_free);
 
-	l_queue_destroy(tree->property_changes, property_change_rec_free);
+	l_queue_destroy(tree->property_changes, property_change_record_free);
 
 	if (tree->emit_signals_work)
 		l_idle_remove(tree->emit_signals_work);
@@ -930,9 +930,9 @@ static struct l_dbus_message *build_interfaces_added_signal(
 }
 
 static struct l_dbus_message *build_old_property_changed_signal(
-					struct l_dbus *dbus,
-					const struct property_changes *rec,
-					const struct _dbus_property *property)
+				struct l_dbus *dbus,
+				const struct property_change_record *rec,
+				const struct _dbus_property *property)
 {
 	struct l_dbus_message *signal;
 	struct l_dbus_message_builder *builder;
@@ -966,8 +966,8 @@ static struct l_dbus_message *build_old_property_changed_signal(
 }
 
 static struct l_dbus_message *build_properties_changed_signal(
-					struct l_dbus *dbus,
-					const struct property_changes *rec)
+				struct l_dbus *dbus,
+				const struct property_change_record *rec)
 {
 	struct l_dbus_message *signal;
 	struct l_dbus_message_builder *builder;
@@ -1022,7 +1022,7 @@ static void emit_signals(struct l_idle *idle, void *user_data)
 	struct _dbus_object_tree *tree = _dbus_get_tree(dbus);
 	struct interface_add_record *interfaces_added_rec;
 	struct interface_remove_record *interfaces_removed_rec;
-	struct property_changes *property_changes_rec;
+	struct property_change_record *property_changes_rec;
 	const struct l_queue_entry *entry;
 	struct object_manager *manager;
 	struct l_dbus_message *signal;
@@ -1079,7 +1079,7 @@ static void emit_signals(struct l_idle *idle, void *user_data)
 				l_dbus_send(dbus, signal);
 		}
 
-		property_change_rec_free(property_changes_rec);
+		property_change_record_free(property_changes_rec);
 	}
 }
 
@@ -1095,7 +1095,7 @@ static void schedule_emit_signals(struct l_dbus *dbus)
 
 static bool match_property_changes_instance(const void *a, const void *b)
 {
-	const struct property_changes *rec = a;
+	const struct property_change_record *rec = a;
 
 	return rec->instance == b;
 }
@@ -1110,7 +1110,7 @@ bool _dbus_object_tree_property_changed(struct l_dbus *dbus,
 					const char *interface_name,
 					const char *property_name)
 {
-	struct property_changes *rec;
+	struct property_change_record *rec;
 	struct object_node *object;
 	struct interface_instance *instance;
 	struct _dbus_property *property;
@@ -1137,7 +1137,7 @@ bool _dbus_object_tree_property_changed(struct l_dbus *dbus,
 		if (l_queue_find(rec->properties, match_pointer, property))
 			return true;
 	} else {
-		rec = l_new(struct property_changes, 1);
+		rec = l_new(struct property_change_record, 1);
 		rec->path = l_strdup(path);
 		rec->object = object;
 		rec->instance = instance;
@@ -1448,7 +1448,7 @@ bool _dbus_object_tree_remove_interface(struct _dbus_object_tree *tree,
 	size_t path_len;
 	struct interface_add_record *interfaces_added_rec;
 	struct interface_remove_record *interfaces_removed_rec;
-	struct property_changes *property_change_rec;
+	struct property_change_record *property_change_rec;
 
 	node = l_hashmap_lookup(tree->objects, path);
 	if (!node)
@@ -1519,7 +1519,7 @@ bool _dbus_object_tree_remove_interface(struct _dbus_object_tree *tree,
 						match_property_changes_instance,
 						instance);
 	if (property_change_rec)
-		property_change_rec_free(property_change_rec);
+		property_change_record_free(property_change_rec);
 
 	return true;
 }
