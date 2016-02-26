@@ -541,7 +541,7 @@ static bool match_interface_instance(const void *a, const void *b)
 	return false;
 }
 
-static void interfaces_added_rec_free(void *data)
+static void interface_add_record_free(void *data)
 {
 	struct interface_add_record *rec = data;
 
@@ -550,7 +550,7 @@ static void interfaces_added_rec_free(void *data)
 	l_free(rec);
 }
 
-static void interfaces_removed_rec_free(void *data)
+static void interface_removed_record_free(void *data)
 {
 	struct interface_remove_record *rec = data;
 
@@ -628,8 +628,9 @@ static void object_manager_free(void *data)
 	struct object_manager *manager = data;
 
 	l_free(manager->path);
-	l_queue_destroy(manager->announce_added, interfaces_added_rec_free);
-	l_queue_destroy(manager->announce_removed, interfaces_removed_rec_free);
+	l_queue_destroy(manager->announce_added, interface_add_record_free);
+	l_queue_destroy(manager->announce_removed,
+						interface_removed_record_free);
 	l_free(manager);
 }
 
@@ -1037,7 +1038,7 @@ static void emit_signals(struct l_idle *idle, void *user_data)
 				l_queue_pop_head(manager->announce_removed))) {
 			signal = build_interfaces_removed_signal(manager,
 							interfaces_removed_rec);
-			interfaces_removed_rec_free(interfaces_removed_rec);
+			interface_removed_record_free(interfaces_removed_rec);
 
 			if (signal)
 				l_dbus_send(manager->dbus, signal);
@@ -1047,7 +1048,7 @@ static void emit_signals(struct l_idle *idle, void *user_data)
 				l_queue_pop_head(manager->announce_added))) {
 			signal = build_interfaces_added_signal(manager,
 							interfaces_added_rec);
-			interfaces_added_rec_free(interfaces_added_rec);
+			interface_add_record_free(interfaces_added_rec);
 
 			if (signal)
 				l_dbus_send(manager->dbus, signal);
@@ -1488,7 +1489,7 @@ bool _dbus_object_tree_remove_interface(struct _dbus_object_tree *tree,
 				l_queue_remove(manager->announce_added,
 						interfaces_added_rec);
 
-			interfaces_added_rec_free(interfaces_added_rec);
+			interface_add_record_free(interfaces_added_rec);
 
 			continue;
 		}
