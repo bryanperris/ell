@@ -57,4 +57,5 @@ unit/*.trs
 examples/dbus-service
 examples/https-server-test
 examples/https-client-test
+examples/dbus-client
 test-suite.log
