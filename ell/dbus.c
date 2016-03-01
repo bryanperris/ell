@@ -122,15 +122,19 @@ struct signal_callback {
 
 struct dbus1_filter_data {
 	struct l_dbus *dbus;
-	l_dbus_message_func_t handle_func;
-	l_dbus_watch_func_t disconnect_func;
 	char *sender;
 	char *path;
 	char *interface;
 	char *member;
 	char *argument;
 	void *user_data;
+	l_dbus_message_func_t handle_func;
 	l_dbus_destroy_func_t destroy_func;
+
+	l_dbus_watch_func_t connect_func;
+	l_dbus_watch_func_t disconnect_func;
+	char *owner;
+	uint32_t get_name_owner_id;
 };
 
 static void message_queue_destroy(void *data)
@@ -1431,7 +1435,6 @@ struct dbus1_filter_data *_dbus1_filter_data_get(struct l_dbus *dbus,
 
 	data->dbus = dbus;
 	data->handle_func = filter;
-	data->disconnect_func = disconnect_func;
 	data->sender = l_strdup(sender);
 	data->path = l_strdup(path);
 	data->interface = l_strdup(interface);
@@ -1439,6 +1442,8 @@ struct dbus1_filter_data *_dbus1_filter_data_get(struct l_dbus *dbus,
 	data->argument = l_strdup(argument);
 	data->user_data = user_data;
 	data->destroy_func = destroy;
+
+	data->disconnect_func = disconnect_func;
 
 	return data;
 }
@@ -1452,6 +1457,11 @@ void _dbus1_filter_data_destroy(void *user_data)
 	l_free(data->interface);
 	l_free(data->member);
 	l_free(data->argument);
+
+	l_free(data->owner);
+
+	if (data->get_name_owner_id)
+		l_dbus_cancel(data->dbus, data->get_name_owner_id);
 
 	if (data->destroy_func)
 		data->destroy_func(data->user_data);
@@ -1554,14 +1564,68 @@ void _dbus1_name_owner_changed_filter(struct l_dbus_message *message,
 	if (strcmp(name, data->argument))
 		return;
 
+	if (!data->owner) {
+		if (data->get_name_owner_id)
+			l_dbus_cancel(data->dbus, data->get_name_owner_id);
+
+		data->get_name_owner_id = 0;
+	} else {
+		if (!strcmp(data->owner, new))
+			return;
+	}
+
+	l_free(data->owner);
+	data->owner = l_strdup(new);
+
 	if (*new == '\0') {
 		if (data->disconnect_func)
 			data->disconnect_func(data->dbus, data->user_data);
+	} else {
+		if (data->connect_func)
+			data->connect_func(data->dbus, data->user_data);
 	}
+}
+
+static void _dbus1_get_name_owner_reply(struct l_dbus_message *message,
+							void *user_data)
+{
+	struct dbus1_filter_data *data = user_data;
+	const char *name;
+
+	data->get_name_owner_id = 0;
+
+	/* No name owner yet */
+	if (l_dbus_message_is_error(message))
+		return;
+
+	/* Shouldn't happen */
+	if (!l_dbus_message_get_arguments(message, "s", &name))
+		return;
+
+	/* If the signal arrived before the reply, don't do anything */
+	if (data->owner && !strcmp(data->owner, name))
+		return;
+
+	l_free(data->owner);
+	data->owner = l_strdup(name);
+
+	if (data->connect_func)
+		data->connect_func(data->dbus, data->user_data);
 }
 
 LIB_EXPORT unsigned int l_dbus_add_disconnect_watch(struct l_dbus *dbus,
 					const char *name,
+					l_dbus_watch_func_t disconnect_func,
+					void *user_data,
+					l_dbus_destroy_func_t destroy)
+{
+	return l_dbus_add_service_watch(dbus, name, NULL, disconnect_func,
+					user_data, destroy);
+}
+
+unsigned int l_dbus_add_service_watch(struct l_dbus *dbus,
+					const char *name,
+					l_dbus_watch_func_t connect_func,
 					l_dbus_watch_func_t disconnect_func,
 					void *user_data,
 					l_dbus_destroy_func_t destroy)
@@ -1582,6 +1646,25 @@ LIB_EXPORT unsigned int l_dbus_add_disconnect_watch(struct l_dbus *dbus,
 		return 0;
 
 	add_match(data);
+
+	if (connect_func) {
+		struct l_dbus_message *message;
+
+		data->connect_func = connect_func;
+
+		message = l_dbus_message_new_method_call(dbus,
+							DBUS_SERVICE_DBUS,
+							DBUS_PATH_DBUS,
+							L_DBUS_INTERFACE_DBUS,
+							"GetNameOwner");
+
+		l_dbus_message_set_arguments(message, "s", name);
+
+		data->get_name_owner_id =
+			l_dbus_send_with_reply(dbus, message,
+						_dbus1_get_name_owner_reply,
+						data, NULL);
+	}
 
 	return l_dbus_register(dbus, _dbus1_signal_dispatcher, data,
 							filter_data_destroy);

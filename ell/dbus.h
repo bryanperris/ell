@@ -219,6 +219,13 @@ bool l_dbus_object_remove_interface(struct l_dbus *dbus, const char *object,
 
 bool l_dbus_object_manager_enable(struct l_dbus *dbus);
 
+unsigned int l_dbus_add_service_watch(struct l_dbus *dbus,
+					const char *name,
+					l_dbus_watch_func_t connect_func,
+					l_dbus_watch_func_t disconnect_func,
+					void *user_data,
+					l_dbus_destroy_func_t destroy);
+
 unsigned int l_dbus_add_disconnect_watch(struct l_dbus *dbus,
 					const char *name,
 					l_dbus_watch_func_t disconnect_func,
