@@ -1093,6 +1093,17 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 	return true;
 }
 
+LIB_EXPORT bool l_dbus_message_is_error(struct l_dbus_message *message)
+{
+	struct dbus_header *hdr;
+
+	if (unlikely(!message))
+		return false;
+
+	hdr = message->header;
+	return hdr->message_type == DBUS_MESSAGE_TYPE_ERROR;
+}
+
 LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 						const char *signature, ...)
 {

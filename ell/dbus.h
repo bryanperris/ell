@@ -144,6 +144,7 @@ uint32_t l_dbus_method_call(struct l_dbus *dbus,
 				l_dbus_message_func_t function,
 				void *user_data, l_dbus_destroy_func_t destroy);
 
+bool l_dbus_message_is_error(struct l_dbus_message *message);
 bool l_dbus_message_get_error(struct l_dbus_message *message,
 					const char **name, const char **text);
 bool l_dbus_message_get_arguments(struct l_dbus_message *message,
