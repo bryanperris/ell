@@ -2,7 +2,7 @@
  *
  *  Embedded Linux library
  *
- *  Copyright (C) 2011-2014  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2016  Intel Corporation. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -20,32 +20,36 @@
  *
  */
 
-#include <ell/util.h>
-#include <ell/test.h>
-#include <ell/queue.h>
-#include <ell/hashmap.h>
-#include <ell/string.h>
-#include <ell/main.h>
-#include <ell/idle.h>
-#include <ell/signal.h>
-#include <ell/timeout.h>
-#include <ell/io.h>
-#include <ell/ringbuf.h>
-#include <ell/log.h>
-#include <ell/plugin.h>
-#include <ell/checksum.h>
-#include <ell/settings.h>
-#include <ell/hwdb.h>
-#include <ell/cipher.h>
-#include <ell/random.h>
-#include <ell/uintset.h>
-#include <ell/base64.h>
-#include <ell/pem.h>
-#include <ell/tls.h>
-#include <ell/uuid.h>
-#include <ell/key.h>
+#ifndef __ELL_KEY_H
+#define __ELL_KEY_H
 
-#include <ell/netlink.h>
-#include <ell/genl.h>
-#include <ell/dbus.h>
-#include <ell/dbus-service.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stddef.h>
+#include <stdbool.h>
+
+struct l_key;
+
+enum l_key_type {
+	L_KEY_RAW = 0,
+	L_KEY_ASYMMETRIC
+};
+
+struct l_key *l_key_new(enum l_key_type type, const void *payload,
+			size_t payload_length);
+
+void l_key_free(struct l_key *key);
+
+bool l_key_update(struct l_key *key, const void *payload, size_t len);
+
+bool l_key_extract(struct l_key *key, void *payload, size_t *len);
+
+ssize_t l_key_get_size(struct l_key *key);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_KEY_H */
