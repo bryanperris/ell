@@ -131,7 +131,8 @@ unit_tests = unit/test-unit \
 			unit/test-base64 \
 			unit/test-pem \
 			unit/test-tls \
-			unit/test-uuid
+			unit/test-uuid \
+			unit/test-key
 
 dbus_tests = unit/test-kdbus \
 			unit/test-dbus \
@@ -214,6 +215,8 @@ unit_test_base64_LDADD = ell/libell-private.la
 unit_test_tls_LDADD = ell/libell-private.la
 
 unit_test_uuid_LDADD = ell/libell-private.la
+
+unit_test_key_LDADD = ell/libell-private.la
 
 if MAINTAINER_MODE
 noinst_LTLIBRARIES += unit/example-plugin.la

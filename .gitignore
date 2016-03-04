@@ -52,6 +52,7 @@ unit/test-base64
 unit/test-tls
 unit/test-pem
 unit/test-uuid
+unit/test-key
 unit/*.log
 unit/*.trs
 examples/dbus-service
