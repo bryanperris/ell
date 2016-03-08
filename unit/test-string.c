@@ -114,6 +114,32 @@ static void test_fixed(const void *test_data)
 	l_free(a);
 }
 
+static void test_truncate(const void *test_data)
+{
+	struct l_string *str;
+	char *a;
+
+	str = l_string_new(7);
+	l_string_append(str, "Foobar7");
+
+	assert(!l_string_truncate(NULL, 8));
+
+	assert(l_string_truncate(str, 7));
+	a = l_string_free(str, false);
+	assert(a);
+	assert(!strcmp(a, "Foobar7"));
+	l_free(a);
+
+	str = l_string_new(7);
+	l_string_append(str, "Foobar7");
+	assert(l_string_truncate(str, 3));
+	l_string_append_c(str, '4');
+	a = l_string_free(str, false);
+	assert(a);
+	assert(!strcmp(a, "Foo4"));
+	l_free(a);
+}
+
 static void test_strsplit(const void *test_data)
 {
 	char **strv = l_strsplit("Foo:bar:bz", ':');
@@ -208,6 +234,8 @@ int main(int argc, char *argv[])
 	l_test_add("append_fixed test 1", test_fixed, &fixed_test1);
 	l_test_add("append_fixed test 2", test_fixed, &fixed_test2);
 	l_test_add("append_fixed test 3", test_fixed, &fixed_test3);
+
+	l_test_add("truncate", test_truncate, NULL);
 
 	l_test_add("strsplit", test_strsplit, NULL);
 	l_test_add("strsplit_set", test_strsplit_set, NULL);
