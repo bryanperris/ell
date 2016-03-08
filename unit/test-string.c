@@ -194,6 +194,8 @@ static void test_joinv(const void *test_data)
 	assert(r);
 	assert(!strcmp(r, "Foo:bar:bz"));
 	l_free(r);
+
+	l_strfreev(strv3);
 }
 
 int main(int argc, char *argv[])
