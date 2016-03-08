@@ -202,6 +202,7 @@ static bool test_string_getter(struct l_dbus *dbus,
 }
 
 static bool setter_called;
+static bool int_optional;
 
 static void test_string_setter(struct l_dbus *dbus,
 				struct l_dbus_message *message,
@@ -224,7 +225,12 @@ static bool test_int_getter(struct l_dbus *dbus,
 				struct l_dbus_message_builder *builder,
 				void *user_data)
 {
-	uint32_t u = 5;
+	uint32_t u;
+
+	if (int_optional)
+		return false;
+
+	u = 5;
 
 	return l_dbus_message_builder_append_basic(builder, 'u', &u);
 }
@@ -290,10 +296,14 @@ static void validate_properties(struct l_dbus_message_iter *dict)
 	test_assert(l_dbus_message_iter_get_variant(&variant, "s", &strval));
 	test_assert(!strcmp(strval, "foo"));
 
-	test_assert(l_dbus_message_iter_next_entry(dict, &name, &variant));
-	test_assert(!strcmp(name, "Integer"));
-	test_assert(l_dbus_message_iter_get_variant(&variant, "u", &intval));
-	test_assert(intval == 5);
+	if (!int_optional) {
+		test_assert(l_dbus_message_iter_next_entry(dict, &name,
+								&variant));
+		test_assert(!strcmp(name, "Integer"));
+		test_assert(l_dbus_message_iter_get_variant(&variant, "u",
+								&intval));
+		test_assert(intval == 5);
+	}
 
 	test_assert(l_dbus_message_iter_next_entry(dict, &name, &variant));
 	test_assert(!strcmp(name, "Readonly"));
@@ -339,6 +349,20 @@ static void test_old_get(struct l_dbus *dbus, void *test_data)
 						NULL, NULL));
 }
 
+static void test_old_optional_get(struct l_dbus *dbus, void *test_data)
+{
+	struct l_dbus_message *call =
+		l_dbus_message_new_method_call(dbus, "org.test", "/test",
+						"org.test", "GetProperties");
+
+	int_optional = true;
+
+	test_assert(call);
+	test_assert(l_dbus_message_set_arguments(call, ""));
+
+	test_assert(l_dbus_send_with_reply(dbus, call, get_properties_callback,
+						NULL, NULL));
+}
 static void set_invalid_callback(struct l_dbus_message *message,
 					void *user_data)
 {
@@ -966,6 +990,7 @@ int main(int argc, char *argv[])
 
 	test_add("Legacy properties get", test_old_get, NULL);
 	test_add("Legacy properties set", test_old_set, NULL);
+	test_add("Legacy optional property", test_old_optional_get, NULL);
 	test_add("org.freedesktop.DBus.Properties get", test_new_get, NULL);
 	test_add("org.freedesktop.DBus.Properties set", test_new_set, NULL);
 	test_add("Property changed signals", test_property_signals, NULL);
