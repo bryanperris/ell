@@ -809,7 +809,13 @@ struct dbus_builder {
 	struct l_string *signature;
 	void *body;
 	size_t body_size;
+	size_t body_pos;
 	struct l_queue *containers;
+	struct {
+		struct container *container;
+		int sig_end;
+		size_t body_pos;
+	} mark;
 };
 
 struct container {
@@ -841,17 +847,18 @@ static void container_free(struct container *container)
 static inline size_t grow_body(struct dbus_builder *builder,
 					size_t len, unsigned int alignment)
 {
-	size_t size = align_len(builder->body_size, alignment);
+	size_t size = align_len(builder->body_pos, alignment);
 
 	if (size + len > builder->body_size) {
 		builder->body = l_realloc(builder->body, size + len);
-
-		if (size - builder->body_size > 0)
-			memset(builder->body + builder->body_size, 0,
-						size - builder->body_size);
-
 		builder->body_size = size + len;
 	}
+
+	if (size - builder->body_pos > 0)
+		memset(builder->body + builder->body_pos, 0,
+					size - builder->body_pos);
+
+	builder->body_pos = size + len;
 
 	return size;
 }
@@ -870,6 +877,11 @@ struct dbus_builder *_dbus1_builder_new(void *body, size_t body_size)
 
 	builder->body = body;
 	builder->body_size = body_size;
+	builder->body_pos = body_size;
+
+	builder->mark.container = root;
+	builder->mark.sig_end = 0;
+	builder->mark.body_pos = 0;
 
 	return builder;
 }
@@ -1189,9 +1201,45 @@ bool _dbus1_builder_leave_array(struct dbus_builder *builder)
 	array_start = align_len(container->start + 4, alignment);
 
 	put_u32(builder->body + container->start,
-					builder->body_size - array_start);
+					builder->body_pos - array_start);
 
 	container_free(container);
+
+	return true;
+}
+
+bool _dbus1_builder_mark(struct dbus_builder *builder)
+{
+	struct container *container = l_queue_peek_head(builder->containers);
+
+	builder->mark.container = container;
+
+	if (l_queue_length(builder->containers) == 1)
+		builder->mark.sig_end = l_string_length(builder->signature);
+	else
+		builder->mark.sig_end = container->sigindex;
+
+	builder->mark.body_pos = builder->body_pos;
+
+	return true;
+}
+
+bool _dbus1_builder_rewind(struct dbus_builder *builder)
+{
+	struct container *container;
+
+	while ((container = l_queue_peek_head(builder->containers)) !=
+				builder->mark.container) {
+		container_free(container);
+		l_queue_pop_head(builder->containers);
+	}
+
+	builder->body_pos = builder->mark.body_pos;
+
+	if (l_queue_length(builder->containers) == 1)
+		l_string_truncate(builder->signature, builder->mark.sig_end);
+	else
+		container->sigindex = builder->mark.sig_end;
 
 	return true;
 }
