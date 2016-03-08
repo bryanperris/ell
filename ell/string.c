@@ -302,6 +302,21 @@ LIB_EXPORT unsigned int l_string_length(struct l_string *string)
 	return string->len;
 }
 
+LIB_EXPORT struct l_string *l_string_truncate(struct l_string *string,
+							size_t new_size)
+{
+	if (unlikely(!string))
+		return NULL;
+
+	if (new_size >= string->len)
+		return string;
+
+	string->len = new_size;
+	string->str[new_size] = '\0';
+
+	return string;
+}
+
 static inline bool __attribute__ ((always_inline))
 			valid_unicode(wchar_t c)
 {
