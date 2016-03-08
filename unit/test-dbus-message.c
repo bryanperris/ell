@@ -2525,6 +2525,55 @@ static void check_bloom_1(const void *data)
 		assert(bloom_1[i] == filter[i]);
 }
 
+static void builder_rewind(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	struct l_dbus_message_builder *builder;
+	bool b = true;
+
+	builder = l_dbus_message_builder_new(msg);
+	assert(builder);
+
+	assert(l_dbus_message_builder_append_basic(builder, 'o',
+							"/com/example/object"));
+
+	assert(l_dbus_message_builder_enter_array(builder, "{sv}"));
+
+	assert(_dbus_message_builder_mark(builder));
+
+	assert(l_dbus_message_builder_enter_dict(builder, "sv"));
+	assert(l_dbus_message_builder_append_basic(builder, 's', "Name"));
+	assert(l_dbus_message_builder_enter_variant(builder, "s"));
+	assert(l_dbus_message_builder_append_basic(builder, 's',
+							"Invalid"));
+	assert(l_dbus_message_builder_leave_variant(builder));
+	assert(l_dbus_message_builder_leave_dict(builder));
+
+	assert(_dbus_message_builder_rewind(builder));
+
+	assert(l_dbus_message_builder_enter_dict(builder, "sv"));
+	assert(l_dbus_message_builder_append_basic(builder, 's', "Name"));
+	assert(l_dbus_message_builder_enter_variant(builder, "s"));
+	assert(l_dbus_message_builder_append_basic(builder, 's',
+							"Linus Torvalds"));
+	assert(l_dbus_message_builder_leave_variant(builder));
+	assert(l_dbus_message_builder_leave_dict(builder));
+
+	assert(l_dbus_message_builder_enter_dict(builder, "sv"));
+	assert(l_dbus_message_builder_append_basic(builder, 's', "Developer"));
+	assert(l_dbus_message_builder_enter_variant(builder, "b"));
+	assert(l_dbus_message_builder_append_basic(builder, 'b', &b));
+	assert(l_dbus_message_builder_leave_variant(builder));
+	assert(l_dbus_message_builder_leave_dict(builder));
+
+	assert(l_dbus_message_builder_leave_array(builder));
+
+	assert(l_dbus_message_builder_finalize(builder));
+	l_dbus_message_builder_destroy(builder);
+
+	compare_message(msg, data);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -2617,6 +2666,9 @@ int main(int argc, char *argv[])
 
 	l_test_add("Message Builder Complex 3", builder_complex_3,
 						&message_data_complex_3);
+
+	l_test_add("Message Builder Rewind Complex 1", builder_rewind,
+						&message_data_complex_1);
 
 	return l_test_run();
 }
