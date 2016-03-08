@@ -257,6 +257,14 @@ static void test_error_setter(struct l_dbus *dbus,
 						"org.test.Error", "Error"));
 }
 
+static bool test_path_getter(struct l_dbus *dbus,
+				struct l_dbus_message *message,
+				struct l_dbus_message_builder *builder,
+				void *user_data)
+{
+	return l_dbus_message_builder_append_basic(builder, 'o', "/foo/bar");
+}
+
 static void setup_test_interface(struct l_dbus_interface *interface)
 {
 	l_dbus_interface_property(interface, "String", 0, "s",
@@ -267,6 +275,8 @@ static void setup_test_interface(struct l_dbus_interface *interface)
 					test_string_getter, NULL);
 	l_dbus_interface_property(interface, "SetError", 0, "s",
 					test_string_getter, test_error_setter);
+	l_dbus_interface_property(interface, "Path", 0, "o",
+					test_path_getter, NULL);
 }
 
 static void validate_properties(struct l_dbus_message_iter *dict)
@@ -294,6 +304,11 @@ static void validate_properties(struct l_dbus_message_iter *dict)
 	test_assert(!strcmp(name, "SetError"));
 	test_assert(l_dbus_message_iter_get_variant(&variant, "s", &strval));
 	test_assert(!strcmp(strval, "foo"));
+
+	test_assert(l_dbus_message_iter_next_entry(dict, &name, &variant));
+	test_assert(!strcmp(name, "Path"));
+	test_assert(l_dbus_message_iter_get_variant(&variant, "o", &strval));
+	test_assert(!strcmp(strval, "/foo/bar"));
 
 	test_assert(!l_dbus_message_iter_next_entry(dict, &name, &variant));
 }
