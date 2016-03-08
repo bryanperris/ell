@@ -833,6 +833,7 @@ static bool get_properties_dict(struct l_dbus *dbus,
 	const char *signature;
 
 	l_dbus_message_builder_enter_array(builder, "{sv}");
+	_dbus_message_builder_mark(builder);
 
 	for (entry = l_queue_get_entries(interface->properties); entry;
 			entry = entry->next) {
@@ -844,11 +845,16 @@ static bool get_properties_dict(struct l_dbus *dbus,
 							property->metainfo);
 		l_dbus_message_builder_enter_variant(builder, signature);
 
-		if (!property->getter(dbus, message, builder, user_data))
-			return false;
+		if (!property->getter(dbus, message, builder, user_data)) {
+			if (!_dbus_message_builder_rewind(builder))
+				return false;
+
+			continue;
+		}
 
 		l_dbus_message_builder_leave_variant(builder);
 		l_dbus_message_builder_leave_dict(builder);
+		_dbus_message_builder_mark(builder);
 	}
 
 	l_dbus_message_builder_leave_array(builder);
