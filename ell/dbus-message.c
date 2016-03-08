@@ -690,6 +690,7 @@ struct builder_driver {
 	bool (*leave_variant)(struct dbus_builder *);
 	char *(*finish)(struct dbus_builder *, void **, size_t *);
 	bool (*mark)(struct dbus_builder *);
+	bool (*rewind)(struct dbus_builder *);
 	struct dbus_builder *(*new)(void *, size_t);
 	void (*free)(struct dbus_builder *);
 };
@@ -706,6 +707,7 @@ static struct builder_driver dbus1_driver = {
 	.leave_array = _dbus1_builder_leave_array,
 	.finish = _dbus1_builder_finish,
 	.mark = _dbus1_builder_mark,
+	.rewind = _dbus1_builder_rewind,
 	.new = _dbus1_builder_new,
 	.free = _dbus1_builder_free,
 };
@@ -1750,4 +1752,12 @@ bool _dbus_message_builder_mark(struct l_dbus_message_builder *builder)
 		return false;
 
 	return builder->driver->mark(builder->builder);
+}
+
+bool _dbus_message_builder_rewind(struct l_dbus_message_builder *builder)
+{
+	if (unlikely(!builder))
+		return false;
+
+	return builder->driver->rewind(builder->builder);
 }
