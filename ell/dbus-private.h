@@ -132,6 +132,8 @@ struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 bool dbus_message_compare(struct l_dbus_message *message,
 					const void *data, size_t size);
 
+bool _dbus_message_builder_mark(struct l_dbus_message_builder *builder);
+
 const char *_dbus_signature_end(const char *signature);
 
 bool _dbus_valid_object_path(const char *path);

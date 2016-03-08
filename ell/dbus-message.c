@@ -689,6 +689,7 @@ struct builder_driver {
 	bool (*enter_variant)(struct dbus_builder *, const char *);
 	bool (*leave_variant)(struct dbus_builder *);
 	char *(*finish)(struct dbus_builder *, void **, size_t *);
+	bool (*mark)(struct dbus_builder *);
 	struct dbus_builder *(*new)(void *, size_t);
 	void (*free)(struct dbus_builder *);
 };
@@ -704,6 +705,7 @@ static struct builder_driver dbus1_driver = {
 	.enter_array = _dbus1_builder_enter_array,
 	.leave_array = _dbus1_builder_leave_array,
 	.finish = _dbus1_builder_finish,
+	.mark = _dbus1_builder_mark,
 	.new = _dbus1_builder_new,
 	.free = _dbus1_builder_free,
 };
@@ -1740,4 +1742,12 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_builder_finalize(
 	l_free(generated_signature);
 
 	return builder->message;
+}
+
+bool _dbus_message_builder_mark(struct l_dbus_message_builder *builder)
+{
+	if (unlikely(!builder))
+		return false;
+
+	return builder->driver->mark(builder->builder);
 }
