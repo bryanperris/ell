@@ -2523,6 +2523,8 @@ static void check_bloom_1(const void *data)
 
 	for (i = 0; i < 8; i++)
 		assert(bloom_1[i] == filter[i]);
+
+	l_dbus_message_unref(msg);
 }
 
 static void builder_rewind(const void *data)
