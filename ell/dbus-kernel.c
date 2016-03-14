@@ -385,7 +385,7 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 	header = _dbus_message_get_header(message, &header_size);
 	item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(struct kdbus_vec);
 	item->type = KDBUS_ITEM_PAYLOAD_VEC;
-	item->vec.address = (uint64_t) header;
+	item->vec.address = (uintptr_t) header;
 	item->vec.size = header_size;
 	item = KDBUS_ITEM_NEXT(item);
 
@@ -393,7 +393,7 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 	if (body_size > 0) {
 		item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(struct kdbus_vec);
 		item->type = KDBUS_ITEM_PAYLOAD_VEC;
-		item->vec.address = (uint64_t) body;
+		item->vec.address = (uintptr_t) body;
 		item->vec.size = body_size;
 		item = KDBUS_ITEM_NEXT(item);
 	}
