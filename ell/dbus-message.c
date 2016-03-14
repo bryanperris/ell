@@ -1352,6 +1352,8 @@ void _dbus_message_set_sender(struct l_dbus_message *message,
 	if (!_dbus_message_is_gvariant(message))
 		return;
 
+	l_free(message->sender);
+
 	message->sender = l_strdup(sender);
 	message->kdbus_sender = true;
 }
@@ -1361,6 +1363,8 @@ void _dbus_message_set_destination(struct l_dbus_message *message,
 {
 	if (!_dbus_message_is_gvariant(message))
 		return;
+
+	l_free(message->destination);
 
 	message->destination = l_strdup(destination);
 	message->kdbus_destination = true;
