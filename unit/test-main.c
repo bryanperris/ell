@@ -74,12 +74,19 @@ static void race_handler(struct l_timeout *timeout, void *user_data)
 	*other_racer = NULL;
 }
 
+static void remove_handler(struct l_timeout *timeout, void *user_data)
+{
+	l_timeout_remove(timeout);
+	l_info("Timer removed itself");
+}
+
 int main(int argc, char *argv[])
 {
 	struct l_timeout *timeout_quit;
 	struct l_timeout *race_delay;
 	struct l_timeout *race1;
 	struct l_timeout *race2;
+	struct l_timeout *remove_self;
 	struct l_signal *signal;
 	struct l_idle *idle;
 	sigset_t mask;
@@ -97,6 +104,8 @@ int main(int argc, char *argv[])
 						  &race2, NULL);
 	race2 = l_timeout_create_with_nanoseconds(1, 100000000, race_handler,
 						  &race1, NULL);
+
+	remove_self = l_timeout_create(2, remove_handler, &remove_self, NULL);
 
 	idle = l_idle_create(idle_handler, NULL, NULL);
 
