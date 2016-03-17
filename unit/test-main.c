@@ -25,6 +25,7 @@
 #endif
 
 #include <ell/ell.h>
+#include <unistd.h>
 
 static void signal_handler(struct l_signal *signal, uint32_t signo,
 							void *user_data)
@@ -38,7 +39,7 @@ static void signal_handler(struct l_signal *signal, uint32_t signo,
 	}
 }
 
-static void timeout_handler(struct l_timeout *timeout, void *user_data)
+static void timeout_quit_handler(struct l_timeout *timeout, void *user_data)
 {
 	l_main_quit();
 }
@@ -58,9 +59,27 @@ static void oneshot_handler(void *user_data)
 	l_info("One-shot");
 }
 
+static void race_delay_handler(struct l_timeout *timeout, void *user_data)
+{
+	l_info("Delay");
+	usleep(250 * 1000);
+}
+
+static void race_handler(struct l_timeout *timeout, void *user_data)
+{
+	struct l_timeout **other_racer = user_data;
+
+	l_info("Remove pending event");
+	l_timeout_remove(*other_racer);
+	*other_racer = NULL;
+}
+
 int main(int argc, char *argv[])
 {
-	struct l_timeout *timeout;
+	struct l_timeout *timeout_quit;
+	struct l_timeout *race_delay;
+	struct l_timeout *race1;
+	struct l_timeout *race2;
 	struct l_signal *signal;
 	struct l_idle *idle;
 	sigset_t mask;
@@ -71,7 +90,13 @@ int main(int argc, char *argv[])
 
 	signal = l_signal_create(&mask, signal_handler, NULL, NULL);
 
-	timeout = l_timeout_create(3, timeout_handler, NULL, NULL);
+	timeout_quit = l_timeout_create(3, timeout_quit_handler, NULL, NULL);
+
+	race_delay = l_timeout_create(1, race_delay_handler, NULL, NULL);
+	race1 = l_timeout_create_with_nanoseconds(1, 100000000, race_handler,
+						  &race2, NULL);
+	race2 = l_timeout_create_with_nanoseconds(1, 100000000, race_handler,
+						  &race1, NULL);
 
 	idle = l_idle_create(idle_handler, NULL, NULL);
 
@@ -85,7 +110,11 @@ int main(int argc, char *argv[])
 
 	l_main_run();
 
-	l_timeout_remove(timeout);
+	l_timeout_remove(race_delay);
+	l_timeout_remove(race1);
+	l_timeout_remove(race2);
+
+	l_timeout_remove(timeout_quit);
 
 	l_signal_remove(signal);
 
