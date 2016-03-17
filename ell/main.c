@@ -100,8 +100,6 @@ static inline bool __attribute__ ((always_inline)) create_epoll(void)
 		goto close_epoll;
 
 	idle_list = l_queue_new();
-	if (!idle_list)
-		goto free_watch_list;
 
 	idle_id = 0;
 
@@ -111,10 +109,6 @@ static inline bool __attribute__ ((always_inline)) create_epoll(void)
 		watch_list[i] = NULL;
 
 	return true;
-
-free_watch_list:
-	free(watch_list);
-	watch_list = NULL;
 
 close_epoll:
 	close(epoll_fd);
