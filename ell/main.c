@@ -49,6 +49,9 @@
 #define IDLE_FLAG_DISPATCHING	1
 #define IDLE_FLAG_DESTROYED	2
 
+#define WATCH_FLAG_DISPATCHING	1
+#define WATCH_FLAG_DESTROYED	2
+
 static int epoll_fd;
 static bool epoll_running;
 static bool epoll_terminate;
@@ -60,6 +63,7 @@ static struct l_queue *idle_list;
 struct watch_data {
 	int fd;
 	uint32_t events;
+	uint32_t flags;
 	watch_event_cb_t callback;
 	watch_destroy_cb_t destroy;
 	void *user_data;
@@ -139,6 +143,7 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 
 	data->fd = fd;
 	data->events = events;
+	data->flags = 0;
 	data->callback = callback;
 	data->destroy = destroy;
 	data->user_data = user_data;
@@ -212,7 +217,10 @@ int watch_remove(int fd)
 	if (data->destroy)
 		data->destroy(data->user_data);
 
-	l_free(data);
+	if (data->flags & WATCH_FLAG_DISPATCHING)
+		data->flags |= WATCH_FLAG_DESTROYED;
+	else
+		l_free(data);
 
 	return err;
 }
@@ -334,6 +342,7 @@ LIB_EXPORT int l_main_run(void)
 
 	for (;;) {
 		struct epoll_event events[MAX_EPOLL_EVENTS];
+		struct watch_data *data;
 		int n, nfds;
 		int timeout;
 
@@ -344,10 +353,28 @@ LIB_EXPORT int l_main_run(void)
 		nfds = epoll_wait(epoll_fd, events, MAX_EPOLL_EVENTS, timeout);
 
 		for (n = 0; n < nfds; n++) {
-			struct watch_data *data = events[n].data.ptr;
+			data = events[n].data.ptr;
+
+			data->flags |= WATCH_FLAG_DISPATCHING;
+		}
+
+		for (n = 0; n < nfds; n++) {
+			data = events[n].data.ptr;
+
+			if (data->flags & WATCH_FLAG_DESTROYED)
+				continue;
 
 			data->callback(data->fd, events[n].events,
 							data->user_data);
+		}
+
+		for (n = 0; n < nfds; n++) {
+			data = events[n].data.ptr;
+
+			if (data->flags & WATCH_FLAG_DESTROYED)
+				l_free(data);
+			else
+				data->flags = 0;
 		}
 
 		l_queue_foreach(idle_list, idle_dispatch, NULL);
