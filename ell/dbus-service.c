@@ -259,39 +259,34 @@ void _dbus_interface_introspection(struct l_dbus_interface *interface,
 	l_string_append(buf, "\t</interface>\n");
 }
 
-static char *copy_params(char *dest, const char *signature, va_list args)
-{
-	const char *pname;
-	const char *sig;
+#define COPY_PARAMS(dest, signature, args)	\
+	do {	\
+		const char *pname;	\
+		const char *sig;	\
+		dest = stpcpy(dest, signature) + 1;	\
+		for (sig = signature; *sig; sig++) {	\
+			sig = _dbus_signature_end(sig);	\
+			pname = va_arg(args, const char *);	\
+			dest = stpcpy(dest, pname) + 1;	\
+		}	\
+	} while(0)
 
-	for (sig = signature; *sig; sig++) {
-		sig = _dbus_signature_end(sig);
-		if (!sig)
-			return NULL;
-
-		pname = va_arg(args, const char *);
-		dest = stpcpy(dest, pname) + 1;
-	}
-
-	return dest;
-}
-
-static bool size_params(const char *signature, va_list args, unsigned int *len)
-{
-	const char *pname;
-	const char *sig;
-
-	for (sig = signature; *sig; sig++) {
-		sig = _dbus_signature_end(sig);
-		if (!sig)
-			return false;
-
-		pname = va_arg(args, const char *);
-		*len += strlen(pname) + 1;
-	}
-
-	return true;
-}
+#define SIZE_PARAMS(signature, args)	\
+	({	\
+		unsigned int len = strlen(signature) + 1;	\
+		const char *pname;	\
+		const char *sig;	\
+		for (sig = signature; *sig; sig++) {	\
+			sig = _dbus_signature_end(sig);	\
+			if (!sig) {	\
+				len = 0;	\
+				break;	\
+			}	\
+			pname = va_arg(args, const char *);	\
+			len += strlen(pname) + 1;	\
+		}	\
+		len;	\
+	})
 
 LIB_EXPORT bool l_dbus_interface_method(struct l_dbus_interface *interface,
 					const char *name, uint32_t flags,
@@ -318,18 +313,15 @@ LIB_EXPORT bool l_dbus_interface_method(struct l_dbus_interface *interface,
 		return false;
 
 	/* Pre-calculate the needed meta-info length */
-	return_info_len = strlen(return_sig) + 1;
-	param_info_len = strlen(param_sig) + 1;
-
 	va_start(args, param_sig);
 
-	if (!size_params(return_sig, args, &return_info_len))
-		goto error;
-
-	if (!size_params(param_sig, args, &param_info_len))
-		goto error;
+	return_info_len = SIZE_PARAMS(return_sig, args);
+	param_info_len = SIZE_PARAMS(param_sig, args);
 
 	va_end(args);
+
+	if (!return_info_len || !param_info_len)
+		return false;
 
 	info = l_malloc(sizeof(*info) + return_info_len +
 					param_info_len + strlen(name) + 1);
@@ -345,22 +337,16 @@ LIB_EXPORT bool l_dbus_interface_method(struct l_dbus_interface *interface,
 	 * lookups during the message dispatch procedures.
 	 */
 	p = info->metainfo + info->name_len + param_info_len + 1;
-	p = stpcpy(p, return_sig) + 1;
-	p = copy_params(p, return_sig, args);
+	COPY_PARAMS(p, return_sig, args);
 
 	p = info->metainfo + info->name_len + 1;
-	p = stpcpy(p, param_sig) + 1;
-	p = copy_params(p, param_sig, args);
+	COPY_PARAMS(p, param_sig, args);
 
 	va_end(args);
 
 	l_queue_push_tail(interface->methods, info);
 
 	return true;
-
-error:
-	va_end(args);
-	return false;
 }
 
 LIB_EXPORT bool l_dbus_interface_signal(struct l_dbus_interface *interface,
@@ -382,17 +368,14 @@ LIB_EXPORT bool l_dbus_interface_signal(struct l_dbus_interface *interface,
 		return false;
 
 	/* Pre-calculate the needed meta-info length */
-	metainfo_len = strlen(name) + 1;
-	metainfo_len += strlen(signature) + 1;
-
 	va_start(args, signature);
-
-	if (!size_params(signature, args, &metainfo_len)) {
-		va_end(args);
-		return false;
-	}
-
+	metainfo_len = SIZE_PARAMS(signature, args);
 	va_end(args);
+
+	if (!metainfo_len)
+		return false;
+
+	metainfo_len += strlen(name) + 1;
 
 	info = l_malloc(sizeof(*info) + metainfo_len);
 	info->flags = flags;
@@ -401,8 +384,7 @@ LIB_EXPORT bool l_dbus_interface_signal(struct l_dbus_interface *interface,
 	p = stpcpy(info->metainfo, name) + 1;
 
 	va_start(args, signature);
-	p = stpcpy(p, signature) + 1;
-	p = copy_params(p, signature, args);
+	COPY_PARAMS(p, signature, args);
 	va_end(args);
 
 	l_queue_push_tail(interface->signals, info);
