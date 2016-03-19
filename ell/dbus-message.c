@@ -1336,7 +1336,8 @@ LIB_EXPORT bool l_dbus_message_iter_get_variant(
 	if (unlikely(!iter))
 		return false;
 
-	if (!iter->sig_start || strcmp(iter->sig_start, signature))
+	if (!iter->sig_start || strlen(signature) != iter->sig_len ||
+			memcmp(iter->sig_start, signature, iter->sig_len))
 		return false;
 
 	va_start(args, signature);
