@@ -735,7 +735,15 @@ struct dbus_builder {
 	struct l_string *signature;
 	void *body;
 	size_t body_size;
+	size_t body_pos;
 	struct l_queue *containers;
+	struct {
+		struct container *container;
+		int sig_end;
+		size_t body_pos;
+		size_t offset_index;
+		bool variable_is_last : 1;
+	} mark;
 };
 
 struct container {
@@ -752,17 +760,18 @@ struct container {
 static inline size_t grow_body(struct dbus_builder *builder,
 					size_t len, unsigned int alignment)
 {
-	size_t size = align_len(builder->body_size, alignment);
+	size_t size = align_len(builder->body_pos, alignment);
 
 	if (size + len > builder->body_size) {
 		builder->body = l_realloc(builder->body, size + len);
-
-		if (size - builder->body_size > 0)
-			memset(builder->body + builder->body_size, 0,
-						size - builder->body_size);
-
 		builder->body_size = size + len;
 	}
+
+	if (size - builder->body_pos > 0)
+		memset(builder->body + builder->body_pos, 0,
+			size - builder->body_pos);
+
+	builder->body_pos = size + len;
 
 	return size;
 }
@@ -822,7 +831,7 @@ static void container_append_struct_offsets(struct container *container,
 	if (container->offset_index == 0)
 		return;
 
-	offset_size = offset_length(builder->body_size,
+	offset_size = offset_length(builder->body_pos,
 						container->offset_index);
 	i = container->offset_index - 1;
 
@@ -845,7 +854,7 @@ static void container_append_array_offsets(struct container *container,
 	if (container->offset_index == 0)
 		return;
 
-	offset_size = offset_length(builder->body_size,
+	offset_size = offset_length(builder->body_pos,
 						container->offset_index);
 	start = grow_body(builder, offset_size * container->offset_index, 1);
 
@@ -870,6 +879,9 @@ struct dbus_builder *_gvariant_builder_new(void *body, size_t body_size)
 
 	builder->body = body;
 	builder->body_size = body_size;
+	builder->body_pos = body_size;
+
+	builder->mark.container = root;
 
 	return builder;
 }
@@ -983,7 +995,7 @@ static bool leave_struct_dict_common(struct dbus_builder *builder,
 			return false;
 
 		container_append_struct_offsets(container, builder);
-		offset = builder->body_size - parent->start;
+		offset = builder->body_pos - parent->start;
 		parent->offsets[parent->offset_index++] = offset;
 		parent->variable_is_last = true;
 	}
@@ -1066,7 +1078,7 @@ bool _gvariant_builder_leave_variant(struct dbus_builder *builder)
 	if (!grow_offsets(parent))
 		return false;
 
-	offset = builder->body_size - parent->start;
+	offset = builder->body_pos - parent->start;
 	parent->offsets[parent->offset_index++] = offset;
 	parent->variable_is_last = true;
 
@@ -1146,7 +1158,7 @@ bool _gvariant_builder_leave_array(struct dbus_builder *builder)
 	if (!grow_offsets(parent))
 		return false;
 
-	offset = builder->body_size - parent->start;
+	offset = builder->body_pos - parent->start;
 	parent->offsets[parent->offset_index++] = offset;
 	parent->variable_is_last = true;
 
@@ -1205,12 +1217,52 @@ bool _gvariant_builder_append_basic(struct dbus_builder *builder,
 	start = grow_body(builder, len, alignment);
 	memcpy(builder->body + start, value, len);
 
-	offset = builder->body_size - container->start;
+	offset = builder->body_pos - container->start;
 	container->offsets[container->offset_index++] = offset;
 	container->variable_is_last = true;
 
 	if (container->type != DBUS_CONTAINER_TYPE_ARRAY)
 		container->sigindex += 1;
+
+	return true;
+}
+
+bool _gvariant_builder_mark(struct dbus_builder *builder)
+{
+	struct container *container = l_queue_peek_head(builder->containers);
+
+	builder->mark.container = container;
+
+	if (l_queue_length(builder->containers) == 1)
+		builder->mark.sig_end = l_string_length(builder->signature);
+	else
+		builder->mark.sig_end = container->sigindex;
+
+	builder->mark.body_pos = builder->body_pos;
+	builder->mark.offset_index = container->offset_index;
+	builder->mark.variable_is_last = container->variable_is_last;
+
+	return true;
+}
+
+bool _gvariant_builder_rewind(struct dbus_builder *builder)
+{
+	struct container *container;
+
+	while ((container = l_queue_peek_head(builder->containers)) !=
+				builder->mark.container) {
+		container_free(container);
+		l_queue_pop_head(builder->containers);
+	}
+
+	builder->body_pos = builder->mark.body_pos;
+	container->offset_index = builder->mark.offset_index;
+	container->variable_is_last = builder->mark.variable_is_last;
+
+	if (l_queue_length(builder->containers) == 1)
+		l_string_truncate(builder->signature, builder->mark.sig_end);
+	else
+		container->sigindex = builder->mark.sig_end;
 
 	return true;
 }
@@ -1239,7 +1291,7 @@ char *_gvariant_builder_finish(struct dbus_builder *builder,
 		container_append_struct_offsets(root, builder);
 
 	*body = builder->body;
-	*body_size = builder->body_size;
+	*body_size = builder->body_pos;
 	builder->body = NULL;
 	builder->body_size = 0;
 

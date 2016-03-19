@@ -728,6 +728,8 @@ static struct builder_driver gvariant_driver = {
 	.enter_array = _gvariant_builder_enter_array,
 	.leave_array = _gvariant_builder_leave_array,
 	.finish = _gvariant_builder_finish,
+	.mark = _gvariant_builder_mark,
+	.rewind = _gvariant_builder_rewind,
 	.new = _gvariant_builder_new,
 	.free = _gvariant_builder_free,
 };

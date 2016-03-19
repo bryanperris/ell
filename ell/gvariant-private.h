@@ -46,6 +46,8 @@ struct dbus_builder *_gvariant_builder_new(void *body, size_t body_size);
 void _gvariant_builder_free(struct dbus_builder *builder);
 bool _gvariant_builder_append_basic(struct dbus_builder *builder,
 					char type, const void *value);
+bool _gvariant_builder_mark(struct dbus_builder *builder);
+bool _gvariant_builder_rewind(struct dbus_builder *builder);
 char *_gvariant_builder_finish(struct dbus_builder *builder,
 				void **body, size_t *body_size);
 bool _gvariant_builder_enter_struct(struct dbus_builder *builder,
