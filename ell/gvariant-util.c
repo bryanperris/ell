@@ -988,6 +988,8 @@ static bool leave_struct_dict_common(struct dbus_builder *builder,
 	if (_gvariant_is_fixed_size(container->signature)) {
 		int alignment = _gvariant_get_alignment(container->signature);
 		grow_body(builder, 0, alignment);
+
+		parent->variable_is_last = false;
 	} else {
 		size_t offset;
 
