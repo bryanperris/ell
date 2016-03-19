@@ -598,9 +598,14 @@ struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size)
 
 	message->header_size = align_len(DBUS_HEADER_SIZE +
 						hdr->field_length, 8);
-	message->header = l_malloc(message->header_size);
-
 	message->body_size = hdr->body_length;
+
+	if (message->header_size + message->body_size < size) {
+		l_free(message);
+		return NULL;
+	}
+
+	message->header = l_malloc(message->header_size);
 	message->body = l_malloc(message->body_size);
 
 	memcpy(message->header, data, message->header_size);
