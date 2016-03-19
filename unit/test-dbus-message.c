@@ -1555,7 +1555,7 @@ static void build_basic_7(const void *data)
 {
 	struct l_dbus_message *msg = build_message(data);
 
-	l_dbus_message_set_arguments(msg, "t", 10000);
+	l_dbus_message_set_arguments(msg, "t", (uint64_t) 10000);
 
 	compare_message(msg, data);
 }

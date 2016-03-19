@@ -208,7 +208,8 @@ static void build_basic_1(const void *data)
 
 	result = l_dbus_message_set_arguments(msg, "bynqiuxtd", true, 255,
 						-32, 32, -24, 24,
-						140179142606749, 99L, 5.0);
+						(uint64_t) 140179142606749,
+						(int64_t) 99, 5.0);
 	assert(result);
 
 	_dbus_message_set_serial(msg, 1111);
