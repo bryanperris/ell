@@ -1259,7 +1259,7 @@ char *_dbus1_builder_finish(struct dbus_builder *builder,
 	builder->signature = NULL;
 
 	*body = builder->body;
-	*body_size = builder->body_size;
+	*body_size = builder->body_pos;
 	builder->body = NULL;
 	builder->body_size = 0;
 
