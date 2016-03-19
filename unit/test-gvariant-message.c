@@ -79,6 +79,40 @@ static const struct message_data message_data_basic_1 = {
 	.binary_len	= 184,
 };
 
+static const unsigned char message_binary_complex_1[] = {
+	0x6c, 0x01, 0x00, 0x02, 0x4f, 0x00, 0x00, 0x00, 0x57, 0x04, 0x00, 0x00,
+	0x86, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x2f, 0x63, 0x6f, 0x6d, 0x2f, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65,
+	0x2f, 0x6f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x00, 0x00, 0x6f, 0x00, 0x00,
+	0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6d, 0x65, 0x74, 0x68,
+	0x6f, 0x64, 0x00, 0x00, 0x73, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x63, 0x6f, 0x6d, 0x2e,
+	0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x69, 0x6e, 0x74, 0x65,
+	0x72, 0x66, 0x61, 0x63, 0x65, 0x00, 0x00, 0x73, 0x06, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x63, 0x6f, 0x6d, 0x2e, 0x65, 0x78, 0x61, 0x6d,
+	0x70, 0x6c, 0x65, 0x00, 0x00, 0x73, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x6f, 0x61, 0x7b, 0x73, 0x76, 0x7d, 0x00, 0x00,
+	0x67, 0x1e, 0x31, 0x58, 0x6e, 0x81, 0x00, 0x00, 0x2f, 0x63, 0x6f, 0x6d,
+	0x2f, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2f, 0x6f, 0x62, 0x6a,
+	0x65, 0x63, 0x74, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4e, 0x61, 0x6d, 0x65,
+	0x00, 0x00, 0x00, 0x00, 0x4c, 0x69, 0x6e, 0x75, 0x73, 0x20, 0x54, 0x6f,
+	0x72, 0x76, 0x61, 0x6c, 0x64, 0x73, 0x00, 0x00, 0x73, 0x05, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x44, 0x65, 0x76, 0x65, 0x6c, 0x6f, 0x70, 0x65,
+	0x72, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x62, 0x0a,
+	0x1a, 0x34, 0x14,
+};
+
+static const struct message_data message_data_complex_1 = {
+	.type		= "method_call",
+	.path		= "/com/example/object",
+	.interface	= "com.example.interface",
+	.member		= "method",
+	.destination	= "com.example",
+	.signature	= "oa{sv}",
+	.binary		= message_binary_complex_1,
+	.binary_len	= sizeof(message_binary_complex_1),
+};
+
 static struct l_dbus_message *check_message(const struct message_data *msg_data)
 {
 	struct l_dbus_message *msg;
@@ -129,6 +163,17 @@ static struct l_dbus_message *check_message(const struct message_data *msg_data)
 		if (do_print)
 			l_info("signature=%s", signature);
 	}
+
+	return msg;
+}
+
+static struct l_dbus_message *build_message(const struct message_data *msg_data)
+{
+	struct l_dbus_message *msg;
+
+	msg = _dbus_message_new_method_call(2, msg_data->destination,
+			msg_data->path, msg_data->interface, msg_data->member);
+	assert(msg);
 
 	return msg;
 }
@@ -198,13 +243,8 @@ static void parse_basic_1(const void *data)
 
 static void build_basic_1(const void *data)
 {
-	const struct message_data *msg_data = data;
-	struct l_dbus_message *msg;
+	struct l_dbus_message *msg = build_message(data);
 	bool result;
-
-	msg = _dbus_message_new_method_call(2, msg_data->destination,
-			msg_data->path, msg_data->interface, msg_data->member);
-	assert(msg);
 
 	result = l_dbus_message_set_arguments(msg, "bynqiuxtd", true, 255,
 						-32, 32, -24, 24,
@@ -217,12 +257,118 @@ static void build_basic_1(const void *data)
 	compare_message(msg, data);
 }
 
+static void check_complex_1(const void *data)
+{
+	struct l_dbus_message *msg = check_message(data);
+	struct l_dbus_message_iter dict, iter;
+	const char *path, *str;
+	bool result, val;
+
+	result = l_dbus_message_get_arguments(msg, "oa{sv}", &path, &dict);
+	assert(result);
+	assert(!strcmp(path, "/com/example/object"));
+
+	result = l_dbus_message_iter_next_entry(&dict, &str, &iter);
+	assert(result);
+	assert(!strcmp(str, "Name"));
+
+	result = l_dbus_message_iter_get_variant(&iter, "s", &str);
+	assert(result);
+	assert(!strcmp(str, "Linus Torvalds"));
+
+	result = l_dbus_message_iter_next_entry(&dict, &str, &iter);
+	assert(result);
+	assert(!strcmp(str, "Developer"));
+
+	result = l_dbus_message_iter_get_variant(&iter, "b", &val);
+	assert(result);
+	assert(val);
+
+	result = l_dbus_message_iter_next_entry(&dict, &str, &iter);
+	assert(!result);
+
+	l_dbus_message_unref(msg);
+}
+
+static void build_complex_1(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	bool result;
+
+	result = l_dbus_message_set_arguments(msg, "oa{sv}",
+						"/com/example/object", 2,
+						"Name", "s", "Linus Torvalds",
+						"Developer", "b", true);
+	assert(result);
+
+	_dbus_message_set_serial(msg, 1111);
+
+	compare_message(msg, data);
+}
+
+static void builder_rewind(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	struct l_dbus_message_builder *builder;
+	bool b = true;
+
+	builder = l_dbus_message_builder_new(msg);
+	assert(builder);
+
+	assert(l_dbus_message_builder_append_basic(builder, 'o',
+							"/com/example/object"));
+
+	assert(l_dbus_message_builder_enter_array(builder, "{sv}"));
+
+	assert(_dbus_message_builder_mark(builder));
+
+	assert(l_dbus_message_builder_enter_dict(builder, "sv"));
+	assert(l_dbus_message_builder_append_basic(builder, 's', "Name"));
+	assert(l_dbus_message_builder_enter_variant(builder, "s"));
+	assert(l_dbus_message_builder_append_basic(builder, 's',
+							"Invalid"));
+	assert(l_dbus_message_builder_leave_variant(builder));
+	assert(l_dbus_message_builder_leave_dict(builder));
+
+	assert(_dbus_message_builder_rewind(builder));
+
+	assert(l_dbus_message_builder_enter_dict(builder, "sv"));
+	assert(l_dbus_message_builder_append_basic(builder, 's', "Name"));
+	assert(l_dbus_message_builder_enter_variant(builder, "s"));
+	assert(l_dbus_message_builder_append_basic(builder, 's',
+							"Linus Torvalds"));
+	assert(l_dbus_message_builder_leave_variant(builder));
+	assert(l_dbus_message_builder_leave_dict(builder));
+
+	assert(l_dbus_message_builder_enter_dict(builder, "sv"));
+	assert(l_dbus_message_builder_append_basic(builder, 's', "Developer"));
+	assert(l_dbus_message_builder_enter_variant(builder, "b"));
+	assert(l_dbus_message_builder_append_basic(builder, 'b', &b));
+	assert(l_dbus_message_builder_leave_variant(builder));
+	assert(l_dbus_message_builder_leave_dict(builder));
+
+	assert(l_dbus_message_builder_leave_array(builder));
+
+	assert(l_dbus_message_builder_finalize(builder));
+	l_dbus_message_builder_destroy(builder);
+
+	compare_message(msg, data);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
 	l_test_add("Basic 1 (parse)", parse_basic_1, &message_data_basic_1);
 	l_test_add("Basic 1 (build)", build_basic_1, &message_data_basic_1);
+
+	l_test_add("Complex 1 (parse)", check_complex_1,
+						&message_data_complex_1);
+	l_test_add("Complex 1 (build)", build_complex_1,
+						&message_data_complex_1);
+
+	l_test_add("Message Builder Rewind Complex 1", builder_rewind,
+						&message_data_complex_1);
 
 	return l_test_run();
 }
