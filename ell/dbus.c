@@ -277,7 +277,7 @@ static bool message_read_handler(struct l_io *io, void *user_data)
 
 	message = dbus->driver->recv_message(dbus);
 	if (!message)
-		return false;
+		return true;
 
 	header = _dbus_message_get_header(message, &header_size);
 	body = _dbus_message_get_body(message, &body_size);
@@ -347,6 +347,22 @@ static uint32_t send_message(struct l_dbus *dbus, bool priority,
 	return callback->serial;
 }
 
+static void bus_ready(struct l_dbus *dbus)
+{
+	dbus->is_ready = true;
+
+	if (dbus->ready_handler)
+		dbus->ready_handler(dbus->ready_data);
+
+	l_io_set_read_handler(dbus->io, message_read_handler, dbus, NULL);
+
+	/* Check for messages added before the connection was ready */
+	if (l_queue_isempty(dbus->message_queue))
+		return;
+
+	l_io_set_write_handler(dbus->io, message_write_handler, dbus, NULL);
+}
+
 static void hello_callback(struct l_dbus_message *message, void *user_data)
 {
 	struct l_dbus *dbus = user_data;
@@ -366,16 +382,7 @@ static void hello_callback(struct l_dbus_message *message, void *user_data)
 
 	dbus->unique_name = l_strdup(unique_name);
 
-	dbus->is_ready = true;
-
-	if (dbus->ready_handler)
-		dbus->ready_handler(dbus->ready_data);
-
-	/* Check for messages added before the connection was ready */
-	if (l_queue_isempty(dbus->message_queue))
-		return;
-
-	l_io_set_write_handler(dbus->io, message_write_handler, dbus, NULL);
+	bus_ready(dbus);
 }
 
 static bool auth_write_handler(struct l_io *io, void *user_data)
@@ -937,29 +944,8 @@ static struct l_dbus *setup_unix(char *params)
 static void kdbus_ready(void *user_data)
 {
 	struct l_dbus *dbus = user_data;
-	struct l_dbus_kdbus *kdbus =
-		container_of(dbus, struct l_dbus_kdbus, super);
-	int fd = l_io_get_fd(dbus->io);
-	int r;
 
-	r = _dbus_kernel_add_match(fd, kdbus->bloom_size, kdbus->bloom_n_hash,
-					NULL);
-	if (r < 0)
-		l_util_debug(dbus->debug_handler,
-				dbus->debug_data, strerror(-r));
-
-	dbus->is_ready = true;
-
-	if (dbus->ready_handler)
-		dbus->ready_handler(dbus->ready_data);
-
-	l_io_set_read_handler(dbus->io, message_read_handler, dbus, NULL);
-
-	/* Check for messages added before the connection was ready */
-	if (l_queue_isempty(dbus->message_queue))
-		return;
-
-	l_io_set_write_handler(dbus->io, message_write_handler, dbus, NULL);
+	bus_ready(dbus);
 }
 
 static void kdbus_free(struct l_dbus *dbus)
@@ -992,25 +978,103 @@ static bool kdbus_send_message(struct l_dbus *dbus,
 	return true;
 }
 
+struct kdbus_message_recv_data {
+	struct l_dbus_message *message;
+	struct l_dbus *dbus;
+};
+
+static void kdbus_message_func(struct l_dbus_message *message, void *user_data)
+{
+	struct kdbus_message_recv_data *recv_data = user_data;
+
+	recv_data->message = message;
+
+	l_util_debug(recv_data->dbus->debug_handler,
+			recv_data->dbus->debug_data, "Read KDBUS Message");
+}
+
+static void kdbus_name_owner_change_func(const char *name, uint64_t old_owner,
+						uint64_t new_owner,
+						void *user_data)
+{
+	struct kdbus_message_recv_data *recv_data = user_data;
+	char owner[32];
+
+	snprintf(owner, sizeof(owner), ":1.%" PRIu64, new_owner);
+
+	_dbus_filter_name_owner_notify(recv_data->dbus->filter, name, owner);
+}
+
 static struct l_dbus_message *kdbus_recv_message(struct l_dbus *dbus)
 {
 	struct l_dbus_kdbus *kdbus =
 			container_of(dbus, struct l_dbus_kdbus, super);
 	int fd = l_io_get_fd(dbus->io);
-	struct l_dbus_message *message = NULL;
+	struct kdbus_message_recv_data recv_data = { NULL, dbus };
 	int r;
 
-	r = _dbus_kernel_recv(fd, kdbus->kdbus_pool, &message);
+	r = _dbus_kernel_recv(fd, kdbus->kdbus_pool, kdbus_message_func,
+				kdbus_name_owner_change_func, &recv_data);
 	if (r < 0) {
 		l_util_debug(dbus->debug_handler,
 				dbus->debug_data, strerror(-r));
 		return NULL;
 	}
 
-	l_util_debug(dbus->debug_handler, dbus->debug_data,
-			"Read KDBUS Message");
+	return recv_data.message;
+}
 
-	return message;
+static bool kdbus_add_match(struct l_dbus *dbus, unsigned int id,
+				const struct _dbus_filter_condition *rule,
+				int rule_len)
+{
+	struct l_dbus_kdbus *kdbus =
+		container_of(dbus, struct l_dbus_kdbus, super);
+	int fd = l_io_get_fd(dbus->io);
+	int r;
+
+	r = _dbus_kernel_add_match(fd, kdbus->bloom_size, kdbus->bloom_n_hash,
+					rule, rule_len, id);
+	if (r < 0)
+		l_util_debug(dbus->debug_handler,
+				dbus->debug_data, strerror(-r));
+
+	return !r;
+}
+
+static bool kdbus_remove_match(struct l_dbus *dbus, unsigned int id)
+{
+	int fd = l_io_get_fd(dbus->io);
+	int r;
+
+	r = _dbus_kernel_remove_match(fd, id);
+	if (r < 0)
+		l_util_debug(dbus->debug_handler,
+				dbus->debug_data, strerror(-r));
+
+	return !r;
+}
+
+static bool kdbus_get_name_owner(struct l_dbus *dbus, const char *name)
+{
+	struct l_dbus_kdbus *kdbus =
+		container_of(dbus, struct l_dbus_kdbus, super);
+	int fd = l_io_get_fd(dbus->io);
+	uint64_t owner_id;
+	char owner[32];
+
+	owner_id = _dbus_kernel_get_name_owner(fd, kdbus->kdbus_pool, name);
+	if (!owner_id) {
+		l_util_debug(dbus->debug_handler,
+				dbus->debug_data, "Error getting name owner");
+		return false;
+	}
+
+	snprintf(owner, sizeof(owner), ":1.%" PRIu64, owner_id);
+
+	_dbus_filter_name_owner_notify(dbus->filter, name, owner);
+
+	return true;
 }
 
 static const struct l_dbus_ops kdbus_ops = {
@@ -1018,12 +1082,18 @@ static const struct l_dbus_ops kdbus_ops = {
 	.free = kdbus_free,
 	.send_message = kdbus_send_message,
 	.recv_message = kdbus_recv_message,
+	.filter_ops = {
+		.add_match = kdbus_add_match,
+		.remove_match = kdbus_remove_match,
+		.get_name_owner = kdbus_get_name_owner,
+	},
 };
 
 static struct l_dbus *setup_kdbus(int fd)
 {
 	struct l_dbus *dbus;
 	struct l_dbus_kdbus *kdbus;
+	int r;
 
 	kdbus = l_new(struct l_dbus_kdbus, 1);
 	dbus = &kdbus->super;
@@ -1043,6 +1113,11 @@ static struct l_dbus *setup_kdbus(int fd)
 	dbus->unique_name = l_strdup_printf(":1.%llu", kdbus->kdbus_id);
 
 	l_idle_oneshot(kdbus_ready, dbus, NULL);
+
+	r = _dbus_kernel_enable_name_owner_notify(fd);
+	if (r < 0)
+		l_util_debug(dbus->debug_handler,
+				dbus->debug_data, strerror(-r));
 
 	return dbus;
 }

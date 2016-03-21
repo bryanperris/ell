@@ -230,15 +230,26 @@ int _dbus_kernel_hello(int fd, const char *connection_name,
 			uint64_t *id, void **pool, char **guid);
 void _dbus_kernel_unmap_pool(void *pool);
 
+typedef void (*_dbus_name_owner_change_func_t)(const char *name,
+						uint64_t old_owner,
+						uint64_t new_owner,
+						void *user_data);
+
 int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t n_bloom_hash,
 			struct l_dbus_message *message);
 int _dbus_kernel_recv(int fd, void *kdbus_pool,
-				struct l_dbus_message **out_message);
+			l_dbus_message_func_t message_func,
+			_dbus_name_owner_change_func_t name_owner_change_func,
+			void *user_data);
 
 int _dbus_kernel_name_acquire(int fd, const char *name);
 int _dbus_kernel_add_match(int fd, uint64_t bloom_size, uint64_t bloom_n_hash,
-				uint64_t *out_cookie);
-int _dbus_kernel_remove_match(int fd, uint64_t cookie);
+				const struct _dbus_filter_condition *rule,
+				int rule_len, unsigned int id);
+int _dbus_kernel_remove_match(int fd, unsigned int it);
+int _dbus_kernel_enable_name_owner_notify(int fd);
+uint64_t _dbus_kernel_get_name_owner(int fd, void *kdbus_pool,
+					const char *name);
 
 uint8_t _dbus_get_version(struct l_dbus *dbus);
 int _dbus_get_fd(struct l_dbus *dbus);
