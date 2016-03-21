@@ -1000,6 +1000,10 @@ static void kdbus_name_owner_change_func(const char *name, uint64_t old_owner,
 	struct kdbus_message_recv_data *recv_data = user_data;
 	char owner[32];
 
+	l_util_debug(recv_data->dbus->debug_handler,
+			recv_data->dbus->debug_data,
+			"Read KDBUS Name Owner Change notification");
+
 	snprintf(owner, sizeof(owner), ":1.%" PRIu64, new_owner);
 
 	_dbus_filter_name_owner_notify(recv_data->dbus->filter, name, owner);

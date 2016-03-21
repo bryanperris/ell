@@ -33,6 +33,7 @@
 #include <alloca.h>
 #include <errno.h>
 #include <sys/mman.h>
+#include <sys/ioctl.h>
 
 #include "linux/kdbus.h"
 
@@ -180,7 +181,7 @@ void _dbus_kernel_bloom_add_parents(uint64_t filter[], size_t size,
 int _dbus_kernel_create_bus(const char *name)
 {
 	struct {
-		struct kdbus_cmd_make head;
+		struct kdbus_cmd head;
 		/* bloom size item */
 		uint64_t bloom_size;
 		uint64_t bloom_type;
@@ -244,13 +245,14 @@ int _dbus_kernel_hello(int fd, const char *connection_name,
 	memset(hello, 0, size);
 
 	hello->size = size;
-	hello->conn_flags |= KDBUS_HELLO_ACCEPT_FD;
-	hello->attach_flags |= KDBUS_ATTACH_NAMES;
+	hello->flags |= KDBUS_HELLO_ACCEPT_FD;
+	hello->attach_flags_send |= KDBUS_ATTACH_NAMES;
+	hello->attach_flags_recv |= KDBUS_ATTACH_NAMES;
 	hello->pool_size = KDBUS_POOL_SIZE;
 
 	item = hello->items;
 	item->size = KDBUS_ITEM_HEADER_SIZE + len + 1;
-	item->type = KDBUS_ITEM_CONN_NAME;
+	item->type = KDBUS_ITEM_CONN_DESCRIPTION;
 	strcpy(item->str, connection_name);
 
 	ret = ioctl(fd, KDBUS_CMD_HELLO, hello);
@@ -259,7 +261,7 @@ int _dbus_kernel_hello(int fd, const char *connection_name,
 
         /* Check for incompatible flags (upper 32 bits) */
         if (hello->bus_flags > 0xFFFFFFFFULL ||
-			hello->conn_flags > 0xFFFFFFFFULL)
+			hello->flags > 0xFFFFFFFFULL)
                 return -ENOTSUP;
 
 	*pool = mmap(NULL, KDBUS_POOL_SIZE, PROT_READ, MAP_SHARED, fd, 0);
@@ -268,8 +270,9 @@ int _dbus_kernel_hello(int fd, const char *connection_name,
 		return -errno;
 	}
 
-	*bloom_size = hello->bloom.size;
-	*bloom_n_hash = hello->bloom.n_hash;
+	*bloom_size = DEFAULT_BLOOM_SIZE;
+	*bloom_n_hash = DEFAULT_BLOOM_N_HASH;
+
 	*id = hello->id;
 	*guid = l_strdup_printf("%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx"
 				"%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx"
@@ -300,6 +303,7 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 	void *body;
 	size_t body_size;
 	int ret;
+	struct kdbus_cmd_send cmd;
 	L_AUTO_FREE_VAR(struct kdbus_msg *, kmsg);
 
 	dest = l_dbus_message_get_destination(message);
@@ -337,10 +341,10 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 	kmsg->cookie = _dbus_message_get_serial(message);
 
 	if (l_dbus_message_get_no_autostart(message))
-		kmsg->flags |= KDBUS_MSG_FLAGS_NO_AUTO_START;
+		kmsg->flags |= KDBUS_MSG_NO_AUTO_START;
 
 	if (!l_dbus_message_get_no_reply(message))
-		kmsg->flags |= KDBUS_MSG_FLAGS_EXPECT_REPLY;
+		kmsg->flags |= KDBUS_MSG_EXPECT_REPLY;
 
 	if (!unique && dest) {
 		kmsg->dst_id = KDBUS_DST_ID_NAME;
@@ -366,9 +370,12 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 		break;
 	}
 	case DBUS_MESSAGE_TYPE_METHOD_CALL:
-		kmsg->timeout_ns = 30000 * 1000ULL;
+		if (!l_dbus_message_get_no_reply(message))
+			kmsg->timeout_ns = 30000 * 1000ULL;
 		break;
 	case DBUS_MESSAGE_TYPE_SIGNAL:
+		kmsg->flags |= KDBUS_MSG_SIGNAL;
+
 		item->size = KDBUS_ITEM_HEADER_SIZE +
 				sizeof(struct kdbus_bloom_filter) + bloom_size;
 		item->type = KDBUS_ITEM_BLOOM_FILTER;
@@ -400,7 +407,11 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 
 	kmsg->size = (void *)item - (void *)kmsg;
 
-	ret = ioctl(fd, KDBUS_CMD_MSG_SEND, kmsg);
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.size = sizeof(cmd);
+	cmd.msg_address = (uint64_t) kmsg;
+
+	ret = ioctl(fd, KDBUS_CMD_SEND, &cmd);
 	if (ret < 0)
 		return -errno;
 
@@ -548,6 +559,7 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 			void *user_data)
 {
 	struct kdbus_cmd_recv recv_cmd;
+	struct kdbus_cmd_free cmd_free;
 	struct kdbus_msg *msg;
 	struct l_dbus_message *dbus_msg;
 	struct kdbus_item *item;
@@ -556,11 +568,13 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 
 	memset(&recv_cmd, 0, sizeof(recv_cmd));
 
-	r = ioctl(fd, KDBUS_CMD_MSG_RECV, &recv_cmd);
+	recv_cmd.size = sizeof(recv_cmd);
+
+	r = ioctl(fd, KDBUS_CMD_RECV, &recv_cmd);
 	if (r < 0)
 		return -errno;
 
-	msg = (struct kdbus_msg *)(kdbus_pool + recv_cmd.offset);
+	msg = (struct kdbus_msg *)(kdbus_pool + recv_cmd.msg.offset);
 
 	switch (msg->payload_type) {
 	case KDBUS_PAYLOAD_DBUS:
@@ -588,8 +602,8 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 			}
 
 			name_owner_change_func(item->name_change.name,
-						item->name_change.old.id,
-						item->name_change.new.id,
+						item->name_change.old_id.id,
+						item->name_change.new_id.id,
 						user_data);
 			break;
 
@@ -603,7 +617,11 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 		break;
 	}
 
-	ioctl(fd, KDBUS_CMD_FREE, &recv_cmd.offset);
+	memset(&cmd_free, 0, sizeof(cmd_free));
+	cmd_free.size = sizeof(cmd_free);
+	cmd_free.offset = recv_cmd.msg.offset;
+
+	ioctl(fd, KDBUS_CMD_FREE, &cmd_free);
 
 	return r;
 }
@@ -611,22 +629,27 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 int _dbus_kernel_name_acquire(int fd, const char *name)
 {
 	struct {
-		struct kdbus_cmd_name head;
+		struct kdbus_cmd head;
 		char param[64];
 	} cmd_name;
+	struct kdbus_item *item;
 	size_t nlen;
 
 	if (!name)
 		return false;
 
 	nlen = strlen(name) + 1;
-	if (nlen > sizeof(cmd_name.param))
+	if (KDBUS_ITEM_SIZE(nlen) > sizeof(cmd_name.param))
 		return false;
 
 	memset(&cmd_name, 0, sizeof(cmd_name));
 
-	strcpy(cmd_name.param, name);
-	cmd_name.head.size = sizeof(cmd_name.head) + nlen;
+	cmd_name.head.size = sizeof(cmd_name.head) + KDBUS_ITEM_SIZE(nlen);
+
+	item = cmd_name.head.items;
+	item->size = KDBUS_ITEM_HEADER_SIZE + nlen;
+	item->type = KDBUS_ITEM_NAME;
+	strcpy(item->str, name);
 
 	if (ioctl(fd, KDBUS_CMD_NAME_ACQUIRE, &cmd_name) < 0)
 		return -errno;
@@ -716,8 +739,6 @@ int _dbus_kernel_add_match(int fd, uint64_t bloom_size, uint64_t bloom_n_hash,
 					bloom_n_hash, prefix, rule->value);
 	}
 
-	item = KDBUS_ITEM_NEXT(item);
-
 	r = ioctl(fd, KDBUS_CMD_MATCH_ADD, cmd);
 	if (r < 0)
 		return -errno;
@@ -755,8 +776,8 @@ int _dbus_kernel_enable_name_owner_notify(int fd)
 	item = cmd_match.cmd.items;
 	item->type = KDBUS_ITEM_NAME_ADD;
 	item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(item->name_change);
-	item->name_change.old.id = KDBUS_MATCH_ID_ANY;
-	item->name_change.new.id = KDBUS_MATCH_ID_ANY;
+	item->name_change.old_id.id = KDBUS_MATCH_ID_ANY;
+	item->name_change.new_id.id = KDBUS_MATCH_ID_ANY;
 	cmd_match.cmd.size = sizeof(cmd_match.cmd) + item->size;
 
 	r = ioctl(fd, KDBUS_CMD_MATCH_ADD, &cmd_match);
@@ -767,8 +788,8 @@ int _dbus_kernel_enable_name_owner_notify(int fd)
 	item = cmd_match.cmd.items;
 	item->type = KDBUS_ITEM_NAME_CHANGE;
 	item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(item->name_change);
-	item->name_change.old.id = KDBUS_MATCH_ID_ANY;
-	item->name_change.new.id = KDBUS_MATCH_ID_ANY;
+	item->name_change.old_id.id = KDBUS_MATCH_ID_ANY;
+	item->name_change.new_id.id = KDBUS_MATCH_ID_ANY;
 	cmd_match.cmd.size = sizeof(cmd_match.cmd) + item->size;
 
 	r = ioctl(fd, KDBUS_CMD_MATCH_ADD, &cmd_match);
@@ -779,8 +800,8 @@ int _dbus_kernel_enable_name_owner_notify(int fd)
 	item = cmd_match.cmd.items;
 	item->type = KDBUS_ITEM_NAME_REMOVE;
 	item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(item->name_change);
-	item->name_change.old.id = KDBUS_MATCH_ID_ANY;
-	item->name_change.new.id = KDBUS_MATCH_ID_ANY;
+	item->name_change.old_id.id = KDBUS_MATCH_ID_ANY;
+	item->name_change.new_id.id = KDBUS_MATCH_ID_ANY;
 	cmd_match.cmd.size = sizeof(cmd_match.cmd) + item->size;
 
 	r = ioctl(fd, KDBUS_CMD_MATCH_ADD, &cmd_match);
@@ -793,28 +814,44 @@ int _dbus_kernel_enable_name_owner_notify(int fd)
 uint64_t _dbus_kernel_get_name_owner(int fd, void *kdbus_pool,
 					const char *name)
 {
-	struct kdbus_cmd_name_list cmd;
-	struct kdbus_name_list *list;
-	const struct kdbus_cmd_name *entry, *end;
+	struct kdbus_cmd_list cmd;
+	struct kdbus_cmd_free cmd_free;
+	struct kdbus_info *entry, *end;
+	struct kdbus_item *item;
+	const char *entry_name;
 	uint64_t owner_id = 0;
 
 	memset(&cmd, 0, sizeof(cmd));
-	cmd.flags = KDBUS_NAME_LIST_NAMES;
+	cmd.size = sizeof(cmd);
+	cmd.flags = KDBUS_LIST_NAMES;
 
-	if (ioctl(fd, KDBUS_CMD_NAME_LIST, &cmd) < 0)
+	if (ioctl(fd, KDBUS_CMD_LIST, &cmd) < 0)
 		return 0;
 
-	list = (struct kdbus_name_list *) (kdbus_pool + cmd.offset);
-	end = (void *) list + list->size;
+	entry = kdbus_pool + cmd.offset;
+	end = (void *) entry + cmd.list_size;
 
-	for (entry = list->names; entry < end;
-			entry = (void *) entry + entry->size)
-		if (!strcmp(entry->name, name)) {
-			owner_id = entry->owner_id;
-			break;
+	for (; entry < end; entry = (void *) entry + entry->size) {
+		entry_name = NULL;
+
+		KDBUS_ITEM_FOREACH(item, entry, items) {
+			if (item->type == KDBUS_ITEM_OWNED_NAME) {
+				entry_name = item->name.name;
+				break;
+			}
 		}
 
-	ioctl(fd, KDBUS_CMD_FREE, &cmd.offset);
+		if (entry_name && !strcmp(entry_name, name)) {
+			owner_id = entry->id;
+			break;
+		}
+	}
+
+	memset(&cmd_free, 0, sizeof(cmd_free));
+	cmd_free.size = sizeof(cmd_free);
+	cmd_free.offset = cmd.offset;
+
+	ioctl(fd, KDBUS_CMD_FREE, &cmd_free);
 
 	return owner_id;
 }
