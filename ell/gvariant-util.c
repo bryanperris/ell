@@ -739,6 +739,16 @@ bool _gvariant_iter_enter_array(struct l_dbus_message_iter *iter,
 						start, item_size);
 }
 
+bool _gvariant_iter_skip_entry(struct l_dbus_message_iter *iter)
+{
+	size_t size;
+
+	if (!next_item(iter, &size))
+		return false;
+
+	return true;
+}
+
 struct dbus_builder {
 	struct l_string *signature;
 	void *body;

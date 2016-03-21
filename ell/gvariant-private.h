@@ -35,6 +35,7 @@ bool _gvariant_iter_enter_variant(struct l_dbus_message_iter *iter,
 					struct l_dbus_message_iter *variant);
 bool _gvariant_iter_enter_array(struct l_dbus_message_iter *iter,
 					struct l_dbus_message_iter *array);
+bool _gvariant_iter_skip_entry(struct l_dbus_message_iter *iter);
 
 bool _gvariant_valid_signature(const char *sig);
 int _gvariant_get_alignment(const char *signature);
