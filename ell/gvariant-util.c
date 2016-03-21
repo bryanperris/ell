@@ -529,7 +529,15 @@ static const void *next_item(struct l_dbus_message_iter *iter,
 	}
 
 	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY && last_member) {
-		*out_item_size = iter->len - iter->pos;
+		unsigned int len = iter->len;
+
+		offset_len = offset_length(iter->len, 0);
+
+		if (iter->offsets && iter->offsets + offset_len <
+				iter->data + len)
+			len = iter->offsets + offset_len - iter->data;
+
+		*out_item_size = len - iter->pos;
 		goto done;
 	}
 
