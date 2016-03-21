@@ -805,6 +805,22 @@ bool _dbus1_iter_enter_array(struct l_dbus_message_iter *iter,
 	return true;
 }
 
+bool _dbus1_iter_skip_entry(struct l_dbus_message_iter *iter)
+{
+	size_t len;
+	const char *sig_end;
+
+	sig_end = calc_len_next_item(iter->sig_start + iter->sig_pos,
+					iter->data, iter->pos, iter->len, &len);
+	if (!sig_end)
+		return false;
+
+	iter->pos += len;
+	iter->sig_pos = sig_end - iter->sig_start;
+
+	return true;
+}
+
 struct dbus_builder {
 	struct l_string *signature;
 	void *body;

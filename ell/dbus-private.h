@@ -77,6 +77,7 @@ bool _dbus1_iter_enter_variant(struct l_dbus_message_iter *iter,
 					struct l_dbus_message_iter *variant);
 bool _dbus1_iter_enter_array(struct l_dbus_message_iter *iter,
 					struct l_dbus_message_iter *array);
+bool _dbus1_iter_skip_entry(struct l_dbus_message_iter *iter);
 
 struct dbus_builder *_dbus1_builder_new(void *body, size_t body_size);
 void _dbus1_builder_free(struct dbus_builder *builder);
