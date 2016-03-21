@@ -1108,7 +1108,6 @@ error:
 LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 					const char **name, const char **text)
 {
-	struct l_dbus_message_iter iter;
 	struct dbus_header *hdr;
 	const char *str;
 
@@ -1123,17 +1122,11 @@ LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
 	if (!message->signature)
 		return false;
 
-	if (strcmp(message->signature, "s"))
+	if (message->signature[0] != 's')
 		return false;
 
-	if (_dbus_message_is_gvariant(message))
-		_gvariant_iter_init(&iter, message, message->signature, NULL,
-					message->body, message->body_size);
-	else
-		_dbus1_iter_init(&iter, message, message->signature, NULL,
-				message->body, message->body_size);
-
-	if (!message_iter_next_entry(&iter, &str))
+	str = _dbus_message_get_nth_string_argument(message, 0);
+	if (!str)
 		return false;
 
 	if (!message->error_name)
