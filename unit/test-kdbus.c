@@ -174,7 +174,8 @@ int main(int argc, char *argv[])
 
 	l_dbus_set_debug(client, do_debug, "[CLIENT] ", NULL);
 	l_dbus_set_ready_handler(client, client_ready_callback, client, NULL);
-	l_dbus_register(client, signal_message, NULL, NULL);
+	l_dbus_add_signal_watch(client, "org.test", NULL, NULL, NULL,
+				L_DBUS_MATCH_NONE, signal_message, NULL);
 
 	l_main_run();
 

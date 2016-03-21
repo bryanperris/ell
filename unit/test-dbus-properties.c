@@ -665,55 +665,9 @@ static void signal_timeout_callback(struct l_timeout *timeout, void *user_data)
 static bool old_signal_received, new_signal_received;
 static bool signal_success;
 
-static void test_signal_callback(struct l_dbus_message *message)
+static void test_check_signal_success(void)
 {
-	const char *interface, *member, *property, *value;
-	struct l_dbus_message_iter variant, changed, invalidated;
 	struct l_dbus_message *call;
-
-	if (!signal_timeout)
-		return;
-
-	interface = l_dbus_message_get_interface(message);
-	member = l_dbus_message_get_member(message);
-
-	if (!strcmp(interface, "org.test") &&
-			!strcmp(member, "PropertyChanged")) {
-		test_assert(l_dbus_message_get_arguments(message, "sv",
-								&property,
-								&variant));
-		test_assert(!strcmp(property, "String"));
-		test_assert(l_dbus_message_iter_get_variant(&variant, "s",
-								&value));
-		test_assert(!strcmp(value, "foo"));
-
-		test_assert(!old_signal_received);
-		old_signal_received = true;
-	}
-
-	if (!strcmp(interface, "org.freedesktop.DBus.Properties") &&
-			!strcmp(member, "PropertiesChanged")) {
-		test_assert(l_dbus_message_get_arguments(message, "sa{sv}as",
-								&interface,
-								&changed,
-								&invalidated));
-		test_assert(!strcmp(interface, "org.test"));
-
-		test_assert(l_dbus_message_iter_next_entry(&changed, &property,
-								&variant));
-		test_assert(!strcmp(property, "String"));
-		test_assert(l_dbus_message_iter_get_variant(&variant, "s",
-								&value));
-		test_assert(!strcmp(value, "foo"));
-
-		test_assert(!l_dbus_message_iter_next_entry(&changed, &property,
-								&variant));
-		test_assert(!l_dbus_message_iter_next_entry(&invalidated,
-								&property));
-
-		test_assert(!new_signal_received);
-		new_signal_received = true;
-	}
 
 	if (!old_signal_received || !new_signal_received)
 		return;
@@ -749,6 +703,57 @@ static void test_signal_callback(struct l_dbus_message *message)
 
 		test_next();
 	}
+}
+
+static void test_old_signal_callback(struct l_dbus_message *message,
+					void *user_data)
+{
+	const char *property, *value;
+	struct l_dbus_message_iter variant;
+
+	if (!signal_timeout)
+		return;
+
+	test_assert(l_dbus_message_get_arguments(message, "sv",
+							&property, &variant));
+	test_assert(!strcmp(property, "String"));
+	test_assert(l_dbus_message_iter_get_variant(&variant, "s", &value));
+	test_assert(!strcmp(value, "foo"));
+
+	test_assert(!old_signal_received);
+	old_signal_received = true;
+
+	test_check_signal_success();
+}
+
+static void test_new_signal_callback(struct l_dbus_message *message,
+					void *user_data)
+{
+	const char *interface, *property, *value;
+	struct l_dbus_message_iter variant, changed, invalidated;
+
+	if (!signal_timeout)
+		return;
+
+	test_assert(l_dbus_message_get_arguments(message, "sa{sv}as",
+							&interface, &changed,
+							&invalidated));
+
+	test_assert(l_dbus_message_iter_next_entry(&changed, &property,
+							&variant));
+	test_assert(!strcmp(property, "String"));
+	test_assert(l_dbus_message_iter_get_variant(&variant, "s", &value));
+	test_assert(!strcmp(value, "foo"));
+
+	test_assert(!l_dbus_message_iter_next_entry(&changed, &property,
+							&variant));
+	test_assert(!l_dbus_message_iter_next_entry(&invalidated,
+							&property));
+
+	test_assert(!new_signal_received);
+	new_signal_received = true;
+
+	test_check_signal_success();
 }
 
 static void test_property_signals(struct l_dbus *dbus, void *test_data)
@@ -837,7 +842,7 @@ static void om_signal_timeout_callback(struct l_timeout *timeout,
 
 static bool expect_interfaces_added;
 
-static void root_signal_callback(struct l_dbus_message *message)
+static void om_signal_callback(struct l_dbus_message *message, void *user_data)
 {
 	const char *path, *interface, *member;
 	struct l_dbus_message_iter interfaces, properties;
@@ -845,11 +850,7 @@ static void root_signal_callback(struct l_dbus_message *message)
 	if (!om_signal_timeout)
 		return;
 
-	interface = l_dbus_message_get_interface(message);
 	member = l_dbus_message_get_member(message);
-
-	if (strcmp(interface, "org.freedesktop.DBus.ObjectManager"))
-		return;
 
 	if (!strcmp(member, "InterfacesAdded"))
 		test_assert(expect_interfaces_added);
@@ -909,25 +910,11 @@ static void test_object_manager_signals(struct l_dbus *dbus, void *test_data)
 						NULL));
 }
 
-static void signal_message(struct l_dbus_message *message, void *user_data)
-{
-	const char *path;
-
-	path = l_dbus_message_get_path(message);
-
-	if (!strcmp(path, "/test"))
-		test_signal_callback(message);
-
-	if (!strcmp(path, "/"))
-		root_signal_callback(message);
-}
-
 int main(int argc, char *argv[])
 {
 	struct l_signal *signal;
 	sigset_t mask;
 	int i;
-	struct l_dbus_message *call;
 
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
@@ -950,15 +937,6 @@ int main(int argc, char *argv[])
 
 	l_dbus_set_ready_handler(dbus, ready_callback, dbus, NULL);
 	l_dbus_set_disconnect_handler(dbus, disconnect_callback, NULL, NULL);
-
-	l_dbus_register(dbus, signal_message, NULL, NULL);
-
-	call = l_dbus_message_new_method_call(dbus, "org.freedesktop.DBus",
-						"/org/freedesktop/DBus",
-						"org.freedesktop.DBus",
-						"AddMatch");
-	l_dbus_message_set_arguments(call, "s", "type=signal,sender=org.test");
-	l_dbus_send(dbus, call);
 
 	l_dbus_method_call(dbus, "org.freedesktop.DBus",
 				"/org/freedesktop/DBus",
@@ -983,10 +961,24 @@ int main(int argc, char *argv[])
 		goto done;
 	}
 
+	l_dbus_add_signal_watch(dbus, "org.test", "/test", "org.test",
+				"PropertyChanged", L_DBUS_MATCH_NONE,
+				test_old_signal_callback, NULL);
+	l_dbus_add_signal_watch(dbus, "org.test", "/test",
+				"org.freedesktop.DBus.Properties",
+				"PropertiesChanged", L_DBUS_MATCH_ARGUMENT(0),
+				"org.test", L_DBUS_MATCH_NONE,
+				test_new_signal_callback, NULL);
+
 	if (!l_dbus_object_manager_enable(dbus)) {
 		l_info("Unable to enable Object Manager");
 		goto done;
 	}
+
+	l_dbus_add_signal_watch(dbus, "org.test", "/",
+				"org.freedesktop.DBus.ObjectManager",
+				NULL, L_DBUS_MATCH_NONE,
+				om_signal_callback, NULL);
 
 	test_add("Legacy properties get", test_old_get, NULL);
 	test_add("Legacy properties set", test_old_set, NULL);
