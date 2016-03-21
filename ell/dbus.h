@@ -245,6 +245,13 @@ unsigned int l_dbus_add_disconnect_watch(struct l_dbus *dbus,
 					l_dbus_destroy_func_t destroy);
 bool l_dbus_remove_watch(struct l_dbus *dbus, unsigned int id);
 
+unsigned int l_dbus_add_signal_watch(struct l_dbus *dbus,
+					const char *sender,
+					const char *path,
+					const char *interface,
+					const char *member, ...);
+bool l_dbus_remove_signal_watch(struct l_dbus *dbus, unsigned int id);
+
 #ifdef __cplusplus
 }
 #endif

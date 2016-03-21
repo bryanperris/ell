@@ -555,6 +555,8 @@ static void dbus_init(struct l_dbus *dbus, int fd)
 	dbus->signal_list = l_hashmap_new();
 
 	dbus->tree = _dbus_object_tree_new();
+
+	dbus->filter = _dbus_filter_new(dbus, &dbus->driver->filter_ops);
 }
 
 static void classic_free(struct l_dbus *dbus)
@@ -1228,6 +1230,8 @@ LIB_EXPORT void l_dbus_destroy(struct l_dbus *dbus)
 	if (dbus->ready_destroy)
 		dbus->ready_destroy(dbus->ready_data);
 
+	_dbus_filter_free(dbus->filter);
+
 	l_hashmap_destroy(dbus->signal_list, signal_list_destroy);
 	l_hashmap_destroy(dbus->message_list, message_list_destroy);
 	l_queue_destroy(dbus->message_queue, message_queue_destroy);
@@ -1887,4 +1891,123 @@ unsigned int l_dbus_add_service_watch(struct l_dbus *dbus,
 LIB_EXPORT bool l_dbus_remove_watch(struct l_dbus *dbus, unsigned int id)
 {
 	return l_dbus_unregister(dbus, id);
+}
+
+/**
+ * l_dbus_add_signal_watch:
+ * @dbus: D-Bus connection
+ * @sender: bus name to match the signal sender against or NULL to
+ *          match any sender
+ * @path: object path to match the signal path against or NULL to
+ *        match any path
+ * @interface: interface name to match the signal interface against
+ *             or NULL to match any interface
+ * @member: name to match the signal name against or NULL to match any
+ *          signal
+ * @...: a list of further conditions to be met by the signal followed
+ *       by three more mandatory parameters:
+ *       enum l_dbus_match_type list_end_marker,
+ *       l_dbus_message_func callback,
+ *       void *user_data,
+ *       The value L_DBUS_MATCH_NONE must be passed as the end of list
+ *       marker, followed by the signal match callback and user_data.
+ *       In the list, every condition is a pair of parameters:
+ *       enum l_dbus_match_type match_type, const char *value.
+ *
+ * Subscribe to a group of signals based on a set of conditions that
+ * compare the signal's header fields and string arguments against given
+ * values.  For example:
+ * 	signal_id = l_dbus_add_signal_watch(bus, "org.example", "/"
+ * 						"org.example.Manager",
+ * 						"PropertyChanged",
+ * 						L_DBUS_MATCH_ARGUMENT(0),
+ * 						"ExampleProperty",
+ * 						L_DBUS_MATCH_NONE
+ * 						manager_property_change_cb,
+ * 						NULL);
+  *
+ * Returns: a non-zero signal filter identifier that can be passed to
+ *          l_dbus_remove_signal_watch to remove this filter rule, or
+ *          zero on failure.
+ **/
+LIB_EXPORT unsigned int l_dbus_add_signal_watch(struct l_dbus *dbus,
+						const char *sender,
+						const char *path,
+						const char *interface,
+						const char *member, ...)
+{
+	struct _dbus_filter_condition *rule;
+	int rule_len;
+	va_list args;
+	const char *value;
+	l_dbus_message_func_t signal_func;
+	enum l_dbus_match_type type;
+	void *user_data;
+	unsigned int id;
+
+	va_start(args, member);
+
+	rule_len = 0;
+	while ((type = va_arg(args, enum l_dbus_match_type)) !=
+			L_DBUS_MATCH_NONE)
+		rule_len++;
+
+	va_end(args);
+
+	rule = l_new(struct _dbus_filter_condition, rule_len + 5);
+
+	rule_len = 0;
+
+	rule[rule_len].type = L_DBUS_MATCH_TYPE;
+	rule[rule_len++].value = "signal";
+
+	if (sender) {
+		rule[rule_len].type = L_DBUS_MATCH_SENDER;
+		rule[rule_len++].value = sender;
+	}
+
+	if (path) {
+		rule[rule_len].type = L_DBUS_MATCH_PATH;
+		rule[rule_len++].value = path;
+	}
+
+	if (interface) {
+		rule[rule_len].type = L_DBUS_MATCH_INTERFACE;
+		rule[rule_len++].value = interface;
+	}
+
+	if (member) {
+		rule[rule_len].type = L_DBUS_MATCH_MEMBER;
+		rule[rule_len++].value = member;
+	}
+
+	va_start(args, member);
+
+	while (true) {
+		type = va_arg(args, enum l_dbus_match_type);
+		if (type == L_DBUS_MATCH_NONE)
+			break;
+
+		value = va_arg(args, const char *);
+
+		rule[rule_len].type = type;
+		rule[rule_len++].value = value;
+	}
+
+	signal_func = va_arg(args, l_dbus_message_func_t);
+	user_data = va_arg(args, void *);
+
+	va_end(args);
+
+	id = _dbus_filter_add_rule(dbus->filter, rule, rule_len,
+					signal_func, user_data);
+
+	l_free(rule);
+
+	return id;
+}
+
+LIB_EXPORT bool l_dbus_remove_signal_watch(struct l_dbus *dbus, unsigned int id)
+{
+	return _dbus_filter_remove_rule(dbus->filter, id);
 }
