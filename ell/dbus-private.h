@@ -115,6 +115,8 @@ enum dbus_message_type _dbus_message_get_type(struct l_dbus_message *message);
 const char * _dbus_message_get_type_as_string(struct l_dbus_message *message);
 uint8_t _dbus_message_get_version(struct l_dbus_message *message);
 uint8_t _dbus_message_get_endian(struct l_dbus_message *message);
+const char *_dbus_message_get_nth_string_argument(
+					struct l_dbus_message *message, int n);
 
 struct l_dbus_message *_dbus_message_new_method_call(uint8_t version,
 							const char *destination,

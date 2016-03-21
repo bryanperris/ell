@@ -392,6 +392,51 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 	l_free(message);
 }
 
+const char *_dbus_message_get_nth_string_argument(
+					struct l_dbus_message *message, int n)
+{
+	struct l_dbus_message_iter iter;
+	const char *signature, *value;
+	void *body;
+	size_t size;
+	char type;
+	bool (*skip_entry)(struct l_dbus_message_iter *);
+	bool (*get_basic)(struct l_dbus_message_iter *, char, void *);
+
+	signature = l_dbus_message_get_signature(message);
+	body = _dbus_message_get_body(message, &size);
+
+	if (!signature)
+		return NULL;
+
+	if (_dbus_message_is_gvariant(message)) {
+		if (!_gvariant_iter_init(&iter, message, signature, NULL,
+						body, size))
+			return NULL;
+
+		skip_entry = _gvariant_iter_skip_entry;
+		get_basic = _gvariant_iter_next_entry_basic;
+	} else {
+		_dbus1_iter_init(&iter, message, signature, NULL, body, size);
+
+		skip_entry = _dbus1_iter_skip_entry;
+		get_basic = _dbus1_iter_next_entry_basic;
+	}
+
+	while (n--)
+		if (!skip_entry(&iter))
+			return NULL;
+
+	type = l_dbus_message_iter_get_type(&iter);
+	if (!strchr("sog", type))
+		return NULL;
+
+	if (!get_basic(&iter, type, &value))
+		return NULL;
+
+	return value;
+}
+
 static bool message_iter_next_entry_valist(struct l_dbus_message_iter *orig,
 						va_list args)
 {
