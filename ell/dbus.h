@@ -42,6 +42,18 @@ enum l_dbus_bus {
 	L_DBUS_SESSION_BUS,
 };
 
+enum l_dbus_match_type {
+	L_DBUS_MATCH_NONE = 0,
+	L_DBUS_MATCH_TYPE,
+	L_DBUS_MATCH_SENDER,
+	L_DBUS_MATCH_PATH,
+	L_DBUS_MATCH_INTERFACE,
+	L_DBUS_MATCH_MEMBER,
+	L_DBUS_MATCH_ARG0,
+};
+
+#define L_DBUS_MATCH_ARGUMENT(i)	(L_DBUS_MATCH_ARG0 + (i))
+
 struct l_dbus;
 struct l_dbus_interface;
 struct l_dbus_message_builder;

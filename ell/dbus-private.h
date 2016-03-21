@@ -64,6 +64,9 @@ struct _dbus_property;
 struct l_dbus_message_iter;
 struct l_dbus_message;
 struct l_dbus;
+struct _dbus_filter;
+struct _dbus_filter_condition;
+struct _dbus_filter_ops;
 
 void _dbus1_iter_init(struct l_dbus_message_iter *iter,
 			struct l_dbus_message *message,
@@ -240,6 +243,34 @@ int _dbus_kernel_remove_match(int fd, uint64_t cookie);
 uint8_t _dbus_get_version(struct l_dbus *dbus);
 int _dbus_get_fd(struct l_dbus *dbus);
 struct _dbus_object_tree *_dbus_get_tree(struct l_dbus *dbus);
+
+struct _dbus_filter_condition {
+	enum l_dbus_match_type type;
+	const char *value;
+};
+
+struct _dbus_filter_ops {
+	bool skip_register;
+	bool (*add_match)(struct l_dbus *bus, unsigned int id,
+				const struct _dbus_filter_condition *rule,
+				int rule_len);
+	bool (*remove_match)(struct l_dbus *bus, unsigned int id);
+};
+
+struct _dbus_filter *_dbus_filter_new(struct l_dbus *dbus,
+					const struct _dbus_filter_ops *driver);
+void _dbus_filter_free(struct _dbus_filter *filter);
+
+unsigned int _dbus_filter_add_rule(struct _dbus_filter *filter,
+					struct _dbus_filter_condition *rule,
+					int rule_len,
+					l_dbus_message_func_t signal_func,
+					void *user_data);
+bool _dbus_filter_remove_rule(struct _dbus_filter *filter, unsigned int id);
+
+char *_dbus_filter_rule_to_str(const struct _dbus_filter_condition *rule,
+				int rule_len);
+void _dbus_filter_dispatch(struct l_dbus_message *message, void *user_data);
 
 struct dbus1_filter_data;
 
