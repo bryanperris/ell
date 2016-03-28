@@ -242,7 +242,9 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 			_dbus_name_owner_change_func_t name_owner_change_func,
 			void *user_data);
 
-int _dbus_kernel_name_acquire(int fd, const char *name);
+int _dbus_kernel_name_acquire(int fd, const char *name, bool allow_replacement,
+				bool replace_existing, bool queue,
+				bool *queued);
 int _dbus_kernel_add_match(int fd, uint64_t bloom_size, uint64_t bloom_n_hash,
 				const struct _dbus_filter_condition *rule,
 				int rule_len, unsigned int id);

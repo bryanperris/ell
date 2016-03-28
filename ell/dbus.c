@@ -33,6 +33,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <errno.h>
 
 #include "util.h"
 #include "io.h"
@@ -1087,6 +1088,32 @@ static bool kdbus_get_name_owner(struct l_dbus *dbus, const char *name)
 	return true;
 }
 
+static uint32_t kdbus_name_acquire(struct l_dbus *dbus, const char *name,
+					bool allow_replacement,
+					bool replace_existing, bool queue,
+					l_dbus_name_acquire_func_t callback,
+					void *user_data)
+{
+	int fd = l_io_get_fd(dbus->io);
+	bool queued = false;
+	bool result;
+	int r;
+
+	r = _dbus_kernel_name_acquire(fd, name, allow_replacement,
+					replace_existing, queue, &queued);
+
+	result = r >= 0 || r == -EALREADY;
+
+	if (!result)
+		l_util_debug(dbus->debug_handler,
+				dbus->debug_data, strerror(-r));
+
+	if (callback)
+		callback(dbus, result, queued, user_data);
+
+	return 0;
+}
+
 static const struct l_dbus_ops kdbus_ops = {
 	.version  = 2,
 	.free = kdbus_free,
@@ -1097,6 +1124,7 @@ static const struct l_dbus_ops kdbus_ops = {
 		.remove_match = kdbus_remove_match,
 		.get_name_owner = kdbus_get_name_owner,
 	},
+	.name_acquire = kdbus_name_acquire,
 };
 
 static struct l_dbus *setup_kdbus(int fd)

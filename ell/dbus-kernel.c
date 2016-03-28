@@ -626,7 +626,8 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 	return r;
 }
 
-int _dbus_kernel_name_acquire(int fd, const char *name)
+int _dbus_kernel_name_acquire(int fd, const char *name, bool allow_replacement,
+				bool replace_existing, bool queue, bool *queued)
 {
 	struct {
 		struct kdbus_cmd head;
@@ -651,8 +652,18 @@ int _dbus_kernel_name_acquire(int fd, const char *name)
 	item->type = KDBUS_ITEM_NAME;
 	strcpy(item->str, name);
 
+	if (replace_existing)
+		cmd_name.head.flags |= KDBUS_NAME_REPLACE_EXISTING;
+	if (allow_replacement)
+		cmd_name.head.flags |= KDBUS_NAME_ALLOW_REPLACEMENT;
+	if (queue)
+		cmd_name.head.flags |= KDBUS_NAME_QUEUE;
+
 	if (ioctl(fd, KDBUS_CMD_NAME_ACQUIRE, &cmd_name) < 0)
 		return -errno;
+
+	if (queued)
+		*queued = !!(cmd_name.head.flags & KDBUS_NAME_IN_QUEUE);
 
 	return 0;
 }
