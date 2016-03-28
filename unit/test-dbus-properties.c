@@ -152,32 +152,11 @@ static void test_next()
 		}	\
 	} while (0)
 
-static void request_name_setup(struct l_dbus_message *message, void *user_data)
+static void request_name_callback(struct l_dbus *dbus, bool success,
+					bool queued, void *user_data)
 {
-	const char *name = "org.test";
-
-	l_dbus_message_set_arguments(message, "su", name, 0);
-}
-
-static void request_name_callback(struct l_dbus_message *message,
-					void *user_data)
-{
-	const char *error, *text;
-	uint32_t result;
-
-	if (l_dbus_message_get_error(message, &error, &text)) {
-		l_error("error=%s", error);
-		l_error("message=%s", text);
-		l_main_quit();
-		return;
-	}
-
-	if (!l_dbus_message_get_arguments(message, "u", &result)) {
-		l_main_quit();
-		return;
-	}
-
-	l_info("request name result=%d", result);
+	l_info("request name result=%s",
+		success ? (queued ? "queued" : "success") : "failed");
 
 	test_next();
 }
@@ -938,11 +917,8 @@ int main(int argc, char *argv[])
 	l_dbus_set_ready_handler(dbus, ready_callback, dbus, NULL);
 	l_dbus_set_disconnect_handler(dbus, disconnect_callback, NULL, NULL);
 
-	l_dbus_method_call(dbus, "org.freedesktop.DBus",
-				"/org/freedesktop/DBus",
-				"org.freedesktop.DBus", "RequestName",
-				request_name_setup,
-				request_name_callback, NULL, NULL);
+	l_dbus_name_acquire(dbus, "org.test", false, false, false,
+				request_name_callback, NULL);
 
 	if (!l_dbus_register_interface(dbus, "org.test", setup_test_interface,
 					NULL, true)) {

@@ -97,16 +97,20 @@ static void client_ready_callback(void *user_data)
 				NULL, NULL, NULL);
 }
 
+static void service_name_acquire_callback(struct l_dbus *dbus, bool success,
+						bool queued, void *user_data)
+{
+	if (!success)
+		l_info("Failed to acquire name");
+}
+
 static void service_ready_callback(void *user_data)
 {
 	struct l_dbus *dbus = user_data;
 	struct l_dbus_message *message;
-	int fd = _dbus_get_fd(dbus);
-	int r;
 
-	r = _dbus_kernel_name_acquire(fd, "org.test");
-	if (r < 0)
-		l_info("Failed to acquire name: %s", strerror(-r));
+	l_dbus_name_acquire(dbus, "org.test", false, false, false,
+				service_name_acquire_callback, NULL);
 
 	l_info("service ready");
 
