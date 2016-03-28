@@ -67,6 +67,9 @@ typedef void (*l_dbus_interface_setup_func_t) (struct l_dbus_interface *);
 
 typedef void (*l_dbus_watch_func_t) (struct l_dbus *dbus, void *user_data);
 
+typedef void (*l_dbus_name_acquire_func_t) (struct l_dbus *dbus, bool success,
+						bool queued, void *user_data);
+
 struct l_dbus *l_dbus_new(const char *address);
 struct l_dbus *l_dbus_new_default(enum l_dbus_bus bus);
 void l_dbus_destroy(struct l_dbus *dbus);
@@ -251,6 +254,11 @@ unsigned int l_dbus_add_signal_watch(struct l_dbus *dbus,
 					const char *interface,
 					const char *member, ...);
 bool l_dbus_remove_signal_watch(struct l_dbus *dbus, unsigned int id);
+
+uint32_t l_dbus_name_acquire(struct l_dbus *dbus, const char *name,
+				bool allow_replacement, bool replace_existing,
+				bool queue, l_dbus_name_acquire_func_t callback,
+				void *user_data);
 
 #ifdef __cplusplus
 }

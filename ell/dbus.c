@@ -64,6 +64,10 @@ struct l_dbus_ops {
 	struct l_dbus_message *(*recv_message)(struct l_dbus *bus);
 	void (*free)(struct l_dbus *bus);
 	struct _dbus_filter_ops filter_ops;
+	uint32_t (*name_acquire)(struct l_dbus *dbus, const char *name,
+				bool allow_replacement, bool replace_existing,
+				bool queue, l_dbus_name_acquire_func_t callback,
+				void *user_data);
 };
 
 struct l_dbus {
@@ -2010,4 +2014,34 @@ LIB_EXPORT unsigned int l_dbus_add_signal_watch(struct l_dbus *dbus,
 LIB_EXPORT bool l_dbus_remove_signal_watch(struct l_dbus *dbus, unsigned int id)
 {
 	return _dbus_filter_remove_rule(dbus->filter, id);
+}
+
+/**
+ * l_dbus_name_acquire:
+ * @dbus: D-Bus connection
+ * @name: Well-known bus name to be acquired
+ * @allow_replacement: Whether to allow another peer's name request to
+ *                     take the name ownership away from this connection
+ * @replace_existing: Whether to allow D-Bus to take the name's ownership
+ *                    away from another peer in case the name is already
+ *                    owned and allows replacement.  Ignored if name is
+ *                    currently free.
+ * @queue: Whether to allow the name request to be queued by D-Bus in
+ *         case it cannot be acquired now, rather than to return a failure.
+ * @callback: Callback to receive the request result when done.
+ *
+ * Acquire a well-known bus name (service name) on the bus.
+ *
+ * Returns: a non-zero request serial that can be passed to l_dbus_cancel
+ *          while waiting for the callback or zero if the callback has
+ *          has happened while l_dbus_name_acquire was running.
+ **/
+LIB_EXPORT uint32_t l_dbus_name_acquire(struct l_dbus *dbus, const char *name,
+				bool allow_replacement, bool replace_existing,
+				bool queue, l_dbus_name_acquire_func_t callback,
+				void *user_data)
+{
+	return dbus->driver->name_acquire(dbus, name, allow_replacement,
+						replace_existing, queue,
+						callback, user_data);
 }
