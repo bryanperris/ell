@@ -784,6 +784,84 @@ static bool classic_get_name_owner(struct l_dbus *bus, const char *name)
 	return true;
 }
 
+struct name_request {
+	l_dbus_name_acquire_func_t callback;
+	void *user_data;
+	struct l_dbus *dbus;
+};
+
+enum dbus_name_flag {
+	DBUS_NAME_FLAG_ALLOW_REPLACEMENT	= 0x1,
+	DBUS_NAME_FLAG_REPLACE_EXISTING		= 0x2,
+	DBUS_NAME_FLAG_DO_NOT_QUEUE		= 0x4,
+};
+
+enum dbus_name_reply {
+	DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER	= 1,
+	DBUS_REQUEST_NAME_REPLY_IN_QUEUE	= 2,
+	DBUS_REQUEST_NAME_REPLY_EXISTS		= 3,
+	DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER	= 4,
+};
+
+static void request_name_reply_cb(struct l_dbus_message *reply, void *user_data)
+{
+	struct name_request *req = user_data;
+	bool success = false, queued = false;
+	uint32_t retval;
+
+	if (!req->callback)
+		return;
+
+	/* No name owner yet */
+	if (l_dbus_message_is_error(reply))
+		goto call_back;
+
+	/* Shouldn't happen */
+	if (!l_dbus_message_get_arguments(reply, "u", &retval))
+		goto call_back;
+
+	success = (retval == DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) ||
+		(retval == DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER) ||
+		(retval == DBUS_REQUEST_NAME_REPLY_IN_QUEUE);
+	queued = (retval == DBUS_REQUEST_NAME_REPLY_IN_QUEUE);
+
+call_back:
+	req->callback(req->dbus, success, queued, req->user_data);
+}
+
+static uint32_t classic_name_acquire(struct l_dbus *dbus, const char *name,
+					bool allow_replacement,
+					bool replace_existing, bool queue,
+					l_dbus_name_acquire_func_t callback,
+					void *user_data)
+{
+	struct name_request *req;
+	struct l_dbus_message *message;
+	uint32_t flags = 0;
+
+	req = l_new(struct name_request, 1);
+	req->dbus = dbus;
+	req->user_data = user_data;
+	req->callback = callback;
+
+	message = l_dbus_message_new_method_call(dbus, DBUS_SERVICE_DBUS,
+							DBUS_PATH_DBUS,
+							L_DBUS_INTERFACE_DBUS,
+							"RequestName");
+
+	if (allow_replacement)
+		flags |= DBUS_NAME_FLAG_ALLOW_REPLACEMENT;
+	if (replace_existing)
+		flags |= DBUS_NAME_FLAG_REPLACE_EXISTING;
+	if (!queue)
+		flags |= DBUS_NAME_FLAG_DO_NOT_QUEUE;
+
+	l_dbus_message_set_arguments(message, "su", name, flags);
+
+	return send_message(dbus, false, message, request_name_reply_cb,
+				req, free);
+}
+
 static const struct l_dbus_ops classic_ops = {
 	.version = 1,
 	.send_message = classic_send_message,
@@ -794,6 +872,7 @@ static const struct l_dbus_ops classic_ops = {
 		.remove_match = classic_remove_match,
 		.get_name_owner = classic_get_name_owner,
 	},
+	.name_acquire = classic_name_acquire,
 };
 
 static void name_owner_changed_cb(struct l_dbus_message *message,
