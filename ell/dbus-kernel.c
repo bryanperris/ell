@@ -654,8 +654,10 @@ int _dbus_kernel_name_acquire(int fd, const char *name, bool allow_replacement,
 
 	if (replace_existing)
 		cmd_name.head.flags |= KDBUS_NAME_REPLACE_EXISTING;
+
 	if (allow_replacement)
 		cmd_name.head.flags |= KDBUS_NAME_ALLOW_REPLACEMENT;
+
 	if (queue)
 		cmd_name.head.flags |= KDBUS_NAME_QUEUE;
 

@@ -851,8 +851,10 @@ static uint32_t classic_name_acquire(struct l_dbus *dbus, const char *name,
 
 	if (allow_replacement)
 		flags |= DBUS_NAME_FLAG_ALLOW_REPLACEMENT;
+
 	if (replace_existing)
 		flags |= DBUS_NAME_FLAG_REPLACE_EXISTING;
+
 	if (!queue)
 		flags |= DBUS_NAME_FLAG_DO_NOT_QUEUE;
 
