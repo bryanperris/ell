@@ -409,7 +409,7 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 
 	memset(&cmd, 0, sizeof(cmd));
 	cmd.size = sizeof(cmd);
-	cmd.msg_address = (uint64_t) kmsg;
+	cmd.msg_address = (uintptr_t) kmsg;
 
 	ret = ioctl(fd, KDBUS_CMD_SEND, &cmd);
 	if (ret < 0)
