@@ -1427,6 +1427,7 @@ bool _dbus_kernel_calculate_bloom(struct l_dbus_message *message,
 	struct l_dbus_message_iter iter;
 	uint8_t argn;
 	char buf[256];
+	bool (*get_basic)(struct l_dbus_message_iter *, char, void *);
 
 	/* The string "interface:" suffixed by the interface name */
 	attr = l_dbus_message_get_interface(message);
@@ -1470,17 +1471,36 @@ bool _dbus_kernel_calculate_bloom(struct l_dbus_message *message,
 
 	body = _dbus_message_get_body(message, &body_size);
 
-	if (_dbus_message_is_gvariant(message))
-		_gvariant_iter_init(&iter, message, signature, NULL,
-					body, body_size);
-	else
+	if (_dbus_message_is_gvariant(message)) {
+		if (!_gvariant_iter_init(&iter, message, signature, NULL,
+						body, body_size))
+			return false;
+
+		get_basic = _gvariant_iter_next_entry_basic;
+	} else {
 		_dbus1_iter_init(&iter, message, signature, NULL,
-				body, body_size);
+					body, body_size);
+
+		get_basic = _dbus1_iter_next_entry_basic;
+	}
 
 	argn = 0;
 
+	/*
+	 * systemd-master/src/libsystemd/sd-bus/PORTING-DBUS1:
+	 *
+	 * "If the first argument of the message is a string,
+	 * "arg0-slash-prefix" suffixed with the first argument, and also
+	 * all prefixes of the argument (cut off at "/"), also prefixed
+	 * with "arg0-slash-prefix".
+	 *
+	 * Similar for all further arguments that are strings up to 63,
+	 * for the arguments and their "dot" and "slash" prefixes. On the
+	 * first argument that is not a string, addition to the bloom
+	 * filter should be stopped however."
+	 */
 	while (*signature == 's' || *signature == 'o' || *signature == 'g') {
-		if (!message_iter_next_entry(&iter, &attr))
+		if (!get_basic(&iter, *signature, &attr))
 			return false;
 
 		sprintf(buf, "arg%hhu", argn);
