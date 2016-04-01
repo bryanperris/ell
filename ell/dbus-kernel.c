@@ -279,6 +279,15 @@ int _dbus_kernel_hello(int fd, const char *connection_name,
 	*bloom_size = DEFAULT_BLOOM_SIZE;
 	*bloom_n_hash = DEFAULT_BLOOM_N_HASH;
 
+	KDBUS_ITEM_FOREACH(item, hello, items) {
+		switch (item->type) {
+		case KDBUS_ITEM_BLOOM_PARAMETER:
+			*bloom_size = item->bloom_parameter.size;
+			*bloom_n_hash = item->bloom_parameter.n_hash;
+			break;
+		}
+	}
+
 	*id = hello->id;
 	*guid = l_strdup_printf("%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx"
 				"%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx"
