@@ -393,7 +393,7 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 	}
 	case DBUS_MESSAGE_TYPE_METHOD_CALL:
 		if (!l_dbus_message_get_no_reply(message))
-			kmsg->timeout_ns = 30000 * 1000ULL;
+			kmsg->timeout_ns = 30000 * 1000000ULL;
 		break;
 	case DBUS_MESSAGE_TYPE_SIGNAL:
 		kmsg->flags |= KDBUS_MSG_SIGNAL;
