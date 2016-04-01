@@ -237,6 +237,7 @@ int _dbus_kernel_hello(int fd, const char *connection_name,
 	struct kdbus_cmd_hello *hello;
 	struct kdbus_item *item;
 	int ret;
+	struct kdbus_cmd_free cmd_free;
 
 	size = align_len(sizeof(struct kdbus_cmd_hello), 8);
 	size += KDBUS_ITEM_SIZE(len + 1);
@@ -256,18 +257,23 @@ int _dbus_kernel_hello(int fd, const char *connection_name,
 	strcpy(item->str, connection_name);
 
 	ret = ioctl(fd, KDBUS_CMD_HELLO, hello);
-	if (ret < 0)
-		return -errno;
+	if (ret < 0) {
+		ret = -errno;
+		goto done;
+	}
 
         /* Check for incompatible flags (upper 32 bits) */
         if (hello->bus_flags > 0xFFFFFFFFULL ||
-			hello->flags > 0xFFFFFFFFULL)
-                return -ENOTSUP;
+			hello->flags > 0xFFFFFFFFULL) {
+		ret = -ENOTSUP;
+		goto done;
+	}
 
 	*pool = mmap(NULL, KDBUS_POOL_SIZE, PROT_READ, MAP_SHARED, fd, 0);
 	if (*pool == MAP_FAILED) {
 		*pool = NULL;
-		return -errno;
+		ret = -errno;
+		goto done;
 	}
 
 	*bloom_size = DEFAULT_BLOOM_SIZE;
@@ -286,7 +292,14 @@ int _dbus_kernel_hello(int fd, const char *connection_name,
 				hello->id128[12], hello->id128[13],
 				hello->id128[14], hello->id128[15]);
 
-	return 0;
+done:
+	memset(&cmd_free, 0, sizeof(cmd_free));
+	cmd_free.size = sizeof(cmd_free);
+	cmd_free.offset = hello->offset;
+
+	ioctl(fd, KDBUS_CMD_FREE, &cmd_free);
+
+	return ret;
 }
 
 int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
