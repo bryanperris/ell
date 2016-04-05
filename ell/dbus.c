@@ -1218,8 +1218,6 @@ static struct l_dbus *setup_kdbus(int fd)
 	dbus = &kdbus->super;
 	dbus->driver = &kdbus_ops;
 
-	dbus_init(dbus, fd);
-
 	if (_dbus_kernel_hello(fd, "ell-connection",
 				&kdbus->bloom_size, &kdbus->bloom_n_hash,
 				&kdbus->kdbus_id, &kdbus->kdbus_pool,
@@ -1228,6 +1226,8 @@ static struct l_dbus *setup_kdbus(int fd)
 		close(fd);
 		return NULL;
 	}
+
+	dbus_init(dbus, fd);
 
 	dbus->unique_name = l_strdup_printf(":1.%llu", kdbus->kdbus_id);
 
