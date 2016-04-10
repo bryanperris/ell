@@ -34,6 +34,7 @@
 #include <errno.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
+#include <time.h>
 
 #include "linux/kdbus.h"
 
@@ -392,8 +393,16 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 		break;
 	}
 	case DBUS_MESSAGE_TYPE_METHOD_CALL:
-		if (!l_dbus_message_get_no_reply(message))
-			kmsg->timeout_ns = 30000 * 1000000ULL;
+		if (!l_dbus_message_get_no_reply(message)) {
+			struct timespec now;
+
+			clock_gettime(CLOCK_MONOTONIC_COARSE, &now);
+
+			kmsg->timeout_ns =
+				now.tv_sec * 1000000000ULL + now.tv_nsec +
+				30000 * 1000000ULL;
+		}
+
 		break;
 	case DBUS_MESSAGE_TYPE_SIGNAL:
 		kmsg->flags |= KDBUS_MSG_SIGNAL;
