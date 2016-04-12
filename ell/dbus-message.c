@@ -559,14 +559,16 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 {
 	struct l_dbus_message_iter header;
 	struct l_dbus_message_iter array, iter;
-	uint8_t endian, message_type, flags, version, field_type;
+	uint8_t endian, message_type, flags, version;
 	uint32_t body_length, serial;
+	bool found;
 
 	if (!message->sealed)
 		return false;
 
 	if (_dbus_message_is_gvariant(message)) {
 		uint32_t header_length;
+		uint64_t field_type;
 
 		if (!_gvariant_iter_init(&header, message, "yyyyuuu", NULL,
 					message->header, message->header_size))
@@ -577,13 +579,20 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 						&serial, &header_length))
 			return false;
 
-		if (!_gvariant_iter_init(&header, message, "a(yv)", NULL,
+		if (!_gvariant_iter_init(&header, message, "a(tv)", NULL,
 					message->header + 16, header_length))
 			return false;
 
 		if (!_gvariant_iter_enter_array(&header, &array))
 			return false;
+
+		while ((found = message_iter_next_entry(&array,
+							&field_type, &iter)))
+			if (field_type == type)
+				break;
 	} else {
+		uint8_t field_type;
+
 		_dbus1_iter_init(&header, message, "yyyyuua(yv)", NULL,
 				message->header, message->header_size);
 
@@ -591,19 +600,20 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 						&message_type, &flags, &version,
 						&body_length, &serial, &array))
 			return false;
+
+		while ((found = message_iter_next_entry(&array,
+							&field_type, &iter)))
+			if (field_type == type)
+				break;
 	}
 
-	while (message_iter_next_entry(&array, &field_type, &iter)) {
-		if (field_type != type)
-			continue;
+	if (!found)
+		return false;
 
-		if (iter.sig_start[iter.sig_pos] != data_type)
-			return false;
+	if (iter.sig_start[iter.sig_pos] != data_type)
+		return false;
 
-		return message_iter_next_entry_valist(&iter, args);
-	}
-
-	return false;
+	return message_iter_next_entry_valist(&iter, args);
 }
 
 static inline bool get_header_field(struct l_dbus_message *message,
@@ -795,8 +805,15 @@ static void add_field(struct dbus_builder *builder,
 			struct builder_driver *driver,
 			uint8_t field, const char *type, const void *value)
 {
-	driver->enter_struct(builder, "yv");
-	driver->append_basic(builder, 'y', &field);
+	if (driver == &gvariant_driver) {
+		uint64_t long_field = field;
+
+		driver->enter_struct(builder, "tv");
+		driver->append_basic(builder, 't', &long_field);
+	} else {
+		driver->enter_struct(builder, "yv");
+		driver->append_basic(builder, 'y', &field);
+	}
 	driver->enter_variant(builder, type);
 	driver->append_basic(builder, type[0], value);
 	driver->leave_variant(builder);
@@ -823,7 +840,8 @@ static void build_header(struct l_dbus_message *message, const char *signature)
 		driver->append_basic(builder, 'u', &field_length);
 	}
 
-	driver->enter_array(builder, "(yv)");
+	driver->enter_array(builder, _dbus_message_is_gvariant(message) ?
+				"(tv)" : "(yv)");
 
 	if (message->path) {
 		add_field(builder, driver, DBUS_MESSAGE_FIELD_PATH,
