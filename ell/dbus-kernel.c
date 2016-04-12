@@ -561,6 +561,8 @@ static int _dbus_kernel_make_message(struct kdbus_msg *kmsg,
 
 	*out_message = dbus_message_build(header, header_size, body, body_size,
 						NULL, 0);
+	if (!*out_message)
+		return -EBADMSG;
 
 	if (kmsg->src_id != KDBUS_SRC_ID_KERNEL) {
 		sprintf(unique_bus_name, ":1.%llu", kmsg->src_id);

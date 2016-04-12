@@ -568,16 +568,21 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 	if (_dbus_message_is_gvariant(message)) {
 		uint32_t header_length;
 
-		_gvariant_iter_init(&header, message, "yyyyuuu", NULL,
-					message->header, message->header_size);
+		if (!_gvariant_iter_init(&header, message, "yyyyuuu", NULL,
+					message->header, message->header_size))
+			return false;
+
 		if (!message_iter_next_entry(&header, &endian, &message_type,
 						&flags, &version, &body_length,
 						&serial, &header_length))
 			return false;
 
-		_gvariant_iter_init(&header, message, "a(yv)", NULL,
-					message->header + 16, header_length);
-		_gvariant_iter_enter_array(&header, &array);
+		if (!_gvariant_iter_init(&header, message, "a(yv)", NULL,
+					message->header + 16, header_length))
+			return false;
+
+		if (!_gvariant_iter_enter_array(&header, &array))
+			return false;
 	} else {
 		_dbus1_iter_init(&header, message, "yyyyuua(yv)", NULL,
 				message->header, message->header_size);
@@ -663,6 +668,7 @@ struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size)
 
 	message->sealed = true;
 
+	/* If the field is absent message->signature will remain NULL */
 	get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, 'g',
 						&message->signature);
 
@@ -695,6 +701,7 @@ struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 
 	message->sealed = true;
 
+	/* If the field is absent message->signature will remain NULL */
 	get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, 'g',
 						&message->signature);
 
@@ -1179,10 +1186,12 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 	if (!signature || strcmp(message->signature, signature))
 		return false;
 
-	if (_dbus_message_is_gvariant(message))
-		_gvariant_iter_init(&iter, message, message->signature, NULL,
-					message->body, message->body_size);
-	else
+	if (_dbus_message_is_gvariant(message)) {
+		if (!_gvariant_iter_init(&iter, message, message->signature,
+						NULL, message->body,
+						message->body_size))
+			return false;
+	} else
 		_dbus1_iter_init(&iter, message, message->signature, NULL,
 				message->body, message->body_size);
 
