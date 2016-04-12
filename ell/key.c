@@ -69,7 +69,7 @@ static long kernel_revoke_key(int32_t serial)
 
 static bool setup_keyring_base(void)
 {
-	keyring_base = kernel_add_key("keyring", "ell", 0, 0,
+	keyring_base = kernel_add_key("keyring", "ell-keyring", 0, 0,
 					KEY_SPEC_THREAD_KEYRING);
 
 	if (keyring_base <= 0) {
@@ -84,6 +84,7 @@ LIB_EXPORT struct l_key *l_key_new(enum l_key_type type, const void *payload,
 					size_t payload_length)
 {
 	struct l_key *key;
+	char *description;
 
 	if (unlikely(!payload))
 		return NULL;
@@ -97,8 +98,10 @@ LIB_EXPORT struct l_key *l_key_new(enum l_key_type type, const void *payload,
 
 	key = l_new(struct l_key, 1);
 	key->type = type;
-	key->serial = kernel_add_key(key_type_names[type], "ell", payload,
+	description = l_strdup_printf("ell-%p", key);
+	key->serial = kernel_add_key(key_type_names[type], description, payload,
 					payload_length, keyring_base);
+	l_free(description);
 
 	if (key->serial < 0) {
 		l_free(key);
