@@ -29,6 +29,9 @@ epoll and timerfd.
 For checksum usage you need if_alg (crypto user-space API) with MD5
 and SHA-1 algorithms enabled.
 
+For Diffie-Hellman usage the KEYCTL_DH_COMPUTE command for the
+keyctl() syscall is required.
+
 Kernel configuration checklist:
 
 	CONFIG_TIMERFD=y
@@ -38,6 +41,8 @@ Kernel configuration checklist:
 	CONFIG_CRYPTO_USER_API_HASH=y
 	CONFIG_CRYPTO_MD5=y
 	CONFIG_CRYPTO_SHA1=y
+
+	CONFIG_KEY_DH_OPERATIONS=y
 
 For kernel D-Bus (kdbus) support, the appropriate kernel module is required
 and must be loaded. The development repositories can be found here:
