@@ -34,6 +34,16 @@
 #include "util.h"
 #include "key.h"
 
+#ifndef KEYCTL_DH_COMPUTE
+#define KEYCTL_DH_COMPUTE 23
+
+struct keyctl_dh_params {
+	int32_t private;
+	int32_t prime;
+	int32_t base;
+};
+#endif
+
 static int32_t keyring_base;
 
 struct l_key {
@@ -65,6 +75,16 @@ static long kernel_update_key(int32_t serial, const void *payload, size_t len)
 static long kernel_revoke_key(int32_t serial)
 {
 	return syscall(__NR_keyctl, KEYCTL_REVOKE, serial);
+}
+
+static long kernel_dh_compute(int32_t private, int32_t prime, int32_t base,
+			      void *payload, size_t len)
+{
+	struct keyctl_dh_params params = { .private = private,
+					   .prime = prime,
+					   .base = base };
+
+	return syscall(__NR_keyctl, KEYCTL_DH_COMPUTE, &params, payload, len);
 }
 
 static bool setup_keyring_base(void)
@@ -154,4 +174,39 @@ LIB_EXPORT bool l_key_extract(struct l_key *key, void *payload, size_t *len)
 LIB_EXPORT ssize_t l_key_get_size(struct l_key *key)
 {
 	return kernel_read_key(key->serial, NULL, 0);
+}
+
+static bool compute_common(struct l_key *base,
+			   struct l_key *private,
+			   struct l_key *prime,
+			   void *payload, size_t *len)
+{
+	long result_len;
+	bool usable_payload = *len != 0;
+
+	result_len = kernel_dh_compute(private->serial, prime->serial,
+				       base->serial, payload, *len);
+
+	if (result_len > 0) {
+		*len = result_len;
+		return usable_payload;
+	} else {
+		return false;
+	}
+}
+
+LIB_EXPORT bool l_key_compute_dh_public(struct l_key *generator,
+					struct l_key *private,
+					struct l_key *prime,
+					void *payload, size_t *len)
+{
+	return compute_common(generator, private, prime, payload, len);
+}
+
+LIB_EXPORT bool l_key_compute_dh_secret(struct l_key *other_public,
+					struct l_key *private,
+					struct l_key *prime,
+					void *payload, size_t *len)
+{
+	return compute_common(other_public, private, prime, payload, len);
 }
