@@ -323,8 +323,8 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 	struct kdbus_item *item;
 	void *header;
 	size_t header_size;
-	void *body;
-	size_t body_size;
+	void *footer;
+	size_t footer_size;
 	int ret;
 	struct kdbus_cmd_send cmd;
 	L_AUTO_FREE_VAR(struct kdbus_msg *, kmsg);
@@ -427,14 +427,13 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 	item->vec.size = header_size;
 	item = KDBUS_ITEM_NEXT(item);
 
-	body = _dbus_message_get_body(message, &body_size);
-	if (body_size > 0) {
-		item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(struct kdbus_vec);
-		item->type = KDBUS_ITEM_PAYLOAD_VEC;
-		item->vec.address = (uintptr_t) body;
-		item->vec.size = body_size;
-		item = KDBUS_ITEM_NEXT(item);
-	}
+	footer = _dbus_message_get_footer(message, &footer_size);
+
+	item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(struct kdbus_vec);
+	item->type = KDBUS_ITEM_PAYLOAD_VEC;
+	item->vec.address = (uintptr_t) footer;
+	item->vec.size = footer_size;
+	item = KDBUS_ITEM_NEXT(item);
 
 	kmsg->size = (void *)item - (void *)kmsg;
 

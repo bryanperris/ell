@@ -107,6 +107,25 @@ void *_dbus_message_get_body(struct l_dbus_message *msg, size_t *out_size)
 	return msg->body;
 }
 
+/* Get a buffer containing the final message contents except the header */
+void *_dbus_message_get_footer(struct l_dbus_message *msg, size_t *out_size)
+{
+	size_t size;
+
+	if (_dbus_message_is_gvariant(msg)) {
+		size = _gvariant_message_finalize(msg->header_end,
+						msg->body, msg->body_size,
+						msg->signature);
+		size -= msg->header_size;
+	} else
+		size = msg->body_size;
+
+	if (out_size)
+		*out_size = size;
+
+	return msg->body;
+}
+
 void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial)
 {
 	struct dbus_header *hdr = msg->header;
