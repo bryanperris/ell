@@ -613,10 +613,10 @@ static struct l_dbus_message *classic_recv_message(struct l_dbus *dbus)
 	if (len != DBUS_HEADER_SIZE)
 		return NULL;
 
-	header_size = align_len(DBUS_HEADER_SIZE + hdr.field_length, 8);
+	header_size = align_len(DBUS_HEADER_SIZE + hdr.dbus1.field_length, 8);
 	header = l_malloc(header_size);
 
-	body_size = hdr.body_length;
+	body_size = hdr.dbus1.body_length;
 	body = l_malloc(body_size);
 
 	iov[0].iov_base = header;

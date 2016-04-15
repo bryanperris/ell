@@ -423,9 +423,9 @@ bool _dbus_header_is_valid(void *data, size_t size)
 	hdr = data;
 
 	if (hdr->endian != DBUS_NATIVE_ENDIAN)
-		header_len = bswap_32(hdr->field_length);
+		header_len = bswap_32(hdr->dbus1.field_length);
 	else
-		header_len = hdr->field_length;
+		header_len = hdr->dbus1.field_length;
 
 	header_len += sizeof(struct dbus_header);
 	return size >= header_len;

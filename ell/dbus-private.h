@@ -49,9 +49,19 @@ struct dbus_header {
 	uint8_t  message_type;
 	uint8_t  flags;
 	uint8_t  version;
-	uint32_t body_length;
-	uint32_t serial;
-	uint32_t field_length;
+
+	union {
+		struct {
+			uint32_t body_length;
+			uint32_t serial;
+			uint32_t field_length;
+		} __attribute__ ((packed)) dbus1;
+
+		struct {
+			uint32_t reserved1;
+			uint64_t cookie;
+		} __attribute__ ((packed)) kdbus;
+	};
 } __attribute__ ((packed));
 #define DBUS_HEADER_SIZE 16
 

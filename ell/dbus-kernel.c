@@ -551,9 +551,6 @@ static int _dbus_kernel_make_message(struct kdbus_msg *kmsg,
 	if (hdr->version != 2)
 		return -EPROTO;
 
-	if (hdr->body_length != body_size)
-		return -EBADMSG;
-
 	r = collect_body_parts(kmsg, header_size, &header,
 						body_size, &body);
 	if (r < 0)

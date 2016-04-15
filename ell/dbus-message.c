@@ -58,7 +58,8 @@ struct l_dbus_message {
 	int refcount;
 	void *header;
 	size_t header_size;
-	const char *signature;
+	size_t header_end;
+	char *signature;
 	void *body;
 	size_t body_size;
 	char *path;
@@ -74,6 +75,7 @@ struct l_dbus_message {
 	bool sealed : 1;
 	bool kdbus_sender : 1;
 	bool kdbus_destination : 1;
+	bool signature_free : 1;
 };
 
 struct l_dbus_message_builder {
@@ -109,14 +111,20 @@ void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial)
 {
 	struct dbus_header *hdr = msg->header;
 
-	hdr->serial = serial;
+	if (_dbus_message_is_gvariant(msg))
+		hdr->kdbus.cookie = serial;
+	else
+		hdr->dbus1.serial = serial;
 }
 
 uint32_t _dbus_message_get_serial(struct l_dbus_message *msg)
 {
 	struct dbus_header *hdr = msg->header;
 
-	return hdr->serial;
+	if (_dbus_message_is_gvariant(msg))
+		return hdr->kdbus.cookie;
+	else
+		return hdr->dbus1.serial;
 }
 
 LIB_EXPORT bool l_dbus_message_set_no_reply(struct l_dbus_message *msg, bool on)
@@ -196,10 +204,12 @@ static struct l_dbus_message *message_new_common(uint8_t type, uint8_t flags,
 
 	/*
 	 * We allocate the header with the initial 12 bytes (up to the field
-	 * length) so that we can store the basic information here
+	 * length) so that we can store the basic information here.  For
+	 * GVariant we need 16 bytes.
 	 */
-	message->header = l_realloc(NULL, 12);
-	message->header_size = 12;
+	message->header_size = version == 1 ? 12 : 16;
+	message->header_end = message->header_size;
+	message->header = l_realloc(NULL, message->header_size);
 
 	hdr = message->header;
 	hdr->endian = DBUS_NATIVE_ENDIAN;
@@ -290,7 +300,7 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_return(
 					DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED,
 					hdr->version);
 
-	message->reply_serial = hdr->serial;
+	message->reply_serial = _dbus_message_get_serial(method_call);
 
 	sender = l_dbus_message_get_sender(method_call);
 	if (sender)
@@ -317,7 +327,7 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_error_valist(
 					DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED,
 					hdr->version);
 
-	reply->reply_serial = hdr->serial;
+	reply->reply_serial = _dbus_message_get_serial(method_call);
 
 	sender = l_dbus_message_get_sender(method_call);
 	if (sender)
@@ -386,6 +396,9 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 
 	if (message->kdbus_destination)
 		l_free(message->destination);
+
+	if (message->signature_free)
+		l_free(message->signature);
 
 	l_free(message->header);
 	l_free(message->body);
@@ -567,20 +580,11 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 		return false;
 
 	if (_dbus_message_is_gvariant(message)) {
-		uint32_t header_length;
 		uint64_t field_type;
 
-		if (!_gvariant_iter_init(&header, message, "yyyyuuu", NULL,
-					message->header, message->header_size))
-			return false;
-
-		if (!message_iter_next_entry(&header, &endian, &message_type,
-						&flags, &version, &body_length,
-						&serial, &header_length))
-			return false;
-
 		if (!_gvariant_iter_init(&header, message, "a(tv)", NULL,
-					message->header + 16, header_length))
+						message->header + 16,
+						message->header_end - 16))
 			return false;
 
 		if (!_gvariant_iter_enter_array(&header, &array))
@@ -643,8 +647,14 @@ static bool valid_header(const struct dbus_header *hdr)
 	if (hdr->version != 1 && hdr->version != 2)
 		return false;
 
-	if (hdr->serial == 0)
-		return false;
+	if (hdr->version == 1) {
+		if (hdr->dbus1.serial == 0)
+			return false;
+	} else {
+		/* We don't support 64-bit GVariant cookies */
+		if (hdr->kdbus.cookie == 0 || (hdr->kdbus.cookie >> 32))
+			return false;
+	}
 
 	return true;
 }
@@ -653,6 +663,7 @@ struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size)
 {
 	const struct dbus_header *hdr = data;
 	struct l_dbus_message *message;
+	size_t body_pos;
 
 	if (unlikely(size < DBUS_HEADER_SIZE))
 		return NULL;
@@ -661,28 +672,66 @@ struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size)
 
 	message->refcount = 1;
 
-	message->header_size = align_len(DBUS_HEADER_SIZE +
-						hdr->field_length, 8);
-	message->body_size = hdr->body_length;
+	if (hdr->version == 1) {
+		message->header_size = align_len(DBUS_HEADER_SIZE +
+						hdr->dbus1.field_length, 8);
+		message->body_size = hdr->dbus1.body_length;
 
-	if (message->header_size + message->body_size < size) {
-		l_free(message);
-		return NULL;
+		if (message->header_size + message->body_size < size)
+			goto free;
+
+		body_pos = message->header_size;
+	} else {
+		struct l_dbus_message_iter iter;
+		struct l_dbus_message_iter header, variant, body;
+
+		/*
+		 * GVariant message structure as per
+		 * https://wiki.gnome.org/Projects/GLib/GDBus/Version2
+		 * is "(yyyyuta{tv}v)".  As noted this is equivalent to
+		 * some other types, this one lets us get iterators for
+		 * the header and the body in the fewest steps.
+		 */
+		if (!_gvariant_iter_init(&iter, message, "(yyyyuta{tv})v",
+						NULL, data, size))
+			goto free;
+
+		if (!_gvariant_iter_enter_struct(&iter, &header))
+			goto free;
+
+		if (!_gvariant_iter_enter_variant(&iter, &variant))
+			goto free;
+
+		if (!_gvariant_iter_enter_struct(&variant, &body))
+			goto free;
+
+		message->header_size = align_len(header.len - header.pos, 8);
+		message->body_size = body.len - body.pos;
+		message->signature = l_strndup(body.sig_start + body.sig_pos,
+						body.sig_len - body.sig_pos);
+		message->signature_free = true;
+		message->header_end = header.len;
+		body_pos = body.data + body.pos - data;
 	}
 
 	message->header = l_malloc(message->header_size);
 	message->body = l_malloc(message->body_size);
 
 	memcpy(message->header, data, message->header_size);
-	memcpy(message->body, data + message->header_size, message->body_size);
+	memcpy(message->body, data + body_pos, message->body_size);
 
 	message->sealed = true;
 
 	/* If the field is absent message->signature will remain NULL */
-	get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, 'g',
-						&message->signature);
+	if (hdr->version == 1)
+		get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE,
+					'g', &message->signature);
 
 	return message;
+
+free:
+	l_free(message);
+	return NULL;
 }
 
 struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
@@ -696,6 +745,13 @@ struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 		return NULL;
 
 	if (unlikely(!valid_header(hdr)))
+		return NULL;
+
+	/*
+	 * With GVariant we need to know the signature, use
+	 * dbus_message_from_blob instead.
+	 */
+	if (unlikely(hdr->version != 1))
 		return NULL;
 
 	message = l_new(struct l_dbus_message, 1);
@@ -826,23 +882,19 @@ static void build_header(struct l_dbus_message *message, const char *signature)
 	struct dbus_builder *builder;
 	struct builder_driver *driver;
 	char *generated_signature;
-	struct dbus_header *hdr;
 	size_t header_size;
+	bool gvariant;
 
-	if (_dbus_message_is_gvariant(message))
+	gvariant = _dbus_message_is_gvariant(message);
+
+	if (gvariant)
 		driver = &gvariant_driver;
 	else
 		driver = &dbus1_driver;
 
 	builder = driver->new(message->header, message->header_size);
 
-	if (_dbus_message_is_gvariant(message)) {
-		uint32_t field_length = 0;
-		driver->append_basic(builder, 'u', &field_length);
-	}
-
-	driver->enter_array(builder, _dbus_message_is_gvariant(message) ?
-				"(tv)" : "(yv)");
+	driver->enter_array(builder, gvariant ? "(tv)" : "(yv)");
 
 	if (message->path) {
 		add_field(builder, driver, DBUS_MESSAGE_FIELD_PATH,
@@ -880,8 +932,18 @@ static void build_header(struct l_dbus_message *message, const char *signature)
 	}
 
 	if (message->reply_serial != 0) {
-		add_field(builder, driver, DBUS_MESSAGE_FIELD_REPLY_SERIAL,
+		if (gvariant) {
+			uint64_t reply_serial = message->reply_serial;
+
+			add_field(builder, driver,
+					DBUS_MESSAGE_FIELD_REPLY_SERIAL,
+					"t", &reply_serial);
+		} else {
+			add_field(builder, driver,
+					DBUS_MESSAGE_FIELD_REPLY_SERIAL,
 					"u", &message->reply_serial);
+		}
+
 		message->reply_serial = 0;
 	}
 
@@ -904,18 +966,18 @@ static void build_header(struct l_dbus_message *message, const char *signature)
 
 	driver->free(builder);
 
-	hdr = message->header;
+	if (!_dbus_message_is_gvariant(message)) {
+		struct dbus_header *hdr = message->header;
 
-	if (_dbus_message_is_gvariant(message))
-		hdr->field_length = header_size - 16;
-
-	hdr->body_length = message->body_size;
+		hdr->dbus1.body_length = message->body_size;
+	}
 
 	/* We must align the end of the header to an 8-byte boundary */
 	message->header_size = align_len(header_size, 8);
 	message->header = l_realloc(message->header, message->header_size);
 	memset(message->header + header_size, 0,
 			message->header_size - header_size);
+	message->header_end = header_size;
 }
 
 struct container {
@@ -1314,9 +1376,20 @@ uint32_t _dbus_message_get_reply_serial(struct l_dbus_message *message)
 	if (unlikely(!message))
 		return 0;
 
-	if (message->reply_serial == 0)
-		get_header_field(message, DBUS_MESSAGE_FIELD_REPLY_SERIAL, 'u',
+	if (message->reply_serial == 0) {
+		if (_dbus_message_is_gvariant(message)) {
+			uint64_t reply_serial;
+
+			get_header_field(message,
+					DBUS_MESSAGE_FIELD_REPLY_SERIAL, 't',
+					&reply_serial);
+
+			message->reply_serial = reply_serial;
+		} else
+			get_header_field(message,
+					DBUS_MESSAGE_FIELD_REPLY_SERIAL, 'u',
 					&message->reply_serial);
+	}
 
 	return message->reply_serial;
 }
