@@ -449,84 +449,51 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 	return 0;
 }
 
-static int collect_body_parts(struct kdbus_msg *kmsg,
-					size_t header_size, void **out_header,
-					size_t body_size, void **out_body)
+static void collect_body_parts(struct kdbus_msg *kmsg, size_t size, void **data)
 {
 	struct kdbus_item *item;
-	void *body;
-	void *header;
-	bool saw_header = false;
 	size_t offset = 0;
 
-	header = l_malloc(header_size);
-	if (!header)
-		return -ENOMEM;
-
-	body = NULL;
-
-	if (body_size > 0) {
-		body = l_malloc(body_size);
-		if (!body) {
-			l_free(header);
-			return -ENOMEM;
-		}
-	}
+	*data = l_malloc(size);
 
 	KDBUS_ITEM_FOREACH(item, kmsg, items) {
 		switch (item->type) {
 		case KDBUS_ITEM_PAYLOAD_OFF:
-			if (saw_header) {
-				memcpy(body + offset,
-					(void *)kmsg + item->vec.offset,
-					item->vec.size);
+			memcpy(*data + offset, (void *) kmsg + item->vec.offset,
+				item->vec.size);
 
-				offset += item->vec.size;
-			} else {
-				memcpy(header, (void *)kmsg + item->vec.offset,
-					item->vec.size);
-				saw_header = true;
-			}
+			offset += item->vec.size;
 
 			break;
 		}
 	}
-
-	*out_body = body;
-	*out_header = header;
-
-	return 0;
 }
 
 static int _dbus_kernel_make_message(struct kdbus_msg *kmsg,
 				struct l_dbus_message **out_message)
 {
 	struct kdbus_item *item;
-	void *header = 0;
-	size_t header_size = 0;
+	void *data = 0;
+	size_t size = 0;
 	struct dbus_header *hdr;
-	void *body = 0;
-	size_t body_size = 0;
-	int r;
 	const char *destination = 0;
 	char unique_bus_name[128];
 
 	KDBUS_ITEM_FOREACH(item, kmsg, items) {
 		switch (item->type) {
 		case KDBUS_ITEM_PAYLOAD_OFF:
-			if (!header_size) {
-				header = (void *)kmsg + item->vec.offset;
-
-				header_size = item->vec.size;
-
-				if (!_dbus_header_is_valid(header, header_size))
+			if (!size) {
+				if (item->vec.size < sizeof(struct dbus_header))
 					return -EBADMSG;
-			} else
-				body_size += item->vec.size;
+
+				hdr = (void *)kmsg + item->vec.offset;
+			}
+
+			size += item->vec.size;
 
 			break;
 		case KDBUS_ITEM_PAYLOAD_MEMFD:
-			if (!header_size)
+			if (!size)
 				return -EBADMSG;
 
 			return -ENOTSUP;
@@ -541,23 +508,21 @@ static int _dbus_kernel_make_message(struct kdbus_msg *kmsg,
 		}
 	}
 
-	if (!header)
+	if (!size)
 		return -EBADMSG;
 
-	hdr = header;
 	if (hdr->endian != DBUS_NATIVE_ENDIAN)
 		return -EPROTOTYPE;
 
 	if (hdr->version != 2)
 		return -EPROTO;
 
-	r = collect_body_parts(kmsg, header_size, &header,
-						body_size, &body);
-	if (r < 0)
-		return r;
+	collect_body_parts(kmsg, size, &data);
 
-	*out_message = dbus_message_build(header, header_size, body, body_size,
-						NULL, 0);
+	*out_message = dbus_message_from_blob(data, size);
+
+	l_free(data);
+
 	if (!*out_message)
 		return -EBADMSG;
 
