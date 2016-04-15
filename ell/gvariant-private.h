@@ -63,3 +63,7 @@ bool _gvariant_builder_leave_variant(struct dbus_builder *builder);
 bool _gvariant_builder_enter_array(struct dbus_builder *builder,
 					const char *signature);
 bool _gvariant_builder_leave_array(struct dbus_builder *builder);
+
+size_t _gvariant_message_finalize(size_t header_end,
+					void *body, size_t body_size,
+					const char *signature);

@@ -1292,6 +1292,8 @@ char *_gvariant_builder_finish(struct dbus_builder *builder,
 {
 	char *signature;
 	struct container *root;
+	uint8_t *variant_buf;
+	size_t size;
 
 	if (unlikely(!builder))
 		return NULL;
@@ -1307,8 +1309,29 @@ char *_gvariant_builder_finish(struct dbus_builder *builder,
 	if (_gvariant_is_fixed_size(signature)) {
 		int alignment = _gvariant_get_alignment(signature);
 		grow_body(builder, 0, alignment);
+
+		/* Empty struct or "unit type" is encoded one zero byte */
+		if (signature[0] == '\0')
+			grow_body(builder, 1, 1);
 	} else
 		container_append_struct_offsets(root, builder);
+
+	/*
+	 * Make sure there's enough space after the body for the variant
+	 * signature written here but not included in the body size and
+	 * one framing offset value to be written in
+	 * _gvariant_message_finalize.
+	 */
+	size = 3 + strlen(signature) + 8;
+	if (builder->body_pos + size > builder->body_size)
+		builder->body = l_realloc(builder->body,
+						builder->body_pos + size);
+
+	variant_buf = builder->body + builder->body_pos;
+	*variant_buf++ = 0;
+	*variant_buf++ = '(';
+	variant_buf = mempcpy(variant_buf, signature, strlen(signature));
+	*variant_buf++ = ')';
 
 	*body = builder->body;
 	*body_size = builder->body_pos;
@@ -1316,4 +1339,25 @@ char *_gvariant_builder_finish(struct dbus_builder *builder,
 	builder->body_size = 0;
 
 	return signature;
+}
+
+/*
+ * Write the header's framing offset after the body variant which is the
+ * last piece of data in the message after the header, the padding and
+ * the builder has written the message body.
+ */
+size_t _gvariant_message_finalize(size_t header_end,
+					void *body, size_t body_size,
+					const char *signature)
+{
+	size_t offset_start;
+	size_t offset_size;
+
+	offset_start = body_size + 3 + strlen(signature);
+
+	offset_size = offset_length(align_len(header_end, 8) + offset_start, 1);
+
+	write_word_le(body + offset_start, header_end, offset_size);
+
+	return align_len(header_end, 8) + offset_start + offset_size;
 }
