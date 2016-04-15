@@ -160,7 +160,7 @@ bool _dbus_valid_method(const char *method);
 bool _dbus_parse_unique_name(const char *name, uint64_t *out_id);
 bool _dbus_valid_bus_name(const char *bus_name);
 
-bool _dbus_header_is_valid(void *data, size_t size);
+bool _dbus1_header_is_valid(void *data, size_t size);
 
 void _dbus_method_introspection(struct _dbus_method *info,
 					struct l_string *buf);

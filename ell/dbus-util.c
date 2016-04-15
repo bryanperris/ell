@@ -412,7 +412,7 @@ const char *_dbus_signature_end(const char *signature)
 	return NULL;
 }
 
-bool _dbus_header_is_valid(void *data, size_t size)
+bool _dbus1_header_is_valid(void *data, size_t size)
 {
 	struct dbus_header *hdr;
 	size_t header_len;
