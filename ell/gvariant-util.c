@@ -1007,6 +1007,10 @@ static bool leave_struct_dict_common(struct dbus_builder *builder,
 		int alignment = _gvariant_get_alignment(container->signature);
 		grow_body(builder, 0, alignment);
 
+		/* Empty struct or "unit type" is a encoded as a zero byte */
+		if (container->signature[0] == '\0')
+			grow_body(builder, 1, 1);
+
 		parent->variable_is_last = false;
 	} else {
 		size_t offset;
