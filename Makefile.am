@@ -75,6 +75,7 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/dbus-message.c \
 			ell/dbus-util.c \
 			ell/dbus-service.c \
+			ell/dbus-name-cache.c \
 			ell/dbus-filter.c \
 			ell/gvariant-private.h \
 			ell/gvariant-util.c \

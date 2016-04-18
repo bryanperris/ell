@@ -64,6 +64,7 @@ struct l_dbus_ops {
 				struct l_dbus_message *message);
 	struct l_dbus_message *(*recv_message)(struct l_dbus *bus);
 	void (*free)(struct l_dbus *bus);
+	struct _dbus_name_ops name_ops;
 	struct _dbus_filter_ops filter_ops;
 	uint32_t (*name_acquire)(struct l_dbus *dbus, const char *name,
 				bool allow_replacement, bool replace_existing,
@@ -93,6 +94,7 @@ struct l_dbus {
 	l_dbus_destroy_func_t debug_destroy;
 	void *debug_data;
 	struct _dbus_object_tree *tree;
+	struct _dbus_name_cache *name_cache;
 	struct _dbus_filter *filter;
 
 	const struct l_dbus_ops *driver;
@@ -561,6 +563,8 @@ static void dbus_init(struct l_dbus *dbus, int fd)
 
 	dbus->tree = _dbus_object_tree_new();
 
+	dbus->name_cache = _dbus_name_cache_new(dbus, &dbus->driver->name_ops);
+
 	dbus->filter = _dbus_filter_new(dbus, &dbus->driver->filter_ops);
 }
 
@@ -758,6 +762,8 @@ static void get_name_owner_reply_cb(struct l_dbus_message *reply,
 		return;
 
 	_dbus_filter_name_owner_notify(req->dbus->filter, name, owner);
+
+	_dbus_name_cache_notify(req->dbus->name_cache, name, owner);
 }
 
 static bool classic_get_name_owner(struct l_dbus *bus, const char *name)
@@ -869,6 +875,9 @@ static const struct l_dbus_ops classic_ops = {
 	.send_message = classic_send_message,
 	.recv_message = classic_recv_message,
 	.free = classic_free,
+	.name_ops = {
+		.get_name_owner = classic_get_name_owner,
+	},
 	.filter_ops = {
 		.add_match = classic_add_match,
 		.remove_match = classic_remove_match,
@@ -887,6 +896,8 @@ static void name_owner_changed_cb(struct l_dbus_message *message,
 		return;
 
 	_dbus_filter_name_owner_notify(dbus->filter, name, new);
+
+	_dbus_name_cache_notify(dbus->name_cache, name, new);
 }
 
 static struct l_dbus *setup_dbus1(int fd, const char *guid)
@@ -1092,9 +1103,14 @@ static void kdbus_name_owner_change_func(const char *name, uint64_t old_owner,
 			recv_data->dbus->debug_data,
 			"Read KDBUS Name Owner Change notification");
 
-	snprintf(owner, sizeof(owner), ":1.%" PRIu64, new_owner);
+	if (new_owner)
+		snprintf(owner, sizeof(owner), ":1.%" PRIu64, new_owner);
+	else
+		owner[0] = '\0';
 
 	_dbus_filter_name_owner_notify(recv_data->dbus->filter, name, owner);
+
+	_dbus_name_cache_notify(recv_data->dbus->name_cache, name, owner);
 }
 
 static struct l_dbus_message *kdbus_recv_message(struct l_dbus *dbus)
@@ -1156,15 +1172,15 @@ static bool kdbus_get_name_owner(struct l_dbus *dbus, const char *name)
 	char owner[32];
 
 	owner_id = _dbus_kernel_get_name_owner(fd, kdbus->kdbus_pool, name);
-	if (!owner_id) {
-		l_util_debug(dbus->debug_handler,
-				dbus->debug_data, "Error getting name owner");
-		return false;
-	}
 
-	snprintf(owner, sizeof(owner), ":1.%" PRIu64, owner_id);
+	if (owner_id)
+		snprintf(owner, sizeof(owner), ":1.%" PRIu64, owner_id);
+	else
+		owner[0] = '\0';
 
 	_dbus_filter_name_owner_notify(dbus->filter, name, owner);
+
+	_dbus_name_cache_notify(dbus->name_cache, name, owner);
 
 	return true;
 }
@@ -1200,6 +1216,9 @@ static const struct l_dbus_ops kdbus_ops = {
 	.free = kdbus_free,
 	.send_message = kdbus_send_message,
 	.recv_message = kdbus_recv_message,
+	.name_ops = {
+		.get_name_owner = kdbus_get_name_owner,
+	},
 	.filter_ops = {
 		.add_match = kdbus_add_match,
 		.remove_match = kdbus_remove_match,
@@ -1344,6 +1363,8 @@ LIB_EXPORT void l_dbus_destroy(struct l_dbus *dbus)
 		dbus->ready_destroy(dbus->ready_data);
 
 	_dbus_filter_free(dbus->filter);
+
+	_dbus_name_cache_free(dbus->name_cache);
 
 	l_hashmap_destroy(dbus->signal_list, signal_list_destroy);
 	l_hashmap_destroy(dbus->message_list, message_list_destroy);

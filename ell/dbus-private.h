@@ -268,6 +268,24 @@ uint8_t _dbus_get_version(struct l_dbus *dbus);
 int _dbus_get_fd(struct l_dbus *dbus);
 struct _dbus_object_tree *_dbus_get_tree(struct l_dbus *dbus);
 
+struct _dbus_name_ops {
+	bool (*get_name_owner)(struct l_dbus *bus, const char *name);
+};
+
+struct _dbus_name_cache;
+
+struct _dbus_name_cache *_dbus_name_cache_new(struct l_dbus *bus,
+					const struct _dbus_name_ops *driver);
+void _dbus_name_cache_free(struct _dbus_name_cache *cache);
+
+bool _dbus_name_cache_add(struct _dbus_name_cache *cache, const char *name);
+bool _dbus_name_cache_remove(struct _dbus_name_cache *cache, const char *name);
+const char *_dbus_name_cache_lookup(struct _dbus_name_cache *cache,
+					const char *name);
+
+void _dbus_name_cache_notify(struct _dbus_name_cache *cache,
+				const char *name, const char *owner);
+
 struct _dbus_filter_condition {
 	enum l_dbus_match_type type;
 	const char *value;
