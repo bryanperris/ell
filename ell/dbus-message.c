@@ -722,29 +722,30 @@ bool dbus_message_compare(struct l_dbus_message *message,
 					const void *data, size_t size)
 {
 	struct l_dbus_message *other;
-	bool ret;
+	bool ret = false;
 
 	other = dbus_message_from_blob(data, size);
 
 	if (message->signature) {
 		if (!other->signature)
-			return false;
+			goto done;
 
 		if (strcmp(message->signature, other->signature))
-			return false;
+			goto done;
 	} else {
 		if (other->signature)
-			return false;
+			goto done;
 	}
 
 	if (message->body_size != other->body_size)
-		return false;
+		goto done;
 
 	if (message->header_size != other->header_size)
-		return false;
+		goto done;
 
 	ret = !memcmp(message->body, other->body, message->body_size);
 
+done:
 	l_dbus_message_unref(other);
 
 	return ret;
