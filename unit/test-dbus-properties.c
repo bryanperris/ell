@@ -27,12 +27,18 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/wait.h>
+#include <stdio.h>
 
 #include <ell/ell.h>
+#include <ell/dbus-private.h>
 
 #define TEST_BUS_ADDRESS "unix:path=/tmp/ell-test-bus"
 
 static pid_t dbus_daemon_pid = -1;
+
+static int kdbus_fd = -1;
+
+static char bus_address[128];
 
 static void start_dbus_daemon(void)
 {
@@ -65,6 +71,24 @@ static void start_dbus_daemon(void)
 	l_info("dbus-daemon process %d created", pid);
 
 	dbus_daemon_pid = pid;
+
+	strcpy(bus_address, TEST_BUS_ADDRESS);
+}
+
+static void create_kdbus(void)
+{
+	char bus_name[64];
+
+	snprintf(bus_name, sizeof(bus_name), "%u-ell-test", getuid());
+
+	kdbus_fd = _dbus_kernel_create_bus(bus_name);
+	if (kdbus_fd < 0) {
+		l_warn("kdbus not available");
+		return;
+	}
+
+	snprintf(bus_address, sizeof(bus_address),
+				"kernel:path=/dev/kdbus/%s/bus", bus_name);
 }
 
 static void signal_handler(struct l_signal *signal, uint32_t signo,
@@ -164,6 +188,9 @@ static void request_name_callback(struct l_dbus *dbus, bool success,
 static void ready_callback(void *user_data)
 {
 	l_info("ready");
+
+	l_dbus_name_acquire(dbus, "org.test", false, false, false,
+				request_name_callback, NULL);
 }
 
 static void disconnect_callback(void *user_data)
@@ -894,6 +921,12 @@ int main(int argc, char *argv[])
 	struct l_signal *signal;
 	sigset_t mask;
 	int i;
+	bool kdbus = false;
+
+	for (i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "--kdbus"))
+			kdbus = true;
+	}
 
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
@@ -904,21 +937,24 @@ int main(int argc, char *argv[])
 
 	l_log_set_stderr();
 
-	start_dbus_daemon();
+	if (kdbus)
+		create_kdbus();
+	else
+		start_dbus_daemon();
+
+	if (!bus_address[0])
+		return -1;
 
 	for (i = 0; i < 10; i++) {
 		usleep(200 * 1000);
 
-		dbus = l_dbus_new(TEST_BUS_ADDRESS);
+		dbus = l_dbus_new(bus_address);
 		if (dbus)
 			break;
 	}
 
 	l_dbus_set_ready_handler(dbus, ready_callback, dbus, NULL);
 	l_dbus_set_disconnect_handler(dbus, disconnect_callback, NULL, NULL);
-
-	l_dbus_name_acquire(dbus, "org.test", false, false, false,
-				request_name_callback, NULL);
 
 	if (!l_dbus_register_interface(dbus, "org.test", setup_test_interface,
 					NULL, true)) {
@@ -976,6 +1012,9 @@ done:
 
 	if (dbus_daemon_pid > 0)
 		kill(dbus_daemon_pid, SIGKILL);
+
+	if (kdbus_fd >= 0)
+		close(kdbus_fd);
 
 	l_signal_remove(signal);
 
