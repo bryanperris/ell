@@ -387,7 +387,7 @@ static void test_filter_tree(const void *test_data)
 		{ L_DBUS_MATCH_PATH, DBUS_PATH_DBUS },
 		{ L_DBUS_MATCH_INTERFACE, DBUS_INTERFACE_DBUS },
 		{ L_DBUS_MATCH_MEMBER, "NameOwnerChanged" },
-		{ L_DBUS_MATCH_ARGUMENT(0), ":1.101" }
+		{ L_DBUS_MATCH_ARGUMENT(0), "org.test" }
 	};
 	static struct _dbus_filter_condition rule4[] = {
 		{ L_DBUS_MATCH_TYPE, "signal" },
@@ -396,7 +396,7 @@ static void test_filter_tree(const void *test_data)
 	unsigned int id1, id2, id3, id4, internal_id1, internal_id4;
 	struct l_dbus_message *message;
 
-	filter = _dbus_filter_new(&test.dbus, &filter_ops);
+	filter = _dbus_filter_new(&test.dbus, &filter_ops, NULL);
 	assert(filter);
 
 	test.expected_rule = rule123;
@@ -423,7 +423,8 @@ static void test_filter_tree(const void *test_data)
 	message = _dbus_message_new_signal(2, DBUS_PATH_DBUS,
 						DBUS_INTERFACE_DBUS,
 						"NameOwnerChanged");
-	l_dbus_message_set_arguments(message, "sss", ":1.101", "", ":1.101");
+	l_dbus_message_set_arguments(message, "sss", "org.test",
+					":1.101", "", ":1.101");
 	_dbus_message_set_sender(message, DBUS_SERVICE_DBUS);
 	_dbus_filter_dispatch(message, filter);
 	l_dbus_message_unref(message);
