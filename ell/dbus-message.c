@@ -1326,7 +1326,7 @@ LIB_EXPORT const char *l_dbus_message_get_path(struct l_dbus_message *message)
 	if (unlikely(!message))
 		return NULL;
 
-	if (!message->path)
+	if (!message->path && message->sealed)
 		get_header_field(message, DBUS_MESSAGE_FIELD_PATH, 'o',
 					&message->path);
 
@@ -1338,7 +1338,7 @@ LIB_EXPORT const char *l_dbus_message_get_interface(struct l_dbus_message *messa
 	if (unlikely(!message))
 		return NULL;
 
-	if (!message->interface)
+	if (!message->interface && message->sealed)
 		get_header_field(message, DBUS_MESSAGE_FIELD_INTERFACE, 's',
 					&message->interface);
 
@@ -1350,7 +1350,7 @@ LIB_EXPORT const char *l_dbus_message_get_member(struct l_dbus_message *message)
 	if (unlikely(!message))
 		return NULL;
 
-	if (!message->member)
+	if (!message->member && message->sealed)
 		get_header_field(message, DBUS_MESSAGE_FIELD_MEMBER, 's',
 					&message->member);
 
@@ -1362,7 +1362,7 @@ LIB_EXPORT const char *l_dbus_message_get_destination(struct l_dbus_message *mes
 	if (unlikely(!message))
 		return NULL;
 
-	if (!message->destination)
+	if (!message->destination && message->sealed)
 		get_header_field(message, DBUS_MESSAGE_FIELD_DESTINATION, 's',
 							&message->destination);
 
@@ -1374,7 +1374,7 @@ LIB_EXPORT const char *l_dbus_message_get_sender(struct l_dbus_message *message)
 	if (unlikely(!message))
 		return NULL;
 
-	if (!message->sender)
+	if (!message->sender && message->sealed)
 		get_header_field(message, DBUS_MESSAGE_FIELD_SENDER, 's',
 					&message->sender);
 
@@ -1395,9 +1395,9 @@ uint32_t _dbus_message_get_reply_serial(struct l_dbus_message *message)
 	if (unlikely(!message))
 		return 0;
 
-	if (message->reply_serial == 0) {
+	if (message->reply_serial == 0 && message->sealed) {
 		if (_dbus_message_is_gvariant(message)) {
-			uint64_t reply_serial;
+			uint64_t reply_serial = 0;
 
 			get_header_field(message,
 					DBUS_MESSAGE_FIELD_REPLY_SERIAL, 't',
