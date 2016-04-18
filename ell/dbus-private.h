@@ -286,6 +286,15 @@ const char *_dbus_name_cache_lookup(struct _dbus_name_cache *cache,
 void _dbus_name_cache_notify(struct _dbus_name_cache *cache,
 				const char *name, const char *owner);
 
+unsigned int _dbus_name_cache_add_watch(struct _dbus_name_cache *cache,
+					const char *name,
+					l_dbus_watch_func_t connect_func,
+					l_dbus_watch_func_t disconnect_func,
+					void *user_data,
+					l_dbus_destroy_func_t destroy);
+bool _dbus_name_cache_remove_watch(struct _dbus_name_cache *cache,
+					unsigned int id);
+
 struct _dbus_filter_condition {
 	enum l_dbus_match_type type;
 	const char *value;

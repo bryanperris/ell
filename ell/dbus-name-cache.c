@@ -30,6 +30,7 @@
 
 #include "util.h"
 #include "hashmap.h"
+#include "idle.h"
 #include "dbus.h"
 #include "dbus-private.h"
 
@@ -37,11 +38,24 @@ struct _dbus_name_cache {
 	struct l_dbus *bus;
 	struct l_hashmap *names;
 	const struct _dbus_name_ops *driver;
+	unsigned int last_watch_id;
+	struct l_idle *watch_remove_work;
+};
+
+struct service_watch {
+	l_dbus_watch_func_t connect_func;
+	l_dbus_watch_func_t disconnect_func;
+	l_dbus_destroy_func_t destroy;
+	void *user_data;
+	unsigned int id;
+	bool removed;
+	struct service_watch *next;
 };
 
 struct name_cache_entry {
 	int ref_count;
 	char *unique_name;
+	struct service_watch *watches;
 };
 
 struct _dbus_name_cache *_dbus_name_cache_new(struct l_dbus *bus,
@@ -57,9 +71,27 @@ struct _dbus_name_cache *_dbus_name_cache_new(struct l_dbus *bus,
 	return cache;
 }
 
+static void service_watch_destroy(void *data)
+{
+	struct service_watch *watch = data;
+
+	if (watch->destroy)
+		watch->destroy(watch->user_data);
+
+	l_free(watch);
+}
+
 static void name_cache_entry_destroy(void *data)
 {
 	struct name_cache_entry *entry = data;
+	struct service_watch *watch;
+
+	while (entry->watches) {
+		watch = entry->watches;
+		entry->watches = watch->next;
+
+		service_watch_destroy(watch);
+	}
 
 	l_free(entry->unique_name);
 
@@ -68,6 +100,9 @@ static void name_cache_entry_destroy(void *data)
 
 void _dbus_name_cache_free(struct _dbus_name_cache *cache)
 {
+	if (cache->watch_remove_work)
+		l_idle_remove(cache->watch_remove_work);
+
 	l_hashmap_destroy(cache->names, name_cache_entry_destroy);
 
 	l_free(cache);
@@ -134,6 +169,8 @@ void _dbus_name_cache_notify(struct _dbus_name_cache *cache,
 				const char *name, const char *owner)
 {
 	struct name_cache_entry *entry;
+	struct service_watch *watch;
+	bool prev_connected, connected;
 
 	if (_dbus_parse_unique_name(name, NULL))
 		return;
@@ -143,7 +180,117 @@ void _dbus_name_cache_notify(struct _dbus_name_cache *cache,
 	if (!entry)
 		return;
 
+	prev_connected = !!entry->unique_name;
+	connected = owner && *owner != '\0';
+
 	l_free(entry->unique_name);
 
-	entry->unique_name = (owner && *owner != '\0') ? l_strdup(owner) : NULL;
+	entry->unique_name = connected ? l_strdup(owner) : NULL;
+
+	/*
+	 * This check also means we notify all watchers who have a connected
+	 * callback when we first learn that the service is in fact connected.
+	 */
+	if (connected == prev_connected)
+		return;
+
+	for (watch = entry->watches; watch; watch = watch->next)
+		if (connected && watch->connect_func)
+			watch->connect_func(cache->bus, watch->user_data);
+		else if (!connected && watch->disconnect_func)
+			watch->disconnect_func(cache->bus, watch->user_data);
+}
+
+unsigned int _dbus_name_cache_add_watch(struct _dbus_name_cache *cache,
+					const char *name,
+					l_dbus_watch_func_t connect_func,
+					l_dbus_watch_func_t disconnect_func,
+					void *user_data,
+					l_dbus_destroy_func_t destroy)
+{
+	struct name_cache_entry *entry;
+	struct service_watch *watch;
+
+	if (!_dbus_name_cache_add(cache, name))
+		return 0;
+
+	watch = l_new(struct service_watch, 1);
+	watch->id = ++cache->last_watch_id;
+	watch->connect_func = connect_func;
+	watch->disconnect_func = disconnect_func;
+	watch->user_data = user_data;
+	watch->destroy = destroy;
+
+	entry = l_hashmap_lookup(cache->names, name);
+
+	watch->next = entry->watches;
+	entry->watches = watch;
+
+	if (entry->unique_name && connect_func)
+		watch->connect_func(cache->bus, watch->user_data);
+
+	return watch->id;
+}
+
+static void service_watch_remove(const void *key, void *value, void *user_data)
+{
+	struct _dbus_name_cache *cache = user_data;
+	struct name_cache_entry *entry = value;
+	struct service_watch **watch, *tmp;
+
+	for (watch = &entry->watches; *watch;) {
+		if (!(*watch)->removed) {
+			watch = &(*watch)->next;
+			continue;
+		}
+
+		tmp = *watch;
+		*watch = tmp->next;
+
+		service_watch_destroy(tmp);
+
+		_dbus_name_cache_remove(cache, key);
+	}
+}
+
+static void service_watch_remove_all(struct l_idle *idle, void *user_data)
+{
+	struct _dbus_name_cache *cache = user_data;
+
+	l_idle_remove(cache->watch_remove_work);
+	cache->watch_remove_work = NULL;
+
+	l_hashmap_foreach(cache->names, service_watch_remove, cache);
+}
+
+static void service_watch_mark(const void *key, void *value, void *user_data)
+{
+	struct name_cache_entry *entry = value;
+	struct service_watch *watch;
+	unsigned int *id = user_data;
+
+	for (watch = entry->watches; watch; watch = watch->next)
+		if (watch->id == *id) {
+			watch->removed = true;
+			watch->connect_func = NULL;
+			watch->disconnect_func = NULL;
+			*id = 0;
+			break;
+		}
+}
+
+bool _dbus_name_cache_remove_watch(struct _dbus_name_cache *cache,
+					unsigned int id)
+{
+	l_hashmap_foreach(cache->names, service_watch_mark, &id);
+
+	if (id)
+		return false;
+
+	if (!cache->watch_remove_work)
+		cache->watch_remove_work = l_idle_create(
+						service_watch_remove_all,
+						cache, NULL);
+
+	return true;
 }
