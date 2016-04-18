@@ -65,6 +65,7 @@ SIGNATURE_TEST(false, "{uv", 19);
 SIGNATURE_TEST(false, "(ss", 20);
 SIGNATURE_TEST(false, "aaaaa", 21);
 SIGNATURE_TEST(true, "()", 22);
+SIGNATURE_TEST(false, "", 23);
 
 static void test_signature(const void *test_data)
 {
@@ -1708,6 +1709,7 @@ int main(int argc, char *argv[])
 	l_test_add("Signature test 20", test_signature, &sig_test20);
 	l_test_add("Signature test 21", test_signature, &sig_test21);
 	l_test_add("Signature test 22", test_signature, &sig_test22);
+	l_test_add("Signature test 23", test_signature, &sig_test23);
 
 	l_test_add("Alignment test 1", test_alignment, &align_test1);
 	l_test_add("Alignment test 2", test_alignment, &align_test2);
