@@ -62,12 +62,7 @@ struct _dbus_filter {
 	unsigned int signal_id;
 	unsigned int last_id;
 	const struct _dbus_filter_ops *driver;
-	struct l_hashmap *unique_names;
-};
-
-struct unique_name_record {
-	int ref_count;
-	char *unique_name;
+	struct _dbus_name_cache *name_cache;
 };
 
 static void filter_subtree_free(struct filter_node *node)
@@ -92,24 +87,12 @@ static void filter_subtree_free(struct filter_node *node)
 	}
 }
 
-static void unique_name_record_free(void *data)
-{
-	struct unique_name_record *name_rec = data;
-
-	l_free(name_rec->unique_name);
-	l_free(name_rec);
-}
-
 static void dbus_filter_destroy(void *data)
 {
 	struct _dbus_filter *filter = data;
 
 	if (filter->root)
 		filter_subtree_free(filter->root);
-
-	if (filter->unique_names)
-		l_hashmap_destroy(filter->unique_names,
-					unique_name_record_free);
 
 	l_free(filter);
 }
@@ -120,7 +103,6 @@ static void filter_dispatch_match_recurse(struct _dbus_filter *filter,
 {
 	const char *value = NULL;
 	const char *alt_value = NULL;
-	const struct unique_name_record *name_rec;
 	struct filter_node *child;
 
 	switch ((int) node->type) {
@@ -157,13 +139,9 @@ static void filter_dispatch_match_recurse(struct _dbus_filter *filter,
 	if (!value)
 		return;
 
-	if (node->type == L_DBUS_MATCH_SENDER && filter->unique_names) {
-		name_rec = l_hashmap_lookup(filter->unique_names,
-						node->match.value);
-
-		if (name_rec)
-			alt_value = name_rec->unique_name;
-	}
+	if (node->type == L_DBUS_MATCH_SENDER && filter->name_cache)
+		alt_value = _dbus_name_cache_lookup(filter->name_cache,
+							node->match.value);
 
 	if (strcmp(value, node->match.value) &&
 			(!alt_value || strcmp(value, alt_value)))
@@ -180,28 +158,9 @@ void _dbus_filter_dispatch(struct l_dbus_message *message, void *user_data)
 	filter_dispatch_match_recurse(filter, filter->root, message);
 }
 
-void _dbus_filter_name_owner_notify(struct _dbus_filter *filter,
-					const char *name, const char *owner)
-{
-	struct unique_name_record *name_rec;
-
-	if (!filter)
-		return;
-
-	if (_dbus_parse_unique_name(name, NULL))
-		return;
-
-	name_rec = l_hashmap_lookup(filter->unique_names, name);
-	if (!name_rec)
-		return;
-
-	l_free(name_rec->unique_name);
-
-	name_rec->unique_name = (owner && *owner) ? l_strdup(owner) : NULL;
-}
-
 struct _dbus_filter *_dbus_filter_new(struct l_dbus *dbus,
-					const struct _dbus_filter_ops *driver)
+					const struct _dbus_filter_ops *driver,
+					struct _dbus_name_cache *name_cache)
 {
 	struct _dbus_filter *filter;
 
@@ -209,14 +168,12 @@ struct _dbus_filter *_dbus_filter_new(struct l_dbus *dbus,
 
 	filter->dbus = dbus;
 	filter->driver = driver;
+	filter->name_cache = name_cache;
 
 	if (!filter->driver->skip_register)
 		filter->signal_id = l_dbus_register(dbus, _dbus_filter_dispatch,
 							filter,
 							dbus_filter_destroy);
-
-	if (filter->driver->get_name_owner)
-		filter->unique_names = l_hashmap_string_new();
 
 	return filter;
 }
@@ -230,54 +187,6 @@ void _dbus_filter_free(struct _dbus_filter *filter)
 		l_dbus_unregister(filter->dbus, filter->signal_id);
 	else
 		dbus_filter_destroy(filter);
-}
-
-static bool filter_add_bus_name(struct _dbus_filter *filter, const char *name)
-{
-	struct unique_name_record *name_rec;
-
-	if (!filter->unique_names)
-		return true;
-
-	if (_dbus_parse_unique_name(name, NULL))
-		return true;
-
-	if (!_dbus_valid_bus_name(name))
-		return false;
-
-	name_rec = l_hashmap_lookup(filter->unique_names, name);
-	if (!name_rec) {
-		name_rec = l_new(struct unique_name_record, 1);
-
-		l_hashmap_insert(filter->unique_names, name, name_rec);
-
-		filter->driver->get_name_owner(filter->dbus, name);
-	}
-
-	name_rec->ref_count++;
-
-	return true;
-}
-
-static void filter_remove_bus_name(struct _dbus_filter *filter,
-					const char *name)
-{
-	struct unique_name_record *name_rec;
-
-	if (!filter->unique_names)
-		return;
-
-	if (_dbus_parse_unique_name(name, NULL))
-		return;
-
-	name_rec = l_hashmap_lookup(filter->unique_names, name);
-
-	if (--name_rec->ref_count)
-		return;
-
-	l_hashmap_remove(filter->unique_names, name);
-
-	unique_name_record_free(name_rec);
 }
 
 static int condition_compare(const void *a, const void *b)
@@ -312,8 +221,11 @@ static bool remove_recurse(struct _dbus_filter *filter,
 		if (tmp->match.remote_rule)
 			filter->driver->remove_match(filter->dbus, tmp->id);
 
-		if (tmp->type == L_DBUS_MATCH_SENDER)
-			filter_remove_bus_name(filter, tmp->match.value);
+		if (tmp->type == L_DBUS_MATCH_SENDER && filter->name_cache &&
+				!_dbus_parse_unique_name(tmp->match.value,
+								NULL))
+			_dbus_name_cache_remove(filter->name_cache,
+						tmp->match.value);
 
 		filter_subtree_free(tmp);
 	}
@@ -356,8 +268,14 @@ unsigned int _dbus_filter_add_rule(struct _dbus_filter *filter,
 
 			*node_ptr = node;
 
-			if (node->type == L_DBUS_MATCH_SENDER)
-				filter_add_bus_name(filter, node->match.value);
+			if (node->type == L_DBUS_MATCH_SENDER &&
+					filter->name_cache &&
+					!_dbus_parse_unique_name(
+							node->match.value,
+							NULL))
+				_dbus_name_cache_add(filter->name_cache,
+							node->match.value);
+
 		}
 
 		node_ptr = &node->match.children;

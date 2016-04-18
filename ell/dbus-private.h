@@ -297,11 +297,11 @@ struct _dbus_filter_ops {
 				const struct _dbus_filter_condition *rule,
 				int rule_len);
 	bool (*remove_match)(struct l_dbus *bus, unsigned int id);
-	bool (*get_name_owner)(struct l_dbus *bus, const char *name);
 };
 
 struct _dbus_filter *_dbus_filter_new(struct l_dbus *dbus,
-					const struct _dbus_filter_ops *driver);
+					const struct _dbus_filter_ops *driver,
+					struct _dbus_name_cache *name_cache);
 void _dbus_filter_free(struct _dbus_filter *filter);
 
 unsigned int _dbus_filter_add_rule(struct _dbus_filter *filter,
@@ -315,8 +315,6 @@ char *_dbus_filter_rule_to_str(const struct _dbus_filter_condition *rule,
 				int rule_len);
 
 void _dbus_filter_dispatch(struct l_dbus_message *message, void *user_data);
-void _dbus_filter_name_owner_notify(struct _dbus_filter *filter,
-					const char *name, const char *owner);
 
 struct dbus1_filter_data;
 

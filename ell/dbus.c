@@ -565,7 +565,8 @@ static void dbus_init(struct l_dbus *dbus, int fd)
 
 	dbus->name_cache = _dbus_name_cache_new(dbus, &dbus->driver->name_ops);
 
-	dbus->filter = _dbus_filter_new(dbus, &dbus->driver->filter_ops);
+	dbus->filter = _dbus_filter_new(dbus, &dbus->driver->filter_ops,
+					dbus->name_cache);
 }
 
 static void classic_free(struct l_dbus *dbus)
@@ -761,8 +762,6 @@ static void get_name_owner_reply_cb(struct l_dbus_message *reply,
 	if (!l_dbus_message_get_arguments(req->message, "s", &name))
 		return;
 
-	_dbus_filter_name_owner_notify(req->dbus->filter, name, owner);
-
 	_dbus_name_cache_notify(req->dbus->name_cache, name, owner);
 }
 
@@ -881,7 +880,6 @@ static const struct l_dbus_ops classic_ops = {
 	.filter_ops = {
 		.add_match = classic_add_match,
 		.remove_match = classic_remove_match,
-		.get_name_owner = classic_get_name_owner,
 	},
 	.name_acquire = classic_name_acquire,
 };
@@ -894,8 +892,6 @@ static void name_owner_changed_cb(struct l_dbus_message *message,
 
 	if (!l_dbus_message_get_arguments(message, "sss", &name, &old, &new))
 		return;
-
-	_dbus_filter_name_owner_notify(dbus->filter, name, new);
 
 	_dbus_name_cache_notify(dbus->name_cache, name, new);
 }
@@ -1108,8 +1104,6 @@ static void kdbus_name_owner_change_func(const char *name, uint64_t old_owner,
 	else
 		owner[0] = '\0';
 
-	_dbus_filter_name_owner_notify(recv_data->dbus->filter, name, owner);
-
 	_dbus_name_cache_notify(recv_data->dbus->name_cache, name, owner);
 }
 
@@ -1178,8 +1172,6 @@ static bool kdbus_get_name_owner(struct l_dbus *dbus, const char *name)
 	else
 		owner[0] = '\0';
 
-	_dbus_filter_name_owner_notify(dbus->filter, name, owner);
-
 	_dbus_name_cache_notify(dbus->name_cache, name, owner);
 
 	return true;
@@ -1222,7 +1214,6 @@ static const struct l_dbus_ops kdbus_ops = {
 	.filter_ops = {
 		.add_match = kdbus_add_match,
 		.remove_match = kdbus_remove_match,
-		.get_name_owner = kdbus_get_name_owner,
 	},
 	.name_acquire = kdbus_name_acquire,
 };
