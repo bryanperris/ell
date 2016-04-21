@@ -424,7 +424,7 @@ static void test_filter_tree(const void *test_data)
 						DBUS_INTERFACE_DBUS,
 						"NameOwnerChanged");
 	l_dbus_message_set_arguments(message, "sss", "org.test",
-					":1.101", "", ":1.101");
+					"", ":1.101");
 	_dbus_message_set_sender(message, DBUS_SERVICE_DBUS);
 	_dbus_filter_dispatch(message, filter);
 	l_dbus_message_unref(message);
