@@ -249,7 +249,7 @@ bool _dbus_valid_signature(const char *sig)
 	return true;
 }
 
-static int _dbus_num_children(const char *sig)
+int _dbus_num_children(const char *sig)
 {
 	const char *s = sig;
 	int num_children = 0;

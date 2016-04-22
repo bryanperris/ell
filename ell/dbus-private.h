@@ -156,6 +156,7 @@ const char *_dbus_signature_end(const char *signature);
 
 bool _dbus_valid_object_path(const char *path);
 bool _dbus_valid_signature(const char *sig);
+int _dbus_num_children(const char *sig);
 bool _dbus_valid_interface(const char *interface);
 bool _dbus_valid_method(const char *method);
 bool _dbus_parse_unique_name(const char *name, uint64_t *out_id);
