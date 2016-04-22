@@ -408,7 +408,7 @@ LIB_EXPORT bool l_dbus_interface_property(struct l_dbus_interface *interface,
 	if (unlikely(!signature || !getter))
 		return false;
 
-	if (!_dbus_valid_signature(signature))
+	if (_dbus_num_children(signature) != 1)
 		return false;
 
 	/* Pre-calculate the needed meta-info length */
