@@ -328,38 +328,47 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_return(
 	return message;
 }
 
+struct l_dbus_message *_dbus_message_new_error(uint8_t version,
+						uint32_t reply_serial,
+						const char *destination,
+						const char *name,
+						const char *error)
+{
+	struct l_dbus_message *reply;
+
+	if (!_dbus_valid_interface(name))
+		return NULL;
+
+	reply = message_new_common(DBUS_MESSAGE_TYPE_ERROR,
+					DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED,
+					version);
+
+	reply->error_name = l_strdup(name);
+	reply->destination = l_strdup(destination);
+	reply->reply_serial = reply_serial;
+
+	if (!l_dbus_message_set_arguments(reply, "s", error)) {
+		l_dbus_message_unref(reply);
+		return NULL;
+	}
+
+	return reply;
+}
+
 LIB_EXPORT struct l_dbus_message *l_dbus_message_new_error_valist(
 					struct l_dbus_message *method_call,
 					const char *name,
 					const char *format, va_list args)
 {
 	char str[1024];
-	struct l_dbus_message *reply;
 	struct dbus_header *hdr = method_call->header;
-	const char *sender;
-
-	if (!_dbus_valid_interface(name))
-		return NULL;
 
 	vsnprintf(str, sizeof(str), format, args);
-	reply = message_new_common(DBUS_MESSAGE_TYPE_ERROR,
-					DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED,
-					hdr->version);
 
-	reply->reply_serial = _dbus_message_get_serial(method_call);
-
-	sender = l_dbus_message_get_sender(method_call);
-	if (sender)
-		reply->destination = l_strdup(sender);
-
-	reply->error_name = l_strdup(name);
-
-	if (!l_dbus_message_set_arguments(reply, "s", str)) {
-		l_dbus_message_unref(reply);
-		return NULL;
-	}
-
-	return reply;
+	return _dbus_message_new_error(hdr->version,
+					_dbus_message_get_serial(method_call),
+					l_dbus_message_get_sender(method_call),
+					name, str);
 }
 
 LIB_EXPORT struct l_dbus_message *l_dbus_message_new_error(

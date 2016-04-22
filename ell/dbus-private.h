@@ -141,6 +141,11 @@ struct l_dbus_message *_dbus_message_new_signal(uint8_t version,
 						const char *path,
 						const char *interface,
 						const char *name);
+struct l_dbus_message *_dbus_message_new_error(uint8_t version,
+						uint32_t reply_serial,
+						const char *destination,
+						const char *name,
+						const char *error);
 
 struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size);
 struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
