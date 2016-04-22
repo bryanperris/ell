@@ -973,7 +973,7 @@ static void build_header(struct l_dbus_message *message, const char *signature)
 		message->sender = NULL;
 	}
 
-	if (signature[0] != '\0')
+	if (signature[0] != '\0' && !gvariant)
 		add_field(builder, driver, DBUS_MESSAGE_FIELD_SIGNATURE,
 				"g", signature);
 
@@ -1202,13 +1202,10 @@ static bool append_arguments(struct l_dbus_message *message,
 	if (strcmp(signature, generated_signature))
 		return false;
 
-	l_free(generated_signature);
-
 	build_header(message, signature);
 	message->sealed = true;
-
-	get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, 'g',
-						&message->signature);
+	message->signature = generated_signature;
+	message->signature_free = true;
 
 	return true;
 
@@ -1933,10 +1930,8 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_builder_finalize(
 
 	build_header(builder->message, generated_signature);
 	builder->message->sealed = true;
-
-	get_header_field(builder->message, DBUS_MESSAGE_FIELD_SIGNATURE, 'g',
-						&builder->message->signature);
-	l_free(generated_signature);
+	builder->message->signature = generated_signature;
+	builder->message->signature_free = true;
 
 	return builder->message;
 }
