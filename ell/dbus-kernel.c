@@ -559,6 +559,7 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 	struct kdbus_item *item;
 	int r;
 	size_t min_size;
+	const char *error;
 
 	memset(&recv_cmd, 0, sizeof(recv_cmd));
 
@@ -599,6 +600,23 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 						item->name_change.old_id.id,
 						item->name_change.new_id.id,
 						user_data);
+			break;
+
+		case KDBUS_ITEM_REPLY_TIMEOUT:
+		case KDBUS_ITEM_REPLY_DEAD:
+			if (item->type == KDBUS_ITEM_REPLY_TIMEOUT)
+				error = "Did not receive a reply.";
+			else
+				error = "Message recipient disconnected from "
+					"message bus without replying.";
+
+			dbus_msg = _dbus_message_new_error(
+					2, msg->cookie_reply, NULL,
+					"org.freedesktop.DBus.Error.NoReply",
+					error);
+			if (dbus_msg)
+				message_func(dbus_msg, user_data);
+
 			break;
 
 		default:
