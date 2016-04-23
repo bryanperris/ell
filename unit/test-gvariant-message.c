@@ -110,6 +110,30 @@ static const struct message_data message_data_complex_1 = {
 	.binary_len	= sizeof(message_binary_complex_1),
 };
 
+static const unsigned char message_binary_empty_sig[] = {
+	0x6c, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x57, 0x04, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x2f, 0x66, 0x6f, 0x6f, 0x2f, 0x62, 0x61, 0x72, 0x00, 0x00, 0x6f, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x46, 0x6f, 0x6f, 0x62, 0x61, 0x72, 0x00, 0x00, 0x73, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x66, 0x6f, 0x6f, 0x2e, 0x62, 0x61, 0x72, 0x00, 0x00, 0x73, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x66, 0x6f, 0x6f, 0x2e, 0x62, 0x61, 0x72, 0x00, 0x00, 0x73, 0x13, 0x29,
+	0x42, 0x5a, 0x00, 0x00, 0x00, 0x00, 0x28, 0x29, 0x6e,
+};
+
+static const struct message_data message_data_empty_sig = {
+	.type		= "method_call",
+	.path		= "/foo/bar",
+	.interface	= "foo.bar",
+	.member		= "Foobar",
+	.destination	= "foo.bar",
+	.signature	= "",
+	.binary		= message_binary_empty_sig,
+	.binary_len	= sizeof(message_binary_empty_sig),
+};
+
 static struct l_dbus_message *check_message(const struct message_data *msg_data)
 {
 	struct l_dbus_message *msg;
@@ -303,6 +327,28 @@ static void build_complex_1(const void *data)
 	compare_message(msg, data);
 }
 
+static void check_empty_sig(const void *data)
+{
+	struct l_dbus_message *msg = check_message(data);
+
+	assert(l_dbus_message_get_arguments(msg, ""));
+
+	l_dbus_message_unref(msg);
+}
+
+static void build_empty_sig(const void *data)
+{
+	struct l_dbus_message *msg = build_message(data);
+	bool result;
+
+	result = l_dbus_message_set_arguments(msg, "");
+	assert(result);
+
+	_dbus_message_set_serial(msg, 1111);
+
+	compare_message(msg, data);
+}
+
 static void builder_rewind(const void *data)
 {
 	struct l_dbus_message *msg = build_message(data);
@@ -363,6 +409,11 @@ int main(int argc, char *argv[])
 						&message_data_complex_1);
 	l_test_add("Complex 1 (build)", build_complex_1,
 						&message_data_complex_1);
+
+	l_test_add("Empty signature (parse)", check_empty_sig,
+						&message_data_empty_sig);
+	l_test_add("Empty signature (build)", build_empty_sig,
+						&message_data_empty_sig);
 
 	l_test_add("Message Builder Rewind Complex 1", builder_rewind,
 						&message_data_complex_1);
