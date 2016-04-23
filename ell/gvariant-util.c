@@ -391,11 +391,17 @@ static bool gvariant_iter_init_internal(struct l_dbus_message_iter *iter,
 	iter->len = len;
 	iter->pos = 0;
 
-	n_children = _gvariant_num_children(subsig);
-	if (n_children < 0)
-		return false;
+	if (subsig[0] != '\0') {
+		n_children = _gvariant_num_children(subsig);
+		if (n_children < 0)
+			return false;
 
-	children = l_new(struct gvariant_type_info, n_children);
+		children = l_new(struct gvariant_type_info, n_children);
+	} else {
+		n_children = 0;
+
+		children = NULL;
+	}
 
 	for (p = sig_start, i = 0; i < n_children; i++) {
 		int alignment;
@@ -966,7 +972,7 @@ static bool enter_struct_dict_common(struct dbus_builder *builder,
 bool _gvariant_builder_enter_struct(struct dbus_builder *builder,
 					const char *signature)
 {
-	if (!_gvariant_valid_signature(signature))
+	if (signature[0] && !_gvariant_valid_signature(signature))
 		return false;
 
 	return enter_struct_dict_common(builder, signature,
