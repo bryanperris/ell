@@ -374,7 +374,7 @@ static bool gvariant_iter_init_internal(struct l_dbus_message_iter *iter,
 		unsigned int alignment : 4;
 		size_t end;		/* Index past the end of the type */
 	} *children;
-	uint8_t n_children;
+	int n_children;
 
 	if (sig_end) {
 		size_t len = sig_end - sig_start;
@@ -392,6 +392,9 @@ static bool gvariant_iter_init_internal(struct l_dbus_message_iter *iter,
 	iter->pos = 0;
 
 	n_children = _gvariant_num_children(subsig);
+	if (n_children < 0)
+		return false;
+
 	children = l_new(struct gvariant_type_info, n_children);
 
 	for (p = sig_start, i = 0; i < n_children; i++) {
