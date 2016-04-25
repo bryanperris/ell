@@ -444,6 +444,38 @@ LIB_EXPORT bool l_str_has_prefix(const char *str, const char *prefix)
 }
 
 /**
+ * l_str_has_suffix:
+ * @str: A string to be examined
+ * @suffix: Suffix string
+ *
+ * Determines if the string given by @str ends with the specified @suffix.
+ *
+ * Returns: True if @str ends with the specified @suffix.  False otherwise.
+ */
+LIB_EXPORT bool l_str_has_suffix(const char *str, const char *suffix)
+{
+	size_t str_len;
+	size_t suffix_len;
+	size_t len_diff;
+
+	if (unlikely(!str))
+		return false;
+
+	if (unlikely(!suffix))
+		return false;
+
+	str_len = strlen(str);
+	suffix_len = strlen(suffix);
+
+	if (str_len < suffix_len)
+		return false;
+
+	len_diff = str_len - suffix_len;
+
+	return !strcmp(&str[len_diff], suffix);
+}
+
+/**
  * l_util_hexstring:
  * @buf: buffer pointer
  * @len: length of buffer

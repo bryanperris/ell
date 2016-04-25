@@ -208,6 +208,7 @@ char **l_strsplit_set(const char *str, const char *separators);
 char *l_strjoinv(char **str_array, const char delim);
 
 bool l_str_has_prefix(const char *str, const char *prefix);
+bool l_str_has_suffix(const char *str, const char *suffix);
 
 char *l_util_hexstring(const unsigned char *buf, size_t len);
 unsigned char *l_util_from_hexstring(const char *str, size_t *out_len);
