@@ -62,12 +62,26 @@ static void test_from_hexstring(const void *test_data)
 	assert(!bytes);
 }
 
+static void test_has_suffix(const void *test_data)
+{
+	const char *str = "string";
+	const char *suffix = "ing";
+
+	assert(l_str_has_suffix(str, suffix));
+	assert(l_str_has_suffix(str, str));
+	assert(!l_str_has_suffix(NULL, suffix));
+	assert(!l_str_has_suffix(str, NULL));
+	assert(!l_str_has_suffix(suffix, str));
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
 	l_test_add("l_util_hexstring", test_hexstring, NULL);
 	l_test_add("l_util_from_hexstring", test_from_hexstring, NULL);
+
+	l_test_add("l_util_has_suffix", test_has_suffix, NULL);
 
 	return l_test_run();
 }
