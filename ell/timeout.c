@@ -103,7 +103,8 @@ static inline int timeout_set(int fd, unsigned int seconds, long nanoseconds)
  * The timeout will on fire once. The timeout handling needs to be rearmed
  * with l_timeout_modify() to trigger again.
  *
- * Returns: a newly allocated #l_timeout object
+ * Returns: a newly allocated #l_timeout object. On failure, the function
+ * returns NULL.
  **/
 LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
 			l_timeout_notify_cb_t callback,
@@ -126,7 +127,8 @@ LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
  * The timeout will on fire once. The timeout handling needs to be rearmed
  * with l_timeout_modify_with_nanoseconds() to trigger again.
  *
- * Returns: a newly allocated #l_timeout object
+ * Returns: a newly allocated #l_timeout object. On failure, the function
+ * returns NULL.
  **/
 LIB_EXPORT struct l_timeout *l_timeout_create_with_nanoseconds(unsigned int seconds,
 			long nanoseconds, l_timeout_notify_cb_t callback,
