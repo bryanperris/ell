@@ -489,6 +489,9 @@ static int _dbus_kernel_make_message(struct kdbus_msg *kmsg,
 	struct dbus_header *hdr;
 	const char *destination = 0;
 	char unique_bus_name[128];
+	uint32_t num_fds = 0;
+	int *fds = NULL;
+	unsigned int i;
 
 	KDBUS_ITEM_FOREACH(item, kmsg, items) {
 		switch (item->type) {
@@ -509,7 +512,28 @@ static int _dbus_kernel_make_message(struct kdbus_msg *kmsg,
 
 			return -ENOTSUP;
 		case KDBUS_ITEM_FDS:
-			return -ENOTSUP;
+			if (fds || item->size <= KDBUS_ITEM_HEADER_SIZE)
+				return -EBADMSG;
+
+			num_fds = (item->size - KDBUS_ITEM_HEADER_SIZE) /
+				sizeof(int);
+			fds = item->fds;
+
+			/* Set FD_CLOEXEC on all file descriptors */
+			for (i = 0; i < num_fds; i++) {
+				long flags;
+
+				if (fds[i] == -1)
+					continue;
+
+				flags = fcntl(fds[i], F_GETFD, NULL);
+				if (flags < 0 || (flags & FD_CLOEXEC))
+					continue;
+
+				fcntl(fds[i], F_SETFD, flags | FD_CLOEXEC);
+			}
+
+			break;
 		case KDBUS_ITEM_DST_NAME:
 			if (!_dbus_valid_bus_name(item->str))
 				return -EBADMSG;
@@ -530,7 +554,7 @@ static int _dbus_kernel_make_message(struct kdbus_msg *kmsg,
 
 	collect_body_parts(kmsg, size, &data);
 
-	*out_message = dbus_message_from_blob(data, size, NULL, 0);
+	*out_message = dbus_message_from_blob(data, size, fds, num_fds);
 
 	l_free(data);
 
