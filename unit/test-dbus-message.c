@@ -48,6 +48,7 @@ struct message_data {
 	uint32_t unix_fds;
 	const unsigned char *binary;
 	size_t binary_len;
+	int *fds;
 };
 
 static const unsigned char message_binary_basic_1[] = {
@@ -1320,7 +1321,8 @@ static struct l_dbus_message *check_message(const struct message_data *msg_data)
 {
 	struct l_dbus_message *msg;
 
-	msg = dbus_message_from_blob(msg_data->binary, msg_data->binary_len);
+	msg = dbus_message_from_blob(msg_data->binary, msg_data->binary_len,
+					msg_data->fds, msg_data->unix_fds);
 	assert(msg);
 
 	if (do_print)
