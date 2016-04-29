@@ -116,6 +116,7 @@ bool _dbus1_builder_rewind(struct dbus_builder *builder);
 void *_dbus_message_get_body(struct l_dbus_message *msg, size_t *out_size);
 void *_dbus_message_get_header(struct l_dbus_message *msg, size_t *out_size);
 void *_dbus_message_get_footer(struct l_dbus_message *msg, size_t *out_size);
+int *_dbus_message_get_fds(struct l_dbus_message *msg, uint32_t *num_fds);
 void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial);
 uint32_t _dbus_message_get_serial(struct l_dbus_message *msg);
 uint32_t _dbus_message_get_reply_serial(struct l_dbus_message *message);

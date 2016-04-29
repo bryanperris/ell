@@ -126,6 +126,13 @@ void *_dbus_message_get_footer(struct l_dbus_message *msg, size_t *out_size)
 	return msg->body;
 }
 
+int *_dbus_message_get_fds(struct l_dbus_message *msg, uint32_t *num_fds)
+{
+	*num_fds = msg->num_fds;
+
+	return msg->fds;
+}
+
 void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial)
 {
 	struct dbus_header *hdr = msg->header;
