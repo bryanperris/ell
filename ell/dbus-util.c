@@ -675,17 +675,11 @@ bool _dbus1_iter_next_entry_basic(struct l_dbus_message_iter *iter,
 		iter->pos = pos + 8;
 		break;
 	case 't':
-		if (pos + 8 > iter->len)
-			return false;
-		uint64_val = get_u64(iter->data + pos);
-		*(uint64_t *) out = uint64_val;
-		iter->pos = pos + 8;
-		break;
 	case 'd':
 		if (pos + 8 > iter->len)
 			return false;
 		uint64_val = get_u64(iter->data + pos);
-		*(double *) out = (double) uint64_val;
+		*(uint64_t *) out = uint64_val;
 		iter->pos = pos + 8;
 		break;
 	default:
