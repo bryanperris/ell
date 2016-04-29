@@ -234,34 +234,63 @@ static bool remove_recurse(struct _dbus_filter *filter,
 }
 
 unsigned int _dbus_filter_add_rule(struct _dbus_filter *filter,
-					struct _dbus_filter_condition *rule,
-					int rule_len,
-					l_dbus_message_func_t signal_func,
-					void *user_data)
+				const struct _dbus_filter_condition *rule,
+				int rule_len,
+				l_dbus_message_func_t signal_func,
+				void *user_data)
 {
 	struct filter_node **node_ptr = &filter->root;
 	struct filter_node *node;
 	struct filter_node *parent = filter->root;
 	bool remote_rule = false;
-	struct _dbus_filter_condition *condition, *end = rule + rule_len;
+	struct _dbus_filter_condition sorted[rule_len];
+	struct _dbus_filter_condition *unused, *condition;
+	struct _dbus_filter_condition *end = sorted + rule_len;
 
-	qsort(rule, rule_len, sizeof(*rule), condition_compare);
+	memcpy(sorted, rule, sizeof(sorted));
+	qsort(sorted, rule_len, sizeof(*condition), condition_compare);
 
-	for (condition = rule; condition < end; condition++) {
-		/* See if this condition is already a child of the node */
+	/*
+	 * Find or create a path in the tree with a node for each
+	 * condition in the rule, loop until all conditions have been
+	 * used.
+	 */
+	unused = sorted;
+	while (unused < end) {
+		/*
+		 * Find a child of the node that matches any unused
+		 * condition.  Note there could be multiple matches, we're
+		 * happy with the first we can find.
+		 */
 		while (*node_ptr) {
 			node = *node_ptr;
 
-			if (node->type == condition->type &&
-					!strcmp(node->match.value,
+			for (condition = unused; condition < end; condition++) {
+				if (condition->type > node->type) {
+					condition = end;
+					break;
+				}
+
+				if (condition->type < node->type ||
+						condition->type ==
+						L_DBUS_MATCH_NONE)
+					continue;
+
+				if (!strcmp(node->match.value,
 						condition->value))
+					break;
+			}
+
+			if (condition < end)
 				break;
 
 			node_ptr = &node->next;
 		}
 
-		/* Add one */
+		/* Add a node */
 		if (!*node_ptr) {
+			condition = unused;
+
 			node = l_new(struct filter_node, 1);
 			node->type = condition->type;
 			node->match.value = l_strdup(condition->value);
@@ -277,6 +306,18 @@ unsigned int _dbus_filter_add_rule(struct _dbus_filter *filter,
 							node->match.value);
 
 		}
+
+		/*
+		 * Mark the condition used.  We do this by setting
+		 * condition->type to an invalid value unless it is the
+		 * first condition left in which case we can push the
+		 * rule start.  Another option is to always push the rule
+		 * start and memmove the still unused conditions by one
+		 * if necessary.
+		 */
+		condition->type = L_DBUS_MATCH_NONE;
+		while (unused < end && unused[0].type == L_DBUS_MATCH_NONE)
+			unused++;
 
 		node_ptr = &node->match.children;
 

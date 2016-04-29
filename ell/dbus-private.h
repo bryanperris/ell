@@ -322,10 +322,10 @@ struct _dbus_filter *_dbus_filter_new(struct l_dbus *dbus,
 void _dbus_filter_free(struct _dbus_filter *filter);
 
 unsigned int _dbus_filter_add_rule(struct _dbus_filter *filter,
-					struct _dbus_filter_condition *rule,
-					int rule_len,
-					l_dbus_message_func_t signal_func,
-					void *user_data);
+				const struct _dbus_filter_condition *rule,
+				int rule_len,
+				l_dbus_message_func_t signal_func,
+				void *user_data);
 bool _dbus_filter_remove_rule(struct _dbus_filter *filter, unsigned int id);
 
 char *_dbus_filter_rule_to_str(const struct _dbus_filter_condition *rule,
