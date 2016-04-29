@@ -628,7 +628,11 @@ static struct l_dbus_message *classic_recv_message(struct l_dbus *dbus)
 	ssize_t len;
 	void *header, *body;
 	size_t header_size, body_size;
-	int fds[16];
+	union {
+		uint8_t bytes[CMSG_SPACE(16 * sizeof(int))];
+		struct cmsghdr align;
+	} fd_buf;
+	int *fds = NULL;
 	uint32_t num_fds = 0;
 
 	len = recv(fd, &hdr, DBUS_HEADER_SIZE, MSG_PEEK);
@@ -649,8 +653,8 @@ static struct l_dbus_message *classic_recv_message(struct l_dbus *dbus)
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 2;
-	msg.msg_control = &fds;
-	msg.msg_controllen = CMSG_SPACE(16 * sizeof(int));
+	msg.msg_control = &fd_buf;
+	msg.msg_controllen = sizeof(fd_buf);
 
 	len = recvmsg(fd, &msg, MSG_CMSG_CLOEXEC);
 	if (len < 0)
@@ -665,19 +669,18 @@ static struct l_dbus_message *classic_recv_message(struct l_dbus *dbus)
 			continue;
 
 		num_fds = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
-
-		memcpy(fds, CMSG_DATA(cmsg), num_fds * sizeof(int));
+		fds = (void *) CMSG_DATA(cmsg);
 
 		/* Set FD_CLOEXEC on all file descriptors */
 		for (i = 0; i < num_fds; i++) {
 			long flags;
 
-			flags = fcntl(fd, F_GETFD, NULL);
+			flags = fcntl(fds[i], F_GETFD, NULL);
 			if (flags < 0)
 				continue;
 
 			if (!(flags & FD_CLOEXEC))
-				fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+				fcntl(fds[i], F_SETFD, flags | FD_CLOEXEC);
                 }
 	}
 
