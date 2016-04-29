@@ -26,6 +26,10 @@
 
 #include <assert.h>
 #include <math.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include <ell/ell.h>
 
@@ -2578,6 +2582,124 @@ static void builder_rewind(const void *data)
 	compare_message(msg, data);
 }
 
+static int count_fds(void)
+{
+	int fd;
+	int count = 0;
+
+	for (fd = 0; fd < FD_SETSIZE; fd++)
+		if (fcntl(fd, F_GETFL) != -1 || errno != EBADF)
+			count++;
+
+	return count;
+}
+
+static void compare_files(int a, int b)
+{
+	struct stat sa, sb;
+
+	assert(fstat(a, &sa) == 0);
+	assert(fstat(b, &sb) == 0);
+
+	assert(sa.st_dev == sb.st_dev);
+	assert(sa.st_ino == sb.st_ino);
+	assert(sa.st_rdev == sb.st_rdev);
+}
+
+static const unsigned char message_binary_basic_h[] = {
+	0x6c, 0x01, 0x00, 0x01, 0x04, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x6f, 0x00, 0x00, 0x00,
+	0x01, 0x01, 0x6f, 0x00, 0x13, 0x00, 0x00, 0x00,
+	0x2f, 0x63, 0x6f, 0x6d, 0x2f, 0x65, 0x78, 0x61,
+	0x6d, 0x70, 0x6c, 0x65, 0x2f, 0x6f, 0x62, 0x6a,
+	0x65, 0x63, 0x74, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x06, 0x01, 0x73, 0x00, 0x0b, 0x00, 0x00, 0x00,
+	0x63, 0x6f, 0x6d, 0x2e, 0x65, 0x78, 0x61, 0x6d,
+	0x70, 0x6c, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x02, 0x01, 0x73, 0x00, 0x15, 0x00, 0x00, 0x00,
+	0x63, 0x6f, 0x6d, 0x2e, 0x65, 0x78, 0x61, 0x6d,
+	0x70, 0x6c, 0x65, 0x2e, 0x69, 0x6e, 0x74, 0x65,
+	0x72, 0x66, 0x61, 0x63, 0x65, 0x00, 0x00, 0x00,
+	0x03, 0x01, 0x73, 0x00, 0x06, 0x00, 0x00, 0x00,
+	0x6d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x00, 0x00,
+	0x08, 0x01, 0x67, 0x00, 0x01, 0x68, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00,
+};
+
+static const struct message_data message_data_basic_h = {
+	.type		= "method_call",
+	.path		= "/com/example/object",
+	.interface	= "com.example.interface",
+	.member		= "method",
+	.destination	= "com.example",
+	.signature	= "h",
+	.serial		= 0,
+	.reply_serial	= 0,
+	.no_reply	= 0,
+	.auto_start	= 1,
+	.unix_fds	= 1,
+	.binary		= message_binary_basic_h,
+	.binary_len	= sizeof(message_binary_basic_h),
+};
+
+static void message_fds_parse(const void *data)
+{
+	struct message_data message_data = message_data_basic_h;
+	struct l_dbus_message *msg;
+	int fd0, fd1;
+	int open_fds;
+	bool result;
+
+	open_fds = count_fds();
+
+	fd0 = open("/dev/random", O_RDONLY);
+	assert(fd0 != -1);
+
+	message_data.fds = &fd0;
+	msg = check_message(&message_data);
+
+	result = l_dbus_message_get_arguments(msg, "h", &fd1);
+	assert(result);
+	assert(fd1 != -1 && fd0 != fd1);
+
+	compare_files(fd0, fd1);
+
+	assert(count_fds() != open_fds);
+
+	close(fd1);
+
+	assert(count_fds() != open_fds);
+
+	l_dbus_message_unref(msg);
+
+	assert(count_fds() == open_fds);
+}
+
+static void message_fds_build(const void *data)
+{
+	struct message_data message_data = message_data_basic_h;
+	struct l_dbus_message *msg;
+	int fd;
+	int open_fds;
+
+	open_fds = count_fds();
+
+	fd = open("/dev/random", O_RDONLY);
+	assert(fd != -1);
+
+	msg = build_message(&message_data);
+
+	l_dbus_message_set_arguments(msg, "h", fd);
+
+	close(fd);
+
+	assert(count_fds() != open_fds);
+
+	compare_message(msg, &message_data);
+
+	assert(count_fds() == open_fds);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -2673,6 +2795,9 @@ int main(int argc, char *argv[])
 
 	l_test_add("Message Builder Rewind Complex 1", builder_rewind,
 						&message_data_complex_1);
+
+	l_test_add("FDs (parse)", message_fds_parse, NULL);
+	l_test_add("FDs (build)", message_fds_build, NULL);
 
 	return l_test_run();
 }
