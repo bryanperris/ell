@@ -764,11 +764,22 @@ struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size,
 		get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE,
 					'g', &message->signature);
 
-	if (num_fds > L_ARRAY_SIZE(message->fds)) {
-		for (i = L_ARRAY_SIZE(message->fds); i < num_fds; i++)
-			close(fds[i]);
+	if (num_fds) {
+		uint32_t unix_fds;
 
-		num_fds = L_ARRAY_SIZE(message->fds);
+		if (!get_header_field(message, DBUS_MESSAGE_FIELD_UNIX_FDS,
+					'u', &unix_fds))
+			goto free;
+
+		if (num_fds > unix_fds)
+			num_fds = unix_fds;
+
+		if (num_fds > L_ARRAY_SIZE(message->fds)) {
+			for (i = L_ARRAY_SIZE(message->fds); i < num_fds; i++)
+				close(fds[i]);
+
+			num_fds = L_ARRAY_SIZE(message->fds);
+		}
 	}
 
 	message->num_fds = num_fds;
@@ -777,7 +788,8 @@ struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size,
 	return message;
 
 free:
-	l_free(message);
+	l_dbus_message_unref(message);
+
 	return NULL;
 }
 
@@ -809,18 +821,30 @@ struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 	message->header = header;
 	message->body_size = body_size;
 	message->body = body;
+	message->sealed = true;
 
-	if (num_fds > L_ARRAY_SIZE(message->fds)) {
-		for (i = L_ARRAY_SIZE(message->fds); i < num_fds; i++)
-			close(fds[i]);
+	if (num_fds) {
+		uint32_t unix_fds;
 
-		num_fds = L_ARRAY_SIZE(message->fds);
+		if (!get_header_field(message, DBUS_MESSAGE_FIELD_UNIX_FDS,
+					'u', &unix_fds)) {
+			l_free(message);
+			return NULL;
+		}
+
+		if (num_fds > unix_fds)
+			num_fds = unix_fds;
+
+		if (num_fds > L_ARRAY_SIZE(message->fds)) {
+			for (i = L_ARRAY_SIZE(message->fds); i < num_fds; i++)
+				close(fds[i]);
+
+			num_fds = L_ARRAY_SIZE(message->fds);
+		}
 	}
 
 	message->num_fds = num_fds;
 	memcpy(message->fds, fds, num_fds * sizeof(int));
-
-	message->sealed = true;
 
 	/* If the field is absent message->signature will remain NULL */
 	get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, 'g',
@@ -1012,6 +1036,10 @@ static void build_header(struct l_dbus_message *message, const char *signature)
 	if (signature[0] != '\0' && !gvariant)
 		add_field(builder, driver, DBUS_MESSAGE_FIELD_SIGNATURE,
 				"g", signature);
+
+	if (message->num_fds)
+		add_field(builder, driver, DBUS_MESSAGE_FIELD_UNIX_FDS,
+					"u", &message->num_fds);
 
 	driver->leave_array(builder);
 
