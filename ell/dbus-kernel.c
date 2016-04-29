@@ -248,8 +248,6 @@ int _dbus_kernel_hello(int fd, const char *connection_name,
 
 	hello->size = size;
 	hello->flags |= KDBUS_HELLO_ACCEPT_FD;
-	hello->attach_flags_send |= KDBUS_ATTACH_NAMES;
-	hello->attach_flags_recv |= KDBUS_ATTACH_NAMES;
 	hello->pool_size = KDBUS_POOL_SIZE;
 
 	item = hello->items;
