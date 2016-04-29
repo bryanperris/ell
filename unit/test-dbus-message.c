@@ -1501,7 +1501,7 @@ static void parse_basic_5(const void *data)
 
 	result = l_dbus_message_get_arguments(msg, "q", &val);
 	assert(result);
-	assert(val = 42);
+	assert(val == 42);
 
 	l_dbus_message_unref(msg);
 }
@@ -1524,7 +1524,7 @@ static void parse_basic_6(const void *data)
 
 	result = l_dbus_message_get_arguments(msg, "u", &val);
 	assert(result);
-	assert(val = 4711);
+	assert(val == 4711);
 
 	l_dbus_message_unref(msg);
 }
@@ -1546,7 +1546,7 @@ static void parse_basic_7(const void *data)
 
 	result = l_dbus_message_get_arguments(msg, "t", &val);
 	assert(result);
-	assert(val = 10000);
+	assert(val == 10000);
 
 	l_dbus_message_unref(msg);
 }
@@ -1614,7 +1614,7 @@ static void parse_basic_10(const void *data)
 
 	result = l_dbus_message_get_arguments(msg, "x", &val);
 	assert(result);
-	assert(val = -10000);
+	assert(val == -10000);
 
 	l_dbus_message_unref(msg);
 }
@@ -1637,7 +1637,7 @@ static void parse_basic_11(const void *data)
 
 	result = l_dbus_message_get_arguments(msg, "d", &val);
 	assert(result);
-	assert(val = M_PI);
+	assert(val == M_PI);
 
 	l_dbus_message_unref(msg);
 }
