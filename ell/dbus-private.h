@@ -147,7 +147,8 @@ struct l_dbus_message *_dbus_message_new_error(uint8_t version,
 						const char *name,
 						const char *error);
 
-struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size);
+struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size,
+						int fds[], uint32_t num_fds);
 struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 						void *body, size_t body_size,
 						int fds[], uint32_t num_fds);

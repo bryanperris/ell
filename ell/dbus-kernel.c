@@ -516,7 +516,7 @@ static int _dbus_kernel_make_message(struct kdbus_msg *kmsg,
 
 	collect_body_parts(kmsg, size, &data);
 
-	*out_message = dbus_message_from_blob(data, size);
+	*out_message = dbus_message_from_blob(data, size, NULL, 0);
 
 	l_free(data);
 

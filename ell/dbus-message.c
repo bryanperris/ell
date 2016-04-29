@@ -687,11 +687,13 @@ static bool valid_header(const struct dbus_header *hdr)
 	return true;
 }
 
-struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size)
+struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size,
+						int fds[], uint32_t num_fds)
 {
 	const struct dbus_header *hdr = data;
 	struct l_dbus_message *message;
 	size_t body_pos;
+	unsigned int i;
 
 	if (unlikely(size < DBUS_HEADER_SIZE))
 		return NULL;
@@ -755,6 +757,16 @@ struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size)
 		get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE,
 					'g', &message->signature);
 
+	if (num_fds > L_ARRAY_SIZE(message->fds)) {
+		for (i = L_ARRAY_SIZE(message->fds); i < num_fds; i++)
+			close(fds[i]);
+
+		num_fds = L_ARRAY_SIZE(message->fds);
+	}
+
+	message->num_fds = num_fds;
+	memcpy(message->fds, fds, num_fds * sizeof(int));
+
 	return message;
 
 free:
@@ -808,7 +820,7 @@ bool dbus_message_compare(struct l_dbus_message *message,
 	struct l_dbus_message *other;
 	bool ret = false;
 
-	other = dbus_message_from_blob(data, size);
+	other = dbus_message_from_blob(data, size, NULL, 0);
 
 	if (message->signature) {
 		if (!other->signature)
