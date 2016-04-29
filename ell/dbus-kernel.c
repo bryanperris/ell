@@ -325,6 +325,8 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 	size_t footer_size;
 	int ret;
 	struct kdbus_cmd_send cmd;
+	uint32_t num_fds;
+	int *fds;
 	L_AUTO_FREE_VAR(struct kdbus_msg *, kmsg);
 
 	dest = l_dbus_message_get_destination(message);
@@ -349,6 +351,11 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 	/* Reserve space for well-known destination header */
 	if (dest && !unique)
 		kmsg_size += KDBUS_ITEM_SIZE(dest_len + 1);
+
+	/* Reserve space for fds */
+	fds = _dbus_message_get_fds(message, &num_fds);
+	if (num_fds)
+		kmsg_size += KDBUS_ITEM_SIZE(num_fds * sizeof(int));
 
 	kmsg = aligned_alloc(8, kmsg_size);
 	if (!kmsg)
@@ -432,6 +439,13 @@ int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t bloom_n_hash,
 	item->vec.address = (uintptr_t) footer;
 	item->vec.size = footer_size;
 	item = KDBUS_ITEM_NEXT(item);
+
+	if (num_fds) {
+		item->size = KDBUS_ITEM_HEADER_SIZE + num_fds * sizeof(int);
+		item->type = KDBUS_ITEM_FDS;
+		memcpy(item->fds, fds, num_fds * sizeof(int));
+		item = KDBUS_ITEM_NEXT(item);
+	}
 
 	kmsg->size = (void *)item - (void *)kmsg;
 
