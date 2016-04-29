@@ -1845,7 +1845,6 @@ LIB_EXPORT bool l_dbus_message_builder_append_from_iter(
 	void *basic_ptr;
 	uint64_t basic;
 	uint32_t uint32_val;
-	int fd;
 	bool (*get_basic)(struct l_dbus_message_iter *, char, void *);
 	bool (*enter_func)(struct l_dbus_message_iter *,
 				struct l_dbus_message_iter *);
@@ -1891,17 +1890,22 @@ LIB_EXPORT bool l_dbus_message_builder_append_from_iter(
 		if (!get_basic(from, type, &uint32_val))
 			return false;
 
-		if (uint32_val >= from->message->num_fds)
-			return false;
-
-		fd = fcntl(from->message->fds[uint32_val], F_DUPFD_CLOEXEC, 3);
-
-		uint32_val = builder->message->num_fds;
-		builder->message->fds[builder->message->num_fds++] = fd;
-
 		if (!l_dbus_message_builder_append_basic(builder, type,
-								&uint32_val))
+						&builder->message->num_fds))
 			return false;
+
+		if (builder->message->num_fds <
+				L_ARRAY_SIZE(builder->message->fds)) {
+			int fd;
+
+			if (uint32_val < from->message->num_fds)
+				fd = fcntl(from->message->fds[uint32_val],
+						F_DUPFD_CLOEXEC, 3);
+			else
+				fd = -1;
+
+			builder->message->fds[builder->message->num_fds++] = fd;
+		}
 
 		return true;
 	case '(':
