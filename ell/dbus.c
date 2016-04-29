@@ -586,6 +586,9 @@ static bool classic_send_message(struct l_dbus *dbus,
 	struct msghdr msg;
 	struct iovec iov[2];
 	ssize_t len;
+	int *fds;
+	uint32_t num_fds = 0;
+	struct cmsghdr *cmsg;
 
 	iov[0].iov_base = _dbus_message_get_header(message, &iov[0].iov_len);
 	iov[1].iov_base = _dbus_message_get_body(message, &iov[1].iov_len);
@@ -593,6 +596,20 @@ static bool classic_send_message(struct l_dbus *dbus,
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 2;
+
+	if (dbus->support_unix_fd)
+		fds = _dbus_message_get_fds(message, &num_fds);
+
+	if (num_fds) {
+		msg.msg_control = alloca(CMSG_SPACE(num_fds * sizeof(int)));
+		msg.msg_controllen = CMSG_LEN(num_fds * sizeof(int));
+
+		cmsg = CMSG_FIRSTHDR(&msg);
+		cmsg->cmsg_len = msg.msg_controllen;
+		cmsg->cmsg_level = SOL_SOCKET;
+		cmsg->cmsg_type = SCM_RIGHTS;
+		memcpy(CMSG_DATA(cmsg), fds, num_fds * sizeof(int));
+	}
 
 	len = sendmsg(fd, &msg, 0);
 	if (len < 0)
