@@ -780,6 +780,7 @@ struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 {
 	const struct dbus_header *hdr = header;
 	struct l_dbus_message *message;
+	unsigned int i;
 
 	if (unlikely(header_size < DBUS_HEADER_SIZE))
 		return NULL;
@@ -801,6 +802,13 @@ struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 	message->header = header;
 	message->body_size = body_size;
 	message->body = body;
+
+	if (num_fds > L_ARRAY_SIZE(message->fds)) {
+		for (i = L_ARRAY_SIZE(message->fds); i < num_fds; i++)
+			close(fds[i]);
+
+		num_fds = L_ARRAY_SIZE(message->fds);
+	}
 
 	message->num_fds = num_fds;
 	memcpy(message->fds, fds, num_fds * sizeof(int));
