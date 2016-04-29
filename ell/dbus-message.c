@@ -1140,12 +1140,25 @@ static bool append_arguments(struct l_dbus_message *message,
 		}
 		case 'i':
 		case 'u':
-		case 'h':
 		{
 			uint32_t u = va_arg(args, uint32_t);
 
 			if (!driver->append_basic(builder, *s, &u))
 				goto error;
+
+			break;
+		}
+		case 'h':
+		{
+			int fd = va_arg(args, int);
+
+			if (!driver->append_basic(builder, *s,
+							&message->num_fds))
+				goto error;
+
+			if (message->num_fds < L_ARRAY_SIZE(message->fds))
+				message->fds[message->num_fds++] =
+					fcntl(fd, F_DUPFD_CLOEXEC, 3);
 
 			break;
 		}
