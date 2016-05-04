@@ -765,7 +765,7 @@ struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size,
 					'g', &message->signature);
 
 	if (num_fds) {
-		uint32_t unix_fds;
+		uint32_t unix_fds, orig_fds = num_fds;
 
 		if (!get_header_field(message, DBUS_MESSAGE_FIELD_UNIX_FDS,
 					'u', &unix_fds))
@@ -774,12 +774,11 @@ struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size,
 		if (num_fds > unix_fds)
 			num_fds = unix_fds;
 
-		if (num_fds > L_ARRAY_SIZE(message->fds)) {
-			for (i = L_ARRAY_SIZE(message->fds); i < num_fds; i++)
-				close(fds[i]);
-
+		if (num_fds > L_ARRAY_SIZE(message->fds))
 			num_fds = L_ARRAY_SIZE(message->fds);
-		}
+
+		for (i = num_fds; i < orig_fds; i++)
+			close(fds[i]);
 	}
 
 	message->num_fds = num_fds;
@@ -824,7 +823,7 @@ struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 	message->sealed = true;
 
 	if (num_fds) {
-		uint32_t unix_fds;
+		uint32_t unix_fds, orig_fds = num_fds;
 
 		if (!get_header_field(message, DBUS_MESSAGE_FIELD_UNIX_FDS,
 					'u', &unix_fds)) {
@@ -835,12 +834,11 @@ struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 		if (num_fds > unix_fds)
 			num_fds = unix_fds;
 
-		if (num_fds > L_ARRAY_SIZE(message->fds)) {
-			for (i = L_ARRAY_SIZE(message->fds); i < num_fds; i++)
-				close(fds[i]);
-
+		if (num_fds > L_ARRAY_SIZE(message->fds))
 			num_fds = L_ARRAY_SIZE(message->fds);
-		}
+
+		for (i = num_fds; i < orig_fds; i++)
+			close(fds[i]);
 	}
 
 	message->num_fds = num_fds;
