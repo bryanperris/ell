@@ -332,23 +332,3 @@ char *_dbus_filter_rule_to_str(const struct _dbus_filter_condition *rule,
 				int rule_len);
 
 void _dbus_filter_dispatch(struct l_dbus_message *message, void *user_data);
-
-struct dbus1_filter_data;
-
-void _dbus1_filter_format_match(struct dbus1_filter_data *data, char *rule,
-								size_t size);
-
-struct dbus1_filter_data *_dbus1_filter_data_get(struct l_dbus *dbus,
-					l_dbus_message_func_t filter,
-					const char *sender,
-					const char *path,
-					const char *interface,
-					const char *member,
-					const char *argument,
-					l_dbus_watch_func_t disconnect_func,
-					void *user_data,
-					l_dbus_destroy_func_t destroy);
-void _dbus1_filter_data_destroy(void *user_data);
-void _dbus1_signal_dispatcher(struct l_dbus_message *message, void *user_data);
-void _dbus1_name_owner_changed_filter(struct l_dbus_message *message,
-							void *user_data);
