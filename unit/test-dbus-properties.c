@@ -40,7 +40,7 @@ static int kdbus_fd = -1;
 
 static char bus_address[128];
 
-static void start_dbus_daemon(void)
+static bool start_dbus_daemon(void)
 {
 	char *prg_argv[6];
 	char *prg_envp[1];
@@ -60,7 +60,7 @@ static void start_dbus_daemon(void)
 	pid = fork();
 	if (pid < 0) {
 		l_error("failed to fork new process");
-		return;
+		return false;
 	}
 
 	if (pid == 0) {
@@ -73,9 +73,11 @@ static void start_dbus_daemon(void)
 	dbus_daemon_pid = pid;
 
 	strcpy(bus_address, TEST_BUS_ADDRESS);
+
+	return true;
 }
 
-static void create_kdbus(void)
+static bool create_kdbus(void)
 {
 	char bus_name[64];
 
@@ -84,11 +86,13 @@ static void create_kdbus(void)
 	kdbus_fd = _dbus_kernel_create_bus(bus_name);
 	if (kdbus_fd < 0) {
 		l_warn("kdbus not available");
-		return;
+		return false;
 	}
 
 	snprintf(bus_address, sizeof(bus_address),
 				"kernel:path=/dev/kdbus/%s/bus", bus_name);
+
+	return true;
 }
 
 static void signal_handler(struct l_signal *signal, uint32_t signo,
@@ -131,6 +135,7 @@ struct dbus_test {
 
 static bool success;
 static struct l_queue *tests;
+static const struct l_queue_entry *current;
 
 static void test_add(const char *name,
 			void (*start)(struct l_dbus *dbus, void *),
@@ -150,19 +155,24 @@ static void test_add(const char *name,
 
 static void test_next()
 {
-	struct dbus_test *test = l_queue_pop_head(tests);
+	struct dbus_test *test;
 
-	if (!test) {
+	if (current)
+		current = current->next;
+	else
+		current = l_queue_get_entries(tests);
+
+	if (!current) {
 		success = true;
 		l_main_quit();
 		return;
 	}
 
+	test = current->data;
+
 	l_info("TEST: %s", test->name);
 
 	test->start(dbus, test->data);
-
-	l_free(test);
 }
 
 #define test_assert(cond)	\
@@ -916,42 +926,9 @@ static void test_object_manager_signals(struct l_dbus *dbus, void *test_data)
 						NULL));
 }
 
-int main(int argc, char *argv[])
+static void test_run(void)
 {
-	struct l_signal *signal;
-	sigset_t mask;
-	int i;
-	bool kdbus = false;
-
-	for (i = 1; i < argc; i++) {
-		if (!strcmp(argv[i], "--kdbus"))
-			kdbus = true;
-	}
-
-	sigemptyset(&mask);
-	sigaddset(&mask, SIGINT);
-	sigaddset(&mask, SIGTERM);
-	sigaddset(&mask, SIGCHLD);
-
-	signal = l_signal_create(&mask, signal_handler, NULL, NULL);
-
-	l_log_set_stderr();
-
-	if (kdbus)
-		create_kdbus();
-	else
-		start_dbus_daemon();
-
-	if (!bus_address[0])
-		return -1;
-
-	for (i = 0; i < 10; i++) {
-		usleep(200 * 1000);
-
-		dbus = l_dbus_new(bus_address);
-		if (dbus)
-			break;
-	}
+	success = false;
 
 	l_dbus_set_ready_handler(dbus, ready_callback, dbus, NULL);
 	l_dbus_set_disconnect_handler(dbus, disconnect_callback, NULL, NULL);
@@ -959,18 +936,18 @@ int main(int argc, char *argv[])
 	if (!l_dbus_register_interface(dbus, "org.test", setup_test_interface,
 					NULL, true)) {
 		l_info("Unable to register interface");
-		goto done;
+		return;
 	}
 
 	if (!l_dbus_object_add_interface(dbus, "/test", "org.test", NULL)) {
 		l_info("Unable to instantiate interface");
-		goto done;
+		return;
 	}
 
 	if (!l_dbus_object_add_interface(dbus, "/test",
 				"org.freedesktop.DBus.Properties", NULL)) {
 		l_info("Unable to instantiate the properties interface");
-		goto done;
+		return;
 	}
 
 	l_dbus_add_signal_watch(dbus, "org.test", "/test", "org.test",
@@ -984,13 +961,22 @@ int main(int argc, char *argv[])
 
 	if (!l_dbus_object_manager_enable(dbus)) {
 		l_info("Unable to enable Object Manager");
-		goto done;
+		return;
 	}
 
 	l_dbus_add_signal_watch(dbus, "org.test", "/",
 				"org.freedesktop.DBus.ObjectManager",
 				NULL, L_DBUS_MATCH_NONE,
 				om_signal_callback, NULL);
+
+	l_main_run();
+}
+
+int main(int argc, char *argv[])
+{
+	struct l_signal *signal;
+	sigset_t mask;
+	int i;
 
 	test_add("Legacy properties get", test_old_get, NULL);
 	test_add("Legacy properties set", test_old_set, NULL);
@@ -1003,20 +989,50 @@ int main(int argc, char *argv[])
 	test_add("org.freedesktop.DBus.ObjectManager signals",
 			test_object_manager_signals, NULL);
 
-	l_main_run();
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGINT);
+	sigaddset(&mask, SIGTERM);
+	sigaddset(&mask, SIGCHLD);
 
-	l_queue_destroy(tests, l_free);
+	signal = l_signal_create(&mask, signal_handler, NULL, NULL);
 
-done:
+	l_log_set_stderr();
+
+	if (!start_dbus_daemon())
+		return -1;
+
+	for (i = 0; i < 10; i++) {
+		usleep(200 * 1000);
+
+		dbus = l_dbus_new(bus_address);
+		if (dbus)
+			break;
+	}
+
+	test_run();
+
 	l_dbus_destroy(dbus);
 
-	if (dbus_daemon_pid > 0)
-		kill(dbus_daemon_pid, SIGKILL);
+	kill(dbus_daemon_pid, SIGKILL);
 
-	if (kdbus_fd >= 0)
-		close(kdbus_fd);
+	if (!success)
+		goto done;
 
+	if (!create_kdbus())
+		goto done;
+
+	dbus = l_dbus_new(bus_address);
+
+	test_run();
+
+	l_dbus_destroy(dbus);
+
+	close(kdbus_fd);
+
+done:
 	l_signal_remove(signal);
+
+	l_queue_destroy(tests, l_free);
 
 	if (!success)
 		abort();
