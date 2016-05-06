@@ -140,6 +140,7 @@ dbus_tests = unit/test-kdbus \
 			unit/test-dbus \
 			unit/test-dbus-util \
 			unit/test-dbus-message \
+			unit/test-dbus-message-fds \
 			unit/test-dbus-service \
 			unit/test-dbus-watch \
 			unit/test-dbus-properties \
@@ -185,6 +186,8 @@ unit_test_kdbus_LDADD = ell/libell-private.la
 unit_test_dbus_LDADD = ell/libell-private.la
 
 unit_test_dbus_message_LDADD = ell/libell-private.la
+
+unit_test_dbus_message_fds_LDADD = ell/libell-private.la
 
 unit_test_dbus_util_LDADD = ell/libell-private.la
 
