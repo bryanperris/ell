@@ -232,9 +232,8 @@ unsigned int _dbus_name_cache_add_watch(struct _dbus_name_cache *cache,
 	return watch->id;
 }
 
-static void service_watch_remove(const void *key, void *value, void *user_data)
+static bool service_watch_remove(const void *key, void *value, void *user_data)
 {
-	struct _dbus_name_cache *cache = user_data;
 	struct name_cache_entry *entry = value;
 	struct service_watch **watch, *tmp;
 
@@ -249,8 +248,15 @@ static void service_watch_remove(const void *key, void *value, void *user_data)
 
 		service_watch_destroy(tmp);
 
-		_dbus_name_cache_remove(cache, key);
+		entry->ref_count--;
 	}
+
+	if (entry->ref_count)
+		return false;
+
+	name_cache_entry_destroy(entry);
+
+	return true;
 }
 
 static void service_watch_remove_all(struct l_idle *idle, void *user_data)
@@ -260,7 +266,7 @@ static void service_watch_remove_all(struct l_idle *idle, void *user_data)
 	l_idle_remove(cache->watch_remove_work);
 	cache->watch_remove_work = NULL;
 
-	l_hashmap_foreach(cache->names, service_watch_remove, cache);
+	l_hashmap_foreach_remove(cache->names, service_watch_remove, cache);
 }
 
 static void service_watch_mark(const void *key, void *value, void *user_data)
