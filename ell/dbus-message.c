@@ -694,6 +694,23 @@ static bool valid_header(const struct dbus_header *hdr)
 	return true;
 }
 
+unsigned int _dbus_message_unix_fds_from_header(const void *data, size_t size)
+{
+	struct l_dbus_message message;
+	uint32_t unix_fds;
+
+	message.header = (uint8_t *) data;
+	message.header_size = size;
+	message.body_size = 0;
+	message.sealed = true;
+
+	if (!get_header_field(&message, DBUS_MESSAGE_FIELD_UNIX_FDS,
+				'u', &unix_fds))
+		return 0;
+
+	return unix_fds;
+}
+
 struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size,
 						int fds[], uint32_t num_fds)
 {

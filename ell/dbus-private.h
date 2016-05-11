@@ -159,6 +159,8 @@ bool dbus_message_compare(struct l_dbus_message *message,
 bool _dbus_message_builder_mark(struct l_dbus_message_builder *builder);
 bool _dbus_message_builder_rewind(struct l_dbus_message_builder *builder);
 
+unsigned int _dbus_message_unix_fds_from_header(const void *data, size_t size);
+
 const char *_dbus_signature_end(const char *signature);
 
 bool _dbus_valid_object_path(const char *path);
