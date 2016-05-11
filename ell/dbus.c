@@ -665,7 +665,7 @@ static struct l_dbus_message *classic_recv_message(struct l_dbus *dbus)
 	struct l_dbus_message *message;
 	unsigned int i;
 
-	len = recv(fd, &hdr, DBUS_HEADER_SIZE, MSG_PEEK);
+	len = recv(fd, &hdr, DBUS_HEADER_SIZE, MSG_PEEK | MSG_DONTWAIT);
 	if (len != DBUS_HEADER_SIZE)
 		return NULL;
 
