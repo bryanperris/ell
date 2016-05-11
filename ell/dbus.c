@@ -96,6 +96,7 @@ struct l_dbus {
 	struct _dbus_object_tree *tree;
 	struct _dbus_name_cache *name_cache;
 	struct _dbus_filter *filter;
+	bool name_notify_enabled;
 
 	const struct l_dbus_ops *driver;
 };
@@ -545,11 +546,6 @@ static void dbus_init(struct l_dbus *dbus, int fd)
 	dbus->signal_list = l_hashmap_new();
 
 	dbus->tree = _dbus_object_tree_new();
-
-	dbus->name_cache = _dbus_name_cache_new(dbus, &dbus->driver->name_ops);
-
-	dbus->filter = _dbus_filter_new(dbus, &dbus->driver->filter_ops,
-					dbus->name_cache);
 }
 
 static void classic_free(struct l_dbus *dbus)
@@ -742,6 +738,18 @@ static bool classic_remove_match(struct l_dbus *dbus, unsigned int id)
 	return true;
 }
 
+static void name_owner_changed_cb(struct l_dbus_message *message,
+					void *user_data)
+{
+	struct l_dbus *dbus = user_data;
+	char *name, *old, *new;
+
+	if (!l_dbus_message_get_arguments(message, "sss", &name, &old, &new))
+		return;
+
+	_dbus_name_cache_notify(dbus->name_cache, name, new);
+}
+
 struct get_name_owner_request {
 	struct l_dbus_message *message;
 	struct l_dbus *dbus;
@@ -788,6 +796,26 @@ static bool classic_get_name_owner(struct l_dbus *bus, const char *name)
 
 	send_message(bus, false, req->message, get_name_owner_reply_cb,
 			req, l_free);
+
+	if (!bus->name_notify_enabled) {
+		static struct _dbus_filter_condition rule[] = {
+			{ L_DBUS_MATCH_TYPE,		"signal" },
+			{ L_DBUS_MATCH_SENDER,		DBUS_SERVICE_DBUS },
+			{ L_DBUS_MATCH_PATH,		DBUS_PATH_DBUS },
+			{ L_DBUS_MATCH_INTERFACE,	L_DBUS_INTERFACE_DBUS },
+			{ L_DBUS_MATCH_MEMBER,		"NameOwnerChanged" },
+		};
+
+		if (!bus->filter)
+			bus->filter = _dbus_filter_new(bus,
+						&bus->driver->filter_ops,
+						bus->name_cache);
+
+		_dbus_filter_add_rule(bus->filter, rule, L_ARRAY_SIZE(rule),
+					name_owner_changed_cb, bus);
+
+		bus->name_notify_enabled = true;
+	}
 
 	return true;
 }
@@ -887,18 +915,6 @@ static const struct l_dbus_ops classic_ops = {
 	.name_acquire = classic_name_acquire,
 };
 
-static void name_owner_changed_cb(struct l_dbus_message *message,
-					void *user_data)
-{
-	struct l_dbus *dbus = user_data;
-	char *name, *old, *new;
-
-	if (!l_dbus_message_get_arguments(message, "sss", &name, &old, &new))
-		return;
-
-	_dbus_name_cache_notify(dbus->name_cache, name, new);
-}
-
 static struct l_dbus *setup_dbus1(int fd, const char *guid)
 {
 	static const unsigned char creds = 0x00;
@@ -908,13 +924,6 @@ static struct l_dbus *setup_dbus1(int fd, const char *guid)
 	ssize_t written;
 	unsigned int i;
 	long flags;
-	static struct _dbus_filter_condition rule[] = {
-		{ L_DBUS_MATCH_TYPE,		"signal" },
-		{ L_DBUS_MATCH_SENDER,		DBUS_SERVICE_DBUS },
-		{ L_DBUS_MATCH_PATH,		DBUS_PATH_DBUS },
-		{ L_DBUS_MATCH_INTERFACE,	L_DBUS_INTERFACE_DBUS },
-		{ L_DBUS_MATCH_MEMBER,		"NameOwnerChanged" },
-	};
 
 	if (snprintf(uid, sizeof(uid), "%d", geteuid()) < 1) {
 		close(fd);
@@ -962,9 +971,6 @@ static struct l_dbus *setup_dbus1(int fd, const char *guid)
 
 	l_io_set_read_handler(dbus->io, auth_read_handler, dbus, NULL);
 	l_io_set_write_handler(dbus->io, auth_write_handler, dbus, NULL);
-
-	_dbus_filter_add_rule(dbus->filter, rule, L_ARRAY_SIZE(rule),
-				name_owner_changed_cb, dbus);
 
 	return dbus;
 }
@@ -1167,6 +1173,7 @@ static bool kdbus_get_name_owner(struct l_dbus *dbus, const char *name)
 	int fd = l_io_get_fd(dbus->io);
 	uint64_t owner_id;
 	char owner[32];
+	int r;
 
 	owner_id = _dbus_kernel_get_name_owner(fd, kdbus->kdbus_pool, name);
 
@@ -1176,6 +1183,15 @@ static bool kdbus_get_name_owner(struct l_dbus *dbus, const char *name)
 		owner[0] = '\0';
 
 	_dbus_name_cache_notify(dbus->name_cache, name, owner);
+
+	if (!dbus->name_notify_enabled) {
+		r = _dbus_kernel_enable_name_owner_notify(fd);
+		if (r < 0)
+			l_util_debug(dbus->debug_handler,
+					dbus->debug_data, strerror(-r));
+
+		dbus->name_notify_enabled = true;
+	}
 
 	return true;
 }
@@ -1225,7 +1241,6 @@ static struct l_dbus *setup_kdbus(int fd)
 {
 	struct l_dbus *dbus;
 	struct l_dbus_kdbus *kdbus;
-	int r;
 
 	kdbus = l_new(struct l_dbus_kdbus, 1);
 	dbus = &kdbus->super;
@@ -1245,11 +1260,6 @@ static struct l_dbus *setup_kdbus(int fd)
 	dbus->unique_name = l_strdup_printf(":1.%llu", kdbus->kdbus_id);
 
 	l_idle_oneshot(kdbus_ready, dbus, NULL);
-
-	r = _dbus_kernel_enable_name_owner_notify(fd);
-	if (r < 0)
-		l_util_debug(dbus->debug_handler,
-				dbus->debug_data, strerror(-r));
 
 	return dbus;
 }
@@ -1760,6 +1770,10 @@ LIB_EXPORT unsigned int l_dbus_add_service_watch(struct l_dbus *dbus,
 	if (!name)
 		return 0;
 
+	if (!dbus->name_cache)
+		dbus->name_cache = _dbus_name_cache_new(dbus,
+						&dbus->driver->name_ops);
+
 	return _dbus_name_cache_add_watch(dbus->name_cache, name, connect_func,
 						disconnect_func, user_data,
 						destroy);
@@ -1767,6 +1781,9 @@ LIB_EXPORT unsigned int l_dbus_add_service_watch(struct l_dbus *dbus,
 
 LIB_EXPORT bool l_dbus_remove_watch(struct l_dbus *dbus, unsigned int id)
 {
+	if (!dbus->name_cache)
+		return false;
+
 	return _dbus_name_cache_remove_watch(dbus->name_cache, id);
 }
 
@@ -1876,6 +1893,16 @@ LIB_EXPORT unsigned int l_dbus_add_signal_watch(struct l_dbus *dbus,
 
 	va_end(args);
 
+	if (!dbus->filter) {
+		if (!dbus->name_cache)
+			dbus->name_cache = _dbus_name_cache_new(dbus,
+						&dbus->driver->name_ops);
+
+		dbus->filter = _dbus_filter_new(dbus,
+						&dbus->driver->filter_ops,
+						dbus->name_cache);
+	}
+
 	id = _dbus_filter_add_rule(dbus->filter, rule, rule_len,
 					signal_func, user_data);
 
@@ -1886,6 +1913,9 @@ LIB_EXPORT unsigned int l_dbus_add_signal_watch(struct l_dbus *dbus,
 
 LIB_EXPORT bool l_dbus_remove_signal_watch(struct l_dbus *dbus, unsigned int id)
 {
+	if (!dbus->filter)
+		return false;
+
 	return _dbus_filter_remove_rule(dbus->filter, id);
 }
 
