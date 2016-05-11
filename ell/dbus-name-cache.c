@@ -100,6 +100,9 @@ static void name_cache_entry_destroy(void *data)
 
 void _dbus_name_cache_free(struct _dbus_name_cache *cache)
 {
+	if (!cache)
+		return;
+
 	if (cache->watch_remove_work)
 		l_idle_remove(cache->watch_remove_work);
 
@@ -171,6 +174,9 @@ void _dbus_name_cache_notify(struct _dbus_name_cache *cache,
 	struct name_cache_entry *entry;
 	struct service_watch *watch;
 	bool prev_connected, connected;
+
+	if (!cache)
+		return;
 
 	if (_dbus_parse_unique_name(name, NULL))
 		return;
