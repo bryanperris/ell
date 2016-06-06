@@ -36,6 +36,7 @@ unit/test-genl-msg
 unit/test-kdbus
 unit/test-dbus
 unit/test-dbus-message
+unit/test-dbus-message-fds
 unit/test-dbus-util
 unit/test-dbus-service
 unit/test-dbus-watch
