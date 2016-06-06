@@ -31,10 +31,16 @@ extern "C" {
 #include <stdbool.h>
 
 struct l_key;
+struct l_keyring;
 
 enum l_key_type {
 	L_KEY_RAW = 0,
 	L_KEY_ASYMMETRIC
+};
+
+enum l_keyring_type {
+	L_KEYRING_SIMPLE = 0,
+	L_KEYRING_TRUSTED_ASYM
 };
 
 struct l_key *l_key_new(enum l_key_type type, const void *payload,
@@ -53,6 +59,15 @@ bool l_key_compute_dh_public(struct l_key *generator, struct l_key *private,
 
 bool l_key_compute_dh_secret(struct l_key *other_public, struct l_key *private,
 			     struct l_key *prime, void *payload, size_t *len);
+
+struct l_keyring *l_keyring_new(enum l_keyring_type type,
+				const struct l_keyring *trust);
+
+void l_keyring_free(struct l_keyring *keyring);
+
+bool l_keyring_link(struct l_keyring *keyring, const struct l_key *key);
+
+bool l_keyring_unlink(struct l_keyring *keyring, const struct l_key *key);
 
 #ifdef __cplusplus
 }

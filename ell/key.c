@@ -44,9 +44,14 @@ struct keyctl_dh_params {
 };
 #endif
 
-static int32_t keyring_base;
+static int32_t internal_keyring;
 
 struct l_key {
+	int type;
+	int32_t serial;
+};
+
+struct l_keyring {
 	int type;
 	int32_t serial;
 };
@@ -77,6 +82,16 @@ static long kernel_revoke_key(int32_t serial)
 	return syscall(__NR_keyctl, KEYCTL_REVOKE, serial);
 }
 
+static long kernel_link_key(int32_t key_serial, int32_t ring_serial)
+{
+	return syscall(__NR_keyctl, KEYCTL_LINK, key_serial, ring_serial);
+}
+
+static long kernel_unlink_key(int32_t key_serial, int32_t ring_serial)
+{
+	return syscall(__NR_keyctl, KEYCTL_UNLINK, key_serial, ring_serial);
+}
+
 static long kernel_dh_compute(int32_t private, int32_t prime, int32_t base,
 			      void *payload, size_t len)
 {
@@ -87,13 +102,13 @@ static long kernel_dh_compute(int32_t private, int32_t prime, int32_t base,
 	return syscall(__NR_keyctl, KEYCTL_DH_COMPUTE, &params, payload, len);
 }
 
-static bool setup_keyring_base(void)
+static bool setup_internal_keyring(void)
 {
-	keyring_base = kernel_add_key("keyring", "ell-keyring", 0, 0,
-					KEY_SPEC_THREAD_KEYRING);
+	internal_keyring = kernel_add_key("keyring", "ell-internal", NULL, 0,
+						KEY_SPEC_THREAD_KEYRING);
 
-	if (keyring_base <= 0) {
-		keyring_base = 0;
+	if (internal_keyring <= 0) {
+		internal_keyring = 0;
 		return false;
 	}
 
@@ -112,15 +127,14 @@ LIB_EXPORT struct l_key *l_key_new(enum l_key_type type, const void *payload,
 	if (unlikely((size_t)type >= L_ARRAY_SIZE(key_type_names)))
 		return NULL;
 
-	if (!keyring_base && !setup_keyring_base()) {
+	if (!internal_keyring && !setup_internal_keyring())
 		return NULL;
-	}
 
 	key = l_new(struct l_key, 1);
 	key->type = type;
-	description = l_strdup_printf("ell-%p", key);
+	description = l_strdup_printf("ell-key-%p", key);
 	key->serial = kernel_add_key(key_type_names[type], description, payload,
-					payload_length, keyring_base);
+					payload_length, internal_keyring);
 	l_free(description);
 
 	if (key->serial < 0) {
@@ -209,4 +223,81 @@ LIB_EXPORT bool l_key_compute_dh_secret(struct l_key *other_public,
 					void *payload, size_t *len)
 {
 	return compute_common(other_public, private, prime, payload, len);
+}
+
+LIB_EXPORT struct l_keyring *l_keyring_new(enum l_keyring_type type,
+						const struct l_keyring *trusted)
+{
+	struct l_keyring *keyring;
+	char *description;
+	char *payload = NULL;
+	size_t payload_length = 0;
+
+	if (!internal_keyring && !setup_internal_keyring())
+		return NULL;
+
+	if (type == L_KEYRING_TRUSTED_ASYM) {
+		if (!trusted)
+			return NULL;
+
+		payload = l_strdup_printf(
+			"restrict_type=asymmetric "
+			"restrict_by=signature_keyring "
+			"restrict_key=%d",
+			trusted->serial);
+		payload_length = strlen(payload);
+	} else if (type != L_KEYRING_SIMPLE) {
+		/* Unsupported type */
+		return NULL;
+	}
+
+	keyring = l_new(struct l_keyring, 1);
+	keyring->type = type;
+	description = l_strdup_printf("ell-keyring-%p", keyring);
+	keyring->serial = kernel_add_key("keyring", description, payload,
+						payload_length,
+						internal_keyring);
+	l_free(description);
+	l_free(payload);
+
+	if (keyring->serial < 0) {
+		l_free(keyring);
+		keyring = NULL;
+	}
+
+	return keyring;
+}
+
+LIB_EXPORT void l_keyring_free(struct l_keyring *keyring)
+{
+	if (unlikely(!keyring))
+		return;
+
+	kernel_revoke_key(keyring->serial);
+
+	l_free(keyring);
+}
+
+bool l_keyring_link(struct l_keyring *keyring, const struct l_key *key)
+{
+	long error;
+
+	if (unlikely(!keyring) || unlikely(!key))
+		return false;
+
+	error = kernel_link_key(key->serial, keyring->serial);
+
+	return error == 0;
+}
+
+bool l_keyring_unlink(struct l_keyring *keyring, const struct l_key *key)
+{
+	long error;
+
+	if (unlikely(!keyring) || unlikely(!key))
+		return false;
+
+	error = kernel_unlink_key(key->serial, keyring->serial);
+
+	return error == 0;
 }
