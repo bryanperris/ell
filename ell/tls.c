@@ -727,6 +727,8 @@ static bool tls_send_certificate(struct l_tls *tls)
 	if (cert)
 		tls->cert_sent = true;
 
+	l_free(cert);
+
 	return true;
 }
 
