@@ -444,7 +444,7 @@ static void signal_handler(struct l_signal *signal, uint32_t signo,
  *
  * Run the main loop with signal handling for SIGINT and SIGTERM
  *
- * Returns: #EXIT_SCUCESS after successful execution or #EXIT_FAILURE in
+ * Returns: #EXIT_SUCCESS after successful execution or #EXIT_FAILURE in
  *          case of failure
  **/
 LIB_EXPORT
