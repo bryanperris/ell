@@ -332,6 +332,74 @@ static void test_dh(const void *data)
 	l_free(buffer);
 }
 
+static void test_simple_keyring(const void *data)
+{
+	struct l_keyring *ring;
+	struct l_key *key1;
+	struct l_key *key2;
+	bool success;
+
+	ring = l_keyring_new(L_KEYRING_SIMPLE, NULL);
+	assert(ring);
+
+	key1 = l_key_new(L_KEY_RAW, "1", 1);
+	key2 = l_key_new(L_KEY_RAW, "2", 1);
+
+	success = l_keyring_link(ring, key1);
+	assert(success);
+	success = l_keyring_link(ring, key2);
+	assert(success);
+
+	l_key_free(key1);
+	success = l_keyring_unlink(ring, key2);
+	assert(success);
+	l_keyring_free(ring);
+	l_key_free(key2);
+}
+
+static void test_trusted_keyring(const void *data)
+{
+	struct l_keyring *ring;
+	struct l_keyring *trust;
+	uint8_t *cacert;
+	size_t cacertlen;
+	uint8_t *cert;
+	size_t certlen;
+	struct l_key *cakey;
+	struct l_key *key;
+	bool success;
+
+	cacert = l_pem_load_certificate(TESTDATADIR "/cert-ca.pem", &cacertlen);
+	assert(cacert);
+	cert = l_pem_load_certificate(TESTDATADIR "/cert-server.pem",
+					&certlen);
+	assert(cert);
+
+	cakey = l_key_new(L_KEY_ASYMMETRIC, cacert, cacertlen);
+	assert(cakey);
+	key = l_key_new(L_KEY_ASYMMETRIC, cert, certlen);
+	assert(key);
+
+	trust = l_keyring_new(L_KEYRING_SIMPLE, NULL);
+	assert(trust);
+	ring = l_keyring_new(L_KEYRING_TRUSTED_ASYM, trust);
+	assert(ring);
+
+	success = l_keyring_link(ring, key);
+	assert(!success);
+	success = l_keyring_link(trust, cakey);
+	assert(success);
+	success = l_keyring_link(ring, key);
+	assert(success);
+
+	l_keyring_free(trust);
+	l_keyring_free(ring);
+	l_key_free(cakey);
+	l_key_free(key);
+	l_free(cacert);
+	l_free(cert);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -342,6 +410,9 @@ int main(int argc, char *argv[])
 
 	l_test_add("Diffie-Hellman 1", test_dh, &dh_valid1);
 	l_test_add("Diffie-Hellman 2", test_dh, &dh_valid2);
+
+	l_test_add("simple keyring", test_simple_keyring, NULL);
+	l_test_add("trusted keyring", test_trusted_keyring, NULL);
 
 	return l_test_run();
 }
