@@ -328,6 +328,7 @@ static void test_dh(const void *data)
 	testkey_free_contents(&pub1);
 	testkey_free_contents(&priv2);
 	testkey_free_contents(&pub2);
+	l_free(secret);
 	l_free(buffer);
 }
 
