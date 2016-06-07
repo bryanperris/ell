@@ -155,6 +155,7 @@ LIB_EXPORT struct l_signal *l_signal_create(const sigset_t *mask,
 			void *user_data, l_signal_destroy_cb_t destroy)
 {
 	struct l_signal *signal;
+	int err;
 
 	if (unlikely(!mask || !callback))
 		return NULL;
@@ -172,16 +173,21 @@ LIB_EXPORT struct l_signal *l_signal_create(const sigset_t *mask,
 	}
 
 	signal->fd = signalfd(-1, mask, SFD_NONBLOCK | SFD_CLOEXEC);
-	if (signal->fd < 0) {
-		masked_signals_del(mask);
-		l_free(signal);
-		return NULL;
-	}
+	if (signal->fd < 0)
+		goto error;
 
-	watch_add(signal->fd, EPOLLIN, signal_callback,
-					signal, signal_destroy);
+	err = watch_add(signal->fd, EPOLLIN, signal_callback,
+			signal, signal_destroy);
+
+	if (err < 0)
+		goto error;
 
 	return signal;
+
+error:
+	masked_signals_del(mask);
+	l_free(signal);
+	return NULL;
 }
 
 /**
