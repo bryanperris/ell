@@ -135,6 +135,7 @@ LIB_EXPORT struct l_timeout *l_timeout_create_with_nanoseconds(unsigned int seco
 			void *user_data, l_timeout_destroy_cb_t destroy)
 {
 	struct l_timeout *timeout;
+	int err;
 
 	if (unlikely(!callback))
 		return NULL;
@@ -160,8 +161,13 @@ LIB_EXPORT struct l_timeout *l_timeout_create_with_nanoseconds(unsigned int seco
 		}
 	}
 
-	watch_add(timeout->fd, EPOLLIN | EPOLLONESHOT, timeout_callback,
-						timeout, timeout_destroy);
+	err = watch_add(timeout->fd, EPOLLIN | EPOLLONESHOT, timeout_callback,
+			timeout, timeout_destroy);
+
+	if (err < 0) {
+		l_free(timeout);
+		return NULL;
+	}
 
 	return timeout;
 }
