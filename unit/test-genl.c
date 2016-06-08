@@ -44,6 +44,9 @@ int main(int argc, char *argv[])
 {
 	struct l_genl *genl;
 
+	if (!l_main_init())
+		return -1;
+
 	l_log_set_stderr();
 
 	genl = l_genl_new_default();
@@ -55,6 +58,8 @@ int main(int argc, char *argv[])
 	l_main_run();
 
 	l_genl_unref(genl);
+
+	l_main_exit();
 
 	return 0;
 }

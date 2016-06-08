@@ -330,6 +330,9 @@ int main(int argc, char *argv[])
 	sigset_t mask;
 	int i;
 
+	if (!l_main_init())
+		return -1;
+
 	test_add("FD passing 1", test_fd_passing_1, NULL);
 
 	sigemptyset(&mask);
@@ -376,6 +379,8 @@ done:
 	l_signal_remove(signal);
 
 	l_queue_destroy(tests, l_free);
+
+	l_main_exit();
 
 	if (!success)
 		abort();

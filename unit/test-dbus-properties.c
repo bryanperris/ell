@@ -978,6 +978,9 @@ int main(int argc, char *argv[])
 	sigset_t mask;
 	int i;
 
+	if (!l_main_init())
+		return -1;
+
 	test_add("Legacy properties get", test_old_get, NULL);
 	test_add("Legacy properties set", test_old_set, NULL);
 	test_add("Legacy optional property", test_old_optional_get, NULL);
@@ -1033,6 +1036,8 @@ done:
 	l_signal_remove(signal);
 
 	l_queue_destroy(tests, l_free);
+
+	l_main_exit();
 
 	if (!success)
 		abort();

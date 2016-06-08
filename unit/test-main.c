@@ -91,6 +91,9 @@ int main(int argc, char *argv[])
 	struct l_idle *idle;
 	sigset_t mask;
 
+	if (!l_main_init())
+		return -1;
+
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGTERM);
@@ -128,6 +131,8 @@ int main(int argc, char *argv[])
 	l_signal_remove(signal);
 
 	l_idle_remove(idle);
+
+	l_main_exit();
 
 	return 0;
 }

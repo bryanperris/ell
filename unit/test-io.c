@@ -75,6 +75,9 @@ int main(int argc, char *argv[])
 	struct l_io *io1, *io2;
 	int fd[2];
 
+	if (!l_main_init())
+		return -1;
+
 	l_log_set_stderr();
 
 	if (socketpair(PF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, fd) < 0) {
@@ -98,6 +101,8 @@ int main(int argc, char *argv[])
 
 	l_io_destroy(io2);
 	l_io_destroy(io1);
+
+	l_main_exit();
 
 	return 0;
 }

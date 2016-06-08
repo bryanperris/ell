@@ -77,6 +77,9 @@ int main(int argc, char *argv[])
 	struct l_netlink *netlink;
 	struct ifinfomsg msg;
 
+	if (!l_main_init())
+		return -1;
+
 	l_log_set_stderr();
 
 	netlink = l_netlink_new(NETLINK_ROUTE);
@@ -91,6 +94,8 @@ int main(int argc, char *argv[])
 	l_main_run();
 
 	l_netlink_destroy(netlink);
+
+	l_main_exit();
 
 	return 0;
 }

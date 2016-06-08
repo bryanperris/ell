@@ -136,6 +136,9 @@ int main(int argc, char *argv[])
 	struct l_signal *signal;
 	sigset_t mask;
 
+	if (!l_main_init())
+		return -1;
+
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGTERM);
@@ -190,6 +193,8 @@ error:
 	close(bus_fd);
 
 	l_signal_remove(signal);
+
+	l_main_exit();
 
 	return EXIT_SUCCESS;
 }
