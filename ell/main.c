@@ -56,7 +56,6 @@ static int epoll_fd;
 static bool epoll_running;
 static bool epoll_terminate;
 static int idle_id;
-static int exit_status = EXIT_FAILURE;
 
 static struct l_queue *idle_list;
 
@@ -85,9 +84,6 @@ struct idle_data {
 static inline bool __attribute__ ((always_inline)) create_epoll(void)
 {
 	unsigned int i;
-
-	if (likely(epoll_fd))
-		return true;
 
 	epoll_fd = epoll_create1(EPOLL_CLOEXEC);
 	if (epoll_fd < 0) {
@@ -127,7 +123,7 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 	if (unlikely(fd < 0 || !callback))
 		return -EINVAL;
 
-	if (!create_epoll())
+	if (!epoll_fd)
 		return -EIO;
 
 	if ((unsigned int) fd > watch_entries - 1)
@@ -260,7 +256,7 @@ int idle_add(idle_event_cb_t callback, void *user_data,
 	if (unlikely(!callback))
 		return -EINVAL;
 
-	if (!create_epoll())
+	if (!epoll_fd)
 		return -EIO;
 
 	data = l_new(struct idle_data, 1);
@@ -313,24 +309,48 @@ static void idle_dispatch(void *data, void *user_data)
 }
 
 /**
+ * l_main_init:
+ *
+ * Initialize the main loop. This must be called before l_main_run()
+ * and any other function that directly or indirectly sets up an idle
+ * or watch. A safe rule-of-thumb is to call it before any function
+ * prefixed with "l_".
+ *
+ * Returns: true if initialization was successful, false otherwise.
+ **/
+LIB_EXPORT bool l_main_init(void)
+{
+	if (unlikely(epoll_running))
+		return false;
+
+	if (!create_epoll())
+		return false;
+
+	epoll_terminate = false;
+
+	return true;
+}
+
+/**
  * l_main_run:
  *
  * Run the main loop
  *
- * Returns: #EXIT_SCUCESS after successful execution or #EXIT_FAILURE in
+ * The loop may be restarted by invoking this function after a
+ * previous invocation returns, provided that l_main_exit() has not
+ * been called first.
+ *
+ * Returns: #EXIT_SUCCESS after successful execution or #EXIT_FAILURE in
  *          case of failure
  **/
 LIB_EXPORT int l_main_run(void)
 {
-	unsigned int i;
+	/* Has l_main_init() been called? */
+	if (unlikely(!epoll_fd))
+		return EXIT_FAILURE;
 
 	if (unlikely(epoll_running))
 		return EXIT_FAILURE;
-
-	if (!create_epoll())
-		return EXIT_FAILURE;
-
-	epoll_terminate = false;
 
 	epoll_running = true;
 
@@ -375,6 +395,26 @@ LIB_EXPORT int l_main_run(void)
 		l_queue_foreach_remove(idle_list, idle_prune, NULL);
 	}
 
+	epoll_running = false;
+
+	return EXIT_SUCCESS;
+}
+
+/**
+ * l_main_exit:
+ *
+ * Clean up after main loop completes.
+ *
+ **/
+LIB_EXPORT bool l_main_exit(void)
+{
+	unsigned int i;
+
+	if (epoll_running) {
+		l_error("Cleanup attempted on running main loop");
+		return false;
+	}
+
 	for (i = 0; i < watch_entries; i++) {
 		struct watch_data *data = watch_list[i];
 
@@ -399,12 +439,10 @@ LIB_EXPORT int l_main_run(void)
 	l_queue_destroy(idle_list, idle_destroy);
 	idle_list = NULL;
 
-	epoll_running = false;
-
 	close(epoll_fd);
 	epoll_fd = 0;
 
-	return exit_status;
+	return true;
 }
 
 /**
@@ -419,7 +457,6 @@ LIB_EXPORT bool l_main_quit(void)
 	if (unlikely(!epoll_running))
 		return false;
 
-	exit_status = EXIT_SUCCESS;
 	epoll_terminate = true;
 
 	return true;
@@ -471,20 +508,4 @@ int l_main_run_with_signal(l_main_signal_cb_t callback, void *user_data)
 	l_signal_remove(signal);
 
 	return result;
-}
-
-/**
- * l_main_exit:
- *
- * Teminate the running main loop with exit status
- *
- **/
-LIB_EXPORT
-void l_main_exit(int status)
-{
-	if (unlikely(!epoll_running))
-		return;
-
-	exit_status = status;
-	epoll_terminate = true;
 }

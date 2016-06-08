@@ -29,13 +29,15 @@
 extern "C" {
 #endif
 
+bool l_main_init(void);
 int l_main_run(void);
+bool l_main_exit(void);
+
 bool l_main_quit(void);
 
 typedef void (*l_main_signal_cb_t) (uint32_t signo, void *user_data);
 
 int l_main_run_with_signal(l_main_signal_cb_t callback, void *user_data);
-void l_main_exit(int status);
 
 #ifdef __cplusplus
 }
