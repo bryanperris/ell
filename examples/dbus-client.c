@@ -78,6 +78,9 @@ int main(int argc, char *argv[])
 	sigset_t mask;
 	uint32_t watch_id;
 
+	if (!l_main_init())
+		return -1;
+
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGTERM);
@@ -101,6 +104,8 @@ int main(int argc, char *argv[])
 
 	l_dbus_destroy(dbus);
 	l_signal_remove(signal);
+
+	l_main_exit();
 
 	return 0;
 }

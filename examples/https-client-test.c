@@ -159,6 +159,9 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	if (!l_main_init())
+		return -1;
+
 	io = l_io_new(fd);
 	l_io_set_close_on_destroy(io, true);
 	l_io_set_read_handler(io, https_io_read, tls, NULL);
@@ -175,6 +178,8 @@ int main(int argc, char *argv[])
 
 	l_io_destroy(io);
 	l_tls_free(tls);
+
+	l_main_exit();
 
 	return 0;
 }

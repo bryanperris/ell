@@ -181,6 +181,9 @@ int main(int argc, char *argv[])
 	sigset_t mask;
 	struct test_data *test;
 
+	if (!l_main_init())
+		return -1;
+
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGTERM);
@@ -232,6 +235,8 @@ int main(int argc, char *argv[])
 cleanup:
 	l_dbus_destroy(dbus);
 	l_signal_remove(signal);
+
+	l_main_exit();
 
 	return 0;
 }
