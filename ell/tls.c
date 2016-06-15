@@ -876,8 +876,9 @@ static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
 	/* Fill in the RSA Client Key Exchange body */
 
 	rsa_server_pubkey = l_asymmetric_cipher_new(L_CIPHER_RSA_PKCS1_V1_5,
-						tls->peer_pubkey,
-						tls->peer_pubkey_length);
+							tls->peer_pubkey,
+							tls->peer_pubkey_length,
+							true);
 	if (!rsa_server_pubkey) {
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
 
@@ -920,8 +921,8 @@ static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out,
 				tls_get_hash_t get_hash)
 {
 	struct l_asymmetric_cipher *rsa_privkey;
-	uint8_t *privkey, *privkey_short;
-	size_t key_size, short_size;
+	uint8_t *privkey;
+	size_t key_size;
 	bool result;
 	const struct tls_hash_algorithm *hash_type;
 	uint8_t hash[HANDSHAKE_HASH_MAX_SIZE];
@@ -945,19 +946,9 @@ static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out,
 		return false;
 	}
 
-	privkey_short = extract_rsakey(privkey, key_size, &short_size);
-	tls_free_key(privkey, key_size);
-
-	if (!privkey_short) {
-		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
-				TLS_ALERT_BAD_CERT);
-
-		return false;
-	}
-
 	rsa_privkey = l_asymmetric_cipher_new(L_CIPHER_RSA_PKCS1_V1_5,
-						privkey_short, short_size);
-	tls_free_key(privkey_short, short_size);
+						privkey, key_size, false);
+	tls_free_key(privkey, key_size);
 
 	if (!rsa_privkey) {
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
@@ -1020,8 +1011,9 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 	}
 
 	rsa_client_pubkey = l_asymmetric_cipher_new(L_CIPHER_RSA_PKCS1_V1_5,
-						tls->peer_pubkey,
-						tls->peer_pubkey_length);
+							tls->peer_pubkey,
+							tls->peer_pubkey_length,
+							true);
 	if (!rsa_client_pubkey) {
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
 
@@ -1080,11 +1072,14 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 		 */
 	}
 
-	digest_info = alloca(expected_len);
+	if (expected_len > key_size)
+		goto err_free_rsa;
+
+	digest_info = alloca(key_size);
 
 	result = l_asymmetric_cipher_verify(rsa_client_pubkey, in + 4,
 						digest_info,
-						key_size, expected_len);
+						key_size, key_size);
 
 	l_asymmetric_cipher_free(rsa_client_pubkey);
 
@@ -1743,8 +1738,8 @@ static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
 {
 	uint8_t pre_master_secret[48], random_secret[46];
 	struct l_asymmetric_cipher *rsa_server_privkey;
-	uint8_t *privkey, *privkey_short;
-	size_t key_size, short_size;
+	uint8_t *privkey;
+	size_t key_size;
 	bool result;
 
 	if (!tls->priv_key_path) {
@@ -1764,19 +1759,10 @@ static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
 		return;
 	}
 
-	privkey_short = extract_rsakey(privkey, key_size, &short_size);
-	tls_free_key(privkey, key_size);
-
-	if (!privkey_short) {
-		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
-				TLS_ALERT_BAD_CERT);
-
-		return;
-	}
-
 	rsa_server_privkey = l_asymmetric_cipher_new(L_CIPHER_RSA_PKCS1_V1_5,
-						privkey_short, short_size);
-	tls_free_key(privkey_short, short_size);
+							privkey, key_size,
+							false);
+	tls_free_key(privkey, key_size);
 
 	if (!rsa_server_privkey) {
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);

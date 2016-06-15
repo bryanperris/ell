@@ -58,7 +58,8 @@ enum l_asymmetric_cipher_type {
 
 struct l_asymmetric_cipher *l_asymmetric_cipher_new(
 					enum l_asymmetric_cipher_type type,
-					const void *key, size_t key_length);
+					const void *key, size_t key_length,
+					bool public_key);
 
 void l_asymmetric_cipher_free(struct l_asymmetric_cipher *cipher);
 

@@ -20,9 +20,6 @@
  *
  */
 
-uint8_t *extract_rsakey(uint8_t *pkcs1_key, size_t pkcs1_key_len,
-			size_t *out_len);
-
 #define ASN1_ID(class, pc, tag)	(((class) << 6) | ((pc) << 5) | (tag))
 
 #define ASN1_CLASS_UNIVERSAL	0
