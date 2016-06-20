@@ -65,7 +65,7 @@ struct tls_key_exchange_algorithm {
 	void (*handle_client_key_exchange)(struct l_tls *tls,
 						const uint8_t *buf, size_t len);
 
-	bool (*sign)(struct l_tls *tls, uint8_t **out,
+	ssize_t (*sign)(struct l_tls *tls, uint8_t *out, size_t len,
 			tls_get_hash_t get_hash);
 	bool (*verify)(struct l_tls *tls, const uint8_t *in, size_t len,
 			tls_get_hash_t get_hash);

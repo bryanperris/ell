@@ -25,6 +25,7 @@
 #define _GNU_SOURCE
 #include <time.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "util.h"
 #include "private.h"
@@ -274,7 +275,7 @@ static bool tls_send_rsa_client_key_xchg(struct l_tls *tls);
 static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
 						const uint8_t *buf, size_t len);
 
-static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out,
+static ssize_t tls_rsa_sign(struct l_tls *tls, uint8_t *out, size_t len,
 				tls_get_hash_t get_hash);
 static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 				tls_get_hash_t get_hash);
@@ -917,23 +918,25 @@ static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
 	return true;
 }
 
-static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out,
+static ssize_t tls_rsa_sign(struct l_tls *tls, uint8_t *out, size_t len,
 				tls_get_hash_t get_hash)
 {
 	struct l_asymmetric_cipher *rsa_privkey;
 	uint8_t *privkey;
 	size_t key_size;
-	bool result;
+	ssize_t result;
 	const struct tls_hash_algorithm *hash_type;
 	uint8_t hash[HANDSHAKE_HASH_MAX_SIZE];
 	uint8_t sign_input[HANDSHAKE_HASH_MAX_SIZE * 2 + 32];
 	size_t sign_input_len;
+	bool prepend_hash_type = false;
+	size_t expected_bytes;
 
 	if (!tls->priv_key_path) {
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
 				TLS_ALERT_BAD_CERT);
 
-		return false;
+		return -ENOKEY;
 	}
 
 	privkey = l_pem_load_private_key(tls->priv_key_path,
@@ -943,7 +946,7 @@ static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out,
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
 				TLS_ALERT_BAD_CERT);
 
-		return false;
+		return -ENOKEY;
 	}
 
 	rsa_privkey = l_asymmetric_cipher_new(L_CIPHER_RSA_PKCS1_V1_5,
@@ -953,10 +956,11 @@ static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out,
 	if (!rsa_privkey) {
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
 
-		return false;
+		return -ENOKEY;
 	}
 
 	key_size = l_asymmetric_cipher_get_key_size(rsa_privkey);
+	expected_bytes = key_size + 2;
 
 	if (tls->negotiated_version >= TLS_V12) {
 		hash_type = &tls_handshake_hash_data[tls->signature_hash];
@@ -966,20 +970,33 @@ static bool tls_rsa_sign(struct l_tls *tls, uint8_t **out,
 					sign_input, &sign_input_len,
 					hash, hash_type->length);
 
-		*(*out)++ = hash_type->tls_id;
-		*(*out)++ = 1;	/* RSA_sign */
+		prepend_hash_type = true;
+		expected_bytes += 2;
 	} else {
 		get_hash(tls, 1, sign_input + 0, NULL, NULL);	/* MD5 */
 		get_hash(tls, 2, sign_input + 16, NULL, NULL);	/* SHA1 */
 		sign_input_len = 36;
 	}
 
-	l_put_be16(key_size, *out);
-	result = l_asymmetric_cipher_sign(rsa_privkey, sign_input, *out + 2,
-						sign_input_len, key_size);
-	*out += key_size + 2;
+	result = -EMSGSIZE;
+
+	if (len >= expected_bytes) {
+		if (prepend_hash_type) {
+			*out++ = hash_type->tls_id;
+			*out++ = 1;	/* RSA_sign */
+		}
+
+		l_put_be16(key_size, out);
+		if (l_asymmetric_cipher_sign(rsa_privkey, sign_input,
+						out + 2, sign_input_len,
+						key_size))
+			result = expected_bytes;
+	}
 
 	l_asymmetric_cipher_free(rsa_privkey);
+
+	if (result < 0)
+		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
 
 	return result;
 }
@@ -1137,13 +1154,17 @@ static bool tls_get_handshake_hash_by_id(struct l_tls *tls, uint8_t hash_id,
 static bool tls_send_certificate_verify(struct l_tls *tls)
 {
 	uint8_t buf[2048];
-	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
 	int i;
+	ssize_t sign_len;
 
 	/* Fill in the Certificate Verify body */
 
-	if (!tls->pending.cipher_suite->key_xchg->sign(tls, &ptr,
-						tls_get_handshake_hash_by_id))
+	sign_len = tls->pending.cipher_suite->key_xchg->sign(tls,
+					buf + TLS_HANDSHAKE_HEADER_SIZE,
+					2048 - TLS_HANDSHAKE_HEADER_SIZE,
+					tls_get_handshake_hash_by_id);
+
+	if (sign_len < 0)
 		return false;
 
 	/* Stop maintaining handshake message hashes other than SHA256. */
@@ -1152,7 +1173,8 @@ static bool tls_send_certificate_verify(struct l_tls *tls)
 			if (i != HANDSHAKE_HASH_SHA256)
 				tls_drop_handshake_hash(tls, i);
 
-	tls_tx_handshake(tls, TLS_CERTIFICATE_VERIFY, buf, ptr - buf);
+	tls_tx_handshake(tls, TLS_CERTIFICATE_VERIFY, buf,
+				sign_len + TLS_HANDSHAKE_HEADER_SIZE);
 
 	return true;
 }
