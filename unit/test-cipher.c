@@ -184,16 +184,20 @@ static void test_rsa(const void *data)
 {
 	struct l_asymmetric_cipher *cipher;
 	char buf[128];
+	ssize_t encrypted, decrypted;
 
 	cipher = l_asymmetric_cipher_new(L_CIPHER_RSA_PKCS1_V1_5,
 						rsa_priv_key,
 						sizeof(rsa_priv_key), false);
 	assert(cipher);
-	assert(l_asymmetric_cipher_encrypt(cipher, FIXED_STR, buf, 100, 128));
+	encrypted = l_asymmetric_cipher_encrypt(cipher, FIXED_STR, buf,
+						100, 128);
+	assert(encrypted == 128);
 
 	assert(memcmp(FIXED_STR, buf, 100));
 
-	assert(l_asymmetric_cipher_decrypt(cipher, buf, buf, 128, 128));
+	decrypted = l_asymmetric_cipher_decrypt(cipher, buf, buf, 128, 128);
+	assert(decrypted == 100);
 
 	assert(!memcmp(FIXED_STR, buf, 100));
 
