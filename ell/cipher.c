@@ -192,7 +192,7 @@ LIB_EXPORT void l_cipher_free(struct l_cipher *cipher)
 	l_free(cipher);
 }
 
-static bool operate_cipher(int sk, __u32 operation,
+static ssize_t operate_cipher(int sk, __u32 operation,
 				const void *in, void *out, size_t len_in,
 				size_t len_out)
 {
@@ -200,6 +200,7 @@ static bool operate_cipher(int sk, __u32 operation,
 	struct msghdr msg;
 	struct cmsghdr *c_msg;
 	struct iovec iov;
+	ssize_t result;
 
 	memset(&c_msg_buf, 0, sizeof(c_msg_buf));
 	memset(&msg, 0, sizeof(msg));
@@ -219,13 +220,15 @@ static bool operate_cipher(int sk, __u32 operation,
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 
-	if (sendmsg(sk, &msg, 0) < 0)
-		return false;
+	result = sendmsg(sk, &msg, 0);
+	if (result < 0)
+		return -errno;
 
-	if (read(sk, out, len_out) < 0)
-		return false;
+	result = read(sk, out, len_out);
+	if (result < 0)
+		return -errno;
 
-	return true;
+	return result;
 }
 
 LIB_EXPORT bool l_cipher_encrypt(struct l_cipher *cipher,
@@ -238,7 +241,7 @@ LIB_EXPORT bool l_cipher_encrypt(struct l_cipher *cipher,
 		return false;
 
 	return operate_cipher(cipher->encrypt_sk, ALG_OP_ENCRYPT, in, out, len,
-				len);
+				len) >= 0;
 }
 
 LIB_EXPORT bool l_cipher_decrypt(struct l_cipher *cipher,
@@ -251,7 +254,7 @@ LIB_EXPORT bool l_cipher_decrypt(struct l_cipher *cipher,
 		return false;
 
 	return operate_cipher(cipher->decrypt_sk, ALG_OP_DECRYPT, in, out, len,
-				len);
+				len) >= 0;
 }
 
 LIB_EXPORT bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
@@ -454,9 +457,9 @@ LIB_EXPORT int l_asymmetric_cipher_get_key_size(
 	return cipher->key_size;
 }
 
-LIB_EXPORT bool l_asymmetric_cipher_encrypt(struct l_asymmetric_cipher *cipher,
-					const void *in, void *out,
-					size_t len_in, size_t len_out)
+LIB_EXPORT ssize_t l_asymmetric_cipher_encrypt(struct l_asymmetric_cipher *cipher,
+						const void *in, void *out,
+						size_t len_in, size_t len_out)
 {
 	if (unlikely(!cipher))
 		return false;
@@ -468,9 +471,9 @@ LIB_EXPORT bool l_asymmetric_cipher_encrypt(struct l_asymmetric_cipher *cipher,
 				in, out, len_in, len_out);
 }
 
-LIB_EXPORT bool l_asymmetric_cipher_decrypt(struct l_asymmetric_cipher *cipher,
-					const void *in, void *out,
-					size_t len_in, size_t len_out)
+LIB_EXPORT ssize_t l_asymmetric_cipher_decrypt(struct l_asymmetric_cipher *cipher,
+						const void *in, void *out,
+						size_t len_in, size_t len_out)
 {
 	if (unlikely(!cipher))
 		return false;
@@ -482,9 +485,9 @@ LIB_EXPORT bool l_asymmetric_cipher_decrypt(struct l_asymmetric_cipher *cipher,
 				in, out, len_in, len_out);
 }
 
-LIB_EXPORT bool l_asymmetric_cipher_sign(struct l_asymmetric_cipher *cipher,
-					const void *in, void *out,
-					size_t len_in, size_t len_out)
+LIB_EXPORT ssize_t l_asymmetric_cipher_sign(struct l_asymmetric_cipher *cipher,
+						const void *in, void *out,
+						size_t len_in, size_t len_out)
 {
 	if (unlikely(!cipher))
 		return false;
@@ -496,9 +499,9 @@ LIB_EXPORT bool l_asymmetric_cipher_sign(struct l_asymmetric_cipher *cipher,
 				in, out, len_in, len_out);
 }
 
-LIB_EXPORT bool l_asymmetric_cipher_verify(struct l_asymmetric_cipher *cipher,
-					const void *in, void *out,
-					size_t len_in, size_t len_out)
+LIB_EXPORT ssize_t l_asymmetric_cipher_verify(struct l_asymmetric_cipher *cipher,
+						const void *in, void *out,
+						size_t len_in, size_t len_out)
 {
 	if (unlikely(!cipher))
 		return false;

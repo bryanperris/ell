@@ -65,21 +65,21 @@ void l_asymmetric_cipher_free(struct l_asymmetric_cipher *cipher);
 
 int l_asymmetric_cipher_get_key_size(struct l_asymmetric_cipher *cipher);
 
-bool l_asymmetric_cipher_encrypt(struct l_asymmetric_cipher *cipher,
+ssize_t l_asymmetric_cipher_encrypt(struct l_asymmetric_cipher *cipher,
 					const void *in, void *out,
 					size_t len_in, size_t len_out);
 
-bool l_asymmetric_cipher_decrypt(struct l_asymmetric_cipher *cipher,
+ssize_t l_asymmetric_cipher_decrypt(struct l_asymmetric_cipher *cipher,
 					const void *in, void *out,
 					size_t len_in, size_t len_out);
 
-bool l_asymmetric_cipher_sign(struct l_asymmetric_cipher *cipher,
-				const void *in, void *out,
-				size_t len_in, size_t len_out);
+ssize_t l_asymmetric_cipher_sign(struct l_asymmetric_cipher *cipher,
+					const void *in, void *out,
+					size_t len_in, size_t len_out);
 
-bool l_asymmetric_cipher_verify(struct l_asymmetric_cipher *cipher,
-				const void *in, void *out,
-				size_t len_in, size_t len_out);
+ssize_t l_asymmetric_cipher_verify(struct l_asymmetric_cipher *cipher,
+					const void *in, void *out,
+					size_t len_in, size_t len_out);
 
 #ifdef __cplusplus
 }

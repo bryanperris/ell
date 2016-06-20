@@ -862,7 +862,7 @@ static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
 	uint8_t pre_master_secret[48];
 	struct l_asymmetric_cipher *rsa_server_pubkey;
 	int key_size;
-	bool result;
+	ssize_t bytes_encrypted;
 
 	if (!tls->peer_pubkey) {
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
@@ -897,14 +897,14 @@ static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
 	}
 
 	l_put_be16(key_size, ptr);
-	result = l_asymmetric_cipher_encrypt(rsa_server_pubkey,
-						pre_master_secret, ptr + 2,
-						48, key_size);
+	bytes_encrypted = l_asymmetric_cipher_encrypt(rsa_server_pubkey,
+							pre_master_secret,
+							ptr + 2, 48, key_size);
 	ptr += key_size + 2;
 
 	l_asymmetric_cipher_free(rsa_server_pubkey);
 
-	if (!result) {
+	if (bytes_encrypted != key_size) {
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
 
 		return false;
@@ -987,9 +987,11 @@ static ssize_t tls_rsa_sign(struct l_tls *tls, uint8_t *out, size_t len,
 		}
 
 		l_put_be16(key_size, out);
-		if (l_asymmetric_cipher_sign(rsa_privkey, sign_input,
-						out + 2, sign_input_len,
-						key_size))
+		result = l_asymmetric_cipher_sign(rsa_privkey, sign_input,
+							out + 2, sign_input_len,
+							key_size);
+
+		if (result == (ssize_t) key_size)
 			result = expected_bytes;
 	}
 
@@ -1006,7 +1008,7 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 {
 	struct l_asymmetric_cipher *rsa_client_pubkey;
 	size_t key_size;
-	bool result;
+	ssize_t verify_bytes;
 	uint8_t hash[HANDSHAKE_HASH_MAX_SIZE];
 	size_t hash_len;
 	enum l_checksum_type hash_type;
@@ -1089,18 +1091,16 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 		 */
 	}
 
-	if (expected_len > key_size)
-		goto err_free_rsa;
+	digest_info = alloca(expected_len);
 
-	digest_info = alloca(key_size);
-
-	result = l_asymmetric_cipher_verify(rsa_client_pubkey, in + 4,
-						digest_info,
-						key_size, key_size);
+	verify_bytes = l_asymmetric_cipher_verify(rsa_client_pubkey, in + 4,
+							digest_info, key_size,
+							expected_len);
 
 	l_asymmetric_cipher_free(rsa_client_pubkey);
 
-	if (!result || memcmp(digest_info, expected, expected_len)) {
+	if (verify_bytes != (ssize_t)expected_len ||
+		memcmp(digest_info, expected, expected_len)) {
 		tls_disconnect(tls, TLS_ALERT_DECRYPT_ERROR, 0);
 
 		return false;
@@ -1762,7 +1762,7 @@ static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
 	struct l_asymmetric_cipher *rsa_server_privkey;
 	uint8_t *privkey;
 	size_t key_size;
-	bool result;
+	ssize_t bytes_decrypted;
 
 	if (!tls->priv_key_path) {
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
@@ -1812,9 +1812,10 @@ static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
 		return;
 	}
 
-	result = l_asymmetric_cipher_decrypt(rsa_server_privkey, buf + 2,
-						pre_master_secret,
-						key_size, 48);
+	bytes_decrypted = l_asymmetric_cipher_decrypt(rsa_server_privkey,
+							buf + 2,
+							pre_master_secret,
+							key_size, 48);
 	l_asymmetric_cipher_free(rsa_server_privkey);
 
 	/*
@@ -1832,7 +1833,7 @@ static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
 	pre_master_secret[0] = tls->client_version >> 8;
 	pre_master_secret[1] = tls->client_version >> 0;
 
-	if (!result)
+	if (bytes_decrypted != 48)
 		memcpy(pre_master_secret + 2, random_secret, 46);
 
 	tls_generate_master_secret(tls, pre_master_secret, 48);
