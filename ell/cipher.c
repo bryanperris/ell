@@ -294,7 +294,8 @@ LIB_EXPORT bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
 }
 
 struct l_asymmetric_cipher {
-	struct l_cipher cipher;
+	int type;
+	int sk;
 	int key_size;
 };
 
@@ -407,7 +408,7 @@ LIB_EXPORT struct l_asymmetric_cipher *l_asymmetric_cipher_new(
 		return NULL;
 
 	cipher = l_new(struct l_asymmetric_cipher, 1);
-	cipher->cipher.type = type;
+	cipher->type = type;
 
 	switch (type) {
 	case L_CIPHER_RSA_PKCS1_V1_5:
@@ -418,23 +419,13 @@ LIB_EXPORT struct l_asymmetric_cipher *l_asymmetric_cipher_new(
 		break;
 	}
 
-	cipher->cipher.encrypt_sk = create_alg("akcipher", alg_name,
-						key, key_length, public_key);
-	if (cipher->cipher.encrypt_sk < 0)
+	cipher->sk = create_alg("akcipher", alg_name, key, key_length,
+				public_key);
+	if (cipher->sk < 0)
 		goto error_free;
-
-	if (public_key) {
-		cipher->cipher.decrypt_sk = create_alg("akcipher", alg_name,
-							key, key_length,
-							public_key);
-		if (cipher->cipher.decrypt_sk < 0)
-			goto error_close;
-	}
 
 	return cipher;
 
-error_close:
-	close(cipher->cipher.encrypt_sk);
 error_free:
 	l_free(cipher);
 	return NULL;
@@ -445,8 +436,7 @@ LIB_EXPORT void l_asymmetric_cipher_free(struct l_asymmetric_cipher *cipher)
 	if (unlikely(!cipher))
 		return;
 
-	close(cipher->cipher.encrypt_sk);
-	close(cipher->cipher.decrypt_sk);
+	close(cipher->sk);
 
 	l_free(cipher);
 }
@@ -467,8 +457,8 @@ LIB_EXPORT ssize_t l_asymmetric_cipher_encrypt(struct l_asymmetric_cipher *ciphe
 	if (unlikely(!in) || unlikely(!out))
 		return false;
 
-	return operate_cipher(cipher->cipher.encrypt_sk, ALG_OP_ENCRYPT,
-				in, out, len_in, len_out);
+	return operate_cipher(cipher->sk, ALG_OP_ENCRYPT, in, out, len_in,
+				len_out);
 }
 
 LIB_EXPORT ssize_t l_asymmetric_cipher_decrypt(struct l_asymmetric_cipher *cipher,
@@ -481,8 +471,8 @@ LIB_EXPORT ssize_t l_asymmetric_cipher_decrypt(struct l_asymmetric_cipher *ciphe
 	if (unlikely(!in) || unlikely(!out))
 		return false;
 
-	return operate_cipher(cipher->cipher.decrypt_sk, ALG_OP_DECRYPT,
-				in, out, len_in, len_out);
+	return operate_cipher(cipher->sk, ALG_OP_DECRYPT, in, out, len_in,
+				len_out);
 }
 
 LIB_EXPORT ssize_t l_asymmetric_cipher_sign(struct l_asymmetric_cipher *cipher,
@@ -495,8 +485,8 @@ LIB_EXPORT ssize_t l_asymmetric_cipher_sign(struct l_asymmetric_cipher *cipher,
 	if (unlikely(!in) || unlikely(!out))
 		return false;
 
-	return operate_cipher(cipher->cipher.decrypt_sk, ALG_OP_SIGN,
-				in, out, len_in, len_out);
+	return operate_cipher(cipher->sk, ALG_OP_SIGN, in, out, len_in,
+				len_out);
 }
 
 LIB_EXPORT ssize_t l_asymmetric_cipher_verify(struct l_asymmetric_cipher *cipher,
@@ -509,6 +499,6 @@ LIB_EXPORT ssize_t l_asymmetric_cipher_verify(struct l_asymmetric_cipher *cipher
 	if (unlikely(!in) || unlikely(!out))
 		return false;
 
-	return operate_cipher(cipher->cipher.encrypt_sk, ALG_OP_VERIFY,
-				in, out, len_in, len_out);
+	return operate_cipher(cipher->sk, ALG_OP_VERIFY, in, out, len_in,
+				len_out);
 }
