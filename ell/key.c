@@ -99,7 +99,8 @@ static long kernel_dh_compute(int32_t private, int32_t prime, int32_t base,
 					   .prime = prime,
 					   .base = base };
 
-	return syscall(__NR_keyctl, KEYCTL_DH_COMPUTE, &params, payload, len);
+	return syscall(__NR_keyctl, KEYCTL_DH_COMPUTE, &params, payload, len,
+			NULL);
 }
 
 static bool setup_internal_keyring(void)
