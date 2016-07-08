@@ -399,12 +399,13 @@ static bool test_property_getter(struct l_dbus *dbus,
 	return true;
 }
 
-static void test_property_setter(struct l_dbus *dbus,
+static struct l_dbus_message *test_property_setter(struct l_dbus *dbus,
 					struct l_dbus_message *message,
 					struct l_dbus_message_iter *new_value,
 					l_dbus_property_complete_cb_t complete,
 					void *user_data)
 {
+	return NULL;
 }
 
 int main(int argc, char *argv[])

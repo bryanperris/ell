@@ -220,20 +220,26 @@ static bool test_string_getter(struct l_dbus *dbus,
 static bool setter_called;
 static bool int_optional;
 
-static void test_string_setter(struct l_dbus *dbus,
-				struct l_dbus_message *message,
-				struct l_dbus_message_iter *new_value,
-				l_dbus_property_complete_cb_t complete,
-				void *user_data)
+static struct l_dbus_message *test_string_setter(struct l_dbus *dbus,
+					struct l_dbus_message *message,
+					struct l_dbus_message_iter *new_value,
+					l_dbus_property_complete_cb_t complete,
+					void *user_data)
 {
 	const char *strvalue;
 
-	test_assert(l_dbus_message_iter_get_variant(new_value, "s", &strvalue));
-	test_assert(!strcmp(strvalue, "bar"));
+	if (!l_dbus_message_iter_get_variant(new_value, "s", &strvalue))
+		goto done;
+
+	if (strcmp(strvalue, "bar"))
+		goto done;
 
 	setter_called = true;
 
+done:
 	complete(dbus, message, NULL);
+
+	return NULL;
 }
 
 static bool test_int_getter(struct l_dbus *dbus,
@@ -251,32 +257,37 @@ static bool test_int_getter(struct l_dbus *dbus,
 	return l_dbus_message_builder_append_basic(builder, 'u', &u);
 }
 
-static void test_int_setter(struct l_dbus *dbus,
-				struct l_dbus_message *message,
-				struct l_dbus_message_iter *new_value,
-				l_dbus_property_complete_cb_t complete,
-				void *user_data)
+static struct l_dbus_message *test_int_setter(struct l_dbus *dbus,
+					struct l_dbus_message *message,
+					struct l_dbus_message_iter *new_value,
+					l_dbus_property_complete_cb_t complete,
+					void *user_data)
 {
 	uint32_t u;
 
-	test_assert(l_dbus_message_iter_get_variant(new_value, "u", &u));
-	test_assert(u == 42);
+	if (!l_dbus_message_iter_get_variant(new_value, "u", &u))
+		goto done;
+
+	if (u != 42)
+		goto done;
 
 	setter_called = true;
 
+done:
 	complete(dbus, message, NULL);
+
+	return NULL;
 }
 
-static void test_error_setter(struct l_dbus *dbus,
-				struct l_dbus_message *message,
-				struct l_dbus_message_iter *new_value,
-				l_dbus_property_complete_cb_t complete,
-				void *user_data)
+static struct l_dbus_message *test_error_setter(struct l_dbus *dbus,
+					struct l_dbus_message *message,
+					struct l_dbus_message_iter *new_value,
+					l_dbus_property_complete_cb_t complete,
+					void *user_data)
 {
 	setter_called = true;
 
-	complete(dbus, message, l_dbus_message_new_error(message,
-						"org.test.Error", "Error"));
+	return l_dbus_message_new_error(message, "org.test.Error", "Error");
 }
 
 static bool test_path_getter(struct l_dbus *dbus,
