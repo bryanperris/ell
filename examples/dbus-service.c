@@ -106,27 +106,27 @@ static bool test_string_getter(struct l_dbus *dbus,
 	return true;
 }
 
-static void test_string_setter(struct l_dbus *dbus,
-				struct l_dbus_message *message,
-				struct l_dbus_message_iter *new_value,
-				l_dbus_property_complete_cb_t complete,
-				void *user_data)
+static struct l_dbus_message *test_string_setter(struct l_dbus *dbus,
+					struct l_dbus_message *message,
+					struct l_dbus_message_iter *new_value,
+					l_dbus_property_complete_cb_t complete,
+					void *user_data)
 {
 	const char *strvalue;
 	struct test_data *test = user_data;
 
-	if (!l_dbus_message_iter_get_variant(new_value, "s", &strvalue)) {
-		complete(dbus, message, l_dbus_message_new_error(message,
-					"org.test.InvalidArguments",
-					"String value expected"));
-		return;
-	}
+	if (!l_dbus_message_iter_get_variant(new_value, "s", &strvalue))
+		return l_dbus_message_new_error(message,
+						"org.test.InvalidArguments",
+						"String value expected");
 
 	l_info("New String value: %s", strvalue);
 	l_free(test->string);
 	test->string = l_strdup(strvalue);
 
 	complete(dbus, message, NULL);
+
+	return NULL;
 }
 
 static bool test_int_getter(struct l_dbus *dbus,
@@ -141,7 +141,7 @@ static bool test_int_getter(struct l_dbus *dbus,
 	return true;
 }
 
-static void test_int_setter(struct l_dbus *dbus,
+static struct l_dbus_message *test_int_setter(struct l_dbus *dbus,
 				struct l_dbus_message *message,
 				struct l_dbus_message_iter *new_value,
 				l_dbus_property_complete_cb_t complete,
@@ -150,17 +150,17 @@ static void test_int_setter(struct l_dbus *dbus,
 	uint32_t u;
 	struct test_data *test = user_data;
 
-	if (!l_dbus_message_iter_get_variant(new_value, "u", &u)) {
-		complete(dbus, message, l_dbus_message_new_error(message,
-					"org.test.InvalidArguments",
-					"Integer value expected"));
-		return;
-	}
+	if (!l_dbus_message_iter_get_variant(new_value, "u", &u))
+		return l_dbus_message_new_error(message,
+						"org.test.InvalidArguments",
+						"Integer value expected");
 
 	l_info("New Integer value: %u", u);
 	test->integer = u;
 
 	complete(dbus, message, NULL);
+
+	return NULL;
 }
 
 static void setup_test_interface(struct l_dbus_interface *interface)
