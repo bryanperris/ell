@@ -1180,6 +1180,7 @@ static struct l_dbus_message *old_set_property(struct l_dbus *dbus,
 	const struct _dbus_property *property;
 	struct l_dbus_message_iter variant;
 	struct _dbus_object_tree *tree = _dbus_get_tree(dbus);
+	struct l_dbus_message *reply;
 
 	interface = l_hashmap_lookup(tree->interfaces,
 					l_dbus_message_get_interface(message));
@@ -1207,10 +1208,13 @@ static struct l_dbus_message *old_set_property(struct l_dbus *dbus,
 						"Property %s is read-only",
 						property_name);
 
-	property->setter(dbus, l_dbus_message_ref(message), &variant,
-				set_property_complete, user_data);
+	reply = property->setter(dbus, l_dbus_message_ref(message), &variant,
+					set_property_complete, user_data);
 
-	return NULL;
+	if (reply)
+		l_dbus_message_unref(message);
+
+	return reply;
 }
 
 static struct l_dbus_message *old_get_properties(struct l_dbus *dbus,
@@ -1729,6 +1733,7 @@ static struct l_dbus_message *properties_set(struct l_dbus *dbus,
 	struct l_dbus_message_iter variant;
 	struct _dbus_object_tree *tree = _dbus_get_tree(dbus);
 	const struct object_node *object;
+	struct l_dbus_message *reply;
 
 	if (!l_dbus_message_get_arguments(message, "ssv", &interface_name,
 						&property_name, &variant))
@@ -1774,10 +1779,14 @@ static struct l_dbus_message *properties_set(struct l_dbus *dbus,
 						"Object has no interface %s",
 						interface_name);
 
-	property->setter(dbus, l_dbus_message_ref(message), &variant,
-				properties_set_complete, instance->user_data);
+	reply = property->setter(dbus, l_dbus_message_ref(message), &variant,
+					properties_set_complete,
+					instance->user_data);
 
-	return NULL;
+	if (reply)
+		l_dbus_message_unref(message);
+
+	return reply;
 }
 
 static struct l_dbus_message *properties_get_all(struct l_dbus *dbus,

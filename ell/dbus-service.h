@@ -56,7 +56,7 @@ typedef void (*l_dbus_property_complete_cb_t) (struct l_dbus *,
 						struct l_dbus_message *,
 						struct l_dbus_message *error);
 
-typedef void (*l_dbus_property_set_cb_t) (struct l_dbus *,
+typedef struct l_dbus_message *(*l_dbus_property_set_cb_t) (struct l_dbus *,
 					struct l_dbus_message *message,
 					struct l_dbus_message_iter *new_value,
 					l_dbus_property_complete_cb_t complete,
