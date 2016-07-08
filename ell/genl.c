@@ -39,6 +39,12 @@
 
 #define MAX_NESTING_LEVEL 4
 
+struct genl_unicast_notify {
+	l_genl_msg_func_t handler;
+	l_genl_destroy_func_t destroy;
+	void *user_data;
+};
+
 struct l_genl {
 	int ref_count;
 	int fd;
@@ -54,6 +60,7 @@ struct l_genl {
 	unsigned int next_notify_id;
 	struct l_queue *family_list;
 	struct l_genl_family *nlctrl;
+	struct genl_unicast_notify *unicast_notify;
 	l_genl_debug_func_t debug_callback;
 	l_genl_destroy_func_t debug_destroy;
 	void *debug_data;
@@ -82,7 +89,7 @@ struct genl_request {
 	void *user_data;
 };
 
-struct genl_notify {
+struct genl_mcast_notify {
 	unsigned int id;
 	uint16_t type;
 	uint32_t group;
@@ -133,7 +140,7 @@ static void destroy_request(void *data)
 
 static void destroy_notify(void *data)
 {
-	struct genl_notify *notify = data;
+	struct genl_mcast_notify *notify = data;
 
 	if (notify->destroy)
 		notify->destroy(notify->user_data);
@@ -356,10 +363,11 @@ static bool match_request_seq(const void *a, const void *b)
 	return request->seq == seq;
 }
 
-static void process_request(struct l_genl *genl, const struct nlmsghdr *nlmsg)
+static void process_unicast(struct l_genl *genl, const struct nlmsghdr *nlmsg)
 {
 	struct l_genl_msg *msg;
 	struct genl_request *request;
+	struct genl_unicast_notify *notify;
 
 	if (nlmsg->nlmsg_type == NLMSG_NOOP ||
 					nlmsg->nlmsg_type == NLMSG_OVERRUN)
@@ -367,28 +375,34 @@ static void process_request(struct l_genl *genl, const struct nlmsghdr *nlmsg)
 
 	request = l_queue_remove_if(genl->pending_list, match_request_seq,
 					L_UINT_TO_PTR(nlmsg->nlmsg_seq));
-	if (!request)
-		return;
 
 	msg = _genl_msg_create(nlmsg);
 	if (!msg) {
-		destroy_request(request);
-		wakeup_writer(genl);
+		if (request) {
+			destroy_request(request);
+			wakeup_writer(genl);
+		}
 		return;
 	}
 
-	if (request->callback && nlmsg->nlmsg_type != NLMSG_DONE)
-		request->callback(msg, request->user_data);
+	if (request) {
+		if (request->callback && nlmsg->nlmsg_type != NLMSG_DONE)
+			request->callback(msg, request->user_data);
 
-	if (nlmsg->nlmsg_flags & NLM_F_MULTI) {
-		if (nlmsg->nlmsg_type == NLMSG_DONE) {
+		if (nlmsg->nlmsg_flags & NLM_F_MULTI) {
+			if (nlmsg->nlmsg_type == NLMSG_DONE) {
+				destroy_request(request);
+				wakeup_writer(genl);
+			} else
+				l_queue_push_head(genl->pending_list, request);
+		} else {
 			destroy_request(request);
 			wakeup_writer(genl);
-		} else
-			l_queue_push_head(genl->pending_list, request);
+		}
 	} else {
-		destroy_request(request);
-		wakeup_writer(genl);
+		notify = genl->unicast_notify;
+		if (notify && notify->handler)
+			notify->handler(msg, notify->user_data);
 	}
 
 	l_genl_msg_unref(msg);
@@ -402,7 +416,7 @@ struct notify_type_group {
 
 static void notify_handler(void *data, void *user_data)
 {
-	struct genl_notify *notify = data;
+	struct genl_mcast_notify *notify = data;
 	struct notify_type_group *match = user_data;
 
 	if (notify->type != match->type)
@@ -415,7 +429,7 @@ static void notify_handler(void *data, void *user_data)
 		notify->callback(match->msg, notify->user_data);
 }
 
-static void process_notify(struct l_genl *genl, uint32_t group,
+static void process_multicast(struct l_genl *genl, uint32_t group,
 						const struct nlmsghdr *nlmsg)
 {
 	struct notify_type_group match;
@@ -487,9 +501,9 @@ static bool received_data(struct l_io *io, void *user_data)
 	for (nlmsg = iov.iov_base; NLMSG_OK(nlmsg, bytes_read);
 				nlmsg = NLMSG_NEXT(nlmsg, bytes_read)) {
 		if (group > 0)
-			process_notify(genl, group, nlmsg);
+			process_multicast(genl, group, nlmsg);
 		else
-			process_request(genl, nlmsg);
+			process_unicast(genl, nlmsg);
 	}
 
 	return true;
@@ -607,6 +621,8 @@ LIB_EXPORT void l_genl_unref(struct l_genl *genl)
 	if (genl->debug_destroy)
 		genl->debug_destroy(genl->debug_data);
 
+	l_genl_set_unicast_handler(genl, NULL, NULL, NULL);
+
 	l_free(genl);
 }
 
@@ -634,6 +650,41 @@ LIB_EXPORT bool l_genl_set_close_on_unref(struct l_genl *genl, bool do_close)
 		return false;
 
 	genl->close_on_unref = do_close;
+
+	return true;
+}
+
+LIB_EXPORT bool l_genl_set_unicast_handler(struct l_genl *genl,
+						l_genl_msg_func_t handler,
+						void *user_data,
+						l_genl_destroy_func_t destroy)
+{
+	struct genl_unicast_notify *notify;
+
+	if (!genl)
+		return false;
+
+	notify = genl->unicast_notify;
+	if (notify) {
+		if (notify->destroy)
+			notify->destroy(notify->user_data);
+
+		if (!handler) {
+			l_free(notify);
+			genl->unicast_notify = NULL;
+			return true;
+		}
+	} else {
+		if (!handler)
+			return false;
+
+		notify = l_new(struct genl_unicast_notify, 1);
+		genl->unicast_notify = notify;
+	}
+
+	notify->handler = handler;
+	notify->destroy = destroy;
+	notify->user_data = user_data;
 
 	return true;
 }
@@ -1265,7 +1316,7 @@ LIB_EXPORT unsigned int l_genl_family_register(struct l_genl_family *family,
 						l_genl_destroy_func_t destroy)
 {
 	struct l_genl *genl;
-	struct genl_notify *notify;
+	struct genl_mcast_notify *notify;
 	struct genl_mcast *mcast;
 
 	if (unlikely(!family) || unlikely(!group))
@@ -1280,7 +1331,7 @@ LIB_EXPORT unsigned int l_genl_family_register(struct l_genl_family *family,
 	if (!mcast)
 		return 0;
 
-	notify = l_new(struct genl_notify, 1);
+	notify = l_new(struct genl_mcast_notify, 1);
 
 	notify->type = family->id;
 	notify->group = mcast->id;
@@ -1303,7 +1354,7 @@ LIB_EXPORT unsigned int l_genl_family_register(struct l_genl_family *family,
 
 static bool match_notify_id(const void *a, const void *b)
 {
-	const struct genl_notify *notify = a;
+	const struct genl_mcast_notify *notify = a;
 	unsigned int id = L_PTR_TO_UINT(b);
 
 	return notify->id == id;
@@ -1313,7 +1364,7 @@ LIB_EXPORT bool l_genl_family_unregister(struct l_genl_family *family,
 							unsigned int id)
 {
 	struct l_genl *genl;
-	struct genl_notify *notify;
+	struct genl_mcast_notify *notify;
 
 	if (!family || !id)
 		return false;

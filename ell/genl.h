@@ -96,6 +96,11 @@ bool l_genl_family_set_watches(struct l_genl_family *family,
 
 typedef void (*l_genl_msg_func_t)(struct l_genl_msg *msg, void *user_data);
 
+bool l_genl_set_unicast_handler(struct l_genl *genl,
+						l_genl_msg_func_t handler,
+						void *user_data,
+						l_genl_destroy_func_t destroy);
+
 uint32_t l_genl_family_get_version(struct l_genl_family *family);
 
 bool l_genl_family_can_send(struct l_genl_family *family, uint8_t cmd);
