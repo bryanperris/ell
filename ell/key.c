@@ -243,7 +243,7 @@ LIB_EXPORT struct l_keyring *l_keyring_new(enum l_keyring_type type,
 
 		payload = l_strdup_printf(
 			"restrict_type=asymmetric "
-			"restrict_by=signature_keyring "
+			"restrict_by=keyring "
 			"restrict_key=%d",
 			trusted->serial);
 		payload_length = strlen(payload);
