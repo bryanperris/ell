@@ -59,7 +59,7 @@ struct l_keyring {
 
 static const char * const key_type_names[] = {
 	[L_KEY_RAW] = "user",
-	[L_KEY_ASYMMETRIC] = "asymmetric",
+	[L_KEY_RSA] = "asymmetric",
 };
 
 static long kernel_add_key(const char *type, const char *description,
@@ -172,6 +172,13 @@ LIB_EXPORT struct l_key *l_key_new(enum l_key_type type, const void *payload,
 		l_free(key);
 		key = NULL;
 	}
+
+	/*
+	 * TODO: Query asymmetric key algorithm from the kernel and
+	 * ensure that it matches the expected l_key_type. This can
+	 * currently be found by digging through /proc/keys, but a
+	 * keyctl() op makes more sense.
+	 */
 
 	return key;
 }

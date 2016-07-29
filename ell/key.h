@@ -35,7 +35,7 @@ struct l_keyring;
 
 enum l_key_type {
 	L_KEY_RAW = 0,
-	L_KEY_ASYMMETRIC
+	L_KEY_RSA,
 };
 
 enum l_keyring_type {
