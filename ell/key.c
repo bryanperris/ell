@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <sys/syscall.h>
 #include <linux/keyctl.h>
+#include <errno.h>
 
 #include "private.h"
 #include "util.h"
@@ -64,43 +65,72 @@ static const char * const key_type_names[] = {
 static long kernel_add_key(const char *type, const char *description,
 				const void *payload, size_t len, int32_t keyring)
 {
-	return syscall(__NR_add_key, type, description, payload, len, keyring);
+	long result;
+
+	result = syscall(__NR_add_key, type, description, payload, len,
+				keyring);
+
+	return result >= 0 ? result : -errno;
 }
 
 static long kernel_read_key(int32_t serial, const void *payload, size_t len)
 {
-	return syscall(__NR_keyctl, KEYCTL_READ, serial, payload, len);
+	long result;
+
+	result = syscall(__NR_keyctl, KEYCTL_READ, serial, payload, len);
+
+	return result >= 0 ? result : -errno;
 }
 
 static long kernel_update_key(int32_t serial, const void *payload, size_t len)
 {
-	return syscall(__NR_keyctl, KEYCTL_UPDATE, serial, payload, len);
+	long result;
+
+	result = syscall(__NR_keyctl, KEYCTL_UPDATE, serial, payload, len);
+
+	return result >= 0 ? result : -errno;
 }
 
 static long kernel_revoke_key(int32_t serial)
 {
-	return syscall(__NR_keyctl, KEYCTL_REVOKE, serial);
+	long result;
+
+	result = syscall(__NR_keyctl, KEYCTL_REVOKE, serial);
+
+	return result >= 0 ? result : -errno;
 }
 
 static long kernel_link_key(int32_t key_serial, int32_t ring_serial)
 {
-	return syscall(__NR_keyctl, KEYCTL_LINK, key_serial, ring_serial);
+	long result;
+
+	result = syscall(__NR_keyctl, KEYCTL_LINK, key_serial, ring_serial);
+
+	return result >= 0 ? result : -errno;
 }
 
 static long kernel_unlink_key(int32_t key_serial, int32_t ring_serial)
 {
-	return syscall(__NR_keyctl, KEYCTL_UNLINK, key_serial, ring_serial);
+	long result;
+
+	result = syscall(__NR_keyctl, KEYCTL_UNLINK, key_serial, ring_serial);
+
+	return result >= 0 ? result : -errno;
 }
 
 static long kernel_dh_compute(int32_t private, int32_t prime, int32_t base,
 			      void *payload, size_t len)
 {
+	long result;
+
 	struct keyctl_dh_params params = { .private = private,
 					   .prime = prime,
 					   .base = base };
 
-	return syscall(__NR_keyctl, KEYCTL_DH_COMPUTE, &params, payload, len,
+	result = syscall(__NR_keyctl, KEYCTL_DH_COMPUTE, &params, payload, len,
 			NULL);
+
+	return result >= 0 ? result : -errno;
 }
 
 static bool setup_internal_keyring(void)
