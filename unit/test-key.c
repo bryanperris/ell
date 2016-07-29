@@ -55,7 +55,7 @@ static void test_user(const void *data)
 	key = l_key_new(L_KEY_RAW, KEY1_STR, KEY1_LEN);
 	assert(key);
 
-	reported_len = l_key_get_size(key);
+	reported_len = l_key_get_payload_size(key);
 	assert(reported_len == KEY1_LEN);
 
 	len = KEY1_LEN - 1;
