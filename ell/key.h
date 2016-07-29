@@ -52,7 +52,7 @@ bool l_key_update(struct l_key *key, const void *payload, size_t len);
 
 bool l_key_extract(struct l_key *key, void *payload, size_t *len);
 
-ssize_t l_key_get_size(struct l_key *key);
+ssize_t l_key_get_payload_size(struct l_key *key);
 
 bool l_key_compute_dh_public(struct l_key *generator, struct l_key *private,
 			     struct l_key *prime, void *payload, size_t *len);

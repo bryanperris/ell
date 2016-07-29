@@ -216,7 +216,7 @@ LIB_EXPORT bool l_key_extract(struct l_key *key, void *payload, size_t *len)
 	return true;
 }
 
-LIB_EXPORT ssize_t l_key_get_size(struct l_key *key)
+LIB_EXPORT ssize_t l_key_get_payload_size(struct l_key *key)
 {
 	return kernel_read_key(key->serial, NULL, 0);
 }
