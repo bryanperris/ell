@@ -32,6 +32,7 @@ extern "C" {
 struct l_checksum;
 
 enum l_checksum_type {
+	L_CHECKSUM_NONE,
 	L_CHECKSUM_MD5,
 	L_CHECKSUM_SHA1,
 	L_CHECKSUM_SHA256,

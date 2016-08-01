@@ -124,9 +124,9 @@ LIB_EXPORT struct l_checksum *l_checksum_new(enum l_checksum_type type)
 	if (!is_valid_type(type))
 		return NULL;
 
-	checksum = l_new(struct l_checksum, 1);
-
 	switch (type) {
+	case L_CHECKSUM_NONE:
+		return NULL;
 	case L_CHECKSUM_MD5:
 		name = "md5";
 		break;
@@ -143,6 +143,8 @@ LIB_EXPORT struct l_checksum *l_checksum_new(enum l_checksum_type type)
 		name = "sha512";
 		break;
 	}
+
+	checksum = l_new(struct l_checksum, 1);
 
 	fd = create_alg(name);
 	if (fd < 0)
@@ -202,6 +204,8 @@ struct l_checksum *l_checksum_new_hmac(enum l_checksum_type type,
 		return NULL;
 
 	switch (type) {
+	case L_CHECKSUM_NONE:
+		return NULL;
 	case L_CHECKSUM_MD5:
 		name = "hmac(md5)";
 		break;
