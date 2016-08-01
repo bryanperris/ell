@@ -161,7 +161,16 @@ failed:
 
 LIB_EXPORT struct l_hwdb *l_hwdb_new_default(void)
 {
-	return l_hwdb_new("/etc/udev/hwdb.bin");
+	struct l_hwdb *db = NULL;
+	size_t i;
+	const char * const paths[] = {"/etc/udev/hwdb.bin",
+					"/usr/lib/udev/hwdb.bin",
+					"/lib/udev/hwdb.bin"};
+
+	for (i = 0; !db && i < L_ARRAY_SIZE(paths); i++)
+		db = l_hwdb_new(paths[i]);
+
+	return db;
 }
 
 LIB_EXPORT struct l_hwdb *l_hwdb_ref(struct l_hwdb *hwdb)
