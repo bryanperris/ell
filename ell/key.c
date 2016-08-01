@@ -34,6 +34,7 @@
 #include "private.h"
 #include "util.h"
 #include "key.h"
+#include "string.h"
 
 #ifndef KEYCTL_DH_COMPUTE
 #define KEYCTL_DH_COMPUTE 23
@@ -42,6 +43,40 @@ struct keyctl_dh_params {
 	int32_t private;
 	int32_t prime;
 	int32_t base;
+};
+#endif
+
+#ifndef KEYCTL_PKEY_QUERY
+#define KEYCTL_PKEY_QUERY	24
+#define KEYCTL_PKEY_ENCRYPT	25
+#define KEYCTL_PKEY_DECRYPT	26
+#define KEYCTL_PKEY_SIGN	27
+#define KEYCTL_PKEY_VERIFY	28
+
+#define KEYCTL_SUPPORTS_ENCRYPT	0x01
+#define KEYCTL_SUPPORTS_DECRYPT	0x02
+#define KEYCTL_SUPPORTS_SIGN	0x04
+#define KEYCTL_SUPPORTS_VERIFY	0x08
+
+struct keyctl_pkey_query {
+	uint32_t supported_ops;
+	uint32_t key_size;
+	uint16_t max_data_size;
+	uint16_t max_sig_size;
+	uint16_t max_enc_size;
+	uint16_t max_dec_size;
+
+	uint32_t __spare[10];
+};
+
+struct keyctl_pkey_params {
+	int32_t key_id;
+	uint32_t in_len;
+	union {
+		uint32_t out_len;
+		uint32_t in2_len;
+	};
+	uint32_t __spare[7];
 };
 #endif
 
@@ -118,6 +153,43 @@ static long kernel_unlink_key(int32_t key_serial, int32_t ring_serial)
 	return result >= 0 ? result : -errno;
 }
 
+static char *format_key_info(const char *encoding, const char *hash)
+{
+	struct l_string *info;
+
+	if (!encoding && !hash)
+		return NULL;
+
+	info = l_string_new(0);
+
+	if (encoding)
+		l_string_append_printf(info, "enc=%s ", encoding);
+
+	if (hash)
+		l_string_append_printf(info, "hash=%s", hash);
+
+	return l_string_free(info, false);
+}
+
+static long kernel_query_key(int32_t key_serial, const char *encoding,
+				const char *hash, size_t *size, bool *public)
+{
+	long result;
+	struct keyctl_pkey_query query;
+	char *info = format_key_info(encoding, hash);
+
+	result = syscall(__NR_keyctl, KEYCTL_PKEY_QUERY, key_serial, 0,
+				info ?: "", &query);
+	if (result == 0) {
+		*size = query.key_size;
+		*public = ((query.supported_ops & KEYCTL_SUPPORTS_ENCRYPT) &&
+			!(query.supported_ops & KEYCTL_SUPPORTS_DECRYPT));
+	}
+	l_free(info);
+
+	return result >= 0 ? result : -errno;
+}
+
 static long kernel_dh_compute(int32_t private, int32_t prime, int32_t base,
 			      void *payload, size_t len)
 {
@@ -129,6 +201,40 @@ static long kernel_dh_compute(int32_t private, int32_t prime, int32_t base,
 
 	result = syscall(__NR_keyctl, KEYCTL_DH_COMPUTE, &params, payload, len,
 			NULL);
+
+	return result >= 0 ? result : -errno;
+}
+
+static long kernel_key_eds(int op, int32_t serial, const char *encoding,
+				const char *hash, const void *in, void *out,
+				size_t len_in, size_t len_out)
+{
+	long result;
+	struct keyctl_pkey_params params = { .key_id = serial,
+					     .in_len = len_in,
+					     .out_len = len_out };
+	char *info = format_key_info(encoding, hash);
+
+	result = syscall(__NR_keyctl, op, &params, info ?: "", in, out);
+	l_free(info);
+
+	return result >= 0 ? result : -errno;
+}
+
+static long kernel_key_verify(int32_t serial, const char *encoding,
+				const char *hash, const void *data,
+				const void *sig, size_t len_data,
+				size_t len_sig)
+{
+	long result;
+	struct keyctl_pkey_params params = { .key_id = serial,
+					     .in_len = len_data,
+					     .in2_len = len_sig };
+	char *info = format_key_info(encoding, hash);
+
+	result = syscall(__NR_keyctl, KEYCTL_PKEY_VERIFY, &params, info ?: "",
+				data, sig);
+	l_free(info);
 
 	return result >= 0 ? result : -errno;
 }
@@ -228,6 +334,54 @@ LIB_EXPORT ssize_t l_key_get_payload_size(struct l_key *key)
 	return kernel_read_key(key->serial, NULL, 0);
 }
 
+static const char *lookup_cipher(enum l_asymmetric_cipher_type cipher)
+{
+	const char* ret = NULL;
+
+	switch (cipher) {
+	case L_CIPHER_RSA_PKCS1_V1_5:
+		ret = "pkcs1";
+		break;
+	}
+
+	return ret;
+}
+
+static const char *lookup_checksum(enum l_checksum_type checksum)
+{
+	const char* ret = NULL;
+
+	switch (checksum) {
+	case L_CHECKSUM_NONE:
+		break;
+	case L_CHECKSUM_MD5:
+		ret = "md5";
+		break;
+	case L_CHECKSUM_SHA1:
+		ret = "sha1";
+		break;
+	case L_CHECKSUM_SHA256:
+		ret = "sha256";
+		break;
+	case L_CHECKSUM_SHA384:
+		ret = "sha384";
+		break;
+	case L_CHECKSUM_SHA512:
+		ret = "sha512";
+		break;
+	}
+
+	return ret;
+}
+
+bool l_key_get_info(struct l_key *key, enum l_asymmetric_cipher_type cipher,
+			enum l_checksum_type hash, size_t *bits,
+			bool *public)
+{
+	return !kernel_query_key(key->serial, lookup_cipher(cipher),
+					lookup_checksum(hash), bits, public);
+}
+
 static bool compute_common(struct l_key *base,
 			   struct l_key *private,
 			   struct l_key *prime,
@@ -261,6 +415,68 @@ LIB_EXPORT bool l_key_compute_dh_secret(struct l_key *other_public,
 					void *payload, size_t *len)
 {
 	return compute_common(other_public, private, prime, payload, len);
+}
+
+/* Common code for encrypt/decrypt/sign */
+static ssize_t eds_common(struct l_key *key,
+				enum l_asymmetric_cipher_type cipher,
+				enum l_checksum_type checksum, const void *in,
+				void *out, size_t len_in, size_t len_out,
+				int op)
+{
+	if (unlikely(!key))
+		return -EINVAL;
+
+	return kernel_key_eds(op, key->serial, lookup_cipher(cipher),
+				lookup_checksum(checksum), in, out, len_in,
+				len_out);
+}
+
+LIB_EXPORT ssize_t l_key_encrypt(struct l_key *key,
+					enum l_asymmetric_cipher_type cipher,
+					enum l_checksum_type checksum,
+					const void *in, void *out,
+					size_t len_in, size_t len_out)
+{
+	return eds_common(key, cipher, checksum, in, out, len_in, len_out,
+				KEYCTL_PKEY_ENCRYPT);
+}
+
+LIB_EXPORT ssize_t l_key_decrypt(struct l_key *key,
+					enum l_asymmetric_cipher_type cipher,
+					enum l_checksum_type checksum,
+					const void *in, void *out,
+					size_t len_in, size_t len_out)
+{
+	return eds_common(key, cipher, checksum, in, out, len_in, len_out,
+				KEYCTL_PKEY_DECRYPT);
+}
+
+LIB_EXPORT ssize_t l_key_sign(struct l_key *key,
+				enum l_asymmetric_cipher_type cipher,
+				enum l_checksum_type checksum, const void *in,
+				void *out, size_t len_in, size_t len_out)
+{
+	return eds_common(key, cipher, checksum, in, out, len_in, len_out,
+				KEYCTL_PKEY_SIGN);
+}
+
+LIB_EXPORT bool l_key_verify(struct l_key *key,
+				enum l_asymmetric_cipher_type cipher,
+				enum l_checksum_type checksum, const void *data,
+				const void *sig, size_t len_data,
+				size_t len_sig)
+{
+	long result;
+
+	if (unlikely(!key))
+		return false;
+
+	result = kernel_key_verify(key->serial, lookup_cipher(cipher),
+					lookup_checksum(checksum), data, sig,
+					len_data, len_sig);
+
+	return result == 0;
 }
 
 LIB_EXPORT struct l_keyring *l_keyring_new(enum l_keyring_type type,

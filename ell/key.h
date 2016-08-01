@@ -30,6 +30,9 @@ extern "C" {
 #include <stddef.h>
 #include <stdbool.h>
 
+#include <ell/checksum.h>
+#include <ell/cipher.h>
+
 struct l_key;
 struct l_keyring;
 
@@ -54,11 +57,31 @@ bool l_key_extract(struct l_key *key, void *payload, size_t *len);
 
 ssize_t l_key_get_payload_size(struct l_key *key);
 
+bool l_key_get_info(struct l_key *key, enum l_asymmetric_cipher_type cipher,
+			enum l_checksum_type checksum, size_t *bits,
+			bool *public);
+
 bool l_key_compute_dh_public(struct l_key *generator, struct l_key *private,
 			     struct l_key *prime, void *payload, size_t *len);
 
 bool l_key_compute_dh_secret(struct l_key *other_public, struct l_key *private,
 			     struct l_key *prime, void *payload, size_t *len);
+
+ssize_t l_key_encrypt(struct l_key *key, enum l_asymmetric_cipher_type cipher,
+			enum l_checksum_type checksum, const void *in,
+			void *out, size_t len_in, size_t len_out);
+
+ssize_t l_key_decrypt(struct l_key *key, enum l_asymmetric_cipher_type cipher,
+			enum l_checksum_type checksum, const void *in,
+			void *out, size_t len_in, size_t len_out);
+
+ssize_t l_key_sign(struct l_key *key, enum l_asymmetric_cipher_type cipher,
+			enum l_checksum_type checksum, const void *in,
+			void *out, size_t len_in, size_t len_out);
+
+bool l_key_verify(struct l_key *key, enum l_asymmetric_cipher_type cipher,
+			enum l_checksum_type checksum, const void *data,
+			const void *sig, size_t len_data, size_t len_sig);
 
 struct l_keyring *l_keyring_new(enum l_keyring_type type,
 				const struct l_keyring *trust);
