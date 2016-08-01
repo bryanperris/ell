@@ -375,9 +375,9 @@ static void test_trusted_keyring(const void *data)
 					&certlen);
 	assert(cert);
 
-	cakey = l_key_new(L_KEY_ASYMMETRIC, cacert, cacertlen);
+	cakey = l_key_new(L_KEY_RSA, cacert, cacertlen);
 	assert(cakey);
-	key = l_key_new(L_KEY_ASYMMETRIC, cert, certlen);
+	key = l_key_new(L_KEY_RSA, cert, certlen);
 	assert(key);
 
 	trust = l_keyring_new(L_KEYRING_SIMPLE, NULL);
