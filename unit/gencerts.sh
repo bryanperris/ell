@@ -12,6 +12,7 @@ openssl verify -CAfile cert-ca.pem cert-server.pem
 
 echo -e "\n*** Client Certificate ***"
 openssl genrsa -out cert-client-key.pem
+openssl pkcs8 -topk8 -nocrypt -in cert-client-key.pem -out cert-client-key-pkcs8.pem
 openssl req -new -extensions cert_ext -config ./gencerts.cnf -subj '/O=Bar Example Organization/CN=Bar Example Organization/emailAddress=bar@mail.example' -key cert-client-key.pem -out cert-client.csr
 openssl x509 -req -extensions cert_ext -extfile ./gencerts.cnf -in cert-client.csr -CA cert-ca.pem -CAkey cert-ca-key.pem -CAcreateserial -sha256 -days 10000 -out cert-client.pem
 openssl verify -CAfile cert-ca.pem cert-client.pem
