@@ -216,6 +216,18 @@ static void trie_fnmatch(const void *addr, uint64_t offset, const char *prefix,
 	sprintf(scratch_buf, "%s%s", prefix, prefix_str);
 	scratch_buf[scratch_len + 1] = '\0';
 
+	/*
+	 * Only incur the cost of this fnmatch() if there are children
+	 * to visit.  In practice, nodes have either entries or children
+	 * so fnmatch() will only be called once per node.
+	 */
+	if (child_count) {
+		scratch_buf[scratch_len] = '*';
+
+		if (fnmatch(scratch_buf, string, 0) == FNM_NOMATCH)
+			child_count = 0;
+	}
+
 	for (i = 0; i < child_count; i++) {
 		const struct trie_child *child = addr_ptr;
 
@@ -281,13 +293,6 @@ LIB_EXPORT struct l_hwdb_entry *l_hwdb_lookup_valist(struct l_hwdb *hwdb,
 	if (len < 0)
 		return NULL;
 
-	/*
-	 * This search operation is not optimized for the Patricia Trie
-	 * and will compare every single entry in the database.
-	 *
-	 * An optimized version should allow using the Patricia Trie data
-	 * structure and follow the shortest path to the matching entry.
-	 */
 	trie_fnmatch(hwdb->addr, hwdb->root, "", modalias, &entries);
 
 	free(modalias);
