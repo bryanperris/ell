@@ -198,8 +198,9 @@ LIB_EXPORT void l_hwdb_unref(struct l_hwdb *hwdb)
 	l_free(hwdb);
 }
 
-static int trie_fnmatch(const void *addr, uint64_t offset, const char *prefix,
-			const char *string, struct l_hwdb_entry **entries)
+static void trie_fnmatch(const void *addr, uint64_t offset, const char *prefix,
+				const char *string,
+				struct l_hwdb_entry **entries)
 {
 	const struct trie_node *node = addr + offset;
 	const void *addr_ptr = addr + offset + sizeof(*node);
@@ -217,25 +218,22 @@ static int trie_fnmatch(const void *addr, uint64_t offset, const char *prefix,
 
 	for (i = 0; i < child_count; i++) {
 		const struct trie_child *child = addr_ptr;
-		int err;
 
 		scratch_buf[scratch_len] = child->c;
 
-		err = trie_fnmatch(addr, le64_to_cpu(child->child_offset),
-						scratch_buf, string, entries);
-		if (err)
-			return err;
+		trie_fnmatch(addr, le64_to_cpu(child->child_offset),
+				scratch_buf, string, entries);
 
 		addr_ptr += sizeof(*child);
 	}
 
 	if (!entry_count)
-		return 0;
+		return;
 
 	scratch_buf[scratch_len] = '\0';
 
 	if (fnmatch(scratch_buf, string, 0))
-		return 0;
+		return;
 
 	for (i = 0; i < entry_count; i++) {
 		const struct trie_entry *entry = addr_ptr;
@@ -254,8 +252,6 @@ static int trie_fnmatch(const void *addr, uint64_t offset, const char *prefix,
 
 		addr_ptr += sizeof(*entry);
 	}
-
-	return 0;
 }
 
 LIB_EXPORT struct l_hwdb_entry *l_hwdb_lookup(struct l_hwdb *hwdb,
