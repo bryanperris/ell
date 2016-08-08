@@ -378,6 +378,9 @@ bool l_key_get_info(struct l_key *key, enum l_asymmetric_cipher_type cipher,
 			enum l_checksum_type hash, size_t *bits,
 			bool *public)
 {
+	if (unlikely(!key))
+		return false;
+
 	return !kernel_query_key(key->serial, lookup_cipher(cipher),
 					lookup_checksum(hash), bits, public);
 }
