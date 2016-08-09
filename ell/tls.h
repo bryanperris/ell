@@ -97,7 +97,7 @@ void l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path);
  * one certificate of each type so they can be used depending on which
  * is compatible with the negotiated parameters.
  */
-void l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
+bool l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
 				const char *priv_key_path,
 				const char *priv_key_passphrase);
 

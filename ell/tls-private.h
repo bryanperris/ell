@@ -139,8 +139,8 @@ struct l_tls {
 
 	char *ca_cert_path;
 	char *cert_path;
-	char *priv_key_path;
-	char *priv_key_passphrase;
+	struct l_key *priv_key;
+	size_t priv_key_size;
 
 	/* Record layer */
 
