@@ -242,14 +242,14 @@ struct tls_conn_test {
 
 static const struct tls_conn_test tls_conn_test_no_auth = {
 	.server_cert_path = TESTDATADIR "/cert-server.pem",
-	.server_key_path = TESTDATADIR "/cert-server-key.pem",
+	.server_key_path = TESTDATADIR "/cert-server-key-pkcs8.pem",
 	.server_expect_identity = NULL,
 	.client_expect_identity = NULL,
 };
 
 static const struct tls_conn_test tls_conn_test_server_auth = {
 	.server_cert_path = TESTDATADIR "/cert-server.pem",
-	.server_key_path = TESTDATADIR "/cert-server-key.pem",
+	.server_key_path = TESTDATADIR "/cert-server-key-pkcs8.pem",
 	.server_expect_identity = NULL,
 	.client_ca_cert_path = TESTDATADIR "/cert-ca.pem",
 	.client_expect_identity = "Foo Example Organization",
@@ -257,7 +257,7 @@ static const struct tls_conn_test tls_conn_test_server_auth = {
 
 static const struct tls_conn_test tls_conn_test_client_auth_attempt = {
 	.server_cert_path = TESTDATADIR "/cert-server.pem",
-	.server_key_path = TESTDATADIR "/cert-server-key.pem",
+	.server_key_path = TESTDATADIR "/cert-server-key-pkcs8.pem",
 	.server_ca_cert_path = TESTDATADIR "/cert-ca.pem",
 	.server_expect_identity = NULL,
 	.client_expect_identity = NULL,
@@ -265,17 +265,17 @@ static const struct tls_conn_test tls_conn_test_client_auth_attempt = {
 
 static const struct tls_conn_test tls_conn_test_client_auth = {
 	.server_cert_path = TESTDATADIR "/cert-server.pem",
-	.server_key_path = TESTDATADIR "/cert-server-key.pem",
+	.server_key_path = TESTDATADIR "/cert-server-key-pkcs8.pem",
 	.server_ca_cert_path = TESTDATADIR "/cert-ca.pem",
 	.server_expect_identity = "Bar Example Organization",
 	.client_cert_path = TESTDATADIR "/cert-client.pem",
-	.client_key_path = TESTDATADIR "/cert-client-key.pem",
+	.client_key_path = TESTDATADIR "/cert-client-key-pkcs8.pem",
 	.client_expect_identity = NULL,
 };
 
 static const struct tls_conn_test tls_conn_test_full_auth_attempt = {
 	.server_cert_path = TESTDATADIR "/cert-server.pem",
-	.server_key_path = TESTDATADIR "/cert-server-key.pem",
+	.server_key_path = TESTDATADIR "/cert-server-key-pkcs8.pem",
 	.server_ca_cert_path = TESTDATADIR "/cert-ca.pem",
 	.server_expect_identity = NULL,
 	.client_ca_cert_path = TESTDATADIR "/cert-ca.pem",
@@ -284,11 +284,11 @@ static const struct tls_conn_test tls_conn_test_full_auth_attempt = {
 
 static const struct tls_conn_test tls_conn_test_full_auth = {
 	.server_cert_path = TESTDATADIR "/cert-server.pem",
-	.server_key_path = TESTDATADIR "/cert-server-key.pem",
+	.server_key_path = TESTDATADIR "/cert-server-key-pkcs8.pem",
 	.server_ca_cert_path = TESTDATADIR "/cert-ca.pem",
 	.server_expect_identity = "Bar Example Organization",
 	.client_cert_path = TESTDATADIR "/cert-client.pem",
-	.client_key_path = TESTDATADIR "/cert-client-key.pem",
+	.client_key_path = TESTDATADIR "/cert-client-key-pkcs8.pem",
 	.client_ca_cert_path = TESTDATADIR "/cert-ca.pem",
 	.client_expect_identity = "Foo Example Organization",
 };

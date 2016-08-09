@@ -6,6 +6,7 @@ openssl req -x509 -new -nodes -extensions ca_ext -config ./gencerts.cnf -subj '/
 
 echo -e "\n*** Server Certificate ***"
 openssl genrsa -out cert-server-key.pem
+openssl pkcs8 -topk8 -nocrypt -in cert-server-key.pem -out cert-server-key-pkcs8.pem
 openssl req -new -extensions cert_ext -config ./gencerts.cnf -subj '/O=Foo Example Organization/CN=Foo Example Organization/emailAddress=foo@mail.example' -key cert-server-key.pem -out cert-server.csr
 openssl x509 -req -extensions cert_ext -extfile ./gencerts.cnf -in cert-server.csr -CA cert-ca.pem -CAkey cert-ca-key.pem -CAcreateserial -sha256 -days 10000 -out cert-server.pem
 openssl verify -CAfile cert-ca.pem cert-server.pem
