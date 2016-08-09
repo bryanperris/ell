@@ -119,6 +119,7 @@ int main(int argc, char *argv[])
 	struct in_addr **addr_list;
 	struct sockaddr_in addr;
 	int fd;
+	bool auth_ok = true;
 
 	if (argc != 2 && argc != 3 && argc != 6) {
 		printf("Usage: %s <https-host-name> [<ca-cert-path> "
@@ -172,9 +173,10 @@ int main(int argc, char *argv[])
 	if (argc > 2)
 		l_tls_set_cacert(tls, argv[2]);
 	if (argc > 5)
-		l_tls_set_auth_data(tls, argv[3], argv[4], argv[5]);
+		auth_ok = l_tls_set_auth_data(tls, argv[3], argv[4], argv[5]);
 
-	l_main_run();
+	if (tls && auth_ok)
+		l_main_run();
 
 	l_io_destroy(io);
 	l_tls_free(tls);

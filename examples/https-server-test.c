@@ -111,6 +111,7 @@ int main(int argc, char *argv[])
 {
 	struct sockaddr_in addr;
 	int fd, listenfd;
+	bool auth_ok;
 
 	if (argc != 4 && argc != 5) {
 		printf("Usage: %s <server-cert-path> <server-key-path> "
@@ -159,10 +160,11 @@ int main(int argc, char *argv[])
 
 	tls = l_tls_new(true, https_new_data, https_tls_write,
 			https_tls_ready, https_tls_disconnected, NULL);
-	l_tls_set_auth_data(tls, argv[1], argv[2], argv[3]);
+	auth_ok = l_tls_set_auth_data(tls, argv[1], argv[2], argv[3]);
 	l_tls_set_cacert(tls, argc > 4 ? argv[4] : NULL);
 
-	l_main_run();
+	if (tls && !auth_ok)
+		l_main_run();
 
 	l_io_destroy(io);
 	l_tls_free(tls);
