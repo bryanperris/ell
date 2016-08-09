@@ -356,6 +356,7 @@ static void tls_test_disconnected(enum l_tls_alert_desc reason, bool remote,
 
 static void test_tls_test(const void *data)
 {
+	bool auth_ok;
 	const struct tls_conn_test *test = data;
 	struct tls_test_state s[2] = {
 		{
@@ -388,12 +389,14 @@ static void test_tls_test(const void *data)
 	assert(s[0].tls);
 	assert(s[1].tls);
 
-	l_tls_set_auth_data(s[0].tls, test->server_cert_path,
-				test->server_key_path,
-				test->server_key_passphrase);
-	l_tls_set_auth_data(s[1].tls, test->client_cert_path,
-				test->client_key_path,
-				test->client_key_passphrase);
+	auth_ok = l_tls_set_auth_data(s[0].tls, test->server_cert_path,
+					test->server_key_path,
+					test->server_key_passphrase);
+	assert(auth_ok);
+	auth_ok = l_tls_set_auth_data(s[1].tls, test->client_cert_path,
+					test->client_key_path,
+					test->client_key_passphrase);
+	assert(auth_ok);
 	l_tls_set_cacert(s[0].tls, test->server_ca_cert_path);
 	l_tls_set_cacert(s[1].tls, test->client_ca_cert_path);
 
