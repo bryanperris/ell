@@ -164,8 +164,8 @@ struct l_tls {
 	bool cert_requested, cert_sent;
 	bool peer_authenticated;
 	struct tls_cert *peer_cert;
-	uint8_t *peer_pubkey;
-	size_t peer_pubkey_length;
+	struct l_key *peer_pubkey;
+	size_t peer_pubkey_size;
 	enum handshake_hash_type signature_hash;
 
 	/* SecurityParameters current and pending */
@@ -242,8 +242,6 @@ bool tls_cert_verify_certchain(struct tls_cert *certchain,
 				struct tls_cert *ca_cert);
 
 void tls_cert_free_certchain(struct tls_cert *cert);
-
-uint8_t *tls_cert_find_pubkey(struct tls_cert *cert, int *pubkey_len);
 
 enum tls_cert_key_type tls_cert_get_pubkey_type(struct tls_cert *cert);
 
