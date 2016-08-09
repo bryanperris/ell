@@ -239,6 +239,7 @@ static bool equal_with_leading_zeros(uint8_t *buf1, size_t size1,
 					uint8_t *buf2, size_t size2)
 {
 	size_t extrabytes;
+	size_t index;
 
 	if (size1 < size2) {
 		uint8_t *tmpbuf;
@@ -254,7 +255,8 @@ static bool equal_with_leading_zeros(uint8_t *buf1, size_t size1,
 	}
 
 	extrabytes = size1 - size2;
-	for (size_t index = 0; index < extrabytes; index++) {
+
+	for (index = 0; index < extrabytes; index++) {
 		if (buf1[index])
 			return false;
 	}
