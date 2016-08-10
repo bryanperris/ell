@@ -26,6 +26,7 @@
 
 #define _GNU_SOURCE
 #include <unistd.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -308,36 +309,56 @@ void l_checksum_reset(struct l_checksum *checksum)
  * @len: length of data
  *
  * Updates checksum from @data pointer with @len bytes.
+ *
+ * Returns: true if the operation succeeded, false otherwise.
  **/
-LIB_EXPORT void l_checksum_update(struct l_checksum *checksum,
+LIB_EXPORT bool l_checksum_update(struct l_checksum *checksum,
 					const void *data, size_t len)
 {
 	ssize_t written;
 
 	if (unlikely(!checksum))
-		return;
+		return false;
 
 	written = send(checksum->sk, data, len, MSG_MORE);
 	if (written < 0)
-		return;
+		return false;
+
+	return true;
 }
 
-void l_checksum_updatev(struct l_checksum *checksum,
+/**
+ * l_checksum_updatev:
+ * @checksum: checksum object
+ * @iov: iovec pointer
+ * @iov_len: Number of iovec entries
+ *
+ * This is a iovec based version of l_checksum_update; it updates the checksum
+ * based on contents of @iov and @iov_len.
+ *
+ * Returns: true if the operation succeeded, false otherwise.
+ **/
+bool l_checksum_updatev(struct l_checksum *checksum,
 					struct iovec *iov, size_t iov_len)
 {
 	struct msghdr msg;
+	ssize_t written;
 
 	if (unlikely(!checksum))
-		return;
+		return false;
 
 	if (unlikely(!iov) || unlikely(!iov_len))
-		return;
+		return false;
 
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = iov;
 	msg.msg_iovlen = iov_len;
 
-	sendmsg(checksum->sk, &msg, MSG_MORE);
+	written = sendmsg(checksum->sk, &msg, MSG_MORE);
+	if (written < 0)
+		return false;
+
+	return true;
 }
 
 /**
@@ -347,21 +368,28 @@ void l_checksum_updatev(struct l_checksum *checksum,
  * @len: length of digest data
  *
  * Gets the digest from @checksum as raw binary data.
+ *
+ * Returns: Number of bytes read, or negative value if an error occurred.
  **/
-LIB_EXPORT void l_checksum_get_digest(struct l_checksum *checksum,
+LIB_EXPORT ssize_t l_checksum_get_digest(struct l_checksum *checksum,
 						void *digest, size_t len)
 {
 	ssize_t result;
 
 	if (unlikely(!checksum))
-		return;
+		return -EINVAL;
 
-	if (unlikely(!digest) || unlikely(!len))
-		return;
+	if (unlikely(!digest))
+		return -EFAULT;
+
+	if (unlikely(!len))
+		return -EINVAL;
 
 	result = recv(checksum->sk, digest, len, 0);
 	if (result < 0)
-		return;
+		return -errno;
+
+	return result;
 }
 
 /**
