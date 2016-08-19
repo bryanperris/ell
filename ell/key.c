@@ -178,6 +178,8 @@ static long kernel_query_key(int32_t key_serial, const char *encoding,
 	struct keyctl_pkey_query query;
 	char *info = format_key_info(encoding, hash);
 
+	memset(&query, 0, sizeof(query));
+
 	result = syscall(__NR_keyctl, KEYCTL_PKEY_QUERY, key_serial, 0,
 				info ?: "", &query);
 	if (result == 0) {
