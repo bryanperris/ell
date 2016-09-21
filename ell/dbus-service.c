@@ -962,12 +962,15 @@ static struct l_dbus_message *build_properties_changed_signal(
 	const struct l_queue_entry *entry;
 	const struct _dbus_property *property;
 	const char *signature;
+	struct l_queue *invalidated;
 
 	signal = l_dbus_message_new_signal(dbus, rec->path,
 						L_DBUS_INTERFACE_PROPERTIES,
 						"PropertiesChanged");
 
 	builder = l_dbus_message_builder_new(signal);
+
+	invalidated = l_queue_new();
 
 	l_dbus_message_builder_append_basic(builder, 's',
 						rec->instance->interface->name);
@@ -978,6 +981,8 @@ static struct l_dbus_message *build_properties_changed_signal(
 		property = entry->data;
 		signature = property->metainfo + strlen(property->metainfo) + 1;
 
+		_dbus_message_builder_mark(builder);
+
 		l_dbus_message_builder_enter_dict(builder, "sv");
 		l_dbus_message_builder_append_basic(builder, 's',
 							property->metainfo);
@@ -985,10 +990,16 @@ static struct l_dbus_message *build_properties_changed_signal(
 
 		if (!property->getter(dbus, signal, builder,
 					rec->instance->user_data)) {
-			l_dbus_message_builder_destroy(builder);
-			l_dbus_message_unref(signal);
+			if (!_dbus_message_builder_rewind(builder)) {
+				l_dbus_message_unref(signal);
+				signal = NULL;
 
-			return NULL;
+				goto done;
+			}
+
+			l_queue_push_tail(invalidated, (void *) property);
+
+			continue;
 		}
 
 		l_dbus_message_builder_leave_variant(builder);
@@ -997,9 +1008,18 @@ static struct l_dbus_message *build_properties_changed_signal(
 
 	l_dbus_message_builder_leave_array(builder);
 	l_dbus_message_builder_enter_array(builder, "s");
+
+	while ((property = l_queue_pop_head(invalidated)))
+		l_dbus_message_builder_append_basic(builder, 's',
+							property->metainfo);
+
 	l_dbus_message_builder_leave_array(builder);
 	l_dbus_message_builder_finalize(builder);
+
+done:
 	l_dbus_message_builder_destroy(builder);
+
+	l_queue_destroy(invalidated, NULL);
 
 	return signal;
 }
