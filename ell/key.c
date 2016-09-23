@@ -372,6 +372,10 @@ bool l_key_get_info(struct l_key *key, enum l_key_cipher_type cipher,
 	if (unlikely(!key))
 		return false;
 
+	/* Other checksum types are not yet supported */
+	if (checksum != L_CHECKSUM_NONE)
+		return false;
+
 	return !kernel_query_key(key->serial, lookup_cipher(cipher),
 					lookup_checksum(checksum), bits,
 					public);
@@ -505,6 +509,10 @@ LIB_EXPORT ssize_t l_key_encrypt(struct l_key *key,
 	uint8_t *padded = NULL;
 	ssize_t ret_len;
 
+	/* Other checksum types are not yet supported */
+	if (checksum != L_CHECKSUM_NONE)
+		return -EINVAL;
+
 	if (cipher == L_KEY_RSA_PKCS1_V1_5) {
 		padded = pad(in, len_in, len_out, 0x02, true);
 		if (!padded)
@@ -531,6 +539,10 @@ LIB_EXPORT ssize_t l_key_decrypt(struct l_key *key,
 	uint8_t *padded = NULL;
 	ssize_t ret_len;
 
+	/* Other checksum types are not yet supported */
+	if (checksum != L_CHECKSUM_NONE)
+		return -EINVAL;
+
 	if (cipher == L_KEY_RSA_PKCS1_V1_5)
 		padded = l_malloc(len_in);
 
@@ -556,6 +568,10 @@ LIB_EXPORT ssize_t l_key_sign(struct l_key *key,
 {
 	uint8_t *padded = NULL;
 	ssize_t ret_len;
+
+	/* Other checksum types are not yet supported */
+	if (checksum != L_CHECKSUM_NONE)
+		return -EINVAL;
 
 	if (cipher == L_KEY_RSA_PKCS1_V1_5) {
 		padded = pad(in, len_in, len_out, 0x01, false);
@@ -585,6 +601,10 @@ LIB_EXPORT bool l_key_verify(struct l_key *key,
 	uint8_t *compare_hash;
 	bool success = false;
 	uint8_t *sig_hash = l_malloc(len_sig);
+
+	/* Other checksum types are not yet supported */
+	if (checksum != L_CHECKSUM_NONE)
+		return -EINVAL;
 
 	/* The keyctl verify implementation compares the verify results
 	 * before we get a chance to unpad it. Instead, use the *encrypt*
