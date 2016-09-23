@@ -875,9 +875,9 @@ static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
 
 	l_put_be16(tls->peer_pubkey_size, ptr);
 	bytes_encrypted = l_key_encrypt(tls->peer_pubkey,
-					L_CIPHER_RSA_PKCS1_V1_5,
-					L_CHECKSUM_NONE, pre_master_secret,
-					ptr + 2, 48, tls->peer_pubkey_size);
+					L_KEY_RSA_PKCS1_V1_5, L_CHECKSUM_NONE,
+					pre_master_secret, ptr + 2, 48,
+					tls->peer_pubkey_size);
 	ptr += tls->peer_pubkey_size + 2;
 
 	if (bytes_encrypted != (ssize_t) tls->peer_pubkey_size) {
@@ -939,7 +939,7 @@ static ssize_t tls_rsa_sign(struct l_tls *tls, uint8_t *out, size_t len,
 		}
 
 		l_put_be16(tls->priv_key_size, out);
-		result = l_key_sign(tls->priv_key, L_CIPHER_RSA_PKCS1_V1_5,
+		result = l_key_sign(tls->priv_key, L_KEY_RSA_PKCS1_V1_5,
 					L_CHECKSUM_NONE, sign_input, out + 2,
 					sign_input_len, tls->priv_key_size);
 
@@ -1026,7 +1026,7 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 		 */
 	}
 
-	success = l_key_verify(tls->peer_pubkey, L_CIPHER_RSA_PKCS1_V1_5,
+	success = l_key_verify(tls->peer_pubkey, L_KEY_RSA_PKCS1_V1_5,
 				L_CHECKSUM_NONE, expected, in + 4,
 				expected_len, tls->peer_pubkey_size);
 
@@ -1519,7 +1519,7 @@ static void tls_handle_certificate(struct l_tls *tls,
 		goto done;
 	}
 
-	if (!l_key_get_info(tls->peer_pubkey, L_CIPHER_RSA_PKCS1_V1_5,
+	if (!l_key_get_info(tls->peer_pubkey, L_KEY_RSA_PKCS1_V1_5,
 					L_CHECKSUM_NONE, &tls->peer_pubkey_size,
 					&dummy)) {
 		tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
@@ -1707,7 +1707,7 @@ static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
 		return;
 	}
 
-	bytes_decrypted = l_key_decrypt(tls->priv_key, L_CIPHER_RSA_PKCS1_V1_5,
+	bytes_decrypted = l_key_decrypt(tls->priv_key, L_KEY_RSA_PKCS1_V1_5,
 					L_CHECKSUM_NONE, buf + 2,
 					pre_master_secret, tls->priv_key_size,
 					48);
@@ -2232,7 +2232,7 @@ LIB_EXPORT bool l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
 			l_free(priv_key);
 		}
 
-		if (!l_key_get_info(tls->priv_key, L_CIPHER_RSA_PKCS1_V1_5,
+		if (!l_key_get_info(tls->priv_key, L_KEY_RSA_PKCS1_V1_5,
 					L_CHECKSUM_NONE, &tls->priv_key_size,
 					&is_public) || is_public) {
 			l_key_free(tls->priv_key);

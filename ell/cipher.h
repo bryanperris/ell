@@ -50,10 +50,6 @@ bool l_cipher_decrypt(struct l_cipher *cipher,
 bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
 			size_t iv_length);
 
-enum l_asymmetric_cipher_type {
-	L_CIPHER_RSA_PKCS1_V1_5,
-};
-
 #ifdef __cplusplus
 }
 #endif

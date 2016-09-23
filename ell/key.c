@@ -336,12 +336,12 @@ LIB_EXPORT ssize_t l_key_get_payload_size(struct l_key *key)
 	return kernel_read_key(key->serial, NULL, 0);
 }
 
-static const char *lookup_cipher(enum l_asymmetric_cipher_type cipher)
+static const char *lookup_cipher(enum l_key_cipher_type cipher)
 {
 	const char* ret = NULL;
 
 	switch (cipher) {
-	case L_CIPHER_RSA_PKCS1_V1_5:
+	case L_KEY_RSA_PKCS1_V1_5:
 		ret = "pkcs1";
 		break;
 	}
@@ -376,7 +376,7 @@ static const char *lookup_checksum(enum l_checksum_type checksum)
 	return ret;
 }
 
-bool l_key_get_info(struct l_key *key, enum l_asymmetric_cipher_type cipher,
+bool l_key_get_info(struct l_key *key, enum l_key_cipher_type cipher,
 			enum l_checksum_type hash, size_t *bits,
 			bool *public)
 {
@@ -424,7 +424,7 @@ LIB_EXPORT bool l_key_compute_dh_secret(struct l_key *other_public,
 
 /* Common code for encrypt/decrypt/sign */
 static ssize_t eds_common(struct l_key *key,
-				enum l_asymmetric_cipher_type cipher,
+				enum l_key_cipher_type cipher,
 				enum l_checksum_type checksum, const void *in,
 				void *out, size_t len_in, size_t len_out,
 				int op)
@@ -438,7 +438,7 @@ static ssize_t eds_common(struct l_key *key,
 }
 
 LIB_EXPORT ssize_t l_key_encrypt(struct l_key *key,
-					enum l_asymmetric_cipher_type cipher,
+					enum l_key_cipher_type cipher,
 					enum l_checksum_type checksum,
 					const void *in, void *out,
 					size_t len_in, size_t len_out)
@@ -448,7 +448,7 @@ LIB_EXPORT ssize_t l_key_encrypt(struct l_key *key,
 }
 
 LIB_EXPORT ssize_t l_key_decrypt(struct l_key *key,
-					enum l_asymmetric_cipher_type cipher,
+					enum l_key_cipher_type cipher,
 					enum l_checksum_type checksum,
 					const void *in, void *out,
 					size_t len_in, size_t len_out)
@@ -458,7 +458,7 @@ LIB_EXPORT ssize_t l_key_decrypt(struct l_key *key,
 }
 
 LIB_EXPORT ssize_t l_key_sign(struct l_key *key,
-				enum l_asymmetric_cipher_type cipher,
+				enum l_key_cipher_type cipher,
 				enum l_checksum_type checksum, const void *in,
 				void *out, size_t len_in, size_t len_out)
 {
@@ -467,7 +467,7 @@ LIB_EXPORT ssize_t l_key_sign(struct l_key *key,
 }
 
 LIB_EXPORT bool l_key_verify(struct l_key *key,
-				enum l_asymmetric_cipher_type cipher,
+				enum l_key_cipher_type cipher,
 				enum l_checksum_type checksum, const void *data,
 				const void *sig, size_t len_data,
 				size_t len_sig)
