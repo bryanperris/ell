@@ -35,6 +35,7 @@
 #include "util.h"
 #include "key.h"
 #include "string.h"
+#include "random.h"
 
 #ifndef KEYCTL_DH_COMPUTE
 #define KEYCTL_DH_COMPUTE 23
@@ -223,24 +224,6 @@ static long kernel_key_eds(int op, int32_t serial, const char *encoding,
 	return result >= 0 ? result : -errno;
 }
 
-static long kernel_key_verify(int32_t serial, const char *encoding,
-				const char *hash, const void *data,
-				const void *sig, size_t len_data,
-				size_t len_sig)
-{
-	long result;
-	struct keyctl_pkey_params params = { .key_id = serial,
-					     .in_len = len_data,
-					     .in2_len = len_sig };
-	char *info = format_key_info(encoding, hash);
-
-	result = syscall(__NR_keyctl, KEYCTL_PKEY_VERIFY, &params, info ?: "",
-				data, sig);
-	l_free(info);
-
-	return result >= 0 ? result : -errno;
-}
-
 static bool setup_internal_keyring(void)
 {
 	internal_keyring = kernel_add_key("keyring", "ell-internal", NULL, 0,
@@ -342,7 +325,13 @@ static const char *lookup_cipher(enum l_key_cipher_type cipher)
 
 	switch (cipher) {
 	case L_KEY_RSA_PKCS1_V1_5:
-		ret = "pkcs1";
+		/* Padding is handled in userspace, so the kernel only sees
+		 * raw RSA operations
+		 */
+		ret = "raw";
+		break;
+	case L_KEY_RSA_RAW:
+		ret = "raw";
 		break;
 	}
 
@@ -437,14 +426,99 @@ static ssize_t eds_common(struct l_key *key,
 				len_out);
 }
 
+static void getrandom_nonzero(uint8_t *buf, int len)
+{
+	l_getrandom(buf, len);
+
+	while (len--) {
+		while (buf[0] == 0)
+			l_getrandom(buf, 1);
+
+		buf++;
+	}
+}
+
+/* PKCS#1 v1.5 RSA padding according to RFC3447 */
+static uint8_t *pad(const uint8_t *in, size_t len_in, size_t len_out,
+			uint8_t flag, bool randfill)
+{
+	size_t fill_len;
+	uint8_t *padded;
+
+	if (len_in > len_out - 11)
+		return NULL;
+
+	padded = l_malloc(len_out);
+	fill_len = len_out - len_in - 3;
+
+	padded[0] = 0x00;
+	padded[1] = flag;
+
+	if (randfill)
+		getrandom_nonzero(padded + 2, fill_len);
+	else
+		memset(padded + 2, 0xff, fill_len);
+
+	padded[fill_len + 2] = 0x00;
+	memcpy(padded + fill_len + 3, in, len_in);
+
+	return padded;
+}
+
+static ssize_t unpad(uint8_t *in, uint8_t *out, size_t len_in, size_t len_out,
+			uint8_t flag, bool randfill)
+{
+	size_t pos;
+	ssize_t unpad_len;
+
+	if (in[0] != 0x00 || in[1] != flag)
+		return -EINVAL;
+
+	if (randfill)
+		for (pos = 2; pos < len_in && in[pos] != 0x00; pos++);
+	else
+		for (pos = 2; pos < len_in && in[pos] == 0xff; pos++);
+
+	if (pos < 10 || pos == len_in)
+		return -EINVAL;
+
+	pos++;
+	unpad_len = len_in - pos;
+
+	if (out) {
+		if ((size_t)unpad_len > len_out)
+			return -EINVAL;
+
+		memcpy(out, in + pos, unpad_len);
+	}
+
+	return unpad_len;
+}
+
 LIB_EXPORT ssize_t l_key_encrypt(struct l_key *key,
 					enum l_key_cipher_type cipher,
 					enum l_checksum_type checksum,
 					const void *in, void *out,
 					size_t len_in, size_t len_out)
 {
-	return eds_common(key, cipher, checksum, in, out, len_in, len_out,
+	uint8_t *padded = NULL;
+	ssize_t ret_len;
+
+	if (cipher == L_KEY_RSA_PKCS1_V1_5) {
+		padded = pad(in, len_in, len_out, 0x02, true);
+		if (!padded)
+			return -EOVERFLOW;
+
+		cipher = L_KEY_RSA_RAW;
+	}
+
+	ret_len = eds_common(key, cipher, checksum, padded ?: in, out,
+				padded ? len_out : len_in, len_out,
 				KEYCTL_PKEY_ENCRYPT);
+
+	l_free(padded);
+
+	return ret_len;
 }
 
 LIB_EXPORT ssize_t l_key_decrypt(struct l_key *key,
@@ -453,8 +527,25 @@ LIB_EXPORT ssize_t l_key_decrypt(struct l_key *key,
 					const void *in, void *out,
 					size_t len_in, size_t len_out)
 {
-	return eds_common(key, cipher, checksum, in, out, len_in, len_out,
-				KEYCTL_PKEY_DECRYPT);
+	uint8_t *padded = NULL;
+	ssize_t ret_len;
+
+	if (cipher == L_KEY_RSA_PKCS1_V1_5)
+		padded = l_malloc(len_in);
+
+	ret_len = eds_common(key, cipher, checksum, in, padded ?: out, len_in,
+				padded ? len_in : len_out, KEYCTL_PKEY_DECRYPT);
+
+	if (ret_len < 0)
+		goto done;
+
+	if (padded)
+		ret_len = unpad(padded, out, ret_len, len_out, 0x02, true);
+
+done:
+	l_free(padded);
+
+	return ret_len;
 }
 
 LIB_EXPORT ssize_t l_key_sign(struct l_key *key,
@@ -462,8 +553,24 @@ LIB_EXPORT ssize_t l_key_sign(struct l_key *key,
 				enum l_checksum_type checksum, const void *in,
 				void *out, size_t len_in, size_t len_out)
 {
-	return eds_common(key, cipher, checksum, in, out, len_in, len_out,
+	uint8_t *padded = NULL;
+	ssize_t ret_len;
+
+	if (cipher == L_KEY_RSA_PKCS1_V1_5) {
+		padded = pad(in, len_in, len_out, 0x01, false);
+		if (!padded)
+			return -EOVERFLOW;
+
+		cipher = L_KEY_RSA_RAW;
+	}
+
+	ret_len = eds_common(key, cipher, checksum, padded ?: in, out,
+				padded ? len_out : len_in, len_out,
 				KEYCTL_PKEY_SIGN);
+
+	l_free(padded);
+
+	return ret_len;
 }
 
 LIB_EXPORT bool l_key_verify(struct l_key *key,
@@ -472,16 +579,51 @@ LIB_EXPORT bool l_key_verify(struct l_key *key,
 				const void *sig, size_t len_data,
 				size_t len_sig)
 {
-	long result;
+	enum l_key_cipher_type kernel_cipher;
+	ssize_t hash_len;
+	uint8_t *compare_hash;
+	bool success = false;
+	uint8_t *sig_hash = l_malloc(len_sig);
 
-	if (unlikely(!key))
-		return false;
+	/* The keyctl verify implementation compares the verify results
+	 * before we get a chance to unpad it. Instead, use the *encrypt*
+	 * operation (which uses the same math as verify) to get the hash
+	 * returned to us so it can be unpadded before comparing
+	 */
+	if (cipher == L_KEY_RSA_PKCS1_V1_5)
+		kernel_cipher = L_KEY_RSA_RAW;
+	else
+		kernel_cipher = cipher;
 
-	result = kernel_key_verify(key->serial, lookup_cipher(cipher),
-					lookup_checksum(checksum), data, sig,
-					len_data, len_sig);
+	hash_len = eds_common(key, kernel_cipher, checksum, sig, sig_hash,
+				len_sig, len_sig, KEYCTL_PKEY_ENCRYPT);
 
-	return result == 0;
+	if (hash_len < 0) {
+		success = false;
+		goto done;
+	}
+
+	compare_hash = sig_hash;
+
+	if (cipher == L_KEY_RSA_PKCS1_V1_5) {
+		ssize_t unpad_len;
+
+		unpad_len = unpad(sig_hash, NULL, hash_len, 0, 0x01, false);
+		if (unpad_len < 0) {
+			success = false;
+			goto done;
+		}
+
+		compare_hash += hash_len - unpad_len;
+		hash_len = unpad_len;
+	}
+
+	success = (len_data == (size_t)hash_len) &&
+		(memcmp(data, compare_hash, hash_len) == 0);
+done:
+	l_free(sig_hash);
+
+	return success;
 }
 
 LIB_EXPORT struct l_keyring *l_keyring_new(enum l_keyring_type type,
