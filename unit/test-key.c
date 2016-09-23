@@ -492,7 +492,7 @@ static void test_key_crypto(const void *data)
 	ssize_t len;
 	struct l_checksum *checksum;
 	int hash = L_CHECKSUM_SHA256;
-	int rsa = L_CIPHER_RSA_PKCS1_V1_5;
+	int rsa = L_KEY_RSA_PKCS1_V1_5;
 
 	cert = l_pem_load_private_key(TESTDATADIR "/cert-client-key-pkcs8.pem",
 					NULL, &certlen);
