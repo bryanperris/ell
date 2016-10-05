@@ -27,7 +27,6 @@
 #include <assert.h>
 
 #include <ell/ell.h>
-#include <ell/cipher-private.h>
 
 #define FIXED_STR  "The quick brown fox jumps over the lazy dog. " \
 		   "Jackdaws love my big sphinx of quartz. "       \
