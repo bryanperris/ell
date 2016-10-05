@@ -31,7 +31,6 @@
 
 #include "util.h"
 #include "cipher.h"
-#include "cipher-private.h"
 #include "private.h"
 #include "random.h"
 
@@ -291,53 +290,4 @@ LIB_EXPORT bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
 		return false;
 
 	return true;
-}
-
-static inline int parse_asn1_definite_length(const uint8_t **buf,
-						size_t *len)
-{
-	int n;
-	size_t result = 0;
-
-	(*len)--;
-
-	if (!(**buf & 0x80))
-		return *(*buf)++;
-
-	n = *(*buf)++ & 0x7f;
-	if ((size_t) n > *len)
-		return -1;
-
-	*len -= n;
-	while (n--)
-		result = (result << 8) | *(*buf)++;
-
-	return result;
-}
-
-/* Return index'th element in a DER SEQUENCE */
-uint8_t *der_find_elem(uint8_t *buf, size_t len_in, int index,
-			uint8_t *tag, size_t *len_out)
-{
-	int tlv_len;
-
-	while (1) {
-		if (len_in < 2)
-			return NULL;
-
-		*tag = *buf++;
-		len_in--;
-
-		tlv_len = parse_asn1_definite_length((void *) &buf, &len_in);
-		if (tlv_len < 0 || (size_t) tlv_len > len_in)
-			return NULL;
-
-		if (index-- == 0) {
-			*len_out = tlv_len;
-			return buf;
-		}
-
-		buf += tlv_len;
-		len_in -= tlv_len;
-	}
 }

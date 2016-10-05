@@ -35,7 +35,6 @@
 #include "random.h"
 #include "pem.h"
 #include "tls-private.h"
-#include "cipher-private.h"
 #include "key.h"
 
 void tls10_prf(const uint8_t *secret, size_t secret_len,
@@ -2310,6 +2309,19 @@ LIB_EXPORT const char *l_tls_alert_to_str(enum l_tls_alert_desc desc)
 
 /* X509 Certificates and Certificate Chains */
 
+#define ASN1_ID(class, pc, tag)	(((class) << 6) | ((pc) << 5) | (tag))
+
+#define ASN1_CLASS_UNIVERSAL	0
+
+#define ASN1_ID_SEQUENCE	ASN1_ID(ASN1_CLASS_UNIVERSAL, 1, 0x10)
+#define ASN1_ID_SET		ASN1_ID(ASN1_CLASS_UNIVERSAL, 1, 0x11)
+#define ASN1_ID_INTEGER		ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x02)
+#define ASN1_ID_BIT_STRING	ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x03)
+#define ASN1_ID_OCTET_STRING	ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x04)
+#define ASN1_ID_OID		ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x06)
+#define ASN1_ID_UTF8STRING	ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x0c)
+#define ASN1_ID_PRINTABLESTRING	ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x13)
+
 #define X509_CERTIFICATE_POS			0
 #define   X509_TBSCERTIFICATE_POS		  0
 #define     X509_TBSCERT_VERSION_POS		    0
@@ -2328,6 +2340,55 @@ LIB_EXPORT const char *l_tls_alert_to_str(enum l_tls_alert_desc desc)
 #define     X509_TBSCERT_EXTENSIONS_POS		    9
 #define   X509_SIGNATURE_ALGORITHM_POS		  1
 #define   X509_SIGNATURE_VALUE_POS		  2
+
+static inline int parse_asn1_definite_length(const uint8_t **buf,
+						size_t *len)
+{
+	int n;
+	size_t result = 0;
+
+	(*len)--;
+
+	if (!(**buf & 0x80))
+		return *(*buf)++;
+
+	n = *(*buf)++ & 0x7f;
+	if ((size_t) n > *len)
+		return -1;
+
+	*len -= n;
+	while (n--)
+		result = (result << 8) | *(*buf)++;
+
+	return result;
+}
+
+/* Return index'th element in a DER SEQUENCE */
+static uint8_t *der_find_elem(uint8_t *buf, size_t len_in, int index,
+			uint8_t *tag, size_t *len_out)
+{
+	int tlv_len;
+
+	while (1) {
+		if (len_in < 2)
+			return NULL;
+
+		*tag = *buf++;
+		len_in--;
+
+		tlv_len = parse_asn1_definite_length((void *) &buf, &len_in);
+		if (tlv_len < 0 || (size_t) tlv_len > len_in)
+			return NULL;
+
+		if (index-- == 0) {
+			*len_out = tlv_len;
+			return buf;
+		}
+
+		buf += tlv_len;
+		len_in -= tlv_len;
+	}
+}
 
 /* Return an element in a DER SEQUENCE structure by path */
 static inline uint8_t *der_find_elem_by_path(uint8_t *buf, size_t len_in,
