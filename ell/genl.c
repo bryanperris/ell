@@ -793,6 +793,38 @@ LIB_EXPORT bool l_genl_msg_append_attr(struct l_genl_msg *msg, uint16_t type,
 	return true;
 }
 
+LIB_EXPORT bool l_genl_msg_append_attrv(struct l_genl_msg *msg, uint16_t type,
+					struct iovec *iov, size_t iov_len)
+{
+	struct nlattr *nla;
+	size_t len = 0;
+	unsigned int i;
+
+	if (unlikely(!msg))
+		return false;
+
+	for (i = 0; i < iov_len; i++)
+		len += iov[i].iov_len;
+
+	if (msg->len + NLA_HDRLEN + NLA_ALIGN(len) > msg->size)
+		return false;
+
+	nla = msg->data + msg->len;
+	nla->nla_len = NLA_HDRLEN + len;
+	nla->nla_type = type;
+
+	msg->len += NLA_HDRLEN;
+
+	for (i = 0; i < iov_len; i++, iov++) {
+		memcpy(msg->data + msg->len, iov->iov_base, iov->iov_len);
+		msg->len += iov->iov_len;
+	}
+
+	msg->len += NLA_ALIGN(len) - len;
+
+	return true;
+}
+
 LIB_EXPORT bool l_genl_msg_enter_nested(struct l_genl_msg *msg, uint16_t type)
 {
 	struct nlattr *nla;
