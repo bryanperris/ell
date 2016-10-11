@@ -603,8 +603,10 @@ LIB_EXPORT bool l_key_verify(struct l_key *key,
 	uint8_t *sig_hash = l_malloc(len_sig);
 
 	/* Other checksum types are not yet supported */
-	if (checksum != L_CHECKSUM_NONE)
-		return -EINVAL;
+	if (checksum != L_CHECKSUM_NONE) {
+		success = false;
+		goto done;
+	}
 
 	/* The keyctl verify implementation compares the verify results
 	 * before we get a chance to unpad it. Instead, use the *encrypt*
