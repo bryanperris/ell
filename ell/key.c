@@ -599,14 +599,13 @@ LIB_EXPORT bool l_key_verify(struct l_key *key,
 	enum l_key_cipher_type kernel_cipher;
 	ssize_t hash_len;
 	uint8_t *compare_hash;
-	bool success = false;
-	uint8_t *sig_hash = l_malloc(len_sig);
+	L_AUTO_FREE_VAR(uint8_t *, sig_hash);
+
+	sig_hash = l_malloc(len_sig);
 
 	/* Other checksum types are not yet supported */
-	if (checksum != L_CHECKSUM_NONE) {
-		success = false;
-		goto done;
-	}
+	if (checksum != L_CHECKSUM_NONE)
+		return false;
 
 	/* The keyctl verify implementation compares the verify results
 	 * before we get a chance to unpad it. Instead, use the *encrypt*
@@ -621,10 +620,8 @@ LIB_EXPORT bool l_key_verify(struct l_key *key,
 	hash_len = eds_common(key, kernel_cipher, checksum, sig, sig_hash,
 				len_sig, len_sig, KEYCTL_PKEY_ENCRYPT);
 
-	if (hash_len < 0) {
-		success = false;
-		goto done;
-	}
+	if (hash_len < 0)
+		return false;
 
 	compare_hash = sig_hash;
 
@@ -632,21 +629,15 @@ LIB_EXPORT bool l_key_verify(struct l_key *key,
 		ssize_t unpad_len;
 
 		unpad_len = unpad(sig_hash, NULL, hash_len, 0, 0x01, false);
-		if (unpad_len < 0) {
-			success = false;
-			goto done;
-		}
+		if (unpad_len < 0)
+			return false;
 
 		compare_hash += hash_len - unpad_len;
 		hash_len = unpad_len;
 	}
 
-	success = (len_data == (size_t)hash_len) &&
+	return (len_data == (size_t)hash_len) &&
 		(memcmp(data, compare_hash, hash_len) == 0);
-done:
-	l_free(sig_hash);
-
-	return success;
 }
 
 LIB_EXPORT struct l_keyring *l_keyring_new(enum l_keyring_type type,
