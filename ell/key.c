@@ -218,6 +218,8 @@ static long kernel_key_eds(int op, int32_t serial, const char *encoding,
 					     .out_len = len_out };
 	char *info = format_key_info(encoding, hash);
 
+	memset(out, 0, len_out);
+
 	result = syscall(__NR_keyctl, op, &params, info ?: "", in, out);
 	l_free(info);
 
