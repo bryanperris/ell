@@ -408,6 +408,63 @@ static void test_trusted_keyring(const void *data)
 	l_free(cert);
 }
 
+static void test_trust_chain(const void *data)
+{
+	struct l_keyring *ring;
+	struct l_keyring *trust;
+	uint8_t *cacert;
+	size_t cacertlen;
+	uint8_t *intcert;
+	size_t intcertlen;
+	uint8_t *cert;
+	size_t certlen;
+	struct l_key *cakey;
+	struct l_key *intkey;
+	struct l_key *key;
+	bool success;
+
+	cacert = l_pem_load_certificate(TESTDATADIR "/cert-ca.pem", &cacertlen);
+	assert(cacert);
+	intcert = l_pem_load_certificate(TESTDATADIR "/cert-intca.pem",
+						&intcertlen);
+	assert(intcert);
+	cert = l_pem_load_certificate(TESTDATADIR "/cert-entity-int.pem",
+					&certlen);
+	assert(cert);
+
+	cakey = l_key_new(L_KEY_RSA, cacert, cacertlen);
+	assert(cakey);
+	intkey = l_key_new(L_KEY_RSA, intcert, intcertlen);
+	assert(intkey);
+	key = l_key_new(L_KEY_RSA, cert, certlen);
+	assert(key);
+
+	trust = l_keyring_new(L_KEYRING_SIMPLE, NULL);
+	assert(trust);
+	ring = l_keyring_new(L_KEYRING_TRUSTED_ASYM_CHAIN, trust);
+	assert(ring);
+
+	success = l_keyring_link(ring, key);
+	assert(!success);
+	success = l_keyring_link(ring, intkey);
+	assert(!success);
+	success = l_keyring_link(trust, cakey);
+	assert(success);
+	success = l_keyring_link(ring, key);
+	assert(!success);
+	success = l_keyring_link(ring, intkey);
+	assert(success);
+	success = l_keyring_link(ring, key);
+	assert(success);
+
+	l_keyring_free(trust);
+	l_keyring_free(ring);
+	l_key_free(cakey);
+	l_key_free(key);
+	l_free(cacert);
+	l_free(cert);
+}
+
 /* Reference ciphertext:
  * $ openssl rsautl -in reference_plaintext -inkey cert-client.pem -encrypt \
  * > -pkcs -out reference_ciphertext
@@ -600,6 +657,7 @@ int main(int argc, char *argv[])
 
 	l_test_add("simple keyring", test_simple_keyring, NULL);
 	l_test_add("trusted keyring", test_trusted_keyring, NULL);
+	l_test_add("trust chain", test_trust_chain, NULL);
 
 	l_test_add("key crypto", test_key_crypto, NULL);
 
