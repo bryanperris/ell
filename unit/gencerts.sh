@@ -18,4 +18,17 @@ openssl req -new -extensions cert_ext -config ./gencerts.cnf -subj '/O=Bar Examp
 openssl x509 -req -extensions cert_ext -extfile ./gencerts.cnf -in cert-client.csr -CA cert-ca.pem -CAkey cert-ca-key.pem -CAcreateserial -sha256 -days 10000 -out cert-client.pem
 openssl verify -CAfile cert-ca.pem cert-client.pem
 
-rm cert-ca.srl cert-client.csr cert-server.csr
+echo -e "\n*** Intermediate Certificate ***"
+openssl genrsa -out cert-intca-key.pem
+openssl req -new -extensions int_ext -config ./gencerts.cnf -subj '/O=International Union of Example Organizations/CN=Certificate issuer guy/emailAddress=ca@mail.example' -key cert-intca-key.pem -out cert-intca.csr
+openssl x509 -req -extensions int_ext -extfile ./gencerts.cnf -in cert-intca.csr -CA cert-ca.pem -CAkey cert-ca-key.pem -CAcreateserial -sha256 -days 10000 -out cert-intca.pem
+openssl verify -CAfile cert-ca.pem cert-intca.pem
+cat cert-intca.pem cert-ca.pem > cert-chain.pem
+
+echo -e "\n*** Intermediate-Signed Certificate ***"
+openssl genrsa -out cert-entity-int-key.pem
+openssl req -new -extensions cert_ext -config ./gencerts.cnf -subj '/O=Baz Example Organization/CN=Baz Example Organization/emailAddress=baz@mail.example' -key cert-entity-int-key.pem -out cert-entity-int.csr
+openssl x509 -req -extensions cert_ext -extfile ./gencerts.cnf -in cert-entity-int.csr -CA cert-intca.pem -CAkey cert-intca-key.pem -CAcreateserial -sha256 -days 10000 -out cert-entity-int.pem
+openssl verify -CAfile cert-chain.pem cert-entity-int.pem
+
+rm cert-ca.srl cert-client.csr cert-server.csr cert-intca.srl cert-intca.csr cert-entity-int.csr cert-entity-int-key.pem cert-intca-key.pem cert-chain.pem
