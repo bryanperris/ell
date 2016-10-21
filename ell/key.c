@@ -653,15 +653,25 @@ LIB_EXPORT struct l_keyring *l_keyring_new(enum l_keyring_type type,
 	if (!internal_keyring && !setup_internal_keyring())
 		return NULL;
 
-	if (type == L_KEYRING_TRUSTED_ASYM) {
-		if (!trusted)
-			return NULL;
+	switch (type) {
+	case L_KEYRING_SIMPLE:
+		break;
+	case L_KEYRING_TRUSTED_ASYM:
+	case L_KEYRING_TRUSTED_ASYM_CHAIN:
+	{
+		char *option = "";
+
+		if (type == L_KEYRING_TRUSTED_ASYM_CHAIN)
+			option = ":chain";
 
 		payload = l_strdup_printf(
-			"restrict=asymmetric:key_or_keyring:%d",
-			trusted->serial);
+			"restrict=asymmetric:key_or_keyring:%d%s",
+			trusted ? trusted->serial : 0, option);
 		payload_length = strlen(payload);
-	} else if (type != L_KEYRING_SIMPLE) {
+
+		break;
+	}
+	default:
 		/* Unsupported type */
 		return NULL;
 	}

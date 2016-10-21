@@ -42,7 +42,8 @@ enum l_key_type {
 
 enum l_keyring_type {
 	L_KEYRING_SIMPLE = 0,
-	L_KEYRING_TRUSTED_ASYM
+	L_KEYRING_TRUSTED_ASYM,
+	L_KEYRING_TRUSTED_ASYM_CHAIN,
 };
 
 enum l_key_cipher_type {
