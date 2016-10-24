@@ -55,6 +55,7 @@ struct l_key *l_key_new(enum l_key_type type, const void *payload,
 			size_t payload_length);
 
 void l_key_free(struct l_key *key);
+void l_key_free_norevoke(struct l_key *key);
 
 bool l_key_update(struct l_key *key, const void *payload, size_t len);
 
@@ -92,6 +93,7 @@ struct l_keyring *l_keyring_new(enum l_keyring_type type,
 				const struct l_keyring *trust);
 
 void l_keyring_free(struct l_keyring *keyring);
+void l_keyring_free_norevoke(struct l_keyring *keyring);
 
 bool l_keyring_link(struct l_keyring *keyring, const struct l_key *key);
 

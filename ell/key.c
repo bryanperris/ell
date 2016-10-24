@@ -286,6 +286,16 @@ LIB_EXPORT void l_key_free(struct l_key *key)
 	l_free(key);
 }
 
+LIB_EXPORT void l_key_free_norevoke(struct l_key *key)
+{
+	if (unlikely(!key))
+		return;
+
+	kernel_unlink_key(key->serial, internal_keyring);
+
+	l_free(key);
+}
+
 LIB_EXPORT bool l_key_update(struct l_key *key, const void *payload, size_t len)
 {
 	long error;
@@ -699,6 +709,16 @@ LIB_EXPORT void l_keyring_free(struct l_keyring *keyring)
 		return;
 
 	kernel_revoke_key(keyring->serial);
+
+	l_free(keyring);
+}
+
+LIB_EXPORT void l_keyring_free_norevoke(struct l_keyring *keyring)
+{
+	if (unlikely(!keyring))
+		return;
+
+	kernel_unlink_key(keyring->serial, internal_keyring);
 
 	l_free(keyring);
 }
