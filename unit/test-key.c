@@ -460,8 +460,10 @@ static void test_trust_chain(const void *data)
 	l_keyring_free(trust);
 	l_keyring_free(ring);
 	l_key_free(cakey);
+	l_key_free(intkey);
 	l_key_free(key);
 	l_free(cacert);
+	l_free(intcert);
 	l_free(cert);
 }
 
