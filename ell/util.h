@@ -160,10 +160,10 @@ static inline void l_put_be64(uint64_t val, void *ptr)
 }
 
 #define L_AUTO_CLEANUP_VAR(vartype,varname,destroy) \
-	vartype varname __attribute__((cleanup(destroy)));
+	vartype varname __attribute__((cleanup(destroy)))
 
 #define L_AUTO_FREE_VAR(vartype,varname) \
-	vartype varname __attribute__((cleanup(auto_free)));
+	vartype varname __attribute__((cleanup(auto_free)))
 
 #define L_ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
