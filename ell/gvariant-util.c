@@ -918,7 +918,7 @@ void _gvariant_builder_free(struct dbus_builder *builder)
 	if (unlikely(!builder))
 		return;
 
-	l_string_free(builder->signature, true);
+	l_string_free(builder->signature);
 	l_queue_destroy(builder->containers,
 				(l_queue_destroy_func_t) container_free);
 	l_free(builder->body);
@@ -1319,7 +1319,7 @@ char *_gvariant_builder_finish(struct dbus_builder *builder,
 
 	root = l_queue_peek_head(builder->containers);
 
-	signature = l_string_free(builder->signature, false);
+	signature = l_string_unwrap(builder->signature);
 	builder->signature = NULL;
 
 	if (_gvariant_is_fixed_size(signature)) {

@@ -901,7 +901,7 @@ void _dbus1_builder_free(struct dbus_builder *builder)
 	if (unlikely(!builder))
 		return;
 
-	l_string_free(builder->signature, true);
+	l_string_free(builder->signature);
 	l_queue_destroy(builder->containers,
 				(l_queue_destroy_func_t) container_free);
 	l_free(builder->body);
@@ -1265,7 +1265,7 @@ char *_dbus1_builder_finish(struct dbus_builder *builder,
 	if (unlikely(l_queue_length(builder->containers) != 1))
 		return NULL;
 
-	signature = l_string_free(builder->signature, false);
+	signature = l_string_unwrap(builder->signature);
 	builder->signature = NULL;
 
 	*body = builder->body;

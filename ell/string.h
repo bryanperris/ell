@@ -100,7 +100,8 @@ static inline bool __attribute__ ((always_inline))
 }
 
 struct l_string *l_string_new(size_t initial_length);
-char *l_string_free(struct l_string *string, bool free_data);
+void l_string_free(struct l_string *string);
+char *l_string_unwrap(struct l_string *string);
 
 struct l_string *l_string_append(struct l_string *dest, const char *src);
 struct l_string *l_string_append_c(struct l_string *dest, const char c);

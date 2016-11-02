@@ -393,7 +393,7 @@ char *_dbus_filter_rule_to_str(const struct _dbus_filter_condition *rule,
 					rule->type - L_DBUS_MATCH_ARG0);
 			break;
 		default:
-			l_string_free(str, true);
+			l_string_free(str);
 			return NULL;
 		}
 
@@ -417,5 +417,5 @@ char *_dbus_filter_rule_to_str(const struct _dbus_filter_condition *rule,
 			l_string_append_c(str, ',');
 	}
 
-	return l_string_free(str, false);
+	return l_string_unwrap(str);
 }

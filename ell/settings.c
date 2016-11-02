@@ -428,7 +428,7 @@ LIB_EXPORT char *l_settings_to_data(const struct l_settings *settings,
 		group_entry = group_entry->next;
 	}
 
-	ret = l_string_free(buf, false);
+	ret = l_string_unwrap(buf);
 
 	if (len)
 		*len = strlen(ret);

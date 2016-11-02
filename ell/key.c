@@ -169,7 +169,7 @@ static char *format_key_info(const char *encoding, const char *hash)
 	if (hash)
 		l_string_append_printf(info, "hash=%s", hash);
 
-	return l_string_free(info, false);
+	return l_string_unwrap(info);
 }
 
 static long kernel_query_key(int32_t key_serial, const char *encoding,
