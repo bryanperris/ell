@@ -1694,9 +1694,10 @@ static struct l_dbus_message *properties_get(struct l_dbus *dbus,
 
 	l_dbus_message_builder_enter_variant(builder, signature);
 
-	if (property->getter(dbus, message, builder, instance->user_data))
+	if (property->getter(dbus, message, builder, instance->user_data)) {
 		l_dbus_message_builder_leave_variant(builder);
-	else {
+		l_dbus_message_builder_finalize(builder);
+	} else {
 		l_dbus_message_unref(reply);
 
 		reply = l_dbus_message_new_error(message,
@@ -1706,7 +1707,6 @@ static struct l_dbus_message *properties_get(struct l_dbus *dbus,
 						"failed");
 	}
 
-	l_dbus_message_builder_finalize(builder);
 	l_dbus_message_builder_destroy(builder);
 
 	return reply;
