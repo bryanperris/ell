@@ -103,10 +103,8 @@ int main(int argc, char *argv[])
 	timeout_quit = l_timeout_create(3, timeout_quit_handler, NULL, NULL);
 
 	race_delay = l_timeout_create(1, race_delay_handler, NULL, NULL);
-	race1 = l_timeout_create_with_nanoseconds(1, 100000000, race_handler,
-						  &race2, NULL);
-	race2 = l_timeout_create_with_nanoseconds(1, 100000000, race_handler,
-						  &race1, NULL);
+	race1 = l_timeout_create_ms(1100, race_handler, &race2, NULL);
+	race2 = l_timeout_create_ms(1100, race_handler, &race1, NULL);
 
 	remove_self = l_timeout_create(2, remove_handler, &remove_self, NULL);
 
