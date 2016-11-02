@@ -36,13 +36,13 @@ typedef void (*l_timeout_destroy_cb_t) (void *user_data);
 struct l_timeout *l_timeout_create(unsigned int seconds,
 			l_timeout_notify_cb_t callback,
 			void *user_data, l_timeout_destroy_cb_t destroy);
-struct l_timeout *l_timeout_create_with_nanoseconds(unsigned int seconds,
-			long nanoseconds, l_timeout_notify_cb_t callback,
+struct l_timeout *l_timeout_create_ms(unsigned long milliseconds,
+			l_timeout_notify_cb_t callback,
 			void *user_data, l_timeout_destroy_cb_t destroy);
 void l_timeout_modify(struct l_timeout *timeout,
 				unsigned int seconds);
-void l_timeout_modify_with_nanoseconds(struct l_timeout *timeout,
-				unsigned int seconds, long nanoseconds);
+void l_timeout_modify_ms(struct l_timeout *timeout,
+				unsigned long milliseconds);
 void l_timeout_remove(struct l_timeout *timeout);
 
 #ifdef __cplusplus

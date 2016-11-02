@@ -29,6 +29,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
+#include <limits.h>
 
 #include "util.h"
 #include "timeout.h"
@@ -91,31 +92,22 @@ static inline int timeout_set(int fd, unsigned int seconds, long nanoseconds)
 	return timerfd_settime(fd, 0, &itimer, NULL);
 }
 
-/**
- * l_timeout_create:
- * @seconds: timeout in seconds
- * @callback: timeout callback function
- * @user_data: user data provided to timeout callback function
- * @destroy: destroy function for user data
- *
- * Create new timeout callback handling.
- *
- * The timeout will on fire once. The timeout handling needs to be rearmed
- * with l_timeout_modify() to trigger again.
- *
- * Returns: a newly allocated #l_timeout object. On failure, the function
- * returns NULL.
- **/
-LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
-			l_timeout_notify_cb_t callback,
-			void *user_data, l_timeout_destroy_cb_t destroy)
+static bool convert_ms(unsigned long milliseconds, unsigned int *seconds,
+			long *nanoseconds)
 {
-	return l_timeout_create_with_nanoseconds(seconds, 0, callback,
-							user_data, destroy);
+	unsigned long big_seconds = milliseconds / 1000;
+
+	if (big_seconds > UINT_MAX)
+		return false;
+
+	*seconds = big_seconds;
+	*nanoseconds = (milliseconds % 1000) * 1000000L;
+
+	return true;
 }
 
 /**
- * l_timeout_create_with_nanoseconds:
+ * timeout_create_with_nanoseconds:
  * @seconds: number of seconds
  * @nanoseconds: number of nanoseconds
  * @callback: timeout callback function
@@ -124,13 +116,13 @@ LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
  *
  * Create new timeout callback handling.
  *
- * The timeout will on fire once. The timeout handling needs to be rearmed
- * with l_timeout_modify_with_nanoseconds() to trigger again.
+ * The timeout will only fire once. The timeout handling needs to be rearmed
+ * with one of the l_timeout_modify functions to trigger again.
  *
  * Returns: a newly allocated #l_timeout object. On failure, the function
  * returns NULL.
  **/
-LIB_EXPORT struct l_timeout *l_timeout_create_with_nanoseconds(unsigned int seconds,
+static struct l_timeout *timeout_create_with_nanoseconds(unsigned int seconds,
 			long nanoseconds, l_timeout_notify_cb_t callback,
 			void *user_data, l_timeout_destroy_cb_t destroy)
 {
@@ -173,6 +165,58 @@ LIB_EXPORT struct l_timeout *l_timeout_create_with_nanoseconds(unsigned int seco
 }
 
 /**
+ * l_timeout_create:
+ * @seconds: timeout in seconds
+ * @callback: timeout callback function
+ * @user_data: user data provided to timeout callback function
+ * @destroy: destroy function for user data
+ *
+ * Create new timeout callback handling.
+ *
+ * The timeout will only fire once. The timeout handling needs to be rearmed
+ * with one of the l_timeout_modify functions to trigger again.
+ *
+ * Returns: a newly allocated #l_timeout object. On failure, the function
+ * returns NULL.
+ **/
+LIB_EXPORT struct l_timeout *l_timeout_create(unsigned int seconds,
+			l_timeout_notify_cb_t callback,
+			void *user_data, l_timeout_destroy_cb_t destroy)
+{
+	return timeout_create_with_nanoseconds(seconds, 0, callback,
+							user_data, destroy);
+}
+
+/**
+ * l_timeout_create_ms:
+ * @milliseconds: timeout in milliseconds
+ * @callback: timeout callback function
+ * @user_data: user data provided to timeout callback function
+ * @destroy: destroy function for user data
+ *
+ * Create new timeout callback handling.
+ *
+ * The timeout will only fire once. The timeout handling needs to be rearmed
+ * with one of the l_timeout_modify functions to trigger again.
+ *
+ * Returns: a newly allocated #l_timeout object. On failure, the function
+ * returns NULL.
+ **/
+LIB_EXPORT struct l_timeout *l_timeout_create_ms(unsigned long milliseconds,
+			l_timeout_notify_cb_t callback,
+			void *user_data, l_timeout_destroy_cb_t destroy)
+{
+	unsigned int seconds;
+	long nanoseconds;
+
+	if (!convert_ms(milliseconds, &seconds, &nanoseconds))
+		return NULL;
+
+	return timeout_create_with_nanoseconds(seconds, nanoseconds, callback,
+						user_data, destroy);
+}
+
+/**
  * l_timeout_modify:
  * @timeout: timeout object
  * @seconds: timeout in seconds
@@ -197,15 +241,14 @@ LIB_EXPORT void l_timeout_modify(struct l_timeout *timeout,
 }
 
 /**
- * l_timeout_modify_with_nanoseconds:
+ * l_timeout_modify_ms:
  * @timeout: timeout object
- * @seconds: number of seconds
- * @nanoseconds: number of nanoseconds
+ * @milliseconds: number of milliseconds
  *
  * Modify an existing @timeout and rearm it.
  **/
-LIB_EXPORT void l_timeout_modify_with_nanoseconds(struct l_timeout *timeout,
-					unsigned int seconds, long nanoseconds)
+LIB_EXPORT void l_timeout_modify_ms(struct l_timeout *timeout,
+					unsigned long milliseconds)
 {
 	if (unlikely(!timeout))
 		return;
@@ -213,8 +256,12 @@ LIB_EXPORT void l_timeout_modify_with_nanoseconds(struct l_timeout *timeout,
 	if (unlikely(timeout->fd < 0))
 		return;
 
-	if (seconds > 0 || nanoseconds > 0) {
-		if (timeout_set(timeout->fd, seconds, nanoseconds) < 0)
+	if (milliseconds > 0) {
+		unsigned int sec;
+		long nanosec;
+
+		if (!convert_ms(milliseconds, &sec, &nanosec) ||
+			timeout_set(timeout->fd, sec, nanosec) < 0)
 			return;
 	}
 
