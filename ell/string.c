@@ -132,7 +132,6 @@ LIB_EXPORT void l_string_free(struct l_string *string)
 /**
  * l_string_unwrap:
  * @string: growable string object
- * @free_data: internal string array
  *
  * Free the growable string object and return the internal string data.
  * The caller is responsible for freeing the string data using l_free(),
