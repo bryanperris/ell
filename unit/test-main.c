@@ -26,6 +26,8 @@
 
 #include <ell/ell.h>
 #include <unistd.h>
+#include <assert.h>
+#include <limits.h>
 
 static void signal_handler(struct l_signal *signal, uint32_t signo,
 							void *user_data)
@@ -115,6 +117,12 @@ int main(int argc, char *argv[])
 	l_debug_enable("*");
 
 	l_debug("hello");
+
+#if (ULONG_MAX > UINT_MAX)
+	l_debug("Checking timeout time limit");
+	assert(!l_timeout_create_ms((UINT_MAX + 1UL) * 1000,
+					timeout_quit_handler, NULL, NULL));
+#endif
 
 	l_idle_oneshot(oneshot_handler, NULL, NULL);
 
