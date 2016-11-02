@@ -116,7 +116,7 @@ static void test_introspect_method(const void *test_data)
 
 	buf = l_string_new(0);
 	_dbus_method_introspection(method, buf);
-	xml = l_string_free(buf, false);
+	xml = l_string_unwrap(buf);
 
 	assert(!strcmp(test->expected_xml, xml));
 	l_free(xml);
@@ -134,7 +134,7 @@ static void test_introspect_signal(const void *test_data)
 
 	buf = l_string_new(0);
 	_dbus_signal_introspection(signal, buf);
-	xml = l_string_free(buf, false);
+	xml = l_string_unwrap(buf);
 
 	assert(!strcmp(test->expected_xml, xml));
 	l_free(xml);
@@ -152,7 +152,7 @@ static void test_introspect_property(const void *test_data)
 
 	buf = l_string_new(0);
 	_dbus_property_introspection(property, buf);
-	xml = l_string_free(buf, false);
+	xml = l_string_unwrap(buf);
 
 	assert(!strcmp(test->expected_xml, xml));
 	l_free(xml);
@@ -166,7 +166,7 @@ static void test_introspect_interface(const void *test_data)
 
 	buf = l_string_new(0);
 	_dbus_interface_introspection(interface, buf);
-	xml = l_string_free(buf, false);
+	xml = l_string_unwrap(buf);
 
 	assert(!strcmp(test->expected_xml, xml));
 	l_free(xml);
@@ -358,7 +358,7 @@ static void test_dbus_object_tree_introspection(const void *test_data)
 
 	buf = l_string_new(1024);
 	_dbus_object_tree_introspect(tree, "/", buf);
-	xml = l_string_free(buf, false);
+	xml = l_string_unwrap(buf);
 	assert(!strcmp(ofono_manager_introspection, xml));
 	l_free(xml);
 

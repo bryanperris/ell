@@ -40,7 +40,7 @@ static void test_grow(const void *test_data)
 	assert(l_string_append(str, "BarFoo"));
 	assert(l_string_length(str) == strlen("Foobar7BarFoo"));
 
-	a = l_string_free(str, false);
+	a = l_string_unwrap(str);
 	assert(a);
 	assert(!strcmp(a, "Foobar7BarFoo"));
 
@@ -60,7 +60,7 @@ static void test_printf(const void *test_data)
 
 	assert(l_string_length(str) == strlen("Foobar7100BarFoo"));
 
-	a = l_string_free(str, false);
+	a = l_string_unwrap(str);
 	assert(a);
 	assert(!strcmp(a, "Foobar7100BarFoo"));
 
@@ -107,7 +107,7 @@ static void test_fixed(const void *test_data)
 	l_string_append_fixed(str, test->input, test->input_len);
 	assert(l_string_length(str) == strlen(test->expected));
 
-	a = l_string_free(str, false);
+	a = l_string_unwrap(str);
 	assert(a);
 	assert(!strcmp(a, test->expected));
 
@@ -125,7 +125,7 @@ static void test_truncate(const void *test_data)
 	assert(!l_string_truncate(NULL, 8));
 
 	assert(l_string_truncate(str, 7));
-	a = l_string_free(str, false);
+	a = l_string_unwrap(str);
 	assert(a);
 	assert(!strcmp(a, "Foobar7"));
 	l_free(a);
@@ -134,7 +134,7 @@ static void test_truncate(const void *test_data)
 	l_string_append(str, "Foobar7");
 	assert(l_string_truncate(str, 3));
 	l_string_append_c(str, '4');
-	a = l_string_free(str, false);
+	a = l_string_unwrap(str);
 	assert(a);
 	assert(!strcmp(a, "Foo4"));
 	l_free(a);
