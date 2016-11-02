@@ -394,7 +394,8 @@ LIB_EXPORT bool l_settings_load_from_data(struct l_settings *settings,
 	return r;
 }
 
-LIB_EXPORT char *l_settings_to_data(struct l_settings *settings, size_t *len)
+LIB_EXPORT char *l_settings_to_data(const struct l_settings *settings,
+								size_t *len)
 {
 	struct l_string *buf;
 	char *ret;
@@ -520,7 +521,7 @@ static void gather_groups(void *data, void *user_data)
 	gather->v[gather->cur++] = l_strdup(group_data->name);
 }
 
-LIB_EXPORT char **l_settings_get_groups(struct l_settings *settings)
+LIB_EXPORT char **l_settings_get_groups(const struct l_settings *settings)
 {
 	char **ret;
 	struct gather_data gather;
@@ -537,7 +538,7 @@ LIB_EXPORT char **l_settings_get_groups(struct l_settings *settings)
 	return ret;
 }
 
-LIB_EXPORT bool l_settings_has_group(struct l_settings *settings,
+LIB_EXPORT bool l_settings_has_group(const struct l_settings *settings,
 					const char *group_name)
 {
 	struct group_data *group;
@@ -566,7 +567,7 @@ static void gather_keys(void *data, void *user_data)
 	gather->v[gather->cur++] = l_strdup(setting_data->key);
 }
 
-LIB_EXPORT char **l_settings_get_keys(struct l_settings *settings,
+LIB_EXPORT char **l_settings_get_keys(const struct l_settings *settings,
 					const char *group_name)
 {
 	char **ret;
@@ -589,7 +590,7 @@ LIB_EXPORT char **l_settings_get_keys(struct l_settings *settings,
 	return ret;
 }
 
-LIB_EXPORT bool l_settings_has_key(struct l_settings *settings,
+LIB_EXPORT bool l_settings_has_key(const struct l_settings *settings,
 					const char *group_name, const char *key)
 {
 	struct group_data *group;
@@ -607,7 +608,7 @@ LIB_EXPORT bool l_settings_has_key(struct l_settings *settings,
 	return !!setting;
 }
 
-LIB_EXPORT const char *l_settings_get_value(struct l_settings *settings,
+LIB_EXPORT const char *l_settings_get_value(const struct l_settings *settings,
 						const char *group_name,
 						const char *key)
 {
@@ -719,7 +720,7 @@ LIB_EXPORT bool l_settings_set_value(struct l_settings *settings,
 	return set_value(settings, group_name, key, l_strdup(value));
 }
 
-LIB_EXPORT bool l_settings_get_bool(struct l_settings *settings,
+LIB_EXPORT bool l_settings_get_bool(const struct l_settings *settings,
 					const char *group_name, const char *key,
 					bool *out)
 {
@@ -765,7 +766,7 @@ LIB_EXPORT bool l_settings_set_bool(struct l_settings *settings,
 	return l_settings_set_value(settings, group_name, key, v);
 }
 
-LIB_EXPORT bool l_settings_get_int(struct l_settings *settings,
+LIB_EXPORT bool l_settings_get_int(const struct l_settings *settings,
 					const char *group_name,
 					const char *key, int *out)
 {
@@ -812,7 +813,7 @@ LIB_EXPORT bool l_settings_set_int(struct l_settings *settings,
 	return l_settings_set_value(settings, group_name, key, buf);
 }
 
-LIB_EXPORT bool l_settings_get_uint(struct l_settings *settings,
+LIB_EXPORT bool l_settings_get_uint(const struct l_settings *settings,
 					const char *group_name, const char *key,
 					unsigned int *out)
 {
@@ -859,7 +860,7 @@ LIB_EXPORT bool l_settings_set_uint(struct l_settings *settings,
 	return l_settings_set_value(settings, group_name, key, buf);
 }
 
-LIB_EXPORT bool l_settings_get_int64(struct l_settings *settings,
+LIB_EXPORT bool l_settings_get_int64(const struct l_settings *settings,
 					const char *group_name, const char *key,
 					int64_t *out)
 {
@@ -905,7 +906,7 @@ LIB_EXPORT bool l_settings_set_int64(struct l_settings *settings,
 	return l_settings_set_value(settings, group_name, key, buf);
 }
 
-LIB_EXPORT bool l_settings_get_uint64(struct l_settings *settings,
+LIB_EXPORT bool l_settings_get_uint64(const struct l_settings *settings,
 					const char *group_name, const char *key,
 					uint64_t *out)
 {
@@ -951,7 +952,7 @@ LIB_EXPORT bool l_settings_set_uint64(struct l_settings *settings,
 	return l_settings_set_value(settings, group_name, key, buf);
 }
 
-LIB_EXPORT char *l_settings_get_string(struct l_settings *settings,
+LIB_EXPORT char *l_settings_get_string(const struct l_settings *settings,
 					const char *group_name, const char *key)
 {
 	const char *value = l_settings_get_value(settings, group_name, key);
@@ -976,7 +977,7 @@ LIB_EXPORT bool l_settings_set_string(struct l_settings *settings,
 	return set_value(settings, group_name, key, buf);
 }
 
-LIB_EXPORT char **l_settings_get_string_list(struct l_settings *settings,
+LIB_EXPORT char **l_settings_get_string_list(const struct l_settings *settings,
 						const char *group_name,
 						const char *key,
 						const char delimiter)
@@ -1015,7 +1016,7 @@ LIB_EXPORT bool l_settings_set_string_list(struct l_settings *settings,
 	return set_value(settings, group_name, key, buf);
 }
 
-LIB_EXPORT bool l_settings_get_double(struct l_settings *settings,
+LIB_EXPORT bool l_settings_get_double(const struct l_settings *settings,
 					const char *group_name, const char *key,
 					double *out)
 {
@@ -1061,7 +1062,7 @@ LIB_EXPORT bool l_settings_set_double(struct l_settings *settings,
 	return l_settings_set_value(settings, group_name, key, buf);
 }
 
-LIB_EXPORT bool l_settings_get_float(struct l_settings *settings,
+LIB_EXPORT bool l_settings_get_float(const struct l_settings *settings,
 					const char *group_name, const char *key,
 					float *out)
 {
