@@ -326,7 +326,8 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_method_return(
 					DBUS_MESSAGE_FLAG_NO_REPLY_EXPECTED,
 					hdr->version);
 
-	message->reply_serial = _dbus_message_get_serial(method_call);
+	if (!l_dbus_message_get_no_reply(method_call))
+		message->reply_serial = _dbus_message_get_serial(method_call);
 
 	sender = l_dbus_message_get_sender(method_call);
 	if (sender)
@@ -369,11 +370,14 @@ LIB_EXPORT struct l_dbus_message *l_dbus_message_new_error_valist(
 {
 	char str[1024];
 	struct dbus_header *hdr = method_call->header;
+	uint32_t reply_serial = 0;
 
 	vsnprintf(str, sizeof(str), format, args);
 
-	return _dbus_message_new_error(hdr->version,
-					_dbus_message_get_serial(method_call),
+	if (!l_dbus_message_get_no_reply(method_call))
+		reply_serial = _dbus_message_get_serial(method_call);
+
+	return _dbus_message_new_error(hdr->version, reply_serial,
 					l_dbus_message_get_sender(method_call),
 					name, str);
 }

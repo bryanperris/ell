@@ -313,6 +313,16 @@ static uint32_t send_message(struct l_dbus *dbus, bool priority,
 				void *user_data, l_dbus_destroy_func_t destroy)
 {
 	struct message_callback *callback;
+	enum dbus_message_type type;
+
+	type = _dbus_message_get_type(message);
+
+	if ((type == DBUS_MESSAGE_TYPE_METHOD_RETURN ||
+				type == DBUS_MESSAGE_TYPE_ERROR) &&
+			_dbus_message_get_reply_serial(message) == 0) {
+		l_dbus_message_unref(message);
+		return 0;
+	}
 
 	callback = l_new(struct message_callback, 1);
 
