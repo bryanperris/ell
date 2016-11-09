@@ -178,9 +178,6 @@ void _dbus_name_cache_notify(struct _dbus_name_cache *cache,
 	if (!cache)
 		return;
 
-	if (_dbus_parse_unique_name(name, NULL))
-		return;
-
 	entry = l_hashmap_lookup(cache->names, name);
 
 	if (!entry)
