@@ -596,6 +596,7 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 	int r;
 	size_t min_size;
 	const char *error;
+	char unique_bus_name[128];
 
 	memset(&recv_cmd, 0, sizeof(recv_cmd));
 
@@ -636,6 +637,27 @@ int _dbus_kernel_recv(int fd, void *kdbus_pool,
 						item->name_change.old_id.id,
 						item->name_change.new_id.id,
 						user_data);
+			break;
+
+		case KDBUS_ITEM_ID_ADD:
+		case KDBUS_ITEM_ID_REMOVE:
+			min_size = KDBUS_ITEM_SIZE(sizeof(item->id_change));
+			if (msg->size < sizeof(*msg) + min_size ||
+					item->size < min_size) {
+				r = -EPROTONOSUPPORT;
+				break;
+			}
+
+			sprintf(unique_bus_name, ":1.%llu", item->id_change.id);
+
+			if (item->type == KDBUS_ITEM_ID_ADD)
+				name_owner_change_func(unique_bus_name,
+							0, item->id_change.id,
+							user_data);
+			else
+				name_owner_change_func(unique_bus_name,
+							item->id_change.id, 0,
+							user_data);
 			break;
 
 		case KDBUS_ITEM_REPLY_TIMEOUT:
@@ -828,7 +850,9 @@ int _dbus_kernel_enable_name_owner_notify(int fd)
 	struct {
 		struct kdbus_cmd_match cmd;
 		uint8_t param[KDBUS_ITEM_SIZE(
-				sizeof(struct kdbus_notify_name_change))];
+				sizeof(struct kdbus_notify_name_change)) +
+				KDBUS_ITEM_SIZE(
+				sizeof(struct kdbus_notify_id_change))];
 	} cmd_match;
 	struct kdbus_item *item;
 	int r;
@@ -869,6 +893,28 @@ int _dbus_kernel_enable_name_owner_notify(int fd)
 	if (r < 0)
 		return -errno;
 
+	memset(&cmd_match, 0, sizeof(cmd_match));
+	item = cmd_match.cmd.items;
+	item->type = KDBUS_ITEM_ID_ADD;
+	item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(item->id_change);
+	item->id_change.id = KDBUS_MATCH_ID_ANY;
+	cmd_match.cmd.size = sizeof(cmd_match.cmd) + item->size;
+
+	r = ioctl(fd, KDBUS_CMD_MATCH_ADD, &cmd_match);
+	if (r < 0)
+		return -errno;
+
+	memset(&cmd_match, 0, sizeof(cmd_match));
+	item = cmd_match.cmd.items;
+	item->type = KDBUS_ITEM_ID_REMOVE;
+	item->size = KDBUS_ITEM_HEADER_SIZE + sizeof(item->id_change);
+	item->id_change.id = KDBUS_MATCH_ID_ANY;
+	cmd_match.cmd.size = sizeof(cmd_match.cmd) + item->size;
+
+	r = ioctl(fd, KDBUS_CMD_MATCH_ADD, &cmd_match);
+	if (r < 0)
+		return -errno;
+
 	return 0;
 }
 
@@ -881,10 +927,14 @@ uint64_t _dbus_kernel_get_name_owner(int fd, void *kdbus_pool,
 	struct kdbus_item *item;
 	const char *entry_name;
 	uint64_t owner_id = 0;
+	bool is_unique;
+	uint64_t uninitialized_var(id);
+
+	is_unique = _dbus_parse_unique_name(name, &id);
 
 	memset(&cmd, 0, sizeof(cmd));
 	cmd.size = sizeof(cmd);
-	cmd.flags = KDBUS_LIST_NAMES;
+	cmd.flags = is_unique ? KDBUS_LIST_UNIQUE : KDBUS_LIST_NAMES;
 
 	if (ioctl(fd, KDBUS_CMD_LIST, &cmd) < 0)
 		return 0;
@@ -904,6 +954,11 @@ uint64_t _dbus_kernel_get_name_owner(int fd, void *kdbus_pool,
 
 		if (entry_name && !strcmp(entry_name, name)) {
 			owner_id = entry->id;
+			break;
+		}
+
+		if (is_unique && id == entry->id) {
+			owner_id = id;
 			break;
 		}
 	}
