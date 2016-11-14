@@ -1474,7 +1474,7 @@ static void tls_handle_certificate(struct l_tls *tls,
 	 * against our CA if we have any.
 	 */
 
-	if (ca_cert) {
+	if (tls->ca_cert_path) {
 		ca_cert = tls_cert_load_file(tls->ca_cert_path);
 		if (!ca_cert) {
 			tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
