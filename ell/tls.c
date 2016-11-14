@@ -2469,13 +2469,26 @@ static void tls_key_cleanup(struct l_key **p)
 	l_key_free_norevoke(*p);
 }
 
-static bool tls_cert_verify_with_keyring(struct tls_cert *cert,
-						struct l_keyring *ring)
+static int tls_cert_verify_with_keyring(struct tls_cert *cert,
+						struct l_keyring *ring,
+						struct tls_cert *root)
 {
 	if (!cert)
 		return true;
 
-	if (tls_cert_verify_with_keyring(cert->issuer, ring)) {
+	/*
+	 * RFC5246 7.4.2:
+	 * "Because certificate validation requires that root keys be
+	 * distributed independently, the self-signed certificate that
+	 * specifies the root certificate authority MAY be omitted from
+	 * the chain, under the assumption that the remote end must
+	 * already possess it in order to validate it in any case."
+	 */
+	if (!cert->issuer && root && cert->size == root->size &&
+			!memcmp(cert->asn1, root->asn1, root->size))
+		return true;
+
+	if (tls_cert_verify_with_keyring(cert->issuer, ring, root)) {
 		L_AUTO_CLEANUP_VAR(struct l_key *, key, tls_key_cleanup);
 
 		key = l_key_new(L_KEY_RSA, cert->asn1, cert->size);
@@ -2520,7 +2533,7 @@ bool tls_cert_verify_certchain(struct tls_cert *certchain,
 	if (!verify_ring)
 		return false;
 
-	return tls_cert_verify_with_keyring(certchain, verify_ring);
+	return tls_cert_verify_with_keyring(certchain, verify_ring, ca_cert);
 }
 
 void tls_cert_free_certchain(struct tls_cert *cert)
