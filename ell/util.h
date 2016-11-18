@@ -40,6 +40,15 @@ extern "C" {
 #define L_STRINGIFY(val) L_STRINGIFY_ARG(val)
 #define L_STRINGIFY_ARG(contents) #contents
 
+#define L_WARN_ON(condition) ({						\
+		bool r = !!(condition);					\
+		if (unlikely(r))					\
+			l_warn("WARNING: %s:%s() condition %s failed",	\
+				__FILE__, __PRETTY_FUNCTION__,		\
+				#condition);				\
+		unlikely(r);						\
+	})
+
 #define L_PTR_TO_UINT(p) ((unsigned int) ((uintptr_t) (p)))
 #define L_UINT_TO_PTR(u) ((void *) ((uintptr_t) (u)))
 
