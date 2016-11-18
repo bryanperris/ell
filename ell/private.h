@@ -32,9 +32,6 @@
 	const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
 	(type *)( (char *)__mptr - offsetof(type,member) );})
 
-#define likely(x)   __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
-
 #define align_len(len, boundary) (((len)+(boundary)-1) & ~((boundary)-1))
 
 #define LIB_EXPORT __attribute__ ((visibility("default")))

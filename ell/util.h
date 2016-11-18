@@ -34,6 +34,9 @@
 extern "C" {
 #endif
 
+#define likely(x)   __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+
 #define L_STRINGIFY(val) L_STRINGIFY_ARG(val)
 #define L_STRINGIFY_ARG(contents) #contents
 
