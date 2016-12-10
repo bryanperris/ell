@@ -42,6 +42,26 @@ static void test_unsupported(const void *data)
 	assert(!checksum);
 }
 
+static void test_md4(const void *data)
+{
+	struct l_checksum *checksum;
+	unsigned char digest[16];
+	char *str;
+
+	checksum = l_checksum_new(L_CHECKSUM_MD4);
+	assert(checksum);
+
+	l_checksum_update(checksum, FIXED_STR, FIXED_LEN);
+
+	l_checksum_get_digest(checksum, digest, sizeof(digest));
+
+	str = l_checksum_get_string(checksum);
+	l_info("%s", str);
+	l_free(str);
+
+	l_checksum_free(checksum);
+}
+
 static void test_md5(const void *data)
 {
 	struct l_checksum *checksum;
@@ -161,6 +181,8 @@ int main(int argc, char *argv[])
 	l_test_init(&argc, &argv);
 
 	l_test_add("unsupported", test_unsupported, NULL);
+
+	l_test_add("md4-1", test_md4, NULL);
 
 	l_test_add("md5-1", test_md5, NULL);
 
