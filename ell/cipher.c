@@ -156,6 +156,9 @@ LIB_EXPORT struct l_cipher *l_cipher_new(enum l_cipher_type type,
 	case L_CIPHER_ARC4:
 		alg_name = "ecb(arc4)";
 		break;
+	case L_CIPHER_DES:
+		alg_name = "ecb(des)";
+		break;
 	case L_CIPHER_DES3_EDE_CBC:
 		alg_name = "cbc(des3_ede)";
 		break;
