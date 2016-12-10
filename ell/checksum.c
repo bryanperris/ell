@@ -128,6 +128,9 @@ LIB_EXPORT struct l_checksum *l_checksum_new(enum l_checksum_type type)
 	switch (type) {
 	case L_CHECKSUM_NONE:
 		return NULL;
+	case L_CHECKSUM_MD4:
+		name = "md4";
+		break;
 	case L_CHECKSUM_MD5:
 		name = "md5";
 		break;
@@ -207,6 +210,9 @@ struct l_checksum *l_checksum_new_hmac(enum l_checksum_type type,
 	switch (type) {
 	case L_CHECKSUM_NONE:
 		return NULL;
+	case L_CHECKSUM_MD4:
+		name = "hmac(md4)";
+		break;
 	case L_CHECKSUM_MD5:
 		name = "hmac(md5)";
 		break;
@@ -406,12 +412,14 @@ LIB_EXPORT char *l_checksum_get_string(struct l_checksum *checksum)
 		const char *name;
 		size_t digest_len;
 	} digest_lut[] = {
+		{ .name = "md4", .digest_len = 16 },
 		{ .name = "md5", .digest_len = 16 },
 		{ .name = "sha1", .digest_len = 20 },
 		{ .name = "sha256", .digest_len = 32 },
 		{ .name = "sha384", .digest_len = 48 },
 		{ .name = "sha512", .digest_len = 64 },
 		{ .name = "cmac(aes)", .digest_len = 16 },
+		{ .name = "hmac(md4)", .digest_len = 16 },
 		{ .name = "hmac(md5)", .digest_len = 16 },
 		{ .name = "hmac(sha1)", .digest_len = 20 },
 		{ .name = "hmac(sha256)", .digest_len = 32 },

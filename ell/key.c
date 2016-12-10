@@ -357,6 +357,9 @@ static const char *lookup_checksum(enum l_checksum_type checksum)
 	switch (checksum) {
 	case L_CHECKSUM_NONE:
 		break;
+	case L_CHECKSUM_MD4:
+		ret = "md4";
+		break;
 	case L_CHECKSUM_MD5:
 		ret = "md5";
 		break;
