@@ -345,6 +345,57 @@ static inline bool __attribute__ ((always_inline))
 }
 
 /**
+ * l_utf8_get_codepoint
+ * @str: a pointer to codepoint data
+ * @len: maximum bytes to read
+ * @cp: destination for codepoint
+ *
+ * Returns: number of bytes read, or -1 for invalid coddepoint
+ **/
+LIB_EXPORT int l_utf8_get_codepoint(const char *str, size_t len, wchar_t *cp)
+{
+	static const int mins[3] = { 1 << 7, 1 << 11, 1 << 16 };
+	unsigned int expect_bytes;
+	wchar_t val;
+	size_t i;
+
+	if (str[0] > 0) {
+		*cp = str[0];
+		return 1;
+	}
+
+	expect_bytes = __builtin_clz(~(str[0] << 24));
+
+	if (expect_bytes < 2 || expect_bytes > 4)
+		goto error;
+
+	if (expect_bytes > len)
+		goto error;
+
+	val = str[0] & (0xff >> (expect_bytes + 1));
+
+	for (i = 1; i < expect_bytes; i++) {
+		if ((str[i] & 0xc0) == 0)
+			goto error;
+
+		val <<= 6;
+		val |= str[i] & 0x3f;
+	}
+
+	if (val < mins[expect_bytes - 2])
+		goto error;
+
+	if (valid_unicode(val) == false)
+		goto error;
+
+	*cp = val;
+	return expect_bytes;
+
+error:
+	return -1;
+}
+
+/**
  * l_utf8_validate:
  * @str: a pointer to character data
  * @len: max bytes to validate
@@ -359,43 +410,17 @@ static inline bool __attribute__ ((always_inline))
  **/
 LIB_EXPORT bool l_utf8_validate(const char *str, size_t len, const char **end)
 {
-	static const int mins[3] = { 1 << 7, 1 << 11, 1 << 16 };
 	size_t pos = 0;
-	unsigned int expect_bytes;
+	int ret;
 	wchar_t val;
-	size_t i;
 
 	while (pos < len && str[pos]) {
-		if (str[pos] > 0) {
-			pos += 1;
-			continue;
-		}
+		ret = l_utf8_get_codepoint(str + pos, len - pos, &val);
 
-		expect_bytes = __builtin_clz(~(str[pos] << 24));
-
-		if (expect_bytes < 2 || expect_bytes > 4)
+		if (ret < 0)
 			goto error;
 
-		if (pos + expect_bytes > len)
-			goto error;
-
-		val = str[pos] & (0xff >> (expect_bytes + 1));
-
-		for (i = pos + 1; i < pos + expect_bytes; i++) {
-			if ((str[i] & 0xc0) == 0)
-				goto error;
-
-			val <<= 6;
-			val |= str[i] & 0x3f;
-		}
-
-		if (val < mins[expect_bytes - 2])
-			goto error;
-
-		if (valid_unicode(val) == false)
-			goto error;
-
-		pos += expect_bytes;
+		pos += ret;
 	}
 
 error:
