@@ -815,6 +815,20 @@ static struct utf8_validate_test utf8_validate_test79 = {
 	.ucs4_len = 5,
 };
 
+static void test_utf8_codepoint(const struct utf8_validate_test *test)
+{
+	unsigned int i, pos;
+	int ret;
+	wchar_t val;
+
+	for (i = 0, pos = 0; i < test->ucs4_len; ++i) {
+		ret = l_utf8_get_codepoint(test->utf8 + pos,
+						test->utf8_len - pos, &val);
+		assert(ret > 0 && val == test->ucs4[i]);
+		pos += ret;
+	}
+}
+
 static void test_utf8_validate(const void *test_data)
 {
 	const struct utf8_validate_test *test = test_data;
@@ -827,6 +841,10 @@ static void test_utf8_validate(const void *test_data)
 		assert(res == true);
 	else
 		assert(res == false);
+
+	if (test->type == UTF8_VALIDATE_TYPE_VALID && test->ucs4_len) {
+		test_utf8_codepoint(test);
+	}
 }
 
 struct utf8_strlen_test {
