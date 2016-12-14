@@ -660,7 +660,7 @@ static bool get_header_field_from_iter_valist(struct l_dbus_message *message,
 }
 
 static inline bool get_header_field(struct l_dbus_message *message,
-					uint8_t type, char data_type, ...)
+					uint8_t type, int data_type, ...)
 {
 	va_list args;
 	bool result;

@@ -58,10 +58,8 @@
         { 0x##v0, 0x##v1, 0x##v2, 0x##v3, 0x##v4, 0x##v5, 0x##v6, 0x##v7, \
 	0x##v8, 0x##v9, 0x##v10, 0x##v11, 0x##v12, 0x##v13, 0x##v14, 0x##v15 }
 
-static inline size_t KDBUS_ITEM_SIZE(size_t actual)
-{
-	return align_len(actual + offsetof(struct kdbus_item, data), 8);
-}
+#define KDBUS_ITEM_SIZE(actual) \
+	align_len(actual + offsetof(struct kdbus_item, data), 8)
 
 static inline struct kdbus_item *KDBUS_ITEM_NEXT(struct kdbus_item *item)
 {
