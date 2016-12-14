@@ -371,8 +371,8 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 		tls_write_mac(tls, compressed + 8, 5 + compressed_len,
 				mac_buf, false);
 
-		if (tls->mac_length && memcmp(mac_buf, compressed + 13 +
-					compressed_len, tls->mac_length[0])) {
+		if (memcmp(mac_buf, compressed + 13 + compressed_len,
+							tls->mac_length[0])) {
 			tls_disconnect(tls, TLS_ALERT_BAD_RECORD_MAC, 0);
 			return false;
 		}
