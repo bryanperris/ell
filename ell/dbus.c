@@ -480,7 +480,7 @@ static bool auth_read_handler(struct l_io *io, void *user_data)
 
 	l_util_hexdump(true, ptr, len, dbus->debug_handler, dbus->debug_data);
 
-	end = '\0';
+	*end = '\0';
 
 	switch (classic->auth_state) {
 	case WAITING_FOR_OK:
