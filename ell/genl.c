@@ -1173,6 +1173,14 @@ LIB_EXPORT uint32_t l_genl_family_get_version(struct l_genl_family *family)
 	return family->version;
 }
 
+LIB_EXPORT struct l_genl *l_genl_family_get_genl(struct l_genl_family *family)
+{
+	if (unlikely(!family))
+		return 0;
+
+	return family->genl;
+}
+
 static bool match_op_id(const void *a, const void *b)
 {
 	const struct genl_op *op = a;
