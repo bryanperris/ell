@@ -77,17 +77,6 @@ struct af_alg_iv {
 #define SOL_ALG 279
 #endif
 
-#ifndef ALG_OP_SIGN
-#define ALG_OP_SIGN	2
-#endif
-#ifndef ALG_OP_VERIFY
-#define ALG_OP_VERIFY	3
-#endif
-
-#ifndef ALG_SET_PUBKEY
-#define ALG_SET_PUBKEY	6
-#endif
-
 #define is_valid_type(type)  ((type) <= L_CIPHER_DES3_EDE_CBC)
 
 struct l_cipher {
@@ -97,11 +86,10 @@ struct l_cipher {
 };
 
 static int create_alg(const char *alg_type, const char *alg_name,
-			const void *key, size_t key_length, bool public)
+			const void *key, size_t key_length)
 {
 	struct sockaddr_alg salg;
 	int sk;
-	int keyopt;
 	int ret;
 
 	sk = socket(PF_ALG, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
@@ -118,8 +106,7 @@ static int create_alg(const char *alg_type, const char *alg_name,
 		return -1;
 	}
 
-	keyopt = public ? ALG_SET_PUBKEY : ALG_SET_KEY;
-	if (setsockopt(sk, SOL_ALG, keyopt, key, key_length) < 0) {
+	if (setsockopt(sk, SOL_ALG, ALG_SET_KEY, key, key_length) < 0) {
 		close(sk);
 		return -1;
 	}
@@ -164,13 +151,11 @@ LIB_EXPORT struct l_cipher *l_cipher_new(enum l_cipher_type type,
 		break;
 	}
 
-	cipher->encrypt_sk = create_alg("skcipher", alg_name, key, key_length,
-					false);
+	cipher->encrypt_sk = create_alg("skcipher", alg_name, key, key_length);
 	if (cipher->encrypt_sk < 0)
 		goto error_free;
 
-	cipher->decrypt_sk = create_alg("skcipher", alg_name, key, key_length,
-					false);
+	cipher->decrypt_sk = create_alg("skcipher", alg_name, key, key_length);
 	if (cipher->decrypt_sk < 0)
 		goto error_close;
 
