@@ -51,6 +51,30 @@ bool l_cipher_decrypt(struct l_cipher *cipher,
 bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
 			size_t iv_length);
 
+struct l_aead_cipher;
+
+enum l_aead_cipher_type {
+	L_AEAD_CIPHER_AES_CCM = 0,
+};
+
+struct l_aead_cipher *l_aead_cipher_new(enum l_aead_cipher_type type,
+					const void *key, size_t key_length,
+					size_t tag_length);
+
+void l_aead_cipher_free(struct l_aead_cipher *cipher);
+
+bool l_aead_cipher_encrypt(struct l_aead_cipher *cipher,
+				const void *in, size_t in_len,
+				const void *ad, size_t ad_len,
+				const void *nonce, size_t nonce_len,
+				void *out, size_t out_len);
+
+bool l_aead_cipher_decrypt(struct l_aead_cipher *cipher,
+				const void *in, size_t in_len,
+				const void *ad, size_t ad_len,
+				const void *nonce, size_t nonce_len,
+				void *out, size_t out_len);
+
 #ifdef __cplusplus
 }
 #endif
