@@ -274,9 +274,7 @@ static struct l_dbus_message *test_int_setter(struct l_dbus *dbus,
 	setter_called = true;
 
 done:
-	complete(dbus, message, NULL);
-
-	return NULL;
+	return l_dbus_message_new_method_return(message);
 }
 
 static struct l_dbus_message *test_error_setter(struct l_dbus *dbus,
