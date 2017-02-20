@@ -324,6 +324,11 @@ static uint32_t send_message(struct l_dbus *dbus, bool priority,
 		return 0;
 	}
 
+	/* Default empty signature for method return messages */
+	if (type == DBUS_MESSAGE_TYPE_METHOD_RETURN &&
+			!l_dbus_message_get_signature(message))
+		l_dbus_message_set_arguments(message, "");
+
 	callback = l_new(struct message_callback, 1);
 
 	callback->serial = dbus->next_serial++;
