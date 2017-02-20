@@ -1163,30 +1163,27 @@ bool _dbus_object_tree_property_changed(struct l_dbus *dbus,
 
 static void set_property_complete(struct l_dbus *dbus,
 					struct l_dbus_message *message,
-					struct l_dbus_message *error)
+					struct l_dbus_message *reply)
 {
-	struct l_dbus_message *reply;
 	const char *property_name;
 	struct l_dbus_message_iter variant;
 
-	if (error) {
-		l_dbus_message_unref(message);
-
-		l_dbus_send(dbus, error);
-
-		return;
+	if (!reply) {
+		reply = l_dbus_message_new_method_return(message);
+		l_dbus_message_set_arguments(reply, "");
 	}
 
-	reply = l_dbus_message_new_method_return(message);
-	l_dbus_message_set_arguments(reply, "");
 	l_dbus_send(dbus, reply);
 
-	l_dbus_message_get_arguments(message, "sv", &property_name, &variant);
+	if (!l_dbus_message_is_error(reply)) {
+		l_dbus_message_get_arguments(message, "sv", &property_name,
+						&variant);
 
-	_dbus_object_tree_property_changed(dbus,
+		_dbus_object_tree_property_changed(dbus,
 					l_dbus_message_get_path(message),
 					l_dbus_message_get_interface(message),
 					property_name);
+	}
 
 	l_dbus_message_unref(message);
 }
@@ -1232,9 +1229,9 @@ static struct l_dbus_message *old_set_property(struct l_dbus *dbus,
 					set_property_complete, user_data);
 
 	if (reply)
-		l_dbus_message_unref(message);
+		set_property_complete(dbus, message, reply);
 
-	return reply;
+	return NULL;
 }
 
 static struct l_dbus_message *old_get_properties(struct l_dbus *dbus,
@@ -1714,30 +1711,26 @@ static struct l_dbus_message *properties_get(struct l_dbus *dbus,
 
 static void properties_set_complete(struct l_dbus *dbus,
 					struct l_dbus_message *message,
-					struct l_dbus_message *error)
+					struct l_dbus_message *reply)
 {
-	struct l_dbus_message *reply;
 	const char *interface_name, *property_name;
 	struct l_dbus_message_iter variant;
 
-	if (error) {
-		l_dbus_message_unref(message);
-
-		l_dbus_send(dbus, error);
-
-		return;
+	if (!reply) {
+		reply = l_dbus_message_new_method_return(message);
+		l_dbus_message_set_arguments(reply, "");
 	}
 
-	reply = l_dbus_message_new_method_return(message);
-	l_dbus_message_set_arguments(reply, "");
 	l_dbus_send(dbus, reply);
 
-	l_dbus_message_get_arguments(message, "ssv", &interface_name,
-					&property_name, &variant);
+	if (!l_dbus_message_is_error(reply)) {
+		l_dbus_message_get_arguments(message, "ssv", &interface_name,
+						&property_name, &variant);
 
-	_dbus_object_tree_property_changed(dbus,
+		_dbus_object_tree_property_changed(dbus,
 					l_dbus_message_get_path(message),
 					interface_name, property_name);
+	}
 
 	l_dbus_message_unref(message);
 }
@@ -1804,9 +1797,9 @@ static struct l_dbus_message *properties_set(struct l_dbus *dbus,
 					instance->user_data);
 
 	if (reply)
-		l_dbus_message_unref(message);
+		properties_set_complete(dbus, message, reply);
 
-	return reply;
+	return NULL;
 }
 
 static struct l_dbus_message *properties_get_all(struct l_dbus *dbus,
