@@ -63,13 +63,15 @@ struct af_alg_iv {
 };
 
 /* Socket options */
-#define ALG_SET_KEY	1
-#define ALG_SET_IV	2
-#define ALG_SET_OP	3
+#define ALG_SET_KEY			1
+#define ALG_SET_IV			2
+#define ALG_SET_OP			3
+#define ALG_SET_AEAD_ASSOCLEN		4
+#define ALG_SET_AEAD_AUTHSIZE		5
 
 /* Operations */
-#define ALG_OP_DECRYPT	0
-#define ALG_OP_ENCRYPT	1
+#define ALG_OP_DECRYPT			0
+#define ALG_OP_ENCRYPT			1
 #else
 #include <linux/if_alg.h>
 #endif
