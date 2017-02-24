@@ -63,21 +63,27 @@ struct af_alg_iv {
 };
 
 /* Socket options */
-#define ALG_SET_KEY			1
-#define ALG_SET_IV			2
-#define ALG_SET_OP			3
-#define ALG_SET_AEAD_ASSOCLEN		4
-#define ALG_SET_AEAD_AUTHSIZE		5
+#define ALG_SET_KEY	1
+#define ALG_SET_IV	2
+#define ALG_SET_OP	3
 
 /* Operations */
-#define ALG_OP_DECRYPT			0
-#define ALG_OP_ENCRYPT			1
+#define ALG_OP_DECRYPT	0
+#define ALG_OP_ENCRYPT	1
 #else
 #include <linux/if_alg.h>
 #endif
 
 #ifndef SOL_ALG
 #define SOL_ALG 279
+#endif
+
+#ifndef ALG_SET_AEAD_ASSOCLEN
+#define ALG_SET_AEAD_ASSOCLEN	4
+#endif
+
+#ifndef ALG_SET_AEAD_AUTHSIZE
+#define ALG_SET_AEAD_AUTHSIZE	5
 #endif
 
 #define is_valid_type(type)  ((type) <= L_CIPHER_DES3_EDE_CBC)
