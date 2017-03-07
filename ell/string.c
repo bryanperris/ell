@@ -354,7 +354,7 @@ static inline bool __attribute__ ((always_inline))
  **/
 LIB_EXPORT int l_utf8_get_codepoint(const char *str, size_t len, wchar_t *cp)
 {
-	static const int mins[3] = { 1 << 7, 1 << 11, 1 << 16 };
+	static const wchar_t mins[3] = { 1 << 7, 1 << 11, 1 << 16 };
 	unsigned int expect_bytes;
 	wchar_t val;
 	size_t i;
