@@ -174,6 +174,8 @@ bool l_dbus_message_iter_get_variant(struct l_dbus_message_iter *iter,
 
 bool l_dbus_message_set_arguments(struct l_dbus_message *message,
 						const char *signature, ...);
+bool l_dbus_message_set_arguments_valist(struct l_dbus_message *message,
+					 const char *signature, va_list args);
 
 struct l_dbus_message_builder *l_dbus_message_builder_new(
 						struct l_dbus_message *message);

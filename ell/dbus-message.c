@@ -1414,6 +1414,23 @@ LIB_EXPORT bool l_dbus_message_set_arguments(struct l_dbus_message *message,
 	return result;
 }
 
+LIB_EXPORT bool l_dbus_message_set_arguments_valist(
+					struct l_dbus_message *message,
+					const char *signature, va_list args)
+{
+	bool result;
+
+	if (unlikely(!message))
+		return false;
+
+	if (!signature)
+		return true;
+
+	result = append_arguments(message, signature, args);
+
+	return result;
+}
+
 LIB_EXPORT const char *l_dbus_message_get_path(struct l_dbus_message *message)
 {
 	if (unlikely(!message))
