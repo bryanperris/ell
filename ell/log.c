@@ -34,7 +34,6 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "util.h"
 #include "log.h"
 #include "private.h"
 
