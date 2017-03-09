@@ -214,7 +214,7 @@ static void log_journal(int priority, const char *file, const char *line,
 	iov[0].iov_base = "MESSAGE=";
 	iov[0].iov_len  = 8;
 	iov[1].iov_base = str;
-	iov[1].iov_len  = str_len - 1;
+	iov[1].iov_len  = str_len;
 	iov[2].iov_base = prio;
 	iov[2].iov_len  = prio_len;
 	iov[3].iov_base = "CODE_FILE=";
