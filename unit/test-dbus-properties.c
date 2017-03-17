@@ -36,8 +36,6 @@
 
 static pid_t dbus_daemon_pid = -1;
 
-static int kdbus_fd = -1;
-
 static char bus_address[128];
 
 static bool start_dbus_daemon(void)
@@ -73,24 +71,6 @@ static bool start_dbus_daemon(void)
 	dbus_daemon_pid = pid;
 
 	strcpy(bus_address, TEST_BUS_ADDRESS);
-
-	return true;
-}
-
-static bool create_kdbus(void)
-{
-	char bus_name[64];
-
-	snprintf(bus_name, sizeof(bus_name), "%u-ell-test", getuid());
-
-	kdbus_fd = _dbus_kernel_create_bus(bus_name);
-	if (kdbus_fd < 0) {
-		l_warn("kdbus not available");
-		return false;
-	}
-
-	snprintf(bus_address, sizeof(bus_address),
-				"kernel:path=/dev/kdbus/%s/bus", bus_name);
 
 	return true;
 }
@@ -1030,16 +1010,11 @@ int main(int argc, char *argv[])
 	if (!success)
 		goto done;
 
-	if (!create_kdbus())
-		goto done;
-
 	dbus = l_dbus_new(bus_address);
 
 	test_run();
 
 	l_dbus_destroy(dbus);
-
-	close(kdbus_fd);
 
 done:
 	l_signal_remove(signal);
