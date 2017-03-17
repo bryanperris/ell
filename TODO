@@ -23,12 +23,8 @@ DBus API
   mechanisms specified in the DBus specification.  Whenever a given signal
   matches one of the filters, the relevant callback function should be called.
 
-  For KDBus this implies calculating and installing proper bloom filters.  For
-  DBus classic this implies managing a set of appropriate filters with the DBus
-  daemon as specified in the DBus specification.
-
-  Note that certain filtering mechanisms which are possible with DBus classic
-  are likely not possible with KDBus.
+  For DBus classic this implies managing a set of appropriate filters with the
+  DBus daemon as specified in the DBus specification.
 
   Priority: Medium
   Complexity: C4
