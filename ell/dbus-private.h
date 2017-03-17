@@ -56,11 +56,6 @@ struct dbus_header {
 			uint32_t serial;
 			uint32_t field_length;
 		} __attribute__ ((packed)) dbus1;
-
-		struct {
-			uint32_t reserved1;
-			uint64_t cookie;
-		} __attribute__ ((packed)) kdbus;
 	};
 } __attribute__ ((packed));
 #define DBUS_HEADER_SIZE 16
@@ -234,45 +229,10 @@ bool _dbus_object_tree_property_changed(struct l_dbus *dbus,
 					const char *interface_name,
 					const char *property_name);
 
-void _dbus_kernel_bloom_add(uint64_t filter[], size_t size, uint8_t num_hash,
-				const char *prefix, const char *str);
-void _dbus_kernel_bloom_add_parents(uint64_t filter[], size_t size,
-					uint8_t num_hash, const char *prefix,
-					const char *str, const char sep);
-
-int _dbus_kernel_create_bus(const char *name);
-
-bool _dbus_kernel_calculate_bloom(struct l_dbus_message *message,
-					uint64_t filter[], size_t f_size,
-					uint8_t num_hash);
-
-int _dbus_kernel_hello(int fd, const char *connection_name,
-			size_t *bloom_size, uint8_t *bloom_n_hash,
-			uint64_t *id, void **pool, char **guid);
-void _dbus_kernel_unmap_pool(void *pool);
-
 typedef void (*_dbus_name_owner_change_func_t)(const char *name,
 						uint64_t old_owner,
 						uint64_t new_owner,
 						void *user_data);
-
-int _dbus_kernel_send(int fd, size_t bloom_size, uint8_t n_bloom_hash,
-			struct l_dbus_message *message);
-int _dbus_kernel_recv(int fd, void *kdbus_pool,
-			l_dbus_message_func_t message_func,
-			_dbus_name_owner_change_func_t name_owner_change_func,
-			void *user_data);
-
-int _dbus_kernel_name_acquire(int fd, const char *name, bool allow_replacement,
-				bool replace_existing, bool queue,
-				bool *queued);
-int _dbus_kernel_add_match(int fd, uint64_t bloom_size, uint64_t bloom_n_hash,
-				const struct _dbus_filter_condition *rule,
-				int rule_len, unsigned int id);
-int _dbus_kernel_remove_match(int fd, unsigned int it);
-int _dbus_kernel_enable_name_owner_notify(int fd);
-uint64_t _dbus_kernel_get_name_owner(int fd, void *kdbus_pool,
-					const char *name);
 
 uint8_t _dbus_get_version(struct l_dbus *dbus);
 int _dbus_get_fd(struct l_dbus *dbus);

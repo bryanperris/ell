@@ -73,8 +73,6 @@ struct l_dbus_message {
 	uint32_t num_fds;
 
 	bool sealed : 1;
-	bool kdbus_sender : 1;
-	bool kdbus_destination : 1;
 	bool signature_free : 1;
 };
 
@@ -137,20 +135,14 @@ void _dbus_message_set_serial(struct l_dbus_message *msg, uint32_t serial)
 {
 	struct dbus_header *hdr = msg->header;
 
-	if (_dbus_message_is_gvariant(msg))
-		hdr->kdbus.cookie = serial;
-	else
-		hdr->dbus1.serial = serial;
+	hdr->dbus1.serial = serial;
 }
 
 uint32_t _dbus_message_get_serial(struct l_dbus_message *msg)
 {
 	struct dbus_header *hdr = msg->header;
 
-	if (_dbus_message_is_gvariant(msg))
-		return hdr->kdbus.cookie;
-	else
-		return hdr->dbus1.serial;
+	return hdr->dbus1.serial;
 }
 
 LIB_EXPORT bool l_dbus_message_set_no_reply(struct l_dbus_message *msg, bool on)
@@ -430,12 +422,6 @@ LIB_EXPORT void l_dbus_message_unref(struct l_dbus_message *message)
 		l_free(message->sender);
 	}
 
-	if (message->kdbus_sender)
-		l_free(message->sender);
-
-	if (message->kdbus_destination)
-		l_free(message->destination);
-
 	if (message->signature_free)
 		l_free(message->signature);
 
@@ -688,10 +674,6 @@ static bool valid_header(const struct dbus_header *hdr)
 
 	if (hdr->version == 1) {
 		if (hdr->dbus1.serial == 0)
-			return false;
-	} else {
-		/* We don't support 64-bit GVariant cookies */
-		if (hdr->kdbus.cookie == 0 || (hdr->kdbus.cookie >> 32))
 			return false;
 	}
 
@@ -1636,7 +1618,6 @@ void _dbus_message_set_sender(struct l_dbus_message *message,
 	l_free(message->sender);
 
 	message->sender = l_strdup(sender);
-	message->kdbus_sender = true;
 }
 
 void _dbus_message_set_destination(struct l_dbus_message *message,
@@ -1648,112 +1629,6 @@ void _dbus_message_set_destination(struct l_dbus_message *message,
 	l_free(message->destination);
 
 	message->destination = l_strdup(destination);
-	message->kdbus_destination = true;
-}
-
-bool _dbus_kernel_calculate_bloom(struct l_dbus_message *message,
-					uint64_t filter[], size_t f_size,
-					uint8_t num_hash)
-{
-	const char *attr;
-	const char *signature;
-	void *body;
-	size_t body_size;
-	struct l_dbus_message_iter iter;
-	uint8_t argn;
-	char buf[256];
-	bool (*get_basic)(struct l_dbus_message_iter *, char, void *);
-
-	/* The string "interface:" suffixed by the interface name */
-	attr = l_dbus_message_get_interface(message);
-	if (attr)
-		_dbus_kernel_bloom_add(filter, f_size, num_hash,
-					"interface", attr);
-
-	/* The string "member:" suffixed by the member name */
-	attr = l_dbus_message_get_member(message);
-	if (attr)
-		_dbus_kernel_bloom_add(filter, f_size, num_hash,
-					"member", attr);
-
-	/*
-	 * The string "path:" suffixed by the path name
-	 *
-	 * The string "path-slash-prefix:" suffixed with the path name, and
-	 * also all prefixes of the path name (cut off at "/"), also prefixed
-	 * with "path-slash-prefix"
-	 */
-	attr = l_dbus_message_get_path(message);
-	if (attr) {
-		_dbus_kernel_bloom_add(filter, f_size, num_hash, "path", attr);
-		_dbus_kernel_bloom_add(filter, f_size, num_hash,
-					"path-slash-prefix", attr);
-		_dbus_kernel_bloom_add_parents(filter, f_size, num_hash,
-						"path-slash-prefix", attr, '/');
-	}
-
-	/*
-	 * The string "message-type:" suffixed with the strings "signal",
-	 * "method_call", "error" or "method_return" for the respective
-	 * message type of the message.
-	 */
-	_dbus_kernel_bloom_add(filter, f_size, num_hash, "message-type",
-				_dbus_message_get_type_as_string(message));
-
-	signature = l_dbus_message_get_signature(message);
-	if (!signature)
-		return true;
-
-	body = _dbus_message_get_body(message, &body_size);
-
-	if (_dbus_message_is_gvariant(message)) {
-		if (!_gvariant_iter_init(&iter, message, signature, NULL,
-						body, body_size))
-			return false;
-
-		get_basic = _gvariant_iter_next_entry_basic;
-	} else {
-		_dbus1_iter_init(&iter, message, signature, NULL,
-					body, body_size);
-
-		get_basic = _dbus1_iter_next_entry_basic;
-	}
-
-	argn = 0;
-
-	/*
-	 * systemd-master/src/libsystemd/sd-bus/PORTING-DBUS1:
-	 *
-	 * "If the first argument of the message is a string,
-	 * "arg0-slash-prefix" suffixed with the first argument, and also
-	 * all prefixes of the argument (cut off at "/"), also prefixed
-	 * with "arg0-slash-prefix".
-	 *
-	 * Similar for all further arguments that are strings up to 63,
-	 * for the arguments and their "dot" and "slash" prefixes. On the
-	 * first argument that is not a string, addition to the bloom
-	 * filter should be stopped however."
-	 */
-	while (*signature == 's' || *signature == 'o' || *signature == 'g') {
-		if (!get_basic(&iter, *signature, &attr))
-			return false;
-
-		sprintf(buf, "arg%hhu", argn);
-		_dbus_kernel_bloom_add(filter, f_size, num_hash, buf, attr);
-
-		sprintf(buf, "arg%hhu-slash-prefix", argn);
-		_dbus_kernel_bloom_add_parents(filter, f_size, num_hash, buf,
-						attr, '/');
-
-		sprintf(buf, "arg%hhu-dot-prefix", argn);
-		_dbus_kernel_bloom_add_parents(filter, f_size, num_hash, buf,
-						attr, '.');
-
-		argn += 1;
-		signature += 1;
-	}
-
-	return true;
 }
 
 LIB_EXPORT struct l_dbus_message_builder *l_dbus_message_builder_new(
