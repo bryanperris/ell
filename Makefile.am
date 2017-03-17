@@ -12,8 +12,6 @@ ELL_CURRENT = 0
 ELL_REVISION = 0
 ELL_AGE = 0
 
-linux_headers = linux/kdbus.h
-
 pkginclude_HEADERS = ell/ell.h \
 			ell/util.h \
 			ell/test.h \
@@ -71,7 +69,6 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/genl.c \
 			ell/dbus-private.h \
 			ell/dbus.c \
-			ell/dbus-kernel.c \
 			ell/dbus-message.c \
 			ell/dbus-util.c \
 			ell/dbus-service.c \
@@ -135,8 +132,7 @@ unit_tests = unit/test-unit \
 			unit/test-uuid \
 			unit/test-key
 
-dbus_tests = unit/test-kdbus \
-			unit/test-dbus \
+dbus_tests = unit/test-dbus \
 			unit/test-dbus-util \
 			unit/test-dbus-message \
 			unit/test-dbus-message-fds \
@@ -179,8 +175,6 @@ unit_test_netlink_LDADD = ell/libell-private.la
 unit_test_genl_LDADD = ell/libell-private.la
 
 unit_test_genl_msg_LDADD = ell/libell-private.la
-
-unit_test_kdbus_LDADD = ell/libell-private.la
 
 unit_test_dbus_LDADD = ell/libell-private.la
 
