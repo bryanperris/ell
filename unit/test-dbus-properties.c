@@ -1007,18 +1007,7 @@ int main(int argc, char *argv[])
 
 	kill(dbus_daemon_pid, SIGKILL);
 
-	if (!success)
-		goto done;
-
-	dbus = l_dbus_new(bus_address);
-
-	test_run();
-
-	l_dbus_destroy(dbus);
-
-done:
 	l_signal_remove(signal);
-
 	l_queue_destroy(tests, l_free);
 
 	l_main_exit();
