@@ -132,6 +132,7 @@ struct _dbus_object_tree {
 	struct l_queue *object_managers;
 	struct l_queue *property_changes;
 	struct l_idle *emit_signals_work;
+	bool flushing;
 };
 
 void _dbus_method_introspection(struct _dbus_method *info,
@@ -1024,71 +1025,130 @@ done:
 	return signal;
 }
 
-static void emit_signals(struct l_idle *idle, void *user_data)
-{
-	struct l_dbus *dbus = user_data;
-	struct _dbus_object_tree *tree = _dbus_get_tree(dbus);
-	struct interface_add_record *interfaces_added_rec;
-	struct interface_remove_record *interfaces_removed_rec;
-	struct property_change_record *property_changes_rec;
-	const struct l_queue_entry *entry;
+struct emit_signals_data {
+	struct l_dbus *dbus;
 	struct object_manager *manager;
+	struct object_node *node;
+};
+
+static bool emit_interfaces_removed(void *data, void *user_data)
+{
+	struct interface_remove_record *rec = data;
+	struct emit_signals_data *es = user_data;
 	struct l_dbus_message *signal;
 
-	l_idle_remove(tree->emit_signals_work);
-	tree->emit_signals_work = NULL;
+	if (es->node && rec->object != es->node)
+		return false;
+
+	signal = build_interfaces_removed_signal(es->manager, rec);
+	interface_removed_record_free(rec);
+
+	if (signal)
+		l_dbus_send(es->manager->dbus, signal);
+
+	return true;
+}
+
+static bool emit_interfaces_added(void *data, void *user_data)
+{
+	struct interface_add_record *rec = data;
+	struct emit_signals_data *es = user_data;
+	struct l_dbus_message *signal;
+
+	if (es->node && rec->object != es->node)
+		return false;
+
+	signal = build_interfaces_added_signal(es->manager, rec);
+	interface_add_record_free(rec);
+
+	if (signal)
+		l_dbus_send(es->manager->dbus, signal);
+
+	return true;
+}
+
+static bool emit_properties_changed(void *data, void *user_data)
+{
+	struct property_change_record *rec = data;
+	struct emit_signals_data *es = user_data;
+	struct l_dbus_message *signal;
+	const struct l_queue_entry *entry;
+
+	if (es->node && rec->object != es->node)
+		return false;
+
+	if (rec->instance->interface->handle_old_style_properties)
+		for (entry = l_queue_get_entries(rec->properties);
+				entry; entry = entry->next) {
+			signal = build_old_property_changed_signal(es->dbus,
+							rec, entry->data);
+			if (signal)
+				l_dbus_send(es->dbus, signal);
+		}
+
+	if (l_queue_find(rec->object->instances, match_interface_instance,
+				L_DBUS_INTERFACE_PROPERTIES)) {
+		signal = build_properties_changed_signal(es->dbus, rec);
+		if (signal)
+			l_dbus_send(es->dbus, signal);
+	}
+
+	property_change_record_free(rec);
+
+	return true;
+}
+
+void _dbus_object_tree_signals_flush(struct l_dbus *dbus, const char *path)
+{
+	struct _dbus_object_tree *tree = _dbus_get_tree(dbus);
+	const struct l_queue_entry *entry;
+	struct emit_signals_data data;
+	bool all_done = true;
+
+	if (!tree->emit_signals_work || tree->flushing)
+		return;
+
+	tree->flushing = true;
+
+	data.dbus = dbus;
+	data.node = path ? _dbus_object_tree_lookup(tree, path) : NULL;
 
 	for (entry = l_queue_get_entries(tree->object_managers); entry;
 			entry = entry->next) {
-		manager = entry->data;
+		data.manager = entry->data;
 
-		while ((interfaces_removed_rec =
-				l_queue_pop_head(manager->announce_removed))) {
-			signal = build_interfaces_removed_signal(manager,
-							interfaces_removed_rec);
-			interface_removed_record_free(interfaces_removed_rec);
+		l_queue_foreach_remove(data.manager->announce_removed,
+					emit_interfaces_removed, &data);
 
-			if (signal)
-				l_dbus_send(manager->dbus, signal);
-		}
+		if (!l_queue_isempty(data.manager->announce_removed))
+			all_done = false;
 
-		while ((interfaces_added_rec =
-				l_queue_pop_head(manager->announce_added))) {
-			signal = build_interfaces_added_signal(manager,
-							interfaces_added_rec);
-			interface_add_record_free(interfaces_added_rec);
+		l_queue_foreach_remove(data.manager->announce_added,
+					emit_interfaces_added, &data);
 
-			if (signal)
-				l_dbus_send(manager->dbus, signal);
-		}
+		if (!l_queue_isempty(data.manager->announce_added))
+			all_done = false;
 	}
 
-	while ((property_changes_rec =
-			l_queue_pop_head(tree->property_changes))) {
-		if (property_changes_rec->instance->interface->
-				handle_old_style_properties)
-			for (entry = l_queue_get_entries(property_changes_rec->
-								properties);
-					entry; entry = entry->next) {
-				signal = build_old_property_changed_signal(dbus,
-							property_changes_rec,
-							entry->data);
-				if (signal)
-					l_dbus_send(dbus, signal);
-			}
+	l_queue_foreach_remove(tree->property_changes,
+				emit_properties_changed, &data);
 
+	if (!l_queue_isempty(tree->property_changes))
+		all_done = false;
 
-		if (l_queue_find(property_changes_rec->object->instances,
-					match_interface_instance,
-					L_DBUS_INTERFACE_PROPERTIES)) {
-			signal = build_properties_changed_signal(dbus,
-							property_changes_rec);
-			if (signal)
-				l_dbus_send(dbus, signal);
-		}
-
-		property_change_record_free(property_changes_rec);
+	if (all_done) {
+		l_idle_remove(tree->emit_signals_work);
+		tree->emit_signals_work = NULL;
 	}
+
+	tree->flushing = false;
+}
+
+static void emit_signals(struct l_idle *idle, void *user_data)
+{
+	struct l_dbus *dbus = user_data;
+
+	_dbus_object_tree_signals_flush(dbus, NULL);
 }
 
 static void schedule_emit_signals(struct l_dbus *dbus)
@@ -1356,7 +1416,7 @@ static bool match_interfaces_added_object(const void *a, const void *b)
 
 static bool match_interfaces_removed_object(const void *a, const void *b)
 {
-	const struct interface_add_record *rec = a;
+	const struct interface_remove_record *rec = a;
 
 	return rec->object == b;
 }

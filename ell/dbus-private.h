@@ -229,6 +229,8 @@ bool _dbus_object_tree_property_changed(struct l_dbus *dbus,
 					const char *interface_name,
 					const char *property_name);
 
+void _dbus_object_tree_signals_flush(struct l_dbus *dbus, const char *path);
+
 typedef void (*_dbus_name_owner_change_func_t)(const char *name,
 						uint64_t old_owner,
 						uint64_t new_owner,

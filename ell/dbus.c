@@ -306,6 +306,7 @@ static uint32_t send_message(struct l_dbus *dbus, bool priority,
 {
 	struct message_callback *callback;
 	enum dbus_message_type type;
+	const char *path;
 
 	type = _dbus_message_get_type(message);
 
@@ -337,6 +338,10 @@ static uint32_t send_message(struct l_dbus *dbus, bool priority,
 
 		return callback->serial;
 	}
+
+	path = l_dbus_message_get_path(message);
+	if (path)
+		_dbus_object_tree_signals_flush(dbus, path);
 
 	l_queue_push_tail(dbus->message_queue, callback);
 
