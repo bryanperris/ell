@@ -214,6 +214,7 @@ static void test_certificates(const void *data)
 {
 	struct tls_cert *cert;
 	struct tls_cert *cacert;
+	struct tls_cert *wrongca;
 
 	cert = tls_cert_load_file(TESTDATADIR "/cert-server.pem");
 	assert(cert);
@@ -221,10 +222,18 @@ static void test_certificates(const void *data)
 	cacert = tls_cert_load_file(TESTDATADIR "/cert-ca.pem");
 	assert(cacert);
 
+	wrongca = tls_cert_load_file(TESTDATADIR "/cert-intca.pem");
+	assert(wrongca);
+
+	assert(!tls_cert_verify_certchain(cert, wrongca));
+
 	assert(tls_cert_verify_certchain(cert, cacert));
+
+	assert(tls_cert_verify_certchain(cert, NULL));
 
 	l_free(cert);
 	l_free(cacert);
+	l_free(wrongca);
 }
 
 struct tls_conn_test {
