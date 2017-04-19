@@ -347,7 +347,7 @@ static void test_simple_keyring(const void *data)
 	struct l_key *key2;
 	bool success;
 
-	ring = l_keyring_new(L_KEYRING_SIMPLE, NULL);
+	ring = l_keyring_new();
 	assert(ring);
 
 	key1 = l_key_new(L_KEY_RAW, "1", 1);
@@ -388,10 +388,12 @@ static void test_trusted_keyring(const void *data)
 	key = l_key_new(L_KEY_RSA, cert, certlen);
 	assert(key);
 
-	trust = l_keyring_new(L_KEYRING_SIMPLE, NULL);
+	trust = l_keyring_new();
 	assert(trust);
-	ring = l_keyring_new(L_KEYRING_TRUSTED_ASYM, trust);
+	ring = l_keyring_new();
 	assert(ring);
+	success = l_keyring_restrict(ring, L_KEYRING_RESTRICT_ASYM, trust);
+	assert(success);
 
 	success = l_keyring_link(ring, key);
 	assert(!success);
@@ -439,11 +441,14 @@ static void test_trust_chain(const void *data)
 	key = l_key_new(L_KEY_RSA, cert, certlen);
 	assert(key);
 
-	trust = l_keyring_new(L_KEYRING_SIMPLE, NULL);
+	trust = l_keyring_new();
 	assert(trust);
-	ring = l_keyring_new(L_KEYRING_TRUSTED_ASYM_CHAIN, trust);
+	ring = l_keyring_new();
 	assert(ring);
 
+	success = l_keyring_restrict(ring, L_KEYRING_RESTRICT_ASYM_CHAIN,
+					trust);
+	assert(success);
 	success = l_keyring_link(ring, key);
 	assert(!success);
 	success = l_keyring_link(ring, intkey);
