@@ -2469,9 +2469,10 @@ static void tls_key_cleanup(struct l_key **p)
 	l_key_free_norevoke(*p);
 }
 
-static int tls_cert_verify_with_keyring(struct tls_cert *cert,
+static bool tls_cert_verify_with_keyring(struct tls_cert *cert,
 						struct l_keyring *ring,
-						struct tls_cert *root)
+						struct tls_cert *root,
+						struct l_keyring *trusted)
 {
 	if (!cert)
 		return true;
@@ -2488,14 +2489,33 @@ static int tls_cert_verify_with_keyring(struct tls_cert *cert,
 			!memcmp(cert->asn1, root->asn1, root->size))
 		return true;
 
-	if (tls_cert_verify_with_keyring(cert->issuer, ring, root)) {
+	if (tls_cert_verify_with_keyring(cert->issuer, ring, root, trusted)) {
 		L_AUTO_CLEANUP_VAR(struct l_key *, key, tls_key_cleanup);
 
 		key = l_key_new(L_KEY_RSA, cert->asn1, cert->size);
 		if (!key)
 			return false;
 
-		return l_keyring_link(ring, key);
+		if (!l_keyring_link(ring, key))
+			return false;
+
+		if (trusted || cert->issuer)
+			return true;
+
+		/*
+		 * If execution reaches this point, it's known that:
+		 *  * No trusted root key was supplied, so the chain is only
+		 *    being checked against its own root
+		 *  * The keyring 'ring' is not restricted yet
+		 *  * The chain's root cert was just linked in to the
+		 *    previously empty keyring 'ring'.
+		 *
+		 *  By restricting 'ring' now, the rest of the certs in
+		 *  the chain will have their signature validated using 'key'
+		 *  as the root.
+		 */
+		return l_keyring_restrict(ring,	L_KEYRING_RESTRICT_ASYM_CHAIN,
+						trusted);
 	}
 
 	return false;
@@ -2520,7 +2540,7 @@ bool tls_cert_verify_certchain(struct tls_cert *certchain,
 		L_AUTO_CLEANUP_VAR(struct l_key *, ca_key, tls_key_cleanup);
 		ca_key = NULL;
 
-		ca_ring = l_keyring_new(L_KEYRING_SIMPLE, NULL);
+		ca_ring = l_keyring_new();
 		if (!ca_ring)
 			return false;
 
@@ -2529,11 +2549,25 @@ bool tls_cert_verify_certchain(struct tls_cert *certchain,
 			return false;
 	}
 
-	verify_ring = l_keyring_new(L_KEYRING_TRUSTED_ASYM_CHAIN, ca_ring);
+	verify_ring = l_keyring_new();
 	if (!verify_ring)
 		return false;
 
-	return tls_cert_verify_with_keyring(certchain, verify_ring, ca_cert);
+	/*
+	 * If a CA cert was supplied, restrict verify_ring now so
+	 * everything else in certchain is validated against the CA.
+	 * Otherwise, verify_ring will be restricted after the root of
+	 * certchain is added to verify_ring by
+	 * tls_cert_verify_with_keyring().
+	 */
+	if (ca_ring && !l_keyring_restrict(verify_ring,
+						L_KEYRING_RESTRICT_ASYM_CHAIN,
+						ca_ring)) {
+		return false;
+	}
+
+	return tls_cert_verify_with_keyring(certchain, verify_ring, ca_cert,
+						ca_ring);
 }
 
 void tls_cert_free_certchain(struct tls_cert *cert)

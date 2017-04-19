@@ -40,10 +40,9 @@ enum l_key_type {
 	L_KEY_RSA,
 };
 
-enum l_keyring_type {
-	L_KEYRING_SIMPLE = 0,
-	L_KEYRING_TRUSTED_ASYM,
-	L_KEYRING_TRUSTED_ASYM_CHAIN,
+enum l_keyring_restriction {
+	L_KEYRING_RESTRICT_ASYM = 0,
+	L_KEYRING_RESTRICT_ASYM_CHAIN,
 };
 
 enum l_key_cipher_type {
@@ -89,8 +88,10 @@ bool l_key_verify(struct l_key *key, enum l_key_cipher_type cipher,
 			enum l_checksum_type checksum, const void *data,
 			const void *sig, size_t len_data, size_t len_sig);
 
-struct l_keyring *l_keyring_new(enum l_keyring_type type,
-				const struct l_keyring *trust);
+struct l_keyring *l_keyring_new(void);
+
+bool l_keyring_restrict(struct l_keyring *keyring, enum l_keyring_restriction res,
+			const struct l_keyring *trust);
 
 void l_keyring_free(struct l_keyring *keyring);
 void l_keyring_free_norevoke(struct l_keyring *keyring);

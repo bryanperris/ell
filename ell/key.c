@@ -81,6 +81,10 @@ struct keyctl_pkey_params {
 };
 #endif
 
+#ifndef KEYCTL_RESTRICT_KEYRING
+#define KEYCTL_RESTRICT_KEYRING 29
+#endif
+
 static int32_t internal_keyring;
 
 struct l_key {
@@ -89,7 +93,6 @@ struct l_key {
 };
 
 struct l_keyring {
-	int type;
 	int32_t serial;
 };
 
@@ -204,6 +207,17 @@ static long kernel_dh_compute(int32_t private, int32_t prime, int32_t base,
 
 	result = syscall(__NR_keyctl, KEYCTL_DH_COMPUTE, &params, payload, len,
 			NULL);
+
+	return result >= 0 ? result : -errno;
+}
+
+static long kernel_restrict_keyring(int32_t serial, const char *keytype,
+					const char *restriction)
+{
+	long result;
+
+	result = syscall(__NR_keyctl, KEYCTL_RESTRICT_KEYRING, serial, keytype,
+				restriction);
 
 	return result >= 0 ? result : -errno;
 }
@@ -655,32 +669,47 @@ LIB_EXPORT bool l_key_verify(struct l_key *key,
 		(memcmp(data, compare_hash, hash_len) == 0);
 }
 
-LIB_EXPORT struct l_keyring *l_keyring_new(enum l_keyring_type type,
-						const struct l_keyring *trusted)
+LIB_EXPORT struct l_keyring *l_keyring_new(void)
 {
 	struct l_keyring *keyring;
 	char *description;
-	char *payload = NULL;
-	size_t payload_length = 0;
 
 	if (!internal_keyring && !setup_internal_keyring())
 		return NULL;
 
-	switch (type) {
-	case L_KEYRING_SIMPLE:
-		break;
-	case L_KEYRING_TRUSTED_ASYM:
-	case L_KEYRING_TRUSTED_ASYM_CHAIN:
+	keyring = l_new(struct l_keyring, 1);
+	description = l_strdup_printf("ell-keyring-%p", keyring);
+	keyring->serial = kernel_add_key("keyring", description, NULL, 0,
+						internal_keyring);
+	l_free(description);
+
+	if (keyring->serial < 0) {
+		l_free(keyring);
+		return NULL;
+	}
+
+	return keyring;
+}
+
+LIB_EXPORT bool l_keyring_restrict(struct l_keyring *keyring,
+					enum l_keyring_restriction res,
+					const struct l_keyring *trusted)
+{
+	char *restriction = NULL;
+	long result;
+
+	switch (res) {
+	case L_KEYRING_RESTRICT_ASYM:
+	case L_KEYRING_RESTRICT_ASYM_CHAIN:
 	{
 		char *option = "";
 
-		if (type == L_KEYRING_TRUSTED_ASYM_CHAIN)
+		if (res == L_KEYRING_RESTRICT_ASYM_CHAIN)
 			option = ":chain";
 
-		payload = l_strdup_printf(
-			"restrict=asymmetric:key_or_keyring:%d%s",
-			trusted ? trusted->serial : 0, option);
-		payload_length = strlen(payload);
+		restriction = l_strdup_printf("key_or_keyring:%d%s",
+						trusted ? trusted->serial : 0,
+						option);
 
 		break;
 	}
@@ -689,21 +718,12 @@ LIB_EXPORT struct l_keyring *l_keyring_new(enum l_keyring_type type,
 		return NULL;
 	}
 
-	keyring = l_new(struct l_keyring, 1);
-	keyring->type = type;
-	description = l_strdup_printf("ell-keyring-%p", keyring);
-	keyring->serial = kernel_add_key("keyring", description, payload,
-						payload_length,
-						internal_keyring);
-	l_free(description);
-	l_free(payload);
+	result = kernel_restrict_keyring(keyring->serial, "asymmetric",
+						restriction);
 
-	if (keyring->serial < 0) {
-		l_free(keyring);
-		keyring = NULL;
-	}
+	l_free(restriction);
 
-	return keyring;
+	return result == 0;
 }
 
 LIB_EXPORT void l_keyring_free(struct l_keyring *keyring)
