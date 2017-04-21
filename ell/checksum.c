@@ -119,7 +119,7 @@ static int create_alg(const char *alg)
 LIB_EXPORT struct l_checksum *l_checksum_new(enum l_checksum_type type)
 {
 	struct l_checksum *checksum;
-	const char *name;
+	const char *uninitialized_var(name);
 	int fd;
 
 	if (!is_valid_type(type))
@@ -202,7 +202,7 @@ struct l_checksum *l_checksum_new_hmac(enum l_checksum_type type,
 {
 	struct l_checksum *checksum;
 	int fd;
-	const char *name;
+	const char *uninitialized_var(name);
 
 	if (!is_valid_type(type))
 		return NULL;

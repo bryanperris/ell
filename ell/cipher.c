@@ -143,7 +143,7 @@ LIB_EXPORT struct l_cipher *l_cipher_new(enum l_cipher_type type,
 						size_t key_length)
 {
 	struct l_cipher *cipher;
-	const char *alg_name;
+	const char *uninitialized_var(alg_name);
 
 	if (unlikely(!key))
 		return NULL;
