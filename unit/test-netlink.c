@@ -27,6 +27,7 @@
 #include <sys/socket.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h>
+#include <assert.h>
 
 #include <ell/ell.h>
 
@@ -72,10 +73,16 @@ done:
 	l_main_quit();
 }
 
+static void link_notification(uint16_t type, void const * data,
+					uint32_t len, void * user_data)
+{
+}
+
 int main(int argc, char *argv[])
 {
 	struct l_netlink *netlink;
 	struct ifinfomsg msg;
+	unsigned int link_id;
 
 	if (!l_main_init())
 		return -1;
@@ -91,7 +98,12 @@ int main(int argc, char *argv[])
 	l_netlink_send(netlink, RTM_GETLINK, NLM_F_DUMP, &msg, sizeof(msg),
 						getlink_callback, NULL, NULL);
 
+	link_id = l_netlink_register(netlink, RTNLGRP_LINK,
+					link_notification, NULL, NULL);
+
 	l_main_run();
+
+	assert(l_netlink_unregister(netlink, link_id));
 
 	l_netlink_destroy(netlink);
 
