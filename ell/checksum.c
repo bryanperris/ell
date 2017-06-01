@@ -71,6 +71,7 @@ struct sockaddr_alg {
 static struct {
 	const char *name;
 	uint8_t digest_len;
+	bool supported;
 } checksum_info_table[] = {
 	{ .name = "md4", .digest_len = 16 },
 	{ .name = "md5", .digest_len = 16 },
@@ -428,4 +429,79 @@ LIB_EXPORT char *l_checksum_get_string(struct l_checksum *checksum)
 	}
 
 	return NULL;
+}
+
+static void init_supported()
+{
+	static bool initialized = false;
+	struct sockaddr_alg salg;
+	int sk;
+	int i;
+
+	if (likely(initialized))
+		return;
+
+	initialized = true;
+
+	sk = socket(PF_ALG, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
+	if (sk < 0)
+		return;
+
+	memset(&salg, 0, sizeof(salg));
+	salg.salg_family = AF_ALG;
+	strcpy((char *) salg.salg_type, "hash");
+
+	for (i = 0; checksum_info_table[i].name; i++) {
+		strcpy((char *) salg.salg_name, checksum_info_table[i].name);
+
+		if (bind(sk, (struct sockaddr *) &salg, sizeof(salg)) < 0)
+			continue;
+
+		checksum_info_table[i].supported = true;
+	}
+
+	close(sk);
+}
+
+static inline bool is_supported(const char *alg)
+{
+	int i;
+
+	for (i = 0; checksum_info_table[i].name; i++) {
+		if (strcmp(checksum_info_table[i].name, alg))
+			continue;
+
+		return checksum_info_table[i].supported;
+	}
+
+	return false;
+}
+
+LIB_EXPORT bool l_checksum_is_supported(enum l_checksum_type type,
+							bool check_hmac)
+{
+	const char *name;
+	char hmac[sizeof(((struct sockaddr_alg *)0)->salg_name)];
+
+	init_supported();
+
+	name = checksum_type_to_name(type);
+	if (!name)
+		return false;
+
+	if (!is_supported(name))
+		return false;
+
+	if (!check_hmac)
+		return true;
+
+	snprintf(hmac, sizeof(hmac) - 1, "hmac(%s)", name);
+	return is_supported(hmac);
+}
+
+LIB_EXPORT bool l_checksum_cmac_aes_supported()
+{
+	init_supported();
+
+	return is_supported("cmac(aes)");
 }
