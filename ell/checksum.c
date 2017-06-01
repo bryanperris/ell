@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <stdio.h>
 
 #include "util.h"
 #include "checksum.h"
@@ -94,7 +95,8 @@ static struct {
  * Checksum handling
  */
 
-#define is_valid_type(type)  ((type) <= L_CHECKSUM_SHA512)
+#define is_valid_type(type)  ((type) > L_CHECKSUM_NONE && \
+					(type) <= L_CHECKSUM_SHA512)
 
 /**
  * l_checksum:
@@ -128,6 +130,28 @@ static int create_alg(const char *alg)
 	return sk;
 }
 
+static const char *checksum_type_to_name(enum l_checksum_type type)
+{
+	switch (type) {
+	case L_CHECKSUM_NONE:
+		return NULL;
+	case L_CHECKSUM_MD4:
+		return "md4";
+	case L_CHECKSUM_MD5:
+		return "md5";
+	case L_CHECKSUM_SHA1:
+		return "sha1";
+	case L_CHECKSUM_SHA256:
+		return "sha256";
+	case L_CHECKSUM_SHA384:
+		return "sha384";
+	case L_CHECKSUM_SHA512:
+		return "sha512";
+	}
+
+	return NULL;
+}
+
 /**
  * l_checksum_new:
  * @type: checksum type
@@ -139,36 +163,15 @@ static int create_alg(const char *alg)
 LIB_EXPORT struct l_checksum *l_checksum_new(enum l_checksum_type type)
 {
 	struct l_checksum *checksum;
-	const char *uninitialized_var(name);
+	const char *name;
 	int fd;
 
 	if (!is_valid_type(type))
 		return NULL;
 
-	switch (type) {
-	case L_CHECKSUM_NONE:
-		return NULL;
-	case L_CHECKSUM_MD4:
-		name = "md4";
-		break;
-	case L_CHECKSUM_MD5:
-		name = "md5";
-		break;
-	case L_CHECKSUM_SHA1:
-		name = "sha1";
-		break;
-	case L_CHECKSUM_SHA256:
-		name = "sha256";
-		break;
-	case L_CHECKSUM_SHA384:
-		name = "sha384";
-		break;
-	case L_CHECKSUM_SHA512:
-		name = "sha512";
-		break;
-	}
-
 	checksum = l_new(struct l_checksum, 1);
+
+	name = checksum_type_to_name(type);
 
 	fd = create_alg(name);
 	if (fd < 0)
@@ -222,33 +225,13 @@ struct l_checksum *l_checksum_new_hmac(enum l_checksum_type type,
 {
 	struct l_checksum *checksum;
 	int fd;
-	const char *uninitialized_var(name);
+	char name[sizeof(((struct sockaddr_alg *)0)->salg_name)];
 
 	if (!is_valid_type(type))
 		return NULL;
 
-	switch (type) {
-	case L_CHECKSUM_NONE:
-		return NULL;
-	case L_CHECKSUM_MD4:
-		name = "hmac(md4)";
-		break;
-	case L_CHECKSUM_MD5:
-		name = "hmac(md5)";
-		break;
-	case L_CHECKSUM_SHA1:
-		name = "hmac(sha1)";
-		break;
-	case L_CHECKSUM_SHA256:
-		name = "hmac(sha256)";
-		break;
-	case L_CHECKSUM_SHA384:
-		name = "hmac(sha384)";
-		break;
-	case L_CHECKSUM_SHA512:
-		name = "hmac(sha512)";
-		break;
-	}
+	snprintf(name, sizeof(name) - 1,
+				"hmac(%s)", checksum_type_to_name(type));
 
 	fd = create_alg(name);
 	if (fd < 0)
