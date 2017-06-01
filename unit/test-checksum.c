@@ -182,17 +182,21 @@ int main(int argc, char *argv[])
 
 	l_test_add("unsupported", test_unsupported, NULL);
 
-	l_test_add("md4-1", test_md4, NULL);
+	if (l_checksum_is_supported(L_CHECKSUM_MD4, false))
+		l_test_add("md4-1", test_md4, NULL);
 
-	l_test_add("md5-1", test_md5, NULL);
+	if (l_checksum_is_supported(L_CHECKSUM_MD5, false))
+		l_test_add("md5-1", test_md5, NULL);
 
-	l_test_add("sha1-1", test_sha1, NULL);
+	if (l_checksum_is_supported(L_CHECKSUM_SHA1, false)) {
+		l_test_add("sha1-1", test_sha1, NULL);
 
-	l_test_add("sha256-1", test_sha256, NULL);
+		l_test_add("checksum reset", test_reset, NULL);
+		l_test_add("checksum updatev", test_updatev, NULL);
+	}
 
-	l_test_add("checksum reset", test_reset, NULL);
-
-	l_test_add("checksum updatev", test_updatev, NULL);
+	if (l_checksum_is_supported(L_CHECKSUM_SHA256, false))
+		l_test_add("sha256-1", test_sha256, NULL);
 
 	return l_test_run();
 }
