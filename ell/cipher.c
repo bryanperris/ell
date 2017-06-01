@@ -138,6 +138,24 @@ static int create_alg(const char *alg_type, const char *alg_name,
 	return ret;
 }
 
+static const char *cipher_type_to_name(enum l_cipher_type type)
+{
+	switch (type) {
+	case L_CIPHER_AES:
+		return "ecb(aes)";
+	case L_CIPHER_AES_CBC:
+		return "cbc(aes)";
+	case L_CIPHER_ARC4:
+		return "ecb(arc4)";
+	case L_CIPHER_DES:
+		return "ecb(des)";
+	case L_CIPHER_DES3_EDE_CBC:
+		return "cbc(des3_ede)";
+	}
+
+	return NULL;
+}
+
 LIB_EXPORT struct l_cipher *l_cipher_new(enum l_cipher_type type,
 						const void *key,
 						size_t key_length)
@@ -153,24 +171,7 @@ LIB_EXPORT struct l_cipher *l_cipher_new(enum l_cipher_type type,
 
 	cipher = l_new(struct l_cipher, 1);
 	cipher->type = type;
-
-	switch (type) {
-	case L_CIPHER_AES:
-		alg_name = "ecb(aes)";
-		break;
-	case L_CIPHER_AES_CBC:
-		alg_name = "cbc(aes)";
-		break;
-	case L_CIPHER_ARC4:
-		alg_name = "ecb(arc4)";
-		break;
-	case L_CIPHER_DES:
-		alg_name = "ecb(des)";
-		break;
-	case L_CIPHER_DES3_EDE_CBC:
-		alg_name = "cbc(des3_ede)";
-		break;
-	}
+	alg_name = cipher_type_to_name(type);
 
 	cipher->encrypt_sk = create_alg("skcipher", alg_name, key, key_length,
 					0);
@@ -191,6 +192,16 @@ error_free:
 	return NULL;
 }
 
+static const char *aead_cipher_type_to_name(enum l_aead_cipher_type type)
+{
+	switch (type) {
+	case L_AEAD_CIPHER_AES_CCM:
+		return "ccm(aes)";
+	}
+
+	return NULL;
+}
+
 LIB_EXPORT struct l_aead_cipher *l_aead_cipher_new(enum l_aead_cipher_type type,
 							const void *key,
 							size_t key_length,
@@ -207,12 +218,7 @@ LIB_EXPORT struct l_aead_cipher *l_aead_cipher_new(enum l_aead_cipher_type type,
 
 	cipher = l_new(struct l_aead_cipher, 1);
 	cipher->type = type;
-
-	switch (type) {
-	case L_AEAD_CIPHER_AES_CCM:
-		alg_name = "ccm(aes)";
-		break;
-	}
+	alg_name = aead_cipher_type_to_name(type);
 
 	cipher->encrypt_sk = create_alg("aead", alg_name, key, key_length,
 					tag_length);
