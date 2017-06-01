@@ -33,6 +33,14 @@
 #include "private.h"
 #include "missing.h"
 
+#ifndef GRND_NONBLOCK
+#define GRND_NONBLOCK	0x0001
+#endif
+
+#ifndef GRND_RANOM
+#define GRND_RANDOM	0x0002
+#endif
+
 static inline int getrandom(void *buffer, size_t count, unsigned flags) {
         return syscall(__NR_getrandom, buffer, count, flags);
 }
@@ -62,4 +70,23 @@ LIB_EXPORT bool l_getrandom(void *buf, size_t len)
 		return true;
 
 	return false;
+}
+
+LIB_EXPORT bool l_getrandom_is_supported()
+{
+	static bool initialized = false;
+	static bool supported = false;
+	uint8_t buf[4];
+	int ret;
+
+	if (initialized)
+		return supported;
+
+	initialized = true;
+	ret = getrandom(buf, sizeof(buf), GRND_NONBLOCK);
+
+	if (ret < 0 && errno == ENOSYS)
+		return false;
+
+	return true;
 }

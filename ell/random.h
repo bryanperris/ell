@@ -31,6 +31,7 @@ extern "C" {
 #include <stdbool.h>
 
 bool l_getrandom(void *buf, size_t len);
+bool l_getrandom_is_supported();
 
 #ifdef __cplusplus
 }
