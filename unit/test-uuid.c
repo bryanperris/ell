@@ -163,7 +163,10 @@ int main(int argc, char *argv[])
 	l_test_init(&argc, &argv);
 
 	l_test_add("/uuid/v3", test_v3, NULL);
-	l_test_add("/uuid/v4", test_v4, NULL);
+
+	if (l_getrandom_is_supported())
+		l_test_add("/uuid/v4", test_v4, NULL);
+
 	l_test_add("/uuid/v5", test_v5, NULL);
 	l_test_add("/uuid/to string", test_to_string, NULL);
 

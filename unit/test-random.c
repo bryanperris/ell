@@ -52,7 +52,13 @@ int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
+	if (!l_getrandom_is_supported()) {
+		printf("getrandom syscall missing, skipping...");
+		goto done;
+	}
+
 	l_test_add("l_getrandom sanity check", test_random, NULL);
 
+done:
 	return l_test_run();
 }
