@@ -368,6 +368,21 @@ static void build_libnl_nested(const void *data)
 
 int main(int argc, char *argv[])
 {
+	bool little_endian;
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	little_endian = true;
+#elif __BYTE_ORDER == __BIG_ENDIAN
+	little_endian = false;
+#else
+#error "Unknown byte order"
+#endif
+
+	l_test_init(&argc, &argv);
+
+	if (!little_endian)
+		goto done;
+
 	l_test_add("Parse Set Station Request", parse_set_station, NULL);
 	l_test_add("Parse Set Rekey Offload Request",
 				parse_set_rekey_offload, NULL);
@@ -381,5 +396,6 @@ int main(int argc, char *argv[])
 	l_test_add("Build libnl-generated Example with Nesting",
 				build_libnl_nested, NULL);
 
+done:
 	return l_test_run();
 }
