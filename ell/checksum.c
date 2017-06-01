@@ -67,6 +67,26 @@ struct sockaddr_alg {
 #define SOL_ALG 279
 #endif
 
+static struct {
+	const char *name;
+	uint8_t digest_len;
+} checksum_info_table[] = {
+	{ .name = "md4", .digest_len = 16 },
+	{ .name = "md5", .digest_len = 16 },
+	{ .name = "sha1", .digest_len = 20 },
+	{ .name = "sha256", .digest_len = 32 },
+	{ .name = "sha384", .digest_len = 48 },
+	{ .name = "sha512", .digest_len = 64 },
+	{ .name = "cmac(aes)", .digest_len = 16 },
+	{ .name = "hmac(md4)", .digest_len = 16 },
+	{ .name = "hmac(md5)", .digest_len = 16 },
+	{ .name = "hmac(sha1)", .digest_len = 20 },
+	{ .name = "hmac(sha256)", .digest_len = 32 },
+	{ .name = "hmac(sha384)", .digest_len = 48 },
+	{ .name = "hmac(sha512)", .digest_len = 64 },
+	{ .name = NULL, .digest_len = 0 },
+};
+
 /**
  * SECTION:checksum
  * @short_description: Checksum handling
@@ -408,25 +428,6 @@ LIB_EXPORT ssize_t l_checksum_get_digest(struct l_checksum *checksum,
  **/
 LIB_EXPORT char *l_checksum_get_string(struct l_checksum *checksum)
 {
-	static struct {
-		const char *name;
-		size_t digest_len;
-	} digest_lut[] = {
-		{ .name = "md4", .digest_len = 16 },
-		{ .name = "md5", .digest_len = 16 },
-		{ .name = "sha1", .digest_len = 20 },
-		{ .name = "sha256", .digest_len = 32 },
-		{ .name = "sha384", .digest_len = 48 },
-		{ .name = "sha512", .digest_len = 64 },
-		{ .name = "cmac(aes)", .digest_len = 16 },
-		{ .name = "hmac(md4)", .digest_len = 16 },
-		{ .name = "hmac(md5)", .digest_len = 16 },
-		{ .name = "hmac(sha1)", .digest_len = 20 },
-		{ .name = "hmac(sha256)", .digest_len = 32 },
-		{ .name = "hmac(sha384)", .digest_len = 48 },
-		{ .name = "hmac(sha512)", .digest_len = 64 },
-		{ .name = NULL, .digest_len = 0 },
-	};
 	unsigned char digest[64];
 	unsigned int i;
 
@@ -435,11 +436,12 @@ LIB_EXPORT char *l_checksum_get_string(struct l_checksum *checksum)
 
 	l_checksum_get_digest(checksum, digest, sizeof(digest));
 
-	for (i = 0; digest_lut[i].name; i++) {
-		if (strcmp(digest_lut[i].name, checksum->alg_name))
+	for (i = 0; checksum_info_table[i].name; i++) {
+		if (strcmp(checksum_info_table[i].name, checksum->alg_name))
 			continue;
 
-		return l_util_hexstring(digest, digest_lut[i].digest_len);
+		return l_util_hexstring(digest,
+					checksum_info_table[i].digest_len);
 	}
 
 	return NULL;
