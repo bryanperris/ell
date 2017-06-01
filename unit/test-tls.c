@@ -25,6 +25,7 @@
 #endif
 
 #include <assert.h>
+#include <stdio.h>
 
 #include <ell/ell.h>
 
@@ -432,6 +433,15 @@ int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
+	if (!l_checksum_is_supported(L_CHECKSUM_MD5, false) ||
+			!l_checksum_is_supported(L_CHECKSUM_SHA1, false) ||
+			!l_checksum_is_supported(L_CHECKSUM_SHA256, false) ||
+			!l_checksum_is_supported(L_CHECKSUM_SHA384, false) ||
+			!l_checksum_is_supported(L_CHECKSUM_SHA512, false)) {
+		printf("Needed checksum missing, skipping...\n");
+		goto done;
+	}
+
 	l_test_add("TLS 1.0 PRF", test_tls10_prf, NULL);
 
 	l_test_add("TLS 1.2 PRF with SHA256", test_tls12_prf,
@@ -444,6 +454,11 @@ int main(int argc, char *argv[])
 			&tls12_prf_sha512_0);
 
 	l_test_add("Certificate chains", test_certificates, NULL);
+
+	if (!l_getrandom_is_supported()) {
+		printf("getrandom missing, skipping TLS connection tests...");
+		goto done;
+	}
 
 	l_test_add("TLS connection no auth", test_tls_test,
 			&tls_conn_test_no_auth);
@@ -458,5 +473,6 @@ int main(int argc, char *argv[])
 	l_test_add("TLS connection full auth", test_tls_test,
 			&tls_conn_test_full_auth);
 
+done:
 	return l_test_run();
 }
