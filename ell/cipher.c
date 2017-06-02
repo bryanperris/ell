@@ -88,6 +88,9 @@ struct af_alg_iv {
 
 #define is_valid_type(type)  ((type) <= L_CIPHER_DES3_EDE_CBC)
 
+static uint32_t supported_ciphers;
+static uint32_t supported_aead_ciphers;
+
 struct l_cipher {
 	int type;
 	int encrypt_sk;
@@ -494,4 +497,68 @@ LIB_EXPORT bool l_aead_cipher_decrypt(struct l_aead_cipher *cipher,
 	return operate_cipher(cipher->decrypt_sk, ALG_OP_DECRYPT, in, in_len,
 				ad, ad_len, nonce, nonce_len, out, out_len,
 				l_aead_cipher_get_ivlen(cipher)) >= 0;
+}
+
+static void init_supported()
+{
+	static bool initialized = false;
+	struct sockaddr_alg salg;
+	int sk;
+	enum l_cipher_type c;
+	enum l_aead_cipher_type a;
+
+	if (likely(initialized))
+		return;
+
+	initialized = true;
+
+	sk = socket(PF_ALG, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
+	if (sk < 0)
+		return;
+
+	memset(&salg, 0, sizeof(salg));
+	salg.salg_family = AF_ALG;
+	strcpy((char *) salg.salg_type, "skcipher");
+
+	for (c = L_CIPHER_AES; c <= L_CIPHER_DES3_EDE_CBC; c++) {
+		strcpy((char *) salg.salg_name, cipher_type_to_name(c));
+
+		if (bind(sk, (struct sockaddr *) &salg, sizeof(salg)) < 0)
+			continue;
+
+		supported_ciphers |= 1 << c;
+	}
+
+	strcpy((char *) salg.salg_type, "aead");
+
+	for (a = L_AEAD_CIPHER_AES_CCM; a <= L_AEAD_CIPHER_AES_CCM; a++) {
+		strcpy((char *) salg.salg_name, aead_cipher_type_to_name(a));
+
+		if (bind(sk, (struct sockaddr *) &salg, sizeof(salg)) < 0)
+			continue;
+
+		supported_aead_ciphers |= 1 << a;
+	}
+
+	close(sk);
+}
+
+bool l_cipher_is_supported(enum l_cipher_type type)
+{
+	if (!is_valid_type(type))
+		return false;
+
+	init_supported();
+
+	return supported_ciphers & (1 << type);
+}
+
+bool l_aead_cipher_is_supported(enum l_aead_cipher_type type)
+{
+	if (type != L_AEAD_CIPHER_AES_CCM)
+		return false;
+
+	init_supported();
+
+	return supported_aead_ciphers & (1 << type);
 }

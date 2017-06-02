@@ -75,6 +75,9 @@ bool l_aead_cipher_decrypt(struct l_aead_cipher *cipher,
 				const void *nonce, size_t nonce_len,
 				void *out, size_t out_len);
 
+bool l_cipher_is_supported(enum l_cipher_type type);
+bool l_aead_cipher_is_supported(enum l_aead_cipher_type type);
+
 #ifdef __cplusplus
 }
 #endif
