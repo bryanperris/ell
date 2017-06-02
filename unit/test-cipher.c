@@ -229,13 +229,18 @@ int main(int argc, char *argv[])
 
 	l_test_add("unsupported", test_unsupported, NULL);
 
-	l_test_add("aes", test_aes, NULL);
+	if (l_cipher_is_supported(L_CIPHER_AES))
+		l_test_add("aes", test_aes, NULL);
 
-	l_test_add("arc4", test_arc4, NULL);
+	if (l_cipher_is_supported(L_CIPHER_ARC4))
+		l_test_add("arc4", test_arc4, NULL);
 
-	l_test_add("aes_ccm long nonce", test_aes_ccm, &ccm_long_nonce);
-	l_test_add("aes_ccm short nonce", test_aes_ccm, &ccm_short_nonce);
-	l_test_add("aes_ccm no AAD", test_aes_ccm, &ccm_no_aad);
+	if (l_aead_cipher_is_supported(L_AEAD_CIPHER_AES_CCM)) {
+		l_test_add("aes_ccm long nonce", test_aes_ccm, &ccm_long_nonce);
+		l_test_add("aes_ccm short nonce", test_aes_ccm,
+							&ccm_short_nonce);
+		l_test_add("aes_ccm no AAD", test_aes_ccm, &ccm_no_aad);
+	}
 
 	return l_test_run();
 }
