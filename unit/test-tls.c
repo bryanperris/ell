@@ -460,6 +460,14 @@ int main(int argc, char *argv[])
 		goto done;
 	}
 
+	if (!l_cipher_is_supported(L_CIPHER_DES3_EDE_CBC) ||
+			!l_cipher_is_supported(L_CIPHER_AES_CBC) ||
+			!l_cipher_is_supported(L_CIPHER_ARC4)) {
+		printf("Needed ciphers missing,"
+				"skipping TLS connection tests...");
+		goto done;
+	}
+
 	l_test_add("TLS connection no auth", test_tls_test,
 			&tls_conn_test_no_auth);
 	l_test_add("TLS connection server auth", test_tls_test,
