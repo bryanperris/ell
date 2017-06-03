@@ -225,7 +225,10 @@ unit_example_plugin_la_LDFLAGS = -no-undefined -module -avoid-version \
 
 unit_test_data_files = unit/settings.test unit/cert-ca.pem \
 			unit/cert-client.pem unit/cert-server.pem \
-			unit/cert-client-key.pem unit/cert-server-key.pem
+			unit/cert-client-key.pem unit/cert-server-key.pem \
+			unit/cert-intca.pem unit/cert-entity-int.pem \
+			unit/cert-client-key-pkcs8.pem \
+			unit/cert-server-key-pkcs8.pem
 
 examples = examples/dbus-service examples/https-client-test \
 		examples/https-server-test examples/dbus-client
