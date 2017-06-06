@@ -56,7 +56,8 @@ void l_checksum_reset(struct l_checksum *checksum);
 bool l_checksum_update(struct l_checksum *checksum,
 					const void *data, size_t len);
 bool l_checksum_updatev(struct l_checksum *checksum,
-					struct iovec *iov, size_t iov_len);
+					const struct iovec *iov,
+					size_t iov_len);
 ssize_t l_checksum_get_digest(struct l_checksum *checksum,
 					void *digest, size_t len);
 char *l_checksum_get_string(struct l_checksum *checksum);

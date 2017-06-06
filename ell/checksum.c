@@ -349,7 +349,7 @@ LIB_EXPORT bool l_checksum_update(struct l_checksum *checksum,
  * Returns: true if the operation succeeded, false otherwise.
  **/
 bool l_checksum_updatev(struct l_checksum *checksum,
-					struct iovec *iov, size_t iov_len)
+					const struct iovec *iov, size_t iov_len)
 {
 	struct msghdr msg;
 	ssize_t written;
@@ -361,7 +361,7 @@ bool l_checksum_updatev(struct l_checksum *checksum,
 		return false;
 
 	memset(&msg, 0, sizeof(msg));
-	msg.msg_iov = iov;
+	msg.msg_iov = (struct iovec *) iov;
 	msg.msg_iovlen = iov_len;
 
 	written = sendmsg(checksum->sk, &msg, MSG_MORE);
