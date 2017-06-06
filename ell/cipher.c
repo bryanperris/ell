@@ -390,6 +390,46 @@ static ssize_t operate_cipher(int sk, __u32 operation,
 	return result;
 }
 
+static ssize_t operate_cipherv(int sk, __u32 operation,
+				const struct iovec *in, size_t in_cnt,
+				const struct iovec *out, size_t out_cnt)
+{
+	char *c_msg_buf;
+	size_t c_msg_size;
+	struct msghdr msg;
+	struct cmsghdr *c_msg;
+	ssize_t result;
+
+	c_msg_size = CMSG_SPACE(sizeof(operation));
+	c_msg_buf = alloca(c_msg_size);
+
+	memset(c_msg_buf, 0, c_msg_size);
+	memset(&msg, 0, sizeof(msg));
+
+	msg.msg_iov = (struct iovec *) in;
+	msg.msg_iovlen = in_cnt;
+
+	msg.msg_control = c_msg_buf;
+	msg.msg_controllen = c_msg_size;
+
+	c_msg = CMSG_FIRSTHDR(&msg);
+	c_msg->cmsg_level = SOL_ALG;
+	c_msg->cmsg_type = ALG_SET_OP;
+	c_msg->cmsg_len = CMSG_LEN(sizeof(operation));
+	memcpy(CMSG_DATA(c_msg), &operation, sizeof(operation));
+
+	result = sendmsg(sk, &msg, 0);
+	if (result < 0)
+		return -errno;
+
+	result = readv(sk, out, out_cnt);
+
+	if (result < 0)
+		return -errno;
+
+	return result;
+}
+
 LIB_EXPORT bool l_cipher_encrypt(struct l_cipher *cipher,
 					const void *in, void *out, size_t len)
 {
@@ -403,6 +443,20 @@ LIB_EXPORT bool l_cipher_encrypt(struct l_cipher *cipher,
 				NULL, 0, NULL, 0, out, len, 0) >= 0;
 }
 
+LIB_EXPORT bool l_cipher_encryptv(struct l_cipher *cipher,
+					const struct iovec *in, size_t in_cnt,
+					const struct iovec *out, size_t out_cnt)
+{
+	if (unlikely(!cipher))
+		return false;
+
+	if (unlikely(!in) || unlikely(!out))
+		return false;
+
+	return operate_cipherv(cipher->encrypt_sk, ALG_OP_ENCRYPT, in, in_cnt,
+				out, out_cnt) >= 0;
+}
+
 LIB_EXPORT bool l_cipher_decrypt(struct l_cipher *cipher,
 					const void *in, void *out, size_t len)
 {
@@ -414,6 +468,20 @@ LIB_EXPORT bool l_cipher_decrypt(struct l_cipher *cipher,
 
 	return operate_cipher(cipher->decrypt_sk, ALG_OP_DECRYPT, in, len,
 				NULL, 0, NULL, 0, out, len, 0) >= 0;
+}
+
+LIB_EXPORT bool l_cipher_decryptv(struct l_cipher *cipher,
+					const struct iovec *in, size_t in_cnt,
+					const struct iovec *out, size_t out_cnt)
+{
+	if (unlikely(!cipher))
+		return false;
+
+	if (unlikely(!in) || unlikely(!out))
+		return false;
+
+	return operate_cipherv(cipher->decrypt_sk, ALG_OP_DECRYPT, in, in_cnt,
+				out, out_cnt) >= 0;
 }
 
 LIB_EXPORT bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,

@@ -44,9 +44,15 @@ void l_cipher_free(struct l_cipher *cipher);
 
 bool l_cipher_encrypt(struct l_cipher *cipher,
 			const void *in, void *out, size_t len);
+bool l_cipher_encryptv(struct l_cipher *cipher,
+				const struct iovec *in, size_t in_cnt,
+				const struct iovec *out, size_t out_cnt);
 
 bool l_cipher_decrypt(struct l_cipher *cipher,
 			const void *in, void *out, size_t len);
+bool l_cipher_decryptv(struct l_cipher *cipher,
+				const struct iovec *in, size_t in_cnt,
+				const struct iovec *out, size_t out_cnt);
 
 bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
 			size_t iv_length);
