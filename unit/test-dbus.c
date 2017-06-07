@@ -36,16 +36,15 @@ static pid_t dbus_daemon_pid = -1;
 
 static void start_dbus_daemon(void)
 {
-	char *prg_argv[6];
+	char *prg_argv[5];
 	char *prg_envp[1];
 	pid_t pid;
 
 	prg_argv[0] = "/usr/bin/dbus-daemon";
-	prg_argv[1] = "--session";
-	prg_argv[2] = "--address=" TEST_BUS_ADDRESS;
-	prg_argv[3] = "--nopidfile";
-	prg_argv[4] = "--nofork";
-	prg_argv[5] = NULL;
+	prg_argv[1] = "--nopidfile";
+	prg_argv[2] = "--nofork";
+	prg_argv[3] = "--config-file=" TESTDATADIR "/dbus.conf";
+	prg_argv[4] = NULL;
 
 	prg_envp[0] = NULL;
 
@@ -223,6 +222,9 @@ int main(int argc, char *argv[])
 			break;
 	}
 
+	if (!dbus)
+		goto done;
+
 	l_dbus_set_debug(dbus, do_debug, "[DBUS] ", NULL);
 
 	l_dbus_set_ready_handler(dbus, ready_callback, dbus, NULL);
@@ -246,6 +248,7 @@ int main(int argc, char *argv[])
 
 	l_dbus_destroy(dbus);
 
+done:
 	if (dbus_daemon_pid > 0)
 		kill(dbus_daemon_pid, SIGKILL);
 

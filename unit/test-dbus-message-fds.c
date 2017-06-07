@@ -39,20 +39,17 @@
 
 static pid_t dbus_daemon_pid = -1;
 
-static char bus_address[128];
-
 static bool start_dbus_daemon(void)
 {
-	char *prg_argv[6];
+	char *prg_argv[5];
 	char *prg_envp[1];
 	pid_t pid;
 
 	prg_argv[0] = "/usr/bin/dbus-daemon";
-	prg_argv[1] = "--session";
-	prg_argv[2] = "--address=" TEST_BUS_ADDRESS;
-	prg_argv[3] = "--nopidfile";
-	prg_argv[4] = "--nofork";
-	prg_argv[5] = NULL;
+	prg_argv[1] = "--nopidfile";
+	prg_argv[2] = "--nofork";
+	prg_argv[3] = "--config-file=" TESTDATADIR "/dbus.conf";
+	prg_argv[4] = NULL;
 
 	prg_envp[0] = NULL;
 
@@ -72,8 +69,6 @@ static bool start_dbus_daemon(void)
 	l_info("dbus-daemon process %d created", pid);
 
 	dbus_daemon_pid = pid;
-
-	strcpy(bus_address, TEST_BUS_ADDRESS);
 
 	return true;
 }
@@ -330,16 +325,21 @@ int main(int argc, char *argv[])
 	for (i = 0; i < 10; i++) {
 		usleep(200 * 1000);
 
-		dbus = l_dbus_new(bus_address);
+		dbus = l_dbus_new(TEST_BUS_ADDRESS);
 		if (dbus)
 			break;
 	}
+
+	if (!dbus)
+		goto done;
 
 	test_run();
 
 	l_dbus_destroy(dbus);
 
-	kill(dbus_daemon_pid, SIGKILL);
+done:
+	if (dbus_daemon_pid > 0)
+		kill(dbus_daemon_pid, SIGKILL);
 
 	l_signal_remove(signal);
 	l_queue_destroy(tests, l_free);
