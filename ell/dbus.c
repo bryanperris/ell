@@ -507,7 +507,7 @@ static bool auth_read_handler(struct l_io *io, void *user_data)
 		} else if (!strncmp(ptr, "REJECTED ", 9)) {
 			static const char *command = "AUTH ANONYMOUS\r\n";
 
-			dbus->negotiate_unix_fd = false;
+			dbus->negotiate_unix_fd = true;
 
 			classic->auth_command = l_strdup(command);
 			classic->auth_state = WAITING_FOR_OK;
