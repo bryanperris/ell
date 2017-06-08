@@ -213,10 +213,26 @@ static int count_fds(void)
 {
 	int fd;
 	int count = 0;
+	int flags;
 
-	for (fd = 0; fd < FD_SETSIZE; fd++)
-		if (fcntl(fd, F_GETFL) != -1 || errno != EBADF)
-			count++;
+	for (fd = 0; fd < FD_SETSIZE; fd++) {
+		flags = fcntl(fd, F_GETFL);
+		if (flags < 0) /* ignore any files we can't operate on */
+			continue;
+
+		/*
+		 * Only count files that are read-only or write-only.  This is
+		 * to work around the issue that fakeroot opens a TCP socket
+		 * in RDWR mode in a separate thread
+		 *
+		 * Note: This means that files used for file-descriptor passing
+		 * tests should be opened RDONLY or WRONLY
+		 */
+		if (flags & O_RDWR)
+			continue;
+
+		count++;
+	}
 
 	return count;
 }
