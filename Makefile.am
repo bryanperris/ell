@@ -256,7 +256,7 @@ if TLS_TESTS
 TESTS += $(tls_tests)
 endif
 
-DISTCLEANFILES = $(unit_tests)
+DISTCLEANFILES = $(unit_tests) $(dbus_tests) $(tls_tests)
 
 MAINTAINERCLEANFILES = Makefile.in configure config.h.in aclocal.m4
 
