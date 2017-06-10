@@ -29,6 +29,7 @@ AC_C_CHAR_UNSIGNED
 AC_C_BIGENDIAN(little_endian=no, little_endian=yes, little_endian=no)
 
 AM_CONDITIONAL(DBUS_TESTS, test "${little_endian}" = "yes")
+AM_CONDITIONAL(TLS_TESTS, false)
 
 LT_PREREQ(2.2)
 LT_INIT([disable-static])

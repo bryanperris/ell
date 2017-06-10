@@ -128,9 +128,7 @@ unit_tests = unit/test-unit \
 			unit/test-uintset \
 			unit/test-base64 \
 			unit/test-pem \
-			unit/test-tls \
-			unit/test-uuid \
-			unit/test-key
+			unit/test-uuid
 
 dbus_tests = unit/test-dbus \
 			unit/test-dbus-util \
@@ -142,8 +140,11 @@ dbus_tests = unit/test-dbus \
 			unit/test-gvariant-util \
 			unit/test-gvariant-message
 
+tls_tests = unit/test-tls \
+			unit/test-key
+
 if MAINTAINER_MODE
-noinst_PROGRAMS += $(unit_tests) $(dbus_tests)
+noinst_PROGRAMS += $(unit_tests) $(dbus_tests) $(tls_tests)
 endif
 
 unit_test_unit_LDADD = ell/libell-private.la
@@ -249,6 +250,10 @@ TESTS = $(unit_tests)
 
 if DBUS_TESTS
 TESTS += $(dbus_tests)
+endif
+
+if TLS_TESTS
+TESTS += $(tls_tests)
 endif
 
 DISTCLEANFILES = $(unit_tests)
