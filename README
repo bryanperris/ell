@@ -44,8 +44,12 @@ Kernel configuration checklist:
 
 	CONFIG_KEY_DH_OPERATIONS=y
 
+
 Information
 ===========
 
 Mailing list:
 	ell@lists.01.org
+
+IRC:
+	irc://irc.freenode.net/#ell
