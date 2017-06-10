@@ -9,7 +9,7 @@ ACLOCAL_AMFLAGS = -I build-aux
 # Interfaces removed:		CURRENT++ REVISION=0 AGE=0
 
 ELL_CURRENT = 0
-ELL_REVISION = 0
+ELL_REVISION = 1
 ELL_AGE = 0
 
 pkginclude_HEADERS = ell/ell.h \
