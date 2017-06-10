@@ -121,7 +121,6 @@ unit_tests = unit/test-unit \
 			unit/test-genl \
 			unit/test-genl-msg \
 			unit/test-siphash \
-			unit/test-hwdb \
 			unit/test-cipher \
 			unit/test-random \
 			unit/test-util \
@@ -130,7 +129,8 @@ unit_tests = unit/test-unit \
 			unit/test-pem \
 			unit/test-uuid
 
-dbus_tests = unit/test-dbus \
+dbus_tests = unit/test-hwdb \
+			unit/test-dbus \
 			unit/test-dbus-util \
 			unit/test-dbus-message \
 			unit/test-dbus-message-fds \
