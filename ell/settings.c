@@ -158,7 +158,7 @@ static char *escape_value(const char *value)
 		case '\r':
 		case '\\':
 			j += 1;
-			/* Fall through */
+			/* fall through */
 		default:
 			lead_whitespace = false;
 		}
