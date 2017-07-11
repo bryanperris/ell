@@ -244,6 +244,16 @@ static void test_set_methods(const void *test_data)
 	assert(v);
 	assert(!strcmp(v, "\\s\\s\\tFoobar"));
 
+	assert(l_settings_set_string(settings, "Main", "Escapes",
+					" \\Text\t\n\r\\"));
+	s = l_settings_get_string(settings, "Main", "Escapes");
+	assert(s);
+	assert(!strcmp(s, " \\Text\t\n\r\\"));
+	l_free(s);
+	v = l_settings_get_value(settings, "Main", "Escapes");
+	assert(v);
+	assert(!strcmp(v, "\\s\\\\Text\t\\n\\r\\\\"));
+
 	l_settings_free(settings);
 }
 
