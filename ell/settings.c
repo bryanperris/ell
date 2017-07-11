@@ -198,6 +198,7 @@ static char *escape_value(const char *value)
 			ret[j++] = '\\';
 			ret[j++] = '\\';
 			lead_whitespace = false;
+			break;
 		default:
 			ret[j++] = value[i];
 			lead_whitespace = false;
