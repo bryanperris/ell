@@ -46,7 +46,8 @@ static void test_md4(const void *data)
 {
 	struct l_checksum *checksum;
 	unsigned char digest[16];
-	char *str;
+	unsigned char *expected;
+	size_t expectlen;
 
 	checksum = l_checksum_new(L_CHECKSUM_MD4);
 	assert(checksum);
@@ -55,10 +56,12 @@ static void test_md4(const void *data)
 
 	l_checksum_get_digest(checksum, digest, sizeof(digest));
 
-	str = l_checksum_get_string(checksum);
-	l_info("%s", str);
-	l_free(str);
+	expected = l_util_from_hexstring("be3de05811bec433af48270014a8df0e",
+						&expectlen);
+	assert(expectlen == sizeof(digest));
+	assert(!memcmp(digest, expected, expectlen));
 
+	l_free(expected);
 	l_checksum_free(checksum);
 }
 
@@ -66,7 +69,8 @@ static void test_md5(const void *data)
 {
 	struct l_checksum *checksum;
 	unsigned char digest[16];
-	char *str;
+	unsigned char *expected;
+	size_t expectlen;
 
 	checksum = l_checksum_new(L_CHECKSUM_MD5);
 	assert(checksum);
@@ -75,10 +79,12 @@ static void test_md5(const void *data)
 
 	l_checksum_get_digest(checksum, digest, sizeof(digest));
 
-	str = l_checksum_get_string(checksum);
-	l_info("%s", str);
-	l_free(str);
+	expected = l_util_from_hexstring("407b72260377f77f8e63e13dc09bda2c",
+						&expectlen);
+	assert(expectlen == sizeof(digest));
+	assert(!memcmp(digest, expected, expectlen));
 
+	l_free(expected);
 	l_checksum_free(checksum);
 }
 
@@ -86,7 +92,8 @@ static void test_sha1(const void *data)
 {
 	struct l_checksum *checksum;
 	unsigned char digest[20];
-	char *str;
+	unsigned char *expected;
+	size_t expectlen;
 
 	checksum = l_checksum_new(L_CHECKSUM_SHA1);
 	assert(checksum);
@@ -95,10 +102,12 @@ static void test_sha1(const void *data)
 
 	l_checksum_get_digest(checksum, digest, sizeof(digest));
 
-	str = l_checksum_get_string(checksum);
-	l_info("%s", str);
-	l_free(str);
+	expected = l_util_from_hexstring(
+		"8802f1d217906250585b75187b1ebfbb5c6cbcae", &expectlen);
+	assert(expectlen == sizeof(digest));
+	assert(!memcmp(digest, expected, expectlen));
 
+	l_free(expected);
 	l_checksum_free(checksum);
 }
 
@@ -106,7 +115,8 @@ static void test_sha256(const void *data)
 {
 	struct l_checksum *checksum;
 	unsigned char digest[32];
-	char *str;
+	unsigned char *expected;
+	size_t expectlen;
 
 	checksum = l_checksum_new(L_CHECKSUM_SHA256);
 	assert(checksum);
@@ -115,10 +125,13 @@ static void test_sha256(const void *data)
 
 	l_checksum_get_digest(checksum, digest, sizeof(digest));
 
-	str = l_checksum_get_string(checksum);
-	l_info("%s", str);
-	l_free(str);
+	expected = l_util_from_hexstring(
+		"df3a0c35d5345d6d792415c1310bd458"
+		"9cdf68bac96ed599d6bb0c1545ffc86c", &expectlen);
+	assert(expectlen == sizeof(digest));
+	assert(!memcmp(digest, expected, expectlen));
 
+	l_free(expected);
 	l_checksum_free(checksum);
 }
 
@@ -126,7 +139,6 @@ static void test_reset(const void *data)
 {
 	struct l_checksum *checksum;
 	unsigned char digest[16];
-	char *str;
 
 	checksum = l_checksum_new(L_CHECKSUM_MD5);
 	assert(checksum);
@@ -136,27 +148,21 @@ static void test_reset(const void *data)
 	l_checksum_update(checksum, FIXED_STR, FIXED_LEN);
 	l_checksum_get_digest(checksum, digest, sizeof(digest));
 
-	str = l_checksum_get_string(checksum);
-	l_info("%s", str);
-	l_free(str);
-
 	l_checksum_free(checksum);
 }
 
 static void test_updatev(const void *data)
 {
 	struct l_checksum *checksum;
-	unsigned char digest[20];
+	unsigned char digest1[20];
+	unsigned char digest2[20];
 	struct iovec iov[2];
-	char *str;
-	char *str2;
 
 	checksum = l_checksum_new(L_CHECKSUM_SHA1);
 	assert(checksum);
 
 	l_checksum_update(checksum, FIXED_STR, FIXED_LEN);
-	l_checksum_get_digest(checksum, digest, sizeof(digest));
-	str = l_checksum_get_string(checksum);
+	l_checksum_get_digest(checksum, digest1, sizeof(digest1));
 
 	iov[0].iov_base = FIXED_STR;
 	iov[0].iov_len = FIXED_LEN / 2;
@@ -165,13 +171,9 @@ static void test_updatev(const void *data)
 	iov[1].iov_len = FIXED_LEN - FIXED_LEN / 2;
 
 	l_checksum_updatev(checksum, iov, 2);
-	l_checksum_get_digest(checksum, digest, sizeof(digest));
-	str2 = l_checksum_get_string(checksum);
+	l_checksum_get_digest(checksum, digest2, sizeof(digest2));
 
-	assert(!strcmp(str, str2));
-
-	l_free(str);
-	l_free(str2);
+	assert(!memcmp(digest1, digest2, sizeof(digest1)));
 
 	l_checksum_free(checksum);
 }
