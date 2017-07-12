@@ -228,6 +228,7 @@ static void test_filter_tree(const void *test_data)
 					"", ":1.101");
 	_dbus_message_set_sender(message, DBUS_SERVICE_DBUS);
 	_dbus_filter_dispatch(message, filter);
+	_dbus_message_set_sender(message, NULL);
 	l_dbus_message_unref(message);
 
 	message = _dbus_message_new_signal(2, DBUS_PATH_DBUS,
@@ -236,12 +237,14 @@ static void test_filter_tree(const void *test_data)
 	l_dbus_message_set_arguments(message, "");
 	_dbus_message_set_sender(message, DBUS_SERVICE_DBUS);
 	_dbus_filter_dispatch(message, filter);
+	_dbus_message_set_sender(message, NULL);
 	l_dbus_message_unref(message);
 
 	message = _dbus_message_new_signal(2, DBUS_PATH_DBUS, "foo", "Bar");
 	l_dbus_message_set_arguments(message, "");
 	_dbus_message_set_sender(message, DBUS_SERVICE_DBUS);
 	_dbus_filter_dispatch(message, filter);
+	_dbus_message_set_sender(message, NULL);
 	l_dbus_message_unref(message);
 
 	message = _dbus_message_new_signal(2, "/", "foo", "Bar");
@@ -251,6 +254,7 @@ static void test_filter_tree(const void *test_data)
 
 	_dbus_message_set_sender(message, "org.bar");
 	_dbus_filter_dispatch(message, filter);
+	_dbus_message_set_sender(message, NULL);
 	l_dbus_message_unref(message);
 
 	assert(test.calls[0] == 3 && test.calls[1] == 2 &&
