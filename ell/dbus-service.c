@@ -1781,7 +1781,7 @@ static void properties_set_complete(struct l_dbus *dbus,
 		l_dbus_message_set_arguments(reply, "");
 	}
 
-	l_dbus_send(dbus, reply);
+	l_dbus_send(dbus, l_dbus_message_ref(reply));
 
 	if (!l_dbus_message_is_error(reply)) {
 		l_dbus_message_get_arguments(message, "ssv", &interface_name,
@@ -1793,6 +1793,7 @@ static void properties_set_complete(struct l_dbus *dbus,
 	}
 
 	l_dbus_message_unref(message);
+	l_dbus_message_unref(reply);
 }
 
 static struct l_dbus_message *properties_set(struct l_dbus *dbus,
