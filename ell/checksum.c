@@ -142,6 +142,8 @@ static const char *checksum_type_to_name(enum l_checksum_type type)
 		return "md5";
 	case L_CHECKSUM_SHA1:
 		return "sha1";
+	case L_CHECKSUM_SHA224:
+		return "sha224";
 	case L_CHECKSUM_SHA256:
 		return "sha256";
 	case L_CHECKSUM_SHA384:

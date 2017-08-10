@@ -380,6 +380,9 @@ static const char *lookup_checksum(enum l_checksum_type checksum)
 	case L_CHECKSUM_SHA1:
 		ret = "sha1";
 		break;
+	case L_CHECKSUM_SHA224:
+		ret = "sha224";
+		break;
 	case L_CHECKSUM_SHA256:
 		ret = "sha256";
 		break;
