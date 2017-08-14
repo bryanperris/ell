@@ -36,6 +36,7 @@
 #include "pem.h"
 #include "tls-private.h"
 #include "key.h"
+#include "asn1-private.h"
 
 void tls10_prf(const uint8_t *secret, size_t secret_len,
 		const char *label,
@@ -2309,19 +2310,6 @@ LIB_EXPORT const char *l_tls_alert_to_str(enum l_tls_alert_desc desc)
 
 /* X509 Certificates and Certificate Chains */
 
-#define ASN1_ID(class, pc, tag)	(((class) << 6) | ((pc) << 5) | (tag))
-
-#define ASN1_CLASS_UNIVERSAL	0
-
-#define ASN1_ID_SEQUENCE	ASN1_ID(ASN1_CLASS_UNIVERSAL, 1, 0x10)
-#define ASN1_ID_SET		ASN1_ID(ASN1_CLASS_UNIVERSAL, 1, 0x11)
-#define ASN1_ID_INTEGER		ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x02)
-#define ASN1_ID_BIT_STRING	ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x03)
-#define ASN1_ID_OCTET_STRING	ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x04)
-#define ASN1_ID_OID		ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x06)
-#define ASN1_ID_UTF8STRING	ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x0c)
-#define ASN1_ID_PRINTABLESTRING	ASN1_ID(ASN1_CLASS_UNIVERSAL, 0, 0x13)
-
 #define X509_CERTIFICATE_POS			0
 #define   X509_TBSCERTIFICATE_POS		  0
 #define     X509_TBSCERT_VERSION_POS		    0
@@ -2340,83 +2328,6 @@ LIB_EXPORT const char *l_tls_alert_to_str(enum l_tls_alert_desc desc)
 #define     X509_TBSCERT_EXTENSIONS_POS		    9
 #define   X509_SIGNATURE_ALGORITHM_POS		  1
 #define   X509_SIGNATURE_VALUE_POS		  2
-
-static inline int parse_asn1_definite_length(const uint8_t **buf,
-						size_t *len)
-{
-	int n;
-	size_t result = 0;
-
-	(*len)--;
-
-	if (!(**buf & 0x80))
-		return *(*buf)++;
-
-	n = *(*buf)++ & 0x7f;
-	if ((size_t) n > *len)
-		return -1;
-
-	*len -= n;
-	while (n--)
-		result = (result << 8) | *(*buf)++;
-
-	return result;
-}
-
-/* Return index'th element in a DER SEQUENCE */
-static uint8_t *der_find_elem(uint8_t *buf, size_t len_in, int index,
-			uint8_t *tag, size_t *len_out)
-{
-	int tlv_len;
-
-	while (1) {
-		if (len_in < 2)
-			return NULL;
-
-		*tag = *buf++;
-		len_in--;
-
-		tlv_len = parse_asn1_definite_length((void *) &buf, &len_in);
-		if (tlv_len < 0 || (size_t) tlv_len > len_in)
-			return NULL;
-
-		if (index-- == 0) {
-			*len_out = tlv_len;
-			return buf;
-		}
-
-		buf += tlv_len;
-		len_in -= tlv_len;
-	}
-}
-
-/* Return an element in a DER SEQUENCE structure by path */
-static inline uint8_t *der_find_elem_by_path(uint8_t *buf, size_t len_in,
-						uint8_t tag, size_t *len_out,
-						...)
-{
-	uint8_t elem_tag;
-	int pos;
-	va_list vl;
-
-	va_start(vl, len_out);
-
-	pos = va_arg(vl, int);
-
-	while (pos != -1) {
-		buf = der_find_elem(buf, len_in, pos, &elem_tag, &len_in);
-
-		pos = va_arg(vl, int);
-
-		if (!buf || elem_tag != (pos == -1 ? tag : ASN1_ID_SEQUENCE))
-			return NULL;
-	}
-
-	va_end(vl);
-
-	*len_out = len_in;
-	return buf;
-}
 
 struct tls_cert *tls_cert_load_file(const char *filename)
 {
@@ -2448,11 +2359,6 @@ bool tls_cert_find_certchain(struct tls_cert *cert,
 {
 	return true;
 }
-
-struct asn1_oid {
-	uint8_t asn1_len;
-	uint8_t asn1[10];
-};
 
 static const struct pkcs1_encryption_oid {
 	enum tls_cert_key_type key_type;
@@ -2587,8 +2493,8 @@ enum tls_cert_key_type tls_cert_get_pubkey_type(struct tls_cert *cert)
 	size_t key_type_len;
 	int i;
 
-	key_type = der_find_elem_by_path(cert->asn1, cert->size, ASN1_ID_OID,
-						&key_type_len,
+	key_type = asn1_der_find_elem_by_path(cert->asn1, cert->size,
+						ASN1_ID_OID, &key_type_len,
 						X509_CERTIFICATE_POS,
 						X509_TBSCERTIFICATE_POS,
 						X509_TBSCERT_SUBJECT_KEY_POS,
@@ -2599,10 +2505,8 @@ enum tls_cert_key_type tls_cert_get_pubkey_type(struct tls_cert *cert)
 		return TLS_CERT_KEY_UNKNOWN;
 
 	for (i = 0; i < (int) L_ARRAY_SIZE(pkcs1_encryption_oids); i++)
-		if (key_type_len == pkcs1_encryption_oids[i].oid.asn1_len &&
-				!memcmp(key_type,
-					pkcs1_encryption_oids[i].oid.asn1,
-					key_type_len))
+		if (asn1_oid_eq(&pkcs1_encryption_oids[i].oid,
+					key_type_len, key_type))
 			break;
 
 	if (i == L_ARRAY_SIZE(pkcs1_encryption_oids))
