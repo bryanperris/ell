@@ -575,7 +575,7 @@ static void test_key_crypto(const void *data)
 	int rsa = L_KEY_RSA_PKCS1_V1_5;
 
 	cert = l_pem_load_private_key(TESTDATADIR "/cert-client-key-pkcs8.pem",
-					NULL, &certlen);
+					NULL, NULL, &certlen);
 	assert(cert);
 	pubcert = l_pem_load_certificate(TESTDATADIR "/cert-client.pem",
 						&pubcertlen);
