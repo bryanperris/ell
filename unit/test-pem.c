@@ -87,6 +87,42 @@ static void test_pem(const void *data)
 	l_free(decoded);
 }
 
+static void test_encrypted_pkey(const void *data)
+{
+	const char *encrypted_pem = data;
+	const char *plaintext_pem = "unit/cert-client-key-pkcs8.pem";
+	bool encrypted;
+	size_t size1, size2;
+	uint8_t *pkey1, *pkey2;
+
+	encrypted = false;
+	assert(!l_pem_load_private_key(encrypted_pem, NULL,
+					&encrypted, &size1));
+	assert(encrypted);
+
+	encrypted = false;
+	assert(!l_pem_load_private_key(encrypted_pem, "wrong-passwd",
+					&encrypted, &size1));
+	assert(encrypted);
+
+	encrypted = false;
+	pkey1 = l_pem_load_private_key(encrypted_pem, "abc",
+					&encrypted, &size1);
+	assert(pkey1);
+	assert(encrypted);
+
+	pkey2 = l_pem_load_private_key(plaintext_pem, NULL,
+					&encrypted, &size2);
+	assert(pkey2);
+	assert(!encrypted);
+
+	assert(size1 == size2);
+	assert(!memcmp(pkey1, pkey2, size1));
+
+	l_free(pkey1);
+	l_free(pkey2);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -97,6 +133,18 @@ int main(int argc, char *argv[])
 	l_test_add("pem/empty", test_pem, &empty);
 
 	l_test_add("pem/empty label", test_pem, &empty_label);
+
+	l_test_add("pem/v1 MD5AndDES encrypted Private Key",
+			test_encrypted_pkey,
+			"unit/cert-client-key-md5-des.pem");
+	l_test_add("pem/v2 DES encrypted Private Key", test_encrypted_pkey,
+			"unit/cert-client-key-v2-des.pem");
+	l_test_add("pem/v2 DES EDE3 encrypted Private Key", test_encrypted_pkey,
+			"unit/cert-client-key-v2-des-ede3.pem");
+	l_test_add("pem/v2 AES128 encrypted Private Key", test_encrypted_pkey,
+			"unit/cert-client-key-v2-aes128.pem");
+	l_test_add("pem/v2 AES256 encrypted Private Key", test_encrypted_pkey,
+			"unit/cert-client-key-v2-aes256.pem");
 
 	return l_test_run();
 }
