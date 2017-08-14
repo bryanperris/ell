@@ -34,8 +34,8 @@ uint8_t *l_pem_load_file(const char *filename, int index,
 
 uint8_t *l_pem_load_certificate(const char *filename, size_t *len);
 
-uint8_t *l_pem_load_private_key(const char *filename,
-				const char *passphrase, size_t *len);
+uint8_t *l_pem_load_private_key(const char *filename, const char *passphrase,
+				bool *encrypted, size_t *len);
 
 #ifdef __cplusplus
 }

@@ -2223,6 +2223,7 @@ LIB_EXPORT bool l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
 
 		priv_key = l_pem_load_private_key(priv_key_path,
 							priv_key_passphrase,
+							NULL,
 							&tls->priv_key_size);
 		if (!priv_key)
 			return false;
