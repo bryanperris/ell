@@ -91,6 +91,7 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/tls-record.c \
 			ell/uuid.c \
 			ell/key.c \
+			ell/pkcs5-private.h \
 			ell/pkcs5.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
