@@ -2489,7 +2489,7 @@ void tls_cert_free_certchain(struct tls_cert *cert)
 
 enum tls_cert_key_type tls_cert_get_pubkey_type(struct tls_cert *cert)
 {
-	uint8_t *key_type;
+	const uint8_t *key_type;
 	size_t key_type_len;
 	int i;
 

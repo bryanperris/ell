@@ -63,8 +63,9 @@ static inline int asn1_parse_definite_length(const uint8_t **buf,
 }
 
 /* Return index'th element in a DER SEQUENCE */
-static inline uint8_t *asn1_der_find_elem(uint8_t *buf, size_t len_in,
-				int index, uint8_t *tag, size_t *len_out)
+static inline const uint8_t *asn1_der_find_elem(const uint8_t *buf,
+						size_t len_in, int index,
+						uint8_t *tag, size_t *len_out)
 {
 	int tlv_len;
 
@@ -90,9 +91,9 @@ static inline uint8_t *asn1_der_find_elem(uint8_t *buf, size_t len_in,
 }
 
 /* Return an element in a DER SEQUENCE structure by path */
-static inline uint8_t *asn1_der_find_elem_by_path(uint8_t *buf, size_t len_in,
-						uint8_t tag, size_t *len_out,
-						...)
+static inline const uint8_t *asn1_der_find_elem_by_path(const uint8_t *buf,
+						size_t len_in, uint8_t tag,
+						size_t *len_out, ...)
 {
 	uint8_t elem_tag;
 	int pos;
