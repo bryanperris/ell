@@ -1,4 +1,4 @@
-#!/usr/bin/sh
+#!/bin/sh
 
 echo "*** CA Certificate ***"
 openssl genrsa -out cert-ca-key.pem 2048
