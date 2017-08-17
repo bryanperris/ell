@@ -137,6 +137,9 @@ int main(int argc, char *argv[])
 	l_test_add("pem/v1 MD5AndDES encrypted Private Key",
 			test_encrypted_pkey,
 			"unit/cert-client-key-md5-des.pem");
+	l_test_add("pem/v1 SHA1AndDES encrypted Private Key",
+			test_encrypted_pkey,
+			"unit/cert-client-key-sha1-des.pem");
 	l_test_add("pem/v2 DES encrypted Private Key", test_encrypted_pkey,
 			"unit/cert-client-key-v2-des.pem");
 	l_test_add("pem/v2 DES EDE3 encrypted Private Key", test_encrypted_pkey,

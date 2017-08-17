@@ -235,6 +235,7 @@ unit_test_data_files = unit/settings.test unit/cert-ca.pem \
 			unit/cert-client-key-pkcs8.pem \
 			unit/cert-server-key-pkcs8.pem \
 			unit/cert-client-key-md5-des.pem \
+			unit/cert-client-key-sha1-des.pem \
 			unit/cert-client-key-v2-aes128.pem \
 			unit/cert-client-key-v2-aes256.pem \
 			unit/cert-client-key-v2-des-ede3.pem \
