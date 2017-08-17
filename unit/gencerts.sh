@@ -17,6 +17,12 @@ openssl pkcs8 -topk8 -nocrypt -in cert-client-key.pem -out cert-client-key-pkcs8
 openssl req -new -extensions cert_ext -config ./gencerts.cnf -subj '/O=Bar Example Organization/CN=Bar Example Organization/emailAddress=bar@mail.example' -key cert-client-key.pem -out cert-client.csr
 openssl x509 -req -extensions cert_ext -extfile ./gencerts.cnf -in cert-client.csr -CA cert-ca.pem -CAkey cert-ca-key.pem -CAcreateserial -sha256 -days 10000 -out cert-client.pem
 openssl verify -CAfile cert-ca.pem cert-client.pem
+openssl pkcs8 -in cert-client-key-pkcs8.pem -out cert-client-key-md5-des.pem -topk8 -v1 PBE-MD5-DES -passout pass:abc
+openssl pkcs8 -in cert-client-key-pkcs8.pem -out cert-client-key-sha1-des.pem -topk8 -v1 PBE-SHA1-DES -passout pass:abc
+openssl pkcs8 -in cert-client-key-pkcs8.pem -out cert-client-key-v2-des.pem -topk8 -v2 des-cbc -v2prf hmacWithSHA1 -passout pass:abc
+openssl pkcs8 -in cert-client-key-pkcs8.pem -out cert-client-key-v2-des-ede3.pem -topk8 -v2 des-ede3-cbc -v2prf hmacWithSHA224 -passout pass:abc
+openssl pkcs8 -in cert-client-key-pkcs8.pem -out cert-client-key-v2-aes128.pem -topk8 -v2 aes128 -v2prf hmacWithSHA256 -passout pass:abc
+openssl pkcs8 -in cert-client-key-pkcs8.pem -out cert-client-key-v2-aes256.pem -topk8 -v2 aes256 -v2prf hmacWithSHA512 -passout pass:abc
 
 echo -e "\n*** Intermediate Certificate ***"
 openssl genrsa -out cert-intca-key.pem
