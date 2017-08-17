@@ -254,7 +254,7 @@ static struct l_cipher *pkcs5_cipher_from_pbes2_params(
 	const uint8_t *kdf_sequence, *enc_sequence, *oid, *params,
 		*salt, *iter_count_buf, *key_len_buf, *prf_sequence;
 	size_t kdf_len, enc_len, params_len, salt_len, key_len, tmp_len;
-	unsigned int i, iter_count;
+	unsigned int i, iter_count, pos;
 	enum l_checksum_type prf_alg = L_CHECKSUM_NONE;
 	const struct pkcs5_enc_alg_oid *enc_scheme = NULL;
 	uint8_t derived_key[64];
@@ -309,11 +309,14 @@ static struct l_cipher *pkcs5_cipher_from_pbes2_params(
 	while (tmp_len--)
 		iter_count = (iter_count << 8) | *iter_count_buf++;
 
-	key_len_buf = asn1_der_find_elem(params, params_len, 2, &tag, &tmp_len);
-	if (key_len_buf) {
-		if (tag != ASN1_ID_INTEGER || tmp_len != 1)
+	pos = 2;
+	key_len_buf = asn1_der_find_elem(params, params_len, pos,
+						&tag, &tmp_len);
+	if (key_len_buf && tag == ASN1_ID_INTEGER) {
+		if (tmp_len != 1)
 			return NULL;
 
+		pos++;
 		key_len = 0;
 
 		while (tmp_len--)
@@ -321,11 +324,10 @@ static struct l_cipher *pkcs5_cipher_from_pbes2_params(
 	} else
 		key_len = 0;
 
-	prf_sequence = asn1_der_find_elem(params, params_len, 3,
+	prf_sequence = asn1_der_find_elem(params, params_len, pos,
 						&tag, &tmp_len);
-	if (prf_sequence) {
-		if (tag != ASN1_ID_SEQUENCE)
-			return NULL;
+	if (prf_sequence && tag == ASN1_ID_SEQUENCE) {
+		pos++;
 
 		oid = asn1_der_find_elem(prf_sequence, tmp_len, 0,
 						&tag, &tmp_len);
@@ -333,7 +335,7 @@ static struct l_cipher *pkcs5_cipher_from_pbes2_params(
 			return NULL;
 
 		for (i = 0; i < L_ARRAY_SIZE(pkcs5_digest_alg_oids); i++)
-			if (!asn1_oid_eq(&pkcs5_digest_alg_oids[i].oid,
+			if (asn1_oid_eq(&pkcs5_digest_alg_oids[i].oid,
 						tmp_len, oid))
 				prf_alg = pkcs5_digest_alg_oids[i].type;
 
