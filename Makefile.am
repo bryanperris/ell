@@ -130,7 +130,6 @@ unit_tests = unit/test-unit \
 			unit/test-util \
 			unit/test-uintset \
 			unit/test-base64 \
-			unit/test-pem \
 			unit/test-uuid
 
 dbus_tests = unit/test-hwdb \
@@ -144,11 +143,30 @@ dbus_tests = unit/test-hwdb \
 			unit/test-gvariant-util \
 			unit/test-gvariant-message
 
-tls_tests = unit/test-tls \
+cert_tests = unit/test-pem \
+			unit/test-tls \
 			unit/test-key
 
+cert_files = unit/cert-chain.pem \
+			unit/cert-entity-int.pem \
+			unit/cert-server.pem \
+			unit/cert-client.pem \
+			unit/cert-server-key-pkcs8.pem \
+			unit/cert-client-key-pkcs8.pem \
+			unit/cert-client-key-md5-des.pem \
+			unit/cert-client-key-sha1-des.pem \
+			unit/cert-client-key-v2-des.pem \
+			unit/cert-client-key-v2-des-ede3.pem \
+			unit/cert-client-key-v2-aes128.pem \
+			unit/cert-client-key-v2-aes256.pem
+
+cert_checks = unit/cert-intca \
+			unit/cert-entity-int \
+			unit/cert-server \
+			unit/cert-client
+
 if MAINTAINER_MODE
-noinst_PROGRAMS += $(unit_tests) $(dbus_tests) $(tls_tests)
+noinst_PROGRAMS += $(unit_tests) $(dbus_tests) $(cert_tests)
 endif
 
 unit_test_unit_LDADD = ell/libell-private.la
@@ -211,15 +229,18 @@ unit_test_util_LDADD = ell/libell-private.la
 
 unit_test_uintset_LDADD = ell/libell-private.la
 
-unit_test_pem_LDADD = ell/libell-private.la
-
 unit_test_base64_LDADD = ell/libell-private.la
 
-unit_test_tls_LDADD = ell/libell-private.la
+unit_test_pem_LDADD = ell/libell-private.la
+unit_test_pem_DEPENDENCIES = $(cert_files)
 
-unit_test_uuid_LDADD = ell/libell-private.la
+unit_test_tls_LDADD = ell/libell-private.la
+unit_test_tls_DEPENDENCIES = $(cert_files)
 
 unit_test_key_LDADD = ell/libell-private.la
+unit_test_key_DEPENDENCIES = $(cert_files)
+
+unit_test_uuid_LDADD = ell/libell-private.la
 
 if MAINTAINER_MODE
 noinst_LTLIBRARIES += unit/example-plugin.la
@@ -228,19 +249,7 @@ endif
 unit_example_plugin_la_LDFLAGS = -no-undefined -module -avoid-version \
 							-rpath /dummy
 
-unit_test_data_files = unit/settings.test unit/cert-ca.pem \
-			unit/cert-client.pem unit/cert-server.pem \
-			unit/cert-client-key.pem unit/cert-server-key.pem \
-			unit/cert-intca.pem unit/cert-entity-int.pem \
-			unit/cert-client-key-pkcs8.pem \
-			unit/cert-server-key-pkcs8.pem \
-			unit/cert-client-key-md5-des.pem \
-			unit/cert-client-key-sha1-des.pem \
-			unit/cert-client-key-v2-aes128.pem \
-			unit/cert-client-key-v2-aes256.pem \
-			unit/cert-client-key-v2-des-ede3.pem \
-			unit/cert-client-key-v2-des.pem \
-			unit/dbus.conf
+unit_test_data_files = unit/settings.test unit/dbus.conf
 
 examples = examples/dbus-service examples/https-client-test \
 		examples/https-server-test examples/dbus-client
@@ -254,7 +263,7 @@ examples_https_client_test_LDADD = ell/libell-private.la
 examples_https_server_test_LDADD = ell/libell-private.la
 examples_dbus_client_LDADD = ell/libell-private.la
 
-EXTRA_DIST = $(unit_test_data_files)
+EXTRA_DIST = $(unit_test_data_files) unit/gencerts.cnf
 
 TESTS = $(unit_tests)
 
@@ -262,13 +271,145 @@ if DBUS_TESTS
 TESTS += $(dbus_tests)
 endif
 
-if TLS_TESTS
-TESTS += $(tls_tests)
+if CERT_TESTS
+TESTS += $(cert_tests)
 endif
 
-DISTCLEANFILES = $(unit_tests) $(dbus_tests) $(tls_tests)
+DISTCLEANFILES = $(unit_tests) $(dbus_tests) $(cert_tests)
 
 MAINTAINERCLEANFILES = Makefile.in configure config.h.in aclocal.m4
+
+true_redirect_openssl = 2>&1
+false_redirect_openssl = 2>/dev/null
+
+unit/cert-ca-key.pem:
+	$(AM_V_GEN)openssl genrsa -out $@ 2048 $($(AM_V_P)_redirect_openssl)
+
+unit/cert-ca.pem: unit/cert-ca-key.pem unit/gencerts.cnf
+	$(AM_V_GEN)openssl req -x509 -new -nodes -extensions ca_ext \
+			-config $(srcdir)/unit/gencerts.cnf \
+			-subj '/O=International Union of Example Organizations/CN=Certificate issuer guy/emailAddress=ca@mail.example' \
+			-key $< -sha256 -days 10000 -out $@
+
+unit/cert-server-key.pem:
+	$(AM_V_GEN)openssl genrsa -out $@ $($(AM_V_P)_redirect_openssl)
+
+unit/cert-server-key-pkcs8.pem: unit/cert-server-key.pem
+	$(AM_V_GEN)openssl pkcs8 -topk8 -nocrypt -in $< -out $@
+
+unit/cert-server.csr: unit/cert-server-key.pem unit/gencerts.cnf
+	$(AM_V_GEN)openssl req -new -extensions cert_ext \
+			-config $(srcdir)/unit/gencerts.cnf \
+			-subj '/O=Foo Example Organization/CN=Foo Example Organization/emailAddress=foo@mail.example' \
+			-key $< -out $@
+
+unit/cert-server.pem: unit/cert-server.csr unit/cert-ca.pem unit/gencerts.cnf
+	$(AM_V_GEN)openssl x509 -req -extensions cert_ext \
+			-extfile $(srcdir)/unit/gencerts.cnf \
+			-in $< -CA $(builddir)/unit/cert-ca.pem \
+			-CAkey $(builddir)/unit/cert-ca-key.pem \
+			-CAserial $(builddir)/unit/cert-ca.srl \
+			-CAcreateserial -sha256 -days 10000 -out $@ $($(AM_V_P)_redirect_openssl)
+
+unit/cert-server: unit/cert-server.pem unit/cert-ca.pem
+	$(AM_V_GEN)openssl verify -CAfile $(builddir)/unit/cert-ca.pem $<
+
+unit/cert-client-key.pem:
+	$(AM_V_GEN)openssl genrsa -out $@ $($(AM_V_P)_redirect_openssl)
+
+unit/cert-client-key-pkcs8.pem: unit/cert-client-key.pem
+	$(AM_V_GEN)openssl pkcs8 -topk8 -nocrypt -in $< -out $@
+
+unit/cert-client-key-md5-des.pem: unit/cert-client-key-pkcs8.pem
+	$(AM_V_GEN)openssl pkcs8 -in $< -out $@ \
+			-topk8 -v1 PBE-MD5-DES -passout pass:abc
+
+unit/cert-client-key-sha1-des.pem: unit/cert-client-key-pkcs8.pem
+	$(AM_V_GEN)openssl pkcs8 -in $< -out $@ \
+			-topk8 -v1 PBE-SHA1-DES -passout pass:abc
+
+unit/cert-client-key-v2-des.pem: unit/cert-client-key-pkcs8.pem
+	$(AM_V_GEN)openssl pkcs8 -in $< -out $@ \
+			-topk8 -v2 des-cbc -v2prf hmacWithSHA1 -passout pass:abc
+
+unit/cert-client-key-v2-des-ede3.pem: unit/cert-client-key-pkcs8.pem
+	$(AM_V_GEN)openssl pkcs8 -in $< -out $@ \
+			-topk8 -v2 des-ede3-cbc -v2prf hmacWithSHA224 -passout pass:abc
+
+unit/cert-client-key-v2-aes128.pem: unit/cert-client-key-pkcs8.pem
+	$(AM_V_GEN)openssl pkcs8 -in $< -out $@ \
+			-topk8 -v2 aes128 -v2prf hmacWithSHA256 -passout pass:abc
+
+unit/cert-client-key-v2-aes256.pem: unit/cert-client-key-pkcs8.pem
+	$(AM_V_GEN)openssl pkcs8 -in $< -out $@ \
+			-topk8 -v2 aes256 -v2prf hmacWithSHA512 -passout pass:abc
+
+unit/cert-client.csr: unit/cert-client-key.pem unit/gencerts.cnf
+	$(AM_V_GEN)openssl req -new -extensions cert_ext \
+			-config $(srcdir)/unit/gencerts.cnf \
+			-subj '/O=Bar Example Organization/CN=Bar Example Organization/emailAddress=bar@mail.example' \
+			-key $< -out $@
+
+unit/cert-client.pem: unit/cert-client.csr unit/cert-ca.pem unit/gencerts.cnf
+	$(AM_V_GEN)openssl x509 -req -extensions cert_ext \
+			-extfile $(srcdir)/unit/gencerts.cnf \
+			-in $< -CA $(builddir)/unit/cert-ca.pem \
+			-CAkey $(builddir)/unit/cert-ca-key.pem \
+			-CAserial $(builddir)/unit/cert-ca.srl \
+			-CAcreateserial -sha256 -days 10000 -out $@ $($(AM_V_P)_redirect_openssl)
+
+unit/cert-client: unit/cert-client.pem unit/cert-ca.pem
+	$(AM_V_GEN)openssl verify -CAfile $(builddir)/unit/cert-ca.pem $<
+
+unit/cert-intca-key.pem:
+	$(AM_V_GEN)openssl genrsa -out $@ $($(AM_V_P)_redirect_openssl)
+
+unit/cert-intca.csr: unit/cert-intca-key.pem unit/gencerts.cnf
+	$(AM_V_GEN)openssl req -new -extensions int_ext \
+			-config $(srcdir)/unit/gencerts.cnf \
+			-subj '/O=International Union of Example Organizations/CN=Certificate issuer guy/emailAddress=ca@mail.example' \
+			-key $< -out $@
+
+unit/cert-intca.pem: unit/cert-intca.csr unit/cert-ca.pem unit/gencerts.cnf
+	$(AM_V_GEN)openssl x509 -req -extensions int_ext \
+			-extfile $(srcdir)/unit/gencerts.cnf \
+			-in $< -CA $(builddir)/unit/cert-ca.pem \
+			-CAkey $(builddir)/unit/cert-ca-key.pem \
+			-CAserial $(builddir)/unit/cert-ca.srl \
+			-CAcreateserial -sha256 -days 10000 -out $@ $($(AM_V_P)_redirect_openssl)
+
+unit/cert-intca: unit/cert-intca.pem unit/cert-ca.pem
+	$(AM_V_GEN)openssl verify -CAfile $(builddir)/unit/cert-ca.pem $<
+
+unit/cert-chain.pem: unit/cert-intca.pem unit/cert-ca.pem
+	$(AM_V_GEN)cat $^ > $@
+
+unit/cert-entity-int-key.pem:
+	$(AM_V_GEN)openssl genrsa -out $@ $($(AM_V_P)_redirect_openssl)
+
+unit/cert-entity-int.csr: unit/cert-entity-int-key.pem unit/gencerts.cnf
+	$(AM_V_GEN)openssl req -new -extensions cert_ext \
+			-config $(srcdir)/unit/gencerts.cnf \
+			-subj '/O=Baz Example Organization/CN=Baz Example Organization/emailAddress=baz@mail.example' \
+			-key $< -out $@
+
+unit/cert-entity-int.pem: unit/cert-entity-int.csr unit/cert-intca.pem unit/gencerts.cnf
+	$(AM_V_GEN)openssl x509 -req -extensions cert_ext \
+			-extfile $(srcdir)/unit/gencerts.cnf \
+			-in $< -CA $(builddir)/unit/cert-intca.pem \
+			-CAkey $(builddir)/unit/cert-intca-key.pem \
+			-CAserial $(builddir)/unit/cert-intca.srl \
+			-CAcreateserial -sha256 -days 10000 -out $@ $($(AM_V_P)_redirect_openssl)
+
+unit/cert-entity-int: unit/cert-entity-int.pem unit/cert-chain.pem
+	$(AM_V_GEN)openssl verify -CAfile $(builddir)/unit/cert-chain.pem $<
+
+if MAINTAINER_MODE
+check-local: $(cert_checks)
+endif
+
+clean-local:
+	-rm -f unit/cert-*.pem unit/cert-*.csr unit/cert-*.srl
 
 maintainer-clean-local:
 	-rm -rf build-aux

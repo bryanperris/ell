@@ -53,6 +53,9 @@ unit/test-tls
 unit/test-pem
 unit/test-uuid
 unit/test-key
+unit/cert-*.pem
+unit/cert-*.csr
+unit/cert-*.srl
 unit/*.log
 unit/*.trs
 examples/dbus-service

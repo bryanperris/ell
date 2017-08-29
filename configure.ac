@@ -28,9 +28,6 @@ AC_PROG_INSTALL
 AC_C_CHAR_UNSIGNED
 AC_C_BIGENDIAN(little_endian=no, little_endian=yes, little_endian=no)
 
-AM_CONDITIONAL(DBUS_TESTS, test "${little_endian}" = "yes")
-AM_CONDITIONAL(TLS_TESTS, false)
-
 LT_PREREQ(2.2)
 LT_INIT([disable-static])
 
@@ -113,6 +110,13 @@ AC_CHECK_LIB(dl, dlopen, dummy=yes,
 			AC_MSG_ERROR(dynamic linking loader is required))
 
 AC_CHECK_HEADERS(linux/types.h linux/if_alg.h)
+
+if (test "$USE_MAINTAINER_MODE" = "yes"); then
+        AC_CHECK_PROG(have_openssl, [openssl], [yes], [no])
+fi
+
+AM_CONDITIONAL(DBUS_TESTS, test "${little_endian}" = "yes")
+AM_CONDITIONAL(CERT_TESTS, test "${have_openssl}" = "yes")
 
 AC_CONFIG_FILES(Makefile ell/ell.pc)
 
