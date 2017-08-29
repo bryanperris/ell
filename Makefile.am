@@ -408,9 +408,9 @@ unit/cert-entity-int: unit/cert-entity-int.pem unit/cert-chain.pem
 unit/key-plaintext.h: unit/plaintext.txt
 	$(AM_V_GEN)xxd -i < $< > $@
 
-unit/key-ciphertext.dat: unit/plaintext.txt unit/cert-client-key.pem
-	$(AM_V_GEN)openssl rsautl -encrypt -pkcs -in $< \
-			-inkey $(builddir)/unit/cert-client-key.pem -out $@
+unit/key-ciphertext.dat: unit/plaintext.txt unit/cert-client.pem
+	$(AM_V_GEN)openssl rsautl -encrypt -pkcs -in $< -certin \
+			-inkey $(builddir)/unit/cert-client.pem -out $@
 
 unit/key-ciphertext.h: unit/key-ciphertext.dat
 	$(AM_V_GEN)xxd -i < $< > $@
