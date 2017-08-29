@@ -112,7 +112,8 @@ AC_CHECK_LIB(dl, dlopen, dummy=yes,
 AC_CHECK_HEADERS(linux/types.h linux/if_alg.h)
 
 if (test "$USE_MAINTAINER_MODE" = "yes"); then
-        AC_CHECK_PROG(have_openssl, [openssl], [yes], [no])
+	AC_CHECK_PROG(have_openssl, [openssl], [yes], [no])
+	AC_CHECK_PROG(have_xxd, [xxd], [yes], [no])
 fi
 
 AM_CONDITIONAL(DBUS_TESTS, test "${little_endian}" = "yes")
