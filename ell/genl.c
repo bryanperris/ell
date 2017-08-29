@@ -460,6 +460,7 @@ static bool received_data(struct l_io *io, void *user_data)
 	unsigned char control[32];
 	ssize_t bytes_read;
 	struct nlmsghdr *nlmsg;
+	size_t nlmsg_len;
 	uint32_t group = 0;
 
 	memset(&iov, 0, sizeof(iov));
@@ -480,7 +481,9 @@ static bool received_data(struct l_io *io, void *user_data)
 		return true;
 	}
 
-	l_util_hexdump(true, buf, bytes_read,
+	nlmsg_len = bytes_read;
+
+	l_util_hexdump(true, buf, nlmsg_len,
 				genl->debug_callback, genl->debug_data);
 
 	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL;
@@ -498,8 +501,8 @@ static bool received_data(struct l_io *io, void *user_data)
 		group = pktinfo.group;
 	}
 
-	for (nlmsg = iov.iov_base; NLMSG_OK(nlmsg, bytes_read);
-				nlmsg = NLMSG_NEXT(nlmsg, bytes_read)) {
+	for (nlmsg = iov.iov_base; NLMSG_OK(nlmsg, nlmsg_len);
+				nlmsg = NLMSG_NEXT(nlmsg, nlmsg_len)) {
 		if (group > 0)
 			process_multicast(genl, group, nlmsg);
 		else
