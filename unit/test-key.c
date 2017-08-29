@@ -35,6 +35,7 @@
 
 static const char plaintext[] = {
 #include "unit/key-plaintext.h"
+, 0x00	/* terminate string with nul-byte */
 };
 
 static const uint8_t reference_ciphertext[256] = {
