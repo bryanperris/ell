@@ -43,7 +43,7 @@ static void start_dbus_daemon(void)
 	prg_argv[0] = "/usr/bin/dbus-daemon";
 	prg_argv[1] = "--nopidfile";
 	prg_argv[2] = "--nofork";
-	prg_argv[3] = "--config-file=" TESTDATADIR "/dbus.conf";
+	prg_argv[3] = "--config-file=" UNITDIR "dbus.conf";
 	prg_argv[4] = NULL;
 
 	prg_envp[0] = NULL;

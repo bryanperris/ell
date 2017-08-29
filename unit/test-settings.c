@@ -168,7 +168,7 @@ static void test_load_from_file(const void *test_data)
 	settings = l_settings_new();
 
 	l_settings_set_debug(settings, settings_debug, NULL, NULL);
-	assert(l_settings_load_from_file(settings, TESTDATADIR "/settings.test"));
+	assert(l_settings_load_from_file(settings, UNITDIR "settings.test"));
 
 	test_settings(settings);
 

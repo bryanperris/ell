@@ -395,9 +395,9 @@ static void test_trusted_keyring(const void *data)
 	struct l_key *key;
 	bool success;
 
-	cacert = l_pem_load_certificate(TESTDATADIR "/cert-ca.pem", &cacertlen);
+	cacert = l_pem_load_certificate(CERTDIR "cert-ca.pem", &cacertlen);
 	assert(cacert);
-	cert = l_pem_load_certificate(TESTDATADIR "/cert-server.pem",
+	cert = l_pem_load_certificate(CERTDIR "cert-server.pem",
 					&certlen);
 	assert(cert);
 
@@ -443,12 +443,12 @@ static void test_trust_chain(const void *data)
 	struct l_key *key;
 	bool success;
 
-	cacert = l_pem_load_certificate(TESTDATADIR "/cert-ca.pem", &cacertlen);
+	cacert = l_pem_load_certificate(CERTDIR "cert-ca.pem", &cacertlen);
 	assert(cacert);
-	intcert = l_pem_load_certificate(TESTDATADIR "/cert-intca.pem",
+	intcert = l_pem_load_certificate(CERTDIR "cert-intca.pem",
 						&intcertlen);
 	assert(intcert);
-	cert = l_pem_load_certificate(TESTDATADIR "/cert-entity-int.pem",
+	cert = l_pem_load_certificate(CERTDIR "cert-entity-int.pem",
 					&certlen);
 	assert(cert);
 
@@ -574,10 +574,10 @@ static void test_key_crypto(const void *data)
 	int hash = L_CHECKSUM_NONE;
 	int rsa = L_KEY_RSA_PKCS1_V1_5;
 
-	cert = l_pem_load_private_key(TESTDATADIR "/cert-client-key-pkcs8.pem",
+	cert = l_pem_load_private_key(CERTDIR "cert-client-key-pkcs8.pem",
 					NULL, NULL, &certlen);
 	assert(cert);
-	pubcert = l_pem_load_certificate(TESTDATADIR "/cert-client.pem",
+	pubcert = l_pem_load_certificate(CERTDIR "cert-client.pem",
 						&pubcertlen);
 	assert(pubcert);
 

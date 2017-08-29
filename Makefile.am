@@ -101,7 +101,8 @@ noinst_LTLIBRARIES = ell/libell-private.la
 
 ell_libell_private_la_SOURCES = $(ell_libell_la_SOURCES)
 
-AM_CFLAGS = -fvisibility=hidden -DTESTDATADIR=\""$(top_srcdir)/unit"\"
+AM_CFLAGS = -fvisibility=hidden -DUNITDIR=\""$(top_srcdir)/unit/"\" \
+				-DCERTDIR=\""$(top_builddir)/unit/"\"
 
 pkgconfigdir = $(libdir)/pkgconfig
 
