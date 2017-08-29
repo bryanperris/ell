@@ -264,7 +264,7 @@ examples_https_client_test_LDADD = ell/libell-private.la
 examples_https_server_test_LDADD = ell/libell-private.la
 examples_dbus_client_LDADD = ell/libell-private.la
 
-EXTRA_DIST = $(unit_test_data_files) unit/gencerts.cnf
+EXTRA_DIST = $(unit_test_data_files) unit/gencerts.cnf unit/plaintext.txt
 
 TESTS = $(unit_tests)
 
@@ -405,12 +405,31 @@ unit/cert-entity-int.pem: unit/cert-entity-int.csr unit/cert-intca.pem unit/genc
 unit/cert-entity-int: unit/cert-entity-int.pem unit/cert-chain.pem
 	$(AM_V_GEN)openssl verify -CAfile $(builddir)/unit/cert-chain.pem $<
 
+unit/key-plaintext.h: unit/plaintext.txt
+	$(AM_V_GEN)xxd -i < $< > $@
+
+unit/key-ciphertext.dat: unit/plaintext.txt unit/cert-client-key.pem
+	$(AM_V_GEN)openssl rsautl -encrypt -pkcs -in $< \
+			-inkey $(builddir)/unit/cert-client-key.pem -out $@
+
+unit/key-ciphertext.h: unit/key-ciphertext.dat
+	$(AM_V_GEN)xxd -i < $< > $@
+
+unit/key-signature.dat: unit/plaintext.txt unit/cert-client-key.pem
+	$(AM_V_GEN)openssl rsautl -sign -pkcs -in $< \
+			-inkey $(builddir)/unit/cert-client-key.pem -out $@
+
+unit/key-signature.h: unit/key-signature.dat
+	$(AM_V_GEN)xxd -i < $< > $@
+
 if MAINTAINER_MODE
+BUILT_SOURCES = unit/key-plaintext.h unit/key-ciphertext.h unit/key-signature.h
+
 check-local: $(cert_checks)
 endif
 
 clean-local:
-	-rm -f unit/cert-*.pem unit/cert-*.csr unit/cert-*.srl
+	-rm -f unit/cert-*.pem unit/cert-*.csr unit/cert-*.srl unit/key-*.dat
 
 maintainer-clean-local:
 	-rm -rf build-aux
