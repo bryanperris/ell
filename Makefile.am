@@ -255,6 +255,10 @@ unit_test_data_files = unit/settings.test unit/dbus.conf
 examples = examples/dbus-service examples/https-client-test \
 		examples/https-server-test examples/dbus-client
 
+if GLIB
+examples += examples/glib-eventloop
+endif
+
 if MAINTAINER_MODE
 noinst_PROGRAMS += $(examples)
 endif
@@ -263,6 +267,9 @@ examples_dbus_service_LDADD = ell/libell-private.la
 examples_https_client_test_LDADD = ell/libell-private.la
 examples_https_server_test_LDADD = ell/libell-private.la
 examples_dbus_client_LDADD = ell/libell-private.la
+examples_glib_eventloop_CFLAGS = @GLIB_CFLAGS@
+examples_glib_eventloop_LDADD = ell/libell-private.la @GLIB_LIBS@
+
 
 EXTRA_DIST = $(unit_test_data_files) unit/gencerts.cnf unit/plaintext.txt
 
