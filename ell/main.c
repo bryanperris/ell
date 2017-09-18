@@ -332,6 +332,62 @@ LIB_EXPORT bool l_main_init(void)
 }
 
 /**
+ * l_main_prepare:
+ *
+ * Prepare the iteration of the main loop
+ *
+ * Returns: The timeout to use.  This will be 0 if idle-event processing is
+ * currently pending, or -1 otherwise.  This value can be used to pass to
+ * l_main_iterate.
+ */
+LIB_EXPORT int l_main_prepare(void)
+{
+	return l_queue_isempty(idle_list) ? -1 : 0;
+}
+
+/**
+ * l_main_iterate:
+ *
+ * Run one iteration of the main event loop
+ */
+LIB_EXPORT void l_main_iterate(int timeout)
+{
+	struct epoll_event events[MAX_EPOLL_EVENTS];
+	struct watch_data *data;
+	int n, nfds;
+
+	nfds = epoll_wait(epoll_fd, events, MAX_EPOLL_EVENTS, timeout);
+
+	for (n = 0; n < nfds; n++) {
+		data = events[n].data.ptr;
+
+		data->flags |= WATCH_FLAG_DISPATCHING;
+	}
+
+	for (n = 0; n < nfds; n++) {
+		data = events[n].data.ptr;
+
+		if (data->flags & WATCH_FLAG_DESTROYED)
+			continue;
+
+		data->callback(data->fd, events[n].events,
+							data->user_data);
+	}
+
+	for (n = 0; n < nfds; n++) {
+		data = events[n].data.ptr;
+
+		if (data->flags & WATCH_FLAG_DESTROYED)
+			l_free(data);
+		else
+			data->flags = 0;
+	}
+
+	l_queue_foreach(idle_list, idle_dispatch, NULL);
+	l_queue_foreach_remove(idle_list, idle_prune, NULL);
+}
+
+/**
  * l_main_run:
  *
  * Run the main loop
@@ -345,6 +401,8 @@ LIB_EXPORT bool l_main_init(void)
  **/
 LIB_EXPORT int l_main_run(void)
 {
+	int timeout;
+
 	/* Has l_main_init() been called? */
 	if (unlikely(!epoll_fd))
 		return EXIT_FAILURE;
@@ -355,44 +413,11 @@ LIB_EXPORT int l_main_run(void)
 	epoll_running = true;
 
 	for (;;) {
-		struct epoll_event events[MAX_EPOLL_EVENTS];
-		struct watch_data *data;
-		int n, nfds;
-		int timeout;
-
 		if (epoll_terminate)
 			break;
 
-		timeout = l_queue_isempty(idle_list) ? -1 : 0;
-		nfds = epoll_wait(epoll_fd, events, MAX_EPOLL_EVENTS, timeout);
-
-		for (n = 0; n < nfds; n++) {
-			data = events[n].data.ptr;
-
-			data->flags |= WATCH_FLAG_DISPATCHING;
-		}
-
-		for (n = 0; n < nfds; n++) {
-			data = events[n].data.ptr;
-
-			if (data->flags & WATCH_FLAG_DESTROYED)
-				continue;
-
-			data->callback(data->fd, events[n].events,
-							data->user_data);
-		}
-
-		for (n = 0; n < nfds; n++) {
-			data = events[n].data.ptr;
-
-			if (data->flags & WATCH_FLAG_DESTROYED)
-				l_free(data);
-			else
-				data->flags = 0;
-		}
-
-		l_queue_foreach(idle_list, idle_dispatch, NULL);
-		l_queue_foreach_remove(idle_list, idle_prune, NULL);
+		timeout = l_main_prepare();
+		l_main_iterate(timeout);
 	}
 
 	epoll_running = false;
@@ -508,4 +533,17 @@ int l_main_run_with_signal(l_main_signal_cb_t callback, void *user_data)
 	l_signal_remove(signal);
 
 	return result;
+}
+
+/**
+ * l_main_get_epoll_fd:
+ *
+ * Can be used to obtain the epoll file descriptor in order to integrate
+ * the ell main event loop with other event loops.
+ *
+ * Returns: epoll file descriptor
+ **/
+LIB_EXPORT int l_main_get_epoll_fd(void)
+{
+	return epoll_fd;
 }
