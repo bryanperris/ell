@@ -248,7 +248,7 @@ static bool idle_prune(void *data, void *user_data)
 	return true;
 }
 
-int idle_add(idle_event_cb_t callback, void *user_data,
+int idle_add(idle_event_cb_t callback, void *user_data, uint32_t flags,
 		idle_destroy_cb_t destroy)
 {
 	struct idle_data *data;
@@ -264,6 +264,7 @@ int idle_add(idle_event_cb_t callback, void *user_data,
 	data->callback = callback;
 	data->destroy = destroy;
 	data->user_data = user_data;
+	data->flags = flags;
 
 	if (!l_queue_push_tail(idle_list, data)) {
 		l_free(data);
@@ -288,7 +289,9 @@ static void idle_destroy(void *data)
 {
 	struct idle_data *idle = data;
 
-	l_error("Dangling idle descriptor %p, %d found", data, idle->id);
+	if (!(idle->flags & IDLE_FLAG_NO_WARN_DANGLING))
+		l_error("Dangling idle descriptor %p, %d found",
+							data, idle->id);
 
 	if (idle->destroy)
 		idle->destroy(idle->user_data);

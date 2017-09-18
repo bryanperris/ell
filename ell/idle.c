@@ -59,6 +59,8 @@ static void idle_destroy(void *user_data)
 
 	if (idle->destroy)
 		idle->destroy(idle->user_data);
+
+	l_free(idle);
 }
 
 static void idle_callback(void *user_data)
@@ -76,7 +78,7 @@ static void oneshot_callback(void *user_data)
 	if (idle->oneshot)
 		idle->oneshot(idle->user_data);
 
-	l_idle_remove(idle);
+	idle_remove(idle->id);
 }
 
 /**
@@ -105,7 +107,7 @@ LIB_EXPORT struct l_idle *l_idle_create(l_idle_notify_cb_t callback,
 	idle->destroy = destroy;
 	idle->user_data = user_data;
 
-	idle->id = idle_add(idle_callback, idle, idle_destroy);
+	idle->id = idle_add(idle_callback, idle, 0, idle_destroy);
 	if (idle->id < 0) {
 		l_free(idle);
 		return NULL;
@@ -139,7 +141,8 @@ LIB_EXPORT bool l_idle_oneshot(l_idle_oneshot_cb_t callback, void *user_data,
 	idle->destroy = destroy;
 	idle->user_data = user_data;
 
-	idle->id = idle_add(oneshot_callback, idle, idle_destroy);
+	idle->id = idle_add(oneshot_callback, idle,
+				IDLE_FLAG_NO_WARN_DANGLING, idle_destroy);
 	if (idle->id < 0) {
 		l_free(idle);
 		return false;
@@ -159,6 +162,4 @@ LIB_EXPORT void l_idle_remove(struct l_idle *idle)
 		return;
 
 	idle_remove(idle->id);
-
-	l_free(idle);
 }

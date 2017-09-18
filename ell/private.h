@@ -106,6 +106,7 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 int watch_modify(int fd, uint32_t events, bool force);
 int watch_remove(int fd);
 
-int idle_add(idle_event_cb_t callback, void *user_data,
+#define IDLE_FLAG_NO_WARN_DANGLING 0x10000000
+int idle_add(idle_event_cb_t callback, void *user_data, uint32_t flags,
 		idle_destroy_cb_t destroy);
 void idle_remove(int id);
