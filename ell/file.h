@@ -2,7 +2,7 @@
  *
  *  Embedded Linux library
  *
- *  Copyright (C) 2011-2014  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2017  Intel Corporation. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -20,34 +20,17 @@
  *
  */
 
-#include <ell/util.h>
-#include <ell/test.h>
-#include <ell/queue.h>
-#include <ell/hashmap.h>
-#include <ell/string.h>
-#include <ell/main.h>
-#include <ell/idle.h>
-#include <ell/signal.h>
-#include <ell/timeout.h>
-#include <ell/io.h>
-#include <ell/ringbuf.h>
-#include <ell/log.h>
-#include <ell/plugin.h>
-#include <ell/checksum.h>
-#include <ell/settings.h>
-#include <ell/hwdb.h>
-#include <ell/cipher.h>
-#include <ell/random.h>
-#include <ell/uintset.h>
-#include <ell/base64.h>
-#include <ell/pem.h>
-#include <ell/tls.h>
-#include <ell/uuid.h>
-#include <ell/key.h>
-#include <ell/pkcs5.h>
-#include <ell/file.h>
+#ifndef __ELL_FILE_H
+#define __ELL_FILE_H
 
-#include <ell/netlink.h>
-#include <ell/genl.h>
-#include <ell/dbus.h>
-#include <ell/dbus-service.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void *l_file_get_contents(const char *filename, size_t *out_len);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_FILE_H */
