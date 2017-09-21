@@ -866,6 +866,49 @@ static void test_utf8_strlen(const void *test_data)
 	assert(len == test->utf8_len);
 }
 
+struct utf8_from_utf16_test {
+	uint16_t utf16[64];
+	size_t utf16_size;
+	const char *utf8;
+};
+
+static struct utf8_from_utf16_test utf8_from_utf16_test1 = {
+	.utf16 = { 0x61, 0x62, 0x63, 0x00 },
+	.utf16_size = 8,
+	.utf8 = "abc",
+};
+
+static struct utf8_from_utf16_test utf8_from_utf16_test2 = {
+	.utf16 = { 0x03b1, 0x03b2, 0x03b3, 0x00 },
+	.utf16_size = 8,
+	.utf8 = "\316\261\316\262\316\263",
+};
+
+static struct utf8_from_utf16_test utf8_from_utf16_test3 = {
+	.utf16 = { 0x61, 0x62, 0xd801, 0x00 },
+	.utf16_size = 8,
+};
+
+static struct utf8_from_utf16_test utf8_from_utf16_test4 = {
+	.utf16 = { 0x61, 0x62, 0xdc01, 0x00 },
+	.utf16_size = 8,
+};
+
+static void test_utf8_from_utf16(const void *test_data)
+{
+	const struct utf8_from_utf16_test *test = test_data;
+	char *utf8;
+
+	utf8 = l_utf8_from_utf16(test->utf16, test->utf16_size);
+
+	if (test->utf8) {
+		assert(utf8);
+		assert(!strcmp(utf8, test->utf8));
+		l_free(utf8);
+	} else
+		assert(!utf8);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -1031,6 +1074,15 @@ int main(int argc, char *argv[])
 
 	l_test_add("Strlen UTF 1", test_utf8_strlen,
 					&utf8_strlen_test1);
+
+	l_test_add("utf8_from_utf16 1", test_utf8_from_utf16,
+					&utf8_from_utf16_test1);
+	l_test_add("utf8_from_utf16 2", test_utf8_from_utf16,
+					&utf8_from_utf16_test2);
+	l_test_add("utf8_from_utf16 3", test_utf8_from_utf16,
+					&utf8_from_utf16_test3);
+	l_test_add("utf8_from_utf16 4", test_utf8_from_utf16,
+					&utf8_from_utf16_test4);
 
 	return l_test_run();
 }
