@@ -26,6 +26,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <wchar.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -120,6 +121,7 @@ unsigned int l_string_length(struct l_string *string);
 bool l_utf8_validate(const char *src, size_t len, const char **end);
 int l_utf8_get_codepoint(const char *str, size_t len, wchar_t *cp);
 size_t l_utf8_strlen(const char *src);
+char *l_utf8_from_utf16(const void *utf16, ssize_t utf16_size);
 
 #ifdef __cplusplus
 }

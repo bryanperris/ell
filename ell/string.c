@@ -457,3 +457,131 @@ LIB_EXPORT size_t l_utf8_strlen(const char *str)
 
 	return i - l;
 }
+
+static inline int __attribute__ ((always_inline))
+			utf8_length(wchar_t c)
+{
+	if (c <= 0x7f)
+		return 1;
+
+	if (c <= 0x7ff)
+		return 2;
+
+	if (c <= 0xffff)
+		return 3;
+
+	return 4;
+}
+
+static inline uint16_t __attribute__ ((always_inline))
+			surrogate_value(uint16_t h, uint16_t l)
+{
+	return 0x10000 + (h - 0xd800) * 0x400 + l - 0xdc00;
+}
+
+/*
+ * Assumes c is valid unicode and out_buf contains enough space
+ * Returns: number of characters written
+ */
+static int wchar_to_utf8(wchar_t c, char *out_buf)
+{
+	int len = utf8_length(c);
+	int i;
+
+	if (len == 1) {
+		out_buf[0] = c;
+		return 1;
+	}
+
+	for (i = len - 1; i; i--) {
+		out_buf[i] = (c & 0x3f) | 0x80;
+		c >>= 6;
+	}
+
+	out_buf[0] = (0xff << (8 - len)) | c;
+	return len;
+}
+
+/**
+ * l_utf8_from_utf16:
+ * @utf16: Array of UTF16 characters
+ * @utf16_size: The size of the @utf16 array in bytes.  Must be a multiple of 2.
+ *
+ * Returns: A newly-allocated buffer containing UTF16 encoded string converted
+ * to UTF8.  The UTF8 string will always be null terminated, even if the
+ * original UTF16 string was not.
+ **/
+LIB_EXPORT char *l_utf8_from_utf16(const void *utf16, ssize_t utf16_size)
+{
+	char *utf8;
+	size_t utf8_len = 0;
+	wchar_t high_surrogate = 0;
+	ssize_t i = 0;
+	uint16_t in;
+	wchar_t c;
+
+	if (unlikely(utf16_size % 2))
+		return NULL;
+
+	while (utf16_size < 0 || i < utf16_size) {
+		in = L_GET_UNALIGNED((const uint16_t *) (utf16 + i));
+
+		if (!in)
+			break;
+
+		if (in >= 0xdc00 && in < 0xe000) {
+			if (high_surrogate)
+				c = surrogate_value(high_surrogate, in);
+			else
+				return NULL;
+
+			high_surrogate = 0;
+		} else {
+			if (high_surrogate)
+				return NULL;
+
+			if (in >= 0xd800 && in < 0xdc00) {
+				high_surrogate = in;
+				goto next;
+			}
+
+			c = in;
+		}
+
+		if (!valid_unicode(c))
+			return NULL;
+
+		utf8_len += utf8_length(c);
+next:
+		i += 2;
+	}
+
+	if (high_surrogate)
+		return NULL;
+
+	utf8 = l_malloc(utf8_len + 1);
+	utf8_len = 0;
+	i = 0;
+
+	while (utf16_size < 0 || i < utf16_size) {
+		in = L_GET_UNALIGNED((const uint16_t *) (utf16 + i));
+
+		if (!in)
+			break;
+
+		if (in >= 0xd800 && in < 0xdc00) {
+			high_surrogate = in;
+			i += 2;
+			in = L_GET_UNALIGNED((const uint16_t *) (utf16 + i));
+			c = surrogate_value(high_surrogate, in);
+		} else
+			c = in;
+
+		utf8_len += wchar_to_utf8(c, utf8 + utf8_len);
+		i += 2;
+	}
+
+	utf8[utf8_len] = '\0';
+
+	return utf8;
+}
