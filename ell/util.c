@@ -444,6 +444,38 @@ LIB_EXPORT bool l_str_has_prefix(const char *str, const char *prefix)
 }
 
 /**
+ * l_strlcpy:
+ * @dst: Destination buffer for string
+ * @src: Source buffer containing null-terminated string to copy
+ * @len: Maximum destination buffer space to use
+ *
+ * Copies a string from the @src buffer to the @dst buffer, using no
+ * more than @len bytes in @dst. @dst is guaranteed to be
+ * null-terminated. The caller can determine if the copy was truncated by
+ * checking if the return value is greater than or equal to @len.
+ *
+ * Returns: The length of the @src string, not including the null
+ * terminator.
+ */
+LIB_EXPORT size_t l_strlcpy(char* dst, const char *src, size_t len)
+{
+	size_t src_len = strlen(src);
+
+	if (len) {
+		if (src_len < len) {
+			len = src_len + 1;
+		} else {
+			len -= 1;
+			dst[len] = '\0';
+		}
+
+		memcpy(dst, src, len);
+	}
+
+	return src_len;
+}
+
+/**
  * l_str_has_suffix:
  * @str: A string to be examined
  * @suffix: Suffix string
