@@ -124,23 +124,23 @@ LIB_EXPORT struct l_hwdb *l_hwdb_new(const char *pathname)
 	if (memcmp(hdr->signature, trie_sig, sizeof(trie_sig)))
 		goto failed;
 
-	if (le64_to_cpu(hdr->file_size) != size)
+	if (L_LE64_TO_CPU(hdr->file_size) != size)
 		goto failed;
 
-	if (le64_to_cpu(hdr->header_size) != sizeof(struct trie_header))
+	if (L_LE64_TO_CPU(hdr->header_size) != sizeof(struct trie_header))
 		goto failed;
 
-	if (le64_to_cpu(hdr->node_size) != sizeof(struct trie_node))
+	if (L_LE64_TO_CPU(hdr->node_size) != sizeof(struct trie_node))
 		goto failed;
 
-	if (le64_to_cpu(hdr->child_size) != sizeof(struct trie_child))
+	if (L_LE64_TO_CPU(hdr->child_size) != sizeof(struct trie_child))
 		goto failed;
 
-	if (le64_to_cpu(hdr->entry_size) != sizeof(struct trie_entry))
+	if (L_LE64_TO_CPU(hdr->entry_size) != sizeof(struct trie_entry))
 		goto failed;
 
-	if (le64_to_cpu(hdr->header_size) + le64_to_cpu(hdr->nodes_size) +
-					le64_to_cpu(hdr->strings_size) != size)
+	if (L_LE64_TO_CPU(hdr->header_size) + L_LE64_TO_CPU(hdr->nodes_size) +
+				L_LE64_TO_CPU(hdr->strings_size) != size)
 		goto failed;
 
 	hwdb = l_new(struct l_hwdb, 1);
@@ -149,7 +149,7 @@ LIB_EXPORT struct l_hwdb *l_hwdb_new(const char *pathname)
 	hwdb->mtime = st.st_mtime;
 	hwdb->size = size;
 	hwdb->addr = addr;
-	hwdb->root = le64_to_cpu(hdr->root_offset);
+	hwdb->root = L_LE64_TO_CPU(hdr->root_offset);
 
 	return l_hwdb_ref(hwdb);
 
@@ -204,9 +204,9 @@ static void trie_fnmatch(const void *addr, uint64_t offset, const char *prefix,
 {
 	const struct trie_node *node = addr + offset;
 	const void *addr_ptr = addr + offset + sizeof(*node);
-	const char *prefix_str = addr + le64_to_cpu(node->prefix_offset);
-	uint64_t child_count = le64_to_cpu(node->child_count);
-	uint64_t entry_count = le64_to_cpu(node->entry_count);
+	const char *prefix_str = addr + L_LE64_TO_CPU(node->prefix_offset);
+	uint64_t child_count = L_LE64_TO_CPU(node->child_count);
+	uint64_t entry_count = L_LE64_TO_CPU(node->entry_count);
 	uint64_t i;
 	size_t scratch_len;
 	char *scratch_buf;
@@ -233,7 +233,7 @@ static void trie_fnmatch(const void *addr, uint64_t offset, const char *prefix,
 
 		scratch_buf[scratch_len] = child->c;
 
-		trie_fnmatch(addr, le64_to_cpu(child->child_offset),
+		trie_fnmatch(addr, L_LE64_TO_CPU(child->child_offset),
 				scratch_buf, string, entries);
 
 		addr_ptr += sizeof(*child);
@@ -249,8 +249,8 @@ static void trie_fnmatch(const void *addr, uint64_t offset, const char *prefix,
 
 	for (i = 0; i < entry_count; i++) {
 		const struct trie_entry *entry = addr_ptr;
-		const char *key_str = addr + le64_to_cpu(entry->key_offset);
-		const char *val_str = addr + le64_to_cpu(entry->value_offset);
+		const char *key_str = addr + L_LE64_TO_CPU(entry->key_offset);
+		const char *val_str = addr + L_LE64_TO_CPU(entry->value_offset);
 		struct l_hwdb_entry *result;
 
 		if (key_str[0] == ' ') {
@@ -316,9 +316,9 @@ static void foreach_node(const void *addr, uint64_t offset, const char *prefix,
 {
 	const struct trie_node *node = addr + offset;
 	const void *addr_ptr = addr + offset + sizeof(*node);
-	const char *prefix_str = addr + le64_to_cpu(node->prefix_offset);
-	uint64_t child_count = le64_to_cpu(node->child_count);
-	uint64_t entry_count = le64_to_cpu(node->entry_count);
+	const char *prefix_str = addr + L_LE64_TO_CPU(node->prefix_offset);
+	uint64_t child_count = L_LE64_TO_CPU(node->child_count);
+	uint64_t entry_count = L_LE64_TO_CPU(node->entry_count);
 	uint64_t i;
 	size_t scratch_len;
 	char *scratch_buf;
@@ -334,7 +334,7 @@ static void foreach_node(const void *addr, uint64_t offset, const char *prefix,
 
 		scratch_buf[scratch_len] = child->c;
 
-		foreach_node(addr, le64_to_cpu(child->child_offset),
+		foreach_node(addr, L_LE64_TO_CPU(child->child_offset),
 						scratch_buf, func, user_data);
 
 		addr_ptr += sizeof(*child);
@@ -347,8 +347,8 @@ static void foreach_node(const void *addr, uint64_t offset, const char *prefix,
 
 	for (i = 0; i < entry_count; i++) {
 		const struct trie_entry *entry = addr_ptr;
-		const char *key_str = addr + le64_to_cpu(entry->key_offset);
-		const char *val_str = addr + le64_to_cpu(entry->value_offset);
+		const char *key_str = addr + L_LE64_TO_CPU(entry->key_offset);
+		const char *val_str = addr + L_LE64_TO_CPU(entry->value_offset);
 		struct l_hwdb_entry *result;
 
 		if (key_str[0] == ' ') {
