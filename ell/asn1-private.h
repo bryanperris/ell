@@ -108,8 +108,10 @@ static inline const uint8_t *asn1_der_find_elem_by_path(const uint8_t *buf,
 
 		pos = va_arg(vl, int);
 
-		if (!buf || elem_tag != (pos == -1 ? tag : ASN1_ID_SEQUENCE))
+		if (!buf || elem_tag != (pos == -1 ? tag : ASN1_ID_SEQUENCE)) {
+			va_end(vl);
 			return NULL;
+		}
 	}
 
 	va_end(vl);
