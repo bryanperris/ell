@@ -74,6 +74,45 @@ static void test_has_suffix(const void *test_data)
 	assert(!l_str_has_suffix(suffix, str));
 }
 
+static void do_strlcpy(size_t dst_bytes, size_t src_bytes)
+{
+	/* A valid address is needed for the destination buffer
+	 * even if l_strlcpy is told to not copy anything there
+	 */
+	char *dst = l_malloc(dst_bytes ?: 1);
+	char *src = l_malloc(src_bytes);
+	size_t src_strlen = src_bytes - 1;
+
+	memset(dst, ' ', dst_bytes ?: 1);
+	memset(src, '@', src_strlen);
+	src[src_strlen] = '\0';
+
+	assert(l_strlcpy(dst, src, dst_bytes) == src_strlen);
+
+	if (!dst_bytes) {
+		assert(*dst == ' ');
+	} else if (src_strlen >= dst_bytes) {
+		/* Copy was truncated */
+		assert(strlen(dst) == dst_bytes - 1);
+		assert(l_str_has_prefix(src, dst));
+	} else
+		assert(!strcmp(src, dst));
+
+	l_free(dst);
+	l_free(src);
+}
+
+static void test_strlcpy(const void *test_data)
+{
+	do_strlcpy(0, 1);
+	do_strlcpy(0, 10);
+	do_strlcpy(10, 8);
+	do_strlcpy(10, 9);
+	do_strlcpy(10, 10);
+	do_strlcpy(10, 11);
+	do_strlcpy(10, 12);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -82,6 +121,8 @@ int main(int argc, char *argv[])
 	l_test_add("l_util_from_hexstring", test_from_hexstring, NULL);
 
 	l_test_add("l_util_has_suffix", test_has_suffix, NULL);
+
+	l_test_add("l_strlcpy", test_strlcpy, NULL);
 
 	return l_test_run();
 }
