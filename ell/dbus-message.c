@@ -1386,6 +1386,9 @@ LIB_EXPORT bool l_dbus_message_set_arguments(struct l_dbus_message *message,
 	if (unlikely(!message))
 		return false;
 
+	if (unlikely(message->sealed))
+		return false;
+
 	if (!signature)
 		return true;
 
