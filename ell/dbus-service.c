@@ -1233,7 +1233,7 @@ static void set_property_complete(struct l_dbus *dbus,
 		l_dbus_message_set_arguments(reply, "");
 	}
 
-	l_dbus_send(dbus, reply);
+	l_dbus_send(dbus, l_dbus_message_ref(reply));
 
 	if (!l_dbus_message_is_error(reply)) {
 		l_dbus_message_get_arguments(message, "sv", &property_name,
@@ -1246,6 +1246,7 @@ static void set_property_complete(struct l_dbus *dbus,
 	}
 
 	l_dbus_message_unref(message);
+	l_dbus_message_unref(reply);
 }
 
 static struct l_dbus_message *old_set_property(struct l_dbus *dbus,
