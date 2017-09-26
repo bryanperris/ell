@@ -258,7 +258,7 @@ static void test_iter_basic_1(const void *test_data)
 				test->signature + strlen(test->signature),
 				test->data, test->len);
 
-	_gvariant_iter_next_entry_basic(&iter, 's', &s);
+	assert(_gvariant_iter_next_entry_basic(&iter, 's', &s));
 	assert(!strcmp(s, "Hello World!"));
 }
 
