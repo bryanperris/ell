@@ -229,12 +229,15 @@ struct l_checksum *l_checksum_new_hmac(enum l_checksum_type type,
 	struct l_checksum *checksum;
 	int fd;
 	char name[sizeof(((struct sockaddr_alg *)0)->salg_name)];
+	unsigned int r;
 
 	if (!is_valid_type(type))
 		return NULL;
 
-	snprintf(name, sizeof(name) - 1,
-				"hmac(%s)", checksum_type_to_name(type));
+	r = snprintf(name, sizeof(name), "hmac(%s)",
+					checksum_type_to_name(type));
+	if (r >= sizeof(name))
+		return NULL;
 
 	fd = create_alg(name);
 	if (fd < 0)
