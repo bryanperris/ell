@@ -524,15 +524,12 @@ LIB_EXPORT bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
 
 static size_t l_aead_cipher_get_ivlen(struct l_aead_cipher *cipher)
 {
-	size_t ret;
-
 	switch (cipher->type) {
 	case L_AEAD_CIPHER_AES_CCM:
-		ret = 16;
-		break;
+		return 16;
 	}
 
-	return ret;
+	return 0;
 }
 
 LIB_EXPORT bool l_aead_cipher_encrypt(struct l_aead_cipher *cipher,
