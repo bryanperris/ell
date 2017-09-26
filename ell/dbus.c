@@ -406,7 +406,9 @@ static bool auth_write_handler(struct l_io *io, void *user_data)
 	if (!len)
 		return false;
 
-	written = send(fd, classic->auth_command, len, 0);
+	written = TEMP_FAILURE_RETRY(send(fd, classic->auth_command, len, 0));
+	if (written < 0)
+		return false;
 
 	l_util_hexdump(false, classic->auth_command, written,
 					dbus->debug_handler, dbus->debug_data);
@@ -456,11 +458,13 @@ static bool auth_read_handler(struct l_io *io, void *user_data)
 	offset = 0;
 
 	while (1) {
-		len = recv(fd, ptr + offset, sizeof(buffer) - offset,
-				MSG_DONTWAIT);
-		if (len < 1) {
-			if (len == -1 && errno == EINTR)
-				continue;
+		len = TEMP_FAILURE_RETRY(recv(fd, ptr + offset,
+						sizeof(buffer) - offset,
+						MSG_DONTWAIT));
+		if (len < 0) {
+			if (errno != EAGAIN)
+				return false;
+
 			break;
 		}
 
@@ -625,13 +629,9 @@ static bool classic_send_message(struct l_dbus *dbus,
 			memcpy(CMSG_DATA(cmsg), fds, num_fds * sizeof(int));
 		}
 
-		r = sendmsg(fd, &msg, 0);
-		if (r <= 0) {
-			if (r < 0 && errno != EINTR)
-				return false;
-
-			continue;
-		}
+		r = TEMP_FAILURE_RETRY(sendmsg(fd, &msg, 0));
+		if (r < 0)
+			return false;
 
 		while ((size_t) r >= iovpos->iov_len) {
 			r -= iovpos->iov_len;
@@ -702,13 +702,10 @@ static struct l_dbus_message *classic_recv_message(struct l_dbus *dbus)
 		msg.msg_control = &fd_buf;
 		msg.msg_controllen = sizeof(fd_buf);
 
-		r = recvmsg(fd, &msg, MSG_CMSG_CLOEXEC | MSG_WAITALL);
-		if (r < 0) {
-			if (errno != EINTR)
-				goto cmsg_fail;
-
-			continue;
-		}
+		r = TEMP_FAILURE_RETRY(recvmsg(fd, &msg,
+					MSG_CMSG_CLOEXEC | MSG_WAITALL));
+		if (r < 0)
+			goto cmsg_fail;
 
 		for (cmsg = CMSG_FIRSTHDR(&msg); cmsg;
 				cmsg = CMSG_NXTHDR(&msg, cmsg)) {
@@ -1054,7 +1051,7 @@ static struct l_dbus *setup_dbus1(int fd, const char *guid)
 		ptr += sprintf(ptr, "%02x", uid[i]);
 
 	/* Send special credentials-passing nul byte */
-	written = send(fd, &creds, 1, 0);
+	written = TEMP_FAILURE_RETRY(send(fd, &creds, 1, 0));
 	if (written < 1) {
 		close(fd);
 		return NULL;
