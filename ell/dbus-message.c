@@ -1561,20 +1561,6 @@ LIB_EXPORT char l_dbus_message_iter_get_type(struct l_dbus_message_iter *iter)
 	return iter->sig_start[iter->sig_pos];
 }
 
-LIB_EXPORT bool l_dbus_message_iter_is_valid(struct l_dbus_message_iter *iter)
-{
-	if (unlikely(!iter))
-		return false;
-
-	if (!iter->sig_start)
-		return false;
-
-	if (iter->sig_pos >= iter->sig_len)
-		return false;
-
-	return true;
-}
-
 LIB_EXPORT bool l_dbus_message_iter_next_entry(struct l_dbus_message_iter *iter,
 									...)
 {
