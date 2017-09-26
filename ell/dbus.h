@@ -165,8 +165,6 @@ bool l_dbus_message_get_error(struct l_dbus_message *message,
 bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 						const char *signature, ...);
 
-char l_dbus_message_iter_get_type(struct l_dbus_message_iter *iter);
-
 bool l_dbus_message_iter_next_entry(struct l_dbus_message_iter *iter, ...);
 bool l_dbus_message_iter_get_variant(struct l_dbus_message_iter *iter,
 						const char *signature, ...);

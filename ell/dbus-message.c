@@ -465,7 +465,10 @@ const char *_dbus_message_get_nth_string_argument(
 		if (!skip_entry(&iter))
 			return NULL;
 
-	type = l_dbus_message_iter_get_type(&iter);
+	if (!iter.sig_start)
+		return NULL;
+
+	type = iter.sig_start[iter.sig_pos];
 	if (!strchr("sog", type))
 		return NULL;
 
@@ -1548,17 +1551,6 @@ uint8_t _dbus_message_get_version(struct l_dbus_message *message)
 	struct dbus_header *header = message->header;
 
 	return header->version;
-}
-
-LIB_EXPORT char l_dbus_message_iter_get_type(struct l_dbus_message_iter *iter)
-{
-	if (unlikely(!iter))
-		return '\0';
-
-	if (!iter->sig_start)
-		return '\0';
-
-	return iter->sig_start[iter->sig_pos];
 }
 
 LIB_EXPORT bool l_dbus_message_iter_next_entry(struct l_dbus_message_iter *iter,
