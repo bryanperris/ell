@@ -128,6 +128,8 @@ int main(int argc, char *argv[])
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
 	setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &(int) { 1 },
 			sizeof(int));
+
+	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr.sin_port = htons(1234);
