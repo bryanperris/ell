@@ -106,7 +106,7 @@ static struct {
  */
 struct l_checksum {
 	int sk;
-	char alg_name[16];
+	char alg_name[sizeof(((struct sockaddr_alg *) 0)->salg_name)];
 };
 
 static int create_alg(const char *alg)
