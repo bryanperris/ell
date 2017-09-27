@@ -1529,8 +1529,6 @@ bool _dbus_object_tree_remove_interface(struct _dbus_object_tree *tree,
 	if (!instance)
 		return false;
 
-	interface_instance_free(instance);
-
 	if (!strcmp(interface, L_DBUS_INTERFACE_OBJECT_MANAGER)) {
 		manager = l_queue_remove_if(tree->object_managers,
 						match_object_manager_path,
@@ -1590,6 +1588,8 @@ bool _dbus_object_tree_remove_interface(struct _dbus_object_tree *tree,
 						instance);
 	if (property_change_rec)
 		property_change_record_free(property_change_rec);
+
+	interface_instance_free(instance);
 
 	return true;
 }
