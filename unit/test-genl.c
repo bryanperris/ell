@@ -92,12 +92,21 @@ static bool prep_family_vanished(struct l_genl *genl,
 	 * Use a bogus family name to trigger the vanished watch to
 	 * be called during the ELL event loop run.
 	 */
-	static const char BOGUS_GENL_NAME[] = "bogus_genl_family";
+	static const char BOGUS_GENL_NAME[] = "bogusgenlfamily";
 
 	data->vanished_family = l_genl_family_new(genl, BOGUS_GENL_NAME);
 	return l_genl_family_set_watches(data->vanished_family,
 						NULL, family_vanished,
 						data, NULL);
+}
+
+static bool name_too_long(struct l_genl *genl, struct test_data *data)
+{
+	static const char LONG_GENL_NAME[] = "long_genl_family_name";
+
+	assert(!l_genl_family_new(genl, LONG_GENL_NAME));
+
+	return true;
 }
 
 static bool check_test_data(struct test_data *data)
@@ -153,6 +162,8 @@ int main(int argc, char *argv[])
 
 	assert(prep_family_appeared(genl, &data));
 	assert(prep_family_vanished(genl, &data));
+
+	assert(name_too_long(genl, &data));
 
 	idle = l_idle_create(idle_callback, &data, NULL);
 
