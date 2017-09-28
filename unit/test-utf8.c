@@ -909,6 +909,20 @@ static void test_utf8_from_utf16(const void *test_data)
 		assert(!utf8);
 }
 
+static void test_utf8_to_utf16(const void *test_data)
+{
+	const struct utf8_from_utf16_test *test = test_data;
+	void *utf16;
+	size_t size;
+
+	utf16 = l_utf8_to_utf16(test->utf8, &size);
+	assert(utf16);
+	assert(size == test->utf16_size);
+	assert(!memcmp(utf16, test->utf16, size));
+
+	l_free(utf16);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -1083,6 +1097,11 @@ int main(int argc, char *argv[])
 					&utf8_from_utf16_test3);
 	l_test_add("utf8_from_utf16 4", test_utf8_from_utf16,
 					&utf8_from_utf16_test4);
+
+	l_test_add("utf8_to_utf16 1", test_utf8_to_utf16,
+					&utf8_from_utf16_test1);
+	l_test_add("utf8_to_utf16 2", test_utf8_to_utf16,
+					&utf8_from_utf16_test2);
 
 	return l_test_run();
 }
