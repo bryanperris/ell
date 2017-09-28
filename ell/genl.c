@@ -1079,7 +1079,8 @@ LIB_EXPORT struct l_genl_family *l_genl_family_new(struct l_genl *genl,
 	struct l_genl_family *family;
 	struct l_genl_msg *msg;
 
-	if (unlikely(!genl) || unlikely(!name))
+	if (unlikely(!genl) || unlikely(!name) ||
+			unlikely(strlen(name) >= GENL_NAMSIZ))
 		return NULL;
 
 	family = family_alloc(genl, name);
