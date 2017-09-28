@@ -152,6 +152,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(443);
 	memcpy(&addr.sin_addr, addr_list[0], sizeof(addr.sin_addr));
