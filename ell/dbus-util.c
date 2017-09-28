@@ -490,13 +490,13 @@ static const char *calc_len_next_item(const char *signature, const void *data,
 		if (pos + 5 > data_len)
 			return NULL;
 
-		pos += get_u32(data + pos) + 5;
+		pos += l_get_u32(data + pos) + 5;
 		break;
 	case 'g':
 		if (pos + 2 > data_len)
 			return NULL;
 
-		pos += get_u8(data + pos) + 2;
+		pos += l_get_u8(data + pos) + 2;
 		break;
 	case 'y':
 		pos += 1;
@@ -520,7 +520,7 @@ static const char *calc_len_next_item(const char *signature, const void *data,
 		if (pos + 4 > data_len)
 			return NULL;
 
-		len = get_u32(data + pos);
+		len = l_get_u32(data + pos);
 		pos += 4;
 
 		alignment = get_alignment(signature[1]);
@@ -611,7 +611,7 @@ bool _dbus1_iter_next_entry_basic(struct l_dbus_message_iter *iter,
 	case 's':
 		if (pos + 5 > iter->len)
 			return false;
-		uint32_val = get_u32(iter->data + pos);
+		uint32_val = l_get_u32(iter->data + pos);
 		str_val = iter->data + pos + 4;
 		*(const void **) out = str_val;
 		iter->pos = pos + uint32_val + 5;
@@ -619,7 +619,7 @@ bool _dbus1_iter_next_entry_basic(struct l_dbus_message_iter *iter,
 	case 'g':
 		if (pos + 2 > iter->len)
 			return false;
-		uint8_val = get_u8(iter->data + pos);
+		uint8_val = l_get_u8(iter->data + pos);
 		str_val = iter->data + pos + 1;
 		*(const void **) out = str_val;
 		iter->pos = pos + uint8_val + 2;
@@ -627,35 +627,35 @@ bool _dbus1_iter_next_entry_basic(struct l_dbus_message_iter *iter,
 	case 'b':
 		if (pos + 4 > iter->len)
 			return false;
-		uint32_val = get_u32(iter->data + pos);
+		uint32_val = l_get_u32(iter->data + pos);
 		*(bool *) out = !!uint32_val;
 		iter->pos = pos + 4;
 		break;
 	case 'y':
 		if (pos + 1 > iter->len)
 			return false;
-		uint8_val = get_u8(iter->data + pos);
+		uint8_val = l_get_u8(iter->data + pos);
 		*(uint8_t *) out = uint8_val;
 		iter->pos = pos + 1;
 		break;
 	case 'n':
 		if (pos + 2 > iter->len)
 			return false;
-		int16_val = get_s16(iter->data + pos);
+		int16_val = l_get_s16(iter->data + pos);
 		*(int16_t *) out = int16_val;
 		iter->pos = pos + 2;
 		break;
 	case 'q':
 		if (pos + 2 > iter->len)
 			return false;
-		uint16_val = get_u16(iter->data + pos);
+		uint16_val = l_get_u16(iter->data + pos);
 		*(uint16_t *) out = uint16_val;
 		iter->pos = pos + 2;
 		break;
 	case 'i':
 		if (pos + 4 > iter->len)
 			return false;
-		int32_val = get_s32(iter->data + pos);
+		int32_val = l_get_s32(iter->data + pos);
 		*(int32_t *) out = int32_val;
 		iter->pos = pos + 4;
 		break;
@@ -663,14 +663,14 @@ bool _dbus1_iter_next_entry_basic(struct l_dbus_message_iter *iter,
 	case 'h':
 		if (pos + 4 > iter->len)
 			return false;
-		uint32_val = get_u32(iter->data + pos);
+		uint32_val = l_get_u32(iter->data + pos);
 		*(uint32_t *) out = uint32_val;
 		iter->pos = pos + 4;
 		break;
 	case 'x':
 		if (pos + 8 > iter->len)
 			return false;
-		int64_val = get_s64(iter->data + pos);
+		int64_val = l_get_s64(iter->data + pos);
 		*(int64_t *) out= int64_val;
 		iter->pos = pos + 8;
 		break;
@@ -678,7 +678,7 @@ bool _dbus1_iter_next_entry_basic(struct l_dbus_message_iter *iter,
 	case 'd':
 		if (pos + 8 > iter->len)
 			return false;
-		uint64_val = get_u64(iter->data + pos);
+		uint64_val = l_get_u64(iter->data + pos);
 		*(uint64_t *) out = uint64_val;
 		iter->pos = pos + 8;
 		break;
@@ -744,7 +744,7 @@ bool _dbus1_iter_enter_variant(struct l_dbus_message_iter *iter,
 	if (pos + 2 > iter->len)
 		return false;
 
-	sig_len = get_u8(iter->data + pos);
+	sig_len = l_get_u8(iter->data + pos);
 	sig_start = iter->data + pos + 1;
 
 	if (!calc_len_next_item(sig_start, iter->data, pos + sig_len + 2,
@@ -782,7 +782,7 @@ bool _dbus1_iter_enter_array(struct l_dbus_message_iter *iter,
 	if (pos + 4 > iter->len)
 		return false;
 
-	len = get_u32(iter->data + pos);
+	len = l_get_u32(iter->data + pos);
 	pos += 4;
 
 	pos = align_len(pos, get_alignment(*sig_start));
@@ -955,11 +955,11 @@ bool _dbus1_builder_append_basic(struct dbus_builder *builder,
 
 	if (type == 'g') {
 		start = grow_body(builder, len + 2, 1);
-		put_u8(builder->body + start, len);
+		l_put_u8(len, builder->body + start);
 		strcpy(builder->body + start + 1, value);
 	} else {
 		start = grow_body(builder, len + 5, 4);
-		put_u32(builder->body + start, len);
+		l_put_u32(len, builder->body + start);
 		strcpy(builder->body + start + 4, value);
 	}
 
@@ -1098,7 +1098,7 @@ bool _dbus1_builder_enter_variant(struct dbus_builder *builder,
 
 	siglen = strlen(signature);
 	start = grow_body(builder, siglen + 2, 1);
-	put_u8(builder->body + start, siglen);
+	l_put_u8(siglen, builder->body + start);
 	strcpy(builder->body + start + 1, signature);
 
 	container = container_new(DBUS_CONTAINER_TYPE_VARIANT,
@@ -1210,8 +1210,8 @@ bool _dbus1_builder_leave_array(struct dbus_builder *builder)
 	alignment = get_alignment(container->signature[0]);
 	array_start = align_len(container->start + 4, alignment);
 
-	put_u32(builder->body + container->start,
-					builder->body_pos - array_start);
+	l_put_u32(builder->body_pos - array_start,
+			builder->body + container->start);
 
 	container_free(container);
 

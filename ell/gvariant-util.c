@@ -610,40 +610,40 @@ bool _gvariant_iter_next_entry_basic(struct l_dbus_message_iter *iter,
 		break;
 	}
 	case 'b':
-		uint8_val = get_u8(start);
+		uint8_val = l_get_u8(start);
 		*(bool *) out = !!uint8_val;
 		break;
 	case 'y':
-		uint8_val = get_u8(start);
+		uint8_val = l_get_u8(start);
 		*(uint8_t *) out = uint8_val;
 		break;
 	case 'n':
-		int16_val = get_s16(start);
+		int16_val = l_get_s16(start);
 		*(int16_t *) out = int16_val;
 		break;
 	case 'q':
-		uint16_val = get_u16(start);
+		uint16_val = l_get_u16(start);
 		*(uint16_t *) out = uint16_val;
 		break;
 	case 'i':
-		int32_val = get_s32(start);
+		int32_val = l_get_s32(start);
 		*(int32_t *) out = int32_val;
 		break;
 	case 'h':
 	case 'u':
-		uint32_val = get_u32(start);
+		uint32_val = l_get_u32(start);
 		*(uint32_t *) out = uint32_val;
 		break;
 	case 'x':
-		int64_val = get_s64(start);
+		int64_val = l_get_s64(start);
 		*(int64_t *) out = int64_val;
 		break;
 	case 't':
-		uint64_val = get_u64(start);
+		uint64_val = l_get_u64(start);
 		*(uint64_t *) out = uint64_val;
 		break;
 	case 'd':
-		uint64_val = get_u64(start);
+		uint64_val = l_get_u64(start);
 		*(uint64_t *) out = uint64_val;
 		break;
 	}
