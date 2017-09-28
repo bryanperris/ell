@@ -585,3 +585,65 @@ next:
 
 	return utf8;
 }
+
+/**
+ * l_utf8_to_utf16:
+ * @utf8: UTF8 formatted string
+ * @out_size: The size in bytes of the converted utf16 string
+ *
+ * Converts a UTF8 formatted string to UTF16.  It is assumed that the string
+ * is valid UTF8 and no sanity checking is performed.
+ *
+ * Returns: A newly-allocated buffer containing UTF8 encoded string converted
+ * to UTF16.  The UTF16 string will always be null terminated.
+ **/
+LIB_EXPORT void *l_utf8_to_utf16(const char *utf8, size_t *out_size)
+{
+	const char *c;
+	wchar_t wc;
+	int len;
+	uint16_t *utf16;
+	size_t n_utf16;
+
+	if (unlikely(!utf8))
+		return NULL;
+
+	c = utf8;
+	n_utf16 = 0;
+
+	while (*c) {
+		len = l_utf8_get_codepoint(c, 4, &wc);
+		if (len < 0)
+			return NULL;
+
+		if (wc < 0x10000)
+			n_utf16 += 1;
+		else
+			n_utf16 += 2;
+
+		c += len;
+	}
+
+	utf16 = l_malloc((n_utf16 + 1) * 2);
+	c = utf8;
+	n_utf16 = 0;
+
+	while (*c) {
+		len = l_utf8_get_codepoint(c, 4, &wc);
+
+		if (wc >= 0x10000) {
+			utf16[n_utf16++] = (wc - 0x1000) / 0x400 + 0xd800;
+			utf16[n_utf16++] = (wc - 0x1000) % 0x400 + 0xdc00;
+		} else
+			utf16[n_utf16++] = wc;
+
+		c += len;
+	}
+
+	utf16[n_utf16] = 0;
+
+	if (out_size)
+		*out_size = (n_utf16 + 1) * 2;
+
+	return utf16;
+}
