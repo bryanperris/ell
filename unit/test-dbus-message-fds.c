@@ -277,11 +277,12 @@ static void get_random_return_callback(struct l_dbus_message *message,
 	test_assert(fd0 != -1);
 
 	compare_files(fd0, fd1);
-	if (compare_failed)
-		return;
 
 	close(fd0);
 	close(fd1);
+
+	if (compare_failed)
+		return;
 
 	test_assert(l_idle_oneshot(get_random_idle_callback, NULL, NULL));
 }
