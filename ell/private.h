@@ -34,22 +34,6 @@
 
 #define LIB_EXPORT __attribute__ ((visibility("default")))
 
-#define get_u8(ptr)		(*(uint8_t *) (ptr))
-#define get_u16(ptr)		(*(uint16_t *) (ptr))
-#define get_u32(ptr)		(*(uint32_t *) (ptr))
-#define get_u64(ptr)		(*(uint64_t *) (ptr))
-#define get_s16(ptr)		(*(int16_t *) (ptr))
-#define get_s32(ptr)		(*(int32_t *) (ptr))
-#define get_s64(ptr)		(*(int64_t *) (ptr))
-
-#define put_u8(ptr,val)		(*((uint8_t *) (ptr)) = (val))
-#define put_u16(ptr,val)	(*((uint16_t *) (ptr)) = (val))
-#define put_u32(ptr, val)	(*((uint32_t *) (ptr)) = (val))
-#define put_u64(ptr, val)	(*((uint64_t *) (ptr)) = (val))
-#define put_s16(ptr, val)	(*((int16_t *) (ptr)) = (val))
-#define put_s32(ptr, val)	(*((int32_t *) (ptr)) = (val))
-#define put_s64(ptr, val)	(*((int64_t *) (ptr)) = (val))
-
 struct l_debug_desc;
 
 void debug_enable(struct l_debug_desc *start, struct l_debug_desc *stop);
