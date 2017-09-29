@@ -54,6 +54,8 @@
 #define DBUS_MESSAGE_FIELD_SIGNATURE	8
 #define DBUS_MESSAGE_FIELD_UNIX_FDS	9
 
+#define DBUS_MAX_NESTING	32
+
 struct l_dbus_message {
 	int refcount;
 	void *header;
@@ -486,7 +488,7 @@ static bool message_iter_next_entry_valist(struct l_dbus_message_iter *orig,
 	const char *signature = orig->sig_start + orig->sig_pos;
 	const char *end;
 	struct l_dbus_message_iter *sub_iter;
-	struct l_dbus_message_iter stack[32];
+	struct l_dbus_message_iter stack[DBUS_MAX_NESTING];
 	unsigned int indent = 0;
 	uint32_t uint32_val;
 	int fd;
@@ -540,6 +542,9 @@ static bool message_iter_next_entry_valist(struct l_dbus_message_iter *orig,
 			signature += 1;
 			indent += 1;
 
+			if (indent > DBUS_MAX_NESTING)
+				return false;
+
 			if (!enter_struct(iter, &stack[indent - 1]))
 				return false;
 
@@ -548,6 +553,13 @@ static bool message_iter_next_entry_valist(struct l_dbus_message_iter *orig,
 			break;
 		case ')':
 		case '}':
+			/*
+			 * Sanity check in case of an unmatched paren/brace
+			 * that isn't caught elsewhere.
+			 */
+			if (unlikely(indent == 0))
+				return false;
+
 			signature += 1;
 			indent -= 1;
 
@@ -1082,7 +1094,8 @@ static bool append_arguments(struct l_dbus_message *message,
 	char *generated_signature;
 	char subsig[256];
 	const char *sigend;
-	struct container stack[32];
+	/* Nesting requires an extra stack entry for the base level */
+	struct container stack[DBUS_MAX_NESTING + 1];
 	unsigned int stack_index = 0;
 
 	if (_dbus_message_is_gvariant(message))
@@ -1109,6 +1122,13 @@ static bool append_arguments(struct l_dbus_message *message,
 		if (stack[stack_index].sig_start ==
 				stack[stack_index].sig_end) {
 			bool ret;
+
+			/*
+			 * Sanity check in case of an invalid signature that
+			 * isn't caught elsewhere.
+			 */
+			if (unlikely(stack_index == 0))
+				goto error;
 
 			switch (stack[stack_index].type) {
 			case DBUS_CONTAINER_TYPE_STRUCT:
@@ -1213,6 +1233,9 @@ static bool append_arguments(struct l_dbus_message *message,
 		}
 		case '(':
 		case '{':
+			if (stack_index == DBUS_MAX_NESTING)
+				goto error;
+
 			sigend = _dbus_signature_end(s);
 			memcpy(subsig, s + 1, sigend - s - 1);
 			subsig[sigend - s - 1] = '\0';
@@ -1237,6 +1260,9 @@ static bool append_arguments(struct l_dbus_message *message,
 
 			break;
 		case 'v':
+			if (stack_index == DBUS_MAX_NESTING)
+				goto error;
+
 			str = va_arg(args, const char *);
 
 			if (!str)
@@ -1253,6 +1279,9 @@ static bool append_arguments(struct l_dbus_message *message,
 
 			break;
 		case 'a':
+			if (stack_index == DBUS_MAX_NESTING)
+				goto error;
+
 			sigend = _dbus_signature_end(s + 1) + 1;
 			memcpy(subsig, s + 1, sigend - s - 1);
 			subsig[sigend - s - 1] = '\0';
