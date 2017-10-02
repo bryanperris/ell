@@ -29,6 +29,7 @@
 #include <inttypes.h>
 #include <endian.h>
 #include <byteswap.h>
+#include <sys/uio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -279,6 +280,9 @@ void l_util_hexdump(bool in, const void *buf, size_t len,
 void l_util_hexdump_two(bool in, const void *buf1, size_t len1,
 			const void *buf2, size_t len2,
 			l_util_hexdump_func_t function, void *user_data);
+void l_util_hexdumpv(bool in, const struct iovec *iov, size_t n_iov,
+					l_util_hexdump_func_t function,
+					void *user_data);
 void l_util_debug(l_util_hexdump_func_t function, void *user_data,
 						const char *format, ...);
 

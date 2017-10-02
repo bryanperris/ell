@@ -654,6 +654,65 @@ LIB_EXPORT void l_util_hexdump_two(bool in, const void *buf1, size_t len1,
 	hexdump(' ', buf2, len2, function, user_data);
 }
 
+LIB_EXPORT void l_util_hexdumpv(bool in, const struct iovec *iov,
+					size_t n_iov,
+					l_util_hexdump_func_t function,
+					void *user_data)
+{
+	static const char hexdigits[] = "0123456789abcdef";
+	char str[68];
+	size_t i;
+	size_t len;
+	size_t c;
+	const uint8_t *buf;
+
+	if (unlikely(!iov || !n_iov))
+		return;
+
+	str[0] = in ? '<' : '>';
+
+	for (i = 0, len = 0; i < n_iov; i++)
+		len += iov[i].iov_len;
+
+	c = 0;
+	buf = iov[0].iov_base;
+
+	for (i = 0; i < len; i++, c++) {
+		if (c == iov[0].iov_len) {
+			c = 0;
+			iov += 1;
+			buf = iov[0].iov_base;
+		}
+
+		str[((i % 16) * 3) + 1] = ' ';
+		str[((i % 16) * 3) + 2] = hexdigits[buf[c] >> 4];
+		str[((i % 16) * 3) + 3] = hexdigits[buf[c] & 0xf];
+		str[(i % 16) + 51] = isprint(buf[c]) ? buf[c] : '.';
+
+		if ((i + 1) % 16 == 0) {
+			str[49] = ' ';
+			str[50] = ' ';
+			str[67] = '\0';
+			function(str, user_data);
+			str[0] = ' ';
+		}
+	}
+
+	if (i % 16 > 0) {
+		size_t j;
+		for (j = (i % 16); j < 16; j++) {
+			str[(j * 3) + 1] = ' ';
+			str[(j * 3) + 2] = ' ';
+			str[(j * 3) + 3] = ' ';
+			str[j + 51] = ' ';
+		}
+		str[49] = ' ';
+		str[50] = ' ';
+		str[67] = '\0';
+		function(str, user_data);
+	}
+}
+
 LIB_EXPORT void l_util_debug(l_util_hexdump_func_t function, void *user_data,
 						const char *format, ...)
 {
