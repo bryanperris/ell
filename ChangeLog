@@ -1,2 +1,7 @@
+ver 0.2:
+	Add support for mainloop integration functions.
+	Add support for PKCS#5 key derivation functions.
+	Add support for additional checksum and cipher types.
+
 ver 0.1:
 	Initial public release.
