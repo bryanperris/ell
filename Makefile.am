@@ -133,7 +133,8 @@ unit_tests = unit/test-unit \
 			unit/test-util \
 			unit/test-uintset \
 			unit/test-base64 \
-			unit/test-uuid
+			unit/test-uuid \
+			unit/test-pbkdf2
 
 dbus_tests = unit/test-hwdb \
 			unit/test-dbus \
@@ -233,6 +234,8 @@ unit_test_util_LDADD = ell/libell-private.la
 unit_test_uintset_LDADD = ell/libell-private.la
 
 unit_test_base64_LDADD = ell/libell-private.la
+
+unit_test_pbkdf2_LDADD = ell/libell-private.la
 
 unit_test_pem_LDADD = ell/libell-private.la
 unit_test_pem_DEPENDENCIES = $(cert_files)
