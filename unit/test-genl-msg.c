@@ -366,6 +366,50 @@ static void build_libnl_nested(const void *data)
 	l_genl_msg_unref(msg);
 }
 
+static void test_append_attrv(const void *data)
+{
+	static const int num_blocks = 3;
+	unsigned char * const payload = set_station_request;
+	const size_t total_len = L_ARRAY_SIZE(set_station_request);
+	const size_t block_len = total_len / num_blocks;
+	const struct iovec iov[] = {
+	    {
+		.iov_base = payload,
+		.iov_len  = block_len
+	    },
+	    {
+		.iov_base = payload + block_len,
+		.iov_len  = block_len
+	    },
+	    {
+		.iov_base = payload + block_len * 2,
+		.iov_len  = total_len - block_len * 2
+	    }
+	};
+
+	struct l_genl_msg *msg;
+	const uint16_t type = 2;
+	struct l_genl_attr attr;
+	uint16_t attr_type;
+	uint16_t attr_len;
+	const void *attr_payload;
+
+	assert(L_ARRAY_SIZE(iov) == num_blocks);
+
+	msg = l_genl_msg_new_sized(1, NLA_HDRLEN + NLA_ALIGN(total_len));
+	assert(msg);
+
+	assert(l_genl_msg_append_attrv(msg, type, iov, L_ARRAY_SIZE(iov)));
+	assert(l_genl_attr_init(&attr, msg));
+	assert(l_genl_attr_next(&attr, &attr_type, &attr_len, &attr_payload));
+
+	assert(type == attr_type);
+	assert(total_len == attr_len);
+	assert(memcmp(payload, attr_payload, total_len) == 0);
+
+	l_genl_msg_unref(msg);
+}
+
 int main(int argc, char *argv[])
 {
 	bool little_endian;
@@ -395,6 +439,9 @@ int main(int argc, char *argv[])
 				parse_libnl_nested, NULL);
 	l_test_add("Build libnl-generated Example with Nesting",
 				build_libnl_nested, NULL);
+
+	l_test_add("Test l_genl_msg_append_attrv",
+				test_append_attrv, NULL);
 
 done:
 	return l_test_run();
