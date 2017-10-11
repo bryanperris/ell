@@ -797,7 +797,8 @@ LIB_EXPORT bool l_genl_msg_append_attr(struct l_genl_msg *msg, uint16_t type,
 }
 
 LIB_EXPORT bool l_genl_msg_append_attrv(struct l_genl_msg *msg, uint16_t type,
-					struct iovec *iov, size_t iov_len)
+					const struct iovec *iov,
+					size_t iov_len)
 {
 	struct nlattr *nla;
 	size_t len = 0;
