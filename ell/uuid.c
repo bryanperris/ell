@@ -205,7 +205,8 @@ LIB_EXPORT enum l_uuid_version l_uuid_get_version(const uint8_t uuid[16])
 	return version;
 }
 
-bool l_uuid_to_string(const uint8_t uuid[16], char *dest, size_t dest_size)
+LIB_EXPORT bool l_uuid_to_string(const uint8_t uuid[16],
+						char *dest, size_t dest_size)
 {
 	int n;
 
