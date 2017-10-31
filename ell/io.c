@@ -71,19 +71,14 @@ static void io_cleanup(void *user_data)
 	if (io->write_destroy)
 		io->write_destroy(io->write_data);
 
+	io->write_handler = NULL;
+	io->write_data = NULL;
+
 	if (io->read_destroy)
 		io->read_destroy(io->read_data);
 
-	if (io->disconnect_handler) {
-		io->disconnect_handler(io, io->disconnect_data);
-		io->disconnect_handler = NULL;
-	}
-
-	if (io->disconnect_destroy)
-		io->disconnect_destroy(io->disconnect_data);
-
-	if (io->debug_destroy)
-		io->debug_destroy(io->debug_data);
+	io->read_handler = NULL;
+	io->read_data = NULL;
 
 	if (io->close_on_destroy)
 		close(io->fd);
@@ -96,19 +91,27 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 	struct l_io *io = user_data;
 
 	if (unlikely(events & (EPOLLERR | EPOLLHUP))) {
-		if (io->disconnect_handler) {
-			l_util_debug(io->debug_handler, io->debug_data,
-						"disconnect event <%p>", io);
-
-			io->disconnect_handler(io, io->disconnect_data);
-			io->disconnect_handler = NULL;
-		}
-
-		io->read_handler = NULL;
-		io->write_handler = NULL;
+		/*
+		 * Save off copies of disconnect_handler, disconnect_destroy
+		 * and disconnect_data in case the handler calls io_destroy
+		 */
+		l_io_disconnect_cb_t handler = io->disconnect_handler;
+		l_io_destroy_cb_t destroy = io->disconnect_destroy;
+		void *disconnect_data = io->disconnect_data;
 
 		watch_remove(io->fd);
-		io->fd = -1;
+		io->disconnect_handler = NULL;
+		io->disconnect_destroy = NULL;
+		io->disconnect_data = NULL;
+
+		l_util_debug(io->debug_handler, io->debug_data,
+						"disconnect event <%p>", io);
+
+		if (handler)
+			handler(io, disconnect_data);
+
+		if (destroy)
+			destroy(disconnect_data);
 
 		return;
 	}
@@ -195,7 +198,17 @@ LIB_EXPORT void l_io_destroy(struct l_io *io)
 	io->read_handler = NULL;
 	io->write_handler = NULL;
 
-	watch_remove(io->fd);
+	if (io->fd != -1)
+		watch_remove(io->fd);
+
+	if (io->disconnect_handler)
+		io->disconnect_handler(io, io->disconnect_data);
+
+	if (io->disconnect_destroy)
+		io->disconnect_destroy(io->disconnect_data);
+
+	if (io->debug_destroy)
+		io->debug_destroy(io->debug_data);
 
 	l_free(io);
 }
