@@ -238,13 +238,13 @@ unit_test_base64_LDADD = ell/libell-private.la
 unit_test_pbkdf2_LDADD = ell/libell-private.la
 
 unit_test_pem_LDADD = ell/libell-private.la
-unit_test_pem_DEPENDENCIES = $(cert_files)
+unit_test_pem_DEPENDENCIES = $(cert_files) ell/libell-private.la
 
 unit_test_tls_LDADD = ell/libell-private.la
-unit_test_tls_DEPENDENCIES = $(cert_files)
+unit_test_tls_DEPENDENCIES = $(cert_files) ell/libell-private.la
 
 unit_test_key_LDADD = ell/libell-private.la
-unit_test_key_DEPENDENCIES = $(cert_files)
+unit_test_key_DEPENDENCIES = $(cert_files) ell/libell-private.la
 
 unit_test_uuid_LDADD = ell/libell-private.la
 
