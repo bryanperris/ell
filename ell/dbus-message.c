@@ -1907,9 +1907,13 @@ LIB_EXPORT bool l_dbus_message_builder_append_from_iter(
 						container_type, signature))
 		return false;
 
-	while (iter.sig_pos < iter.sig_len)
-		if (!l_dbus_message_builder_append_from_iter(builder, &iter))
-			return false;
+	if (container_type == DBUS_CONTAINER_TYPE_ARRAY)
+		while(l_dbus_message_builder_append_from_iter(builder, &iter));
+	else
+		while (iter.sig_pos < iter.sig_len)
+			if (!l_dbus_message_builder_append_from_iter(builder,
+									&iter))
+				return false;
 
 	if (!l_dbus_message_builder_leave_container(builder,
 						container_type))
