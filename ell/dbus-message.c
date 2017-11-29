@@ -1372,12 +1372,11 @@ LIB_EXPORT bool l_dbus_message_is_error(struct l_dbus_message *message)
 	return hdr->message_type == DBUS_MESSAGE_TYPE_ERROR;
 }
 
-LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
-						const char *signature, ...)
+LIB_EXPORT bool l_dbus_message_get_arguments_valist(
+					struct l_dbus_message *message,
+					const char *signature, va_list args)
 {
 	struct l_dbus_message_iter iter;
-	va_list args;
-	bool result;
 
 	if (unlikely(!message))
 		return false;
@@ -1402,8 +1401,17 @@ LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
 		_dbus1_iter_init(&iter, message, message->signature, NULL,
 				message->body, message->body_size);
 
+	return message_iter_next_entry_valist(&iter, args);
+}
+
+LIB_EXPORT bool l_dbus_message_get_arguments(struct l_dbus_message *message,
+						const char *signature, ...)
+{
+	va_list args;
+	bool result;
+
 	va_start(args, signature);
-	result = message_iter_next_entry_valist(&iter, args);
+	result = l_dbus_message_get_arguments_valist(message, signature, args);
 	va_end(args);
 
 	return result;
