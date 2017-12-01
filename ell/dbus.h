@@ -214,6 +214,10 @@ bool l_dbus_message_builder_append_from_iter(
 					struct l_dbus_message_builder *builder,
 					struct l_dbus_message_iter *from);
 
+bool l_dbus_message_builder_append_from_valist(
+					struct l_dbus_message_builder *builder,
+					const char *signature, va_list args);
+
 struct l_dbus_message *l_dbus_message_builder_finalize(
 					struct l_dbus_message_builder *builder);
 

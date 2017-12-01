@@ -1930,6 +1930,228 @@ LIB_EXPORT bool l_dbus_message_builder_append_from_iter(
 	return true;
 }
 
+LIB_EXPORT bool l_dbus_message_builder_append_from_valist(
+					struct l_dbus_message_builder *builder,
+					const char *signature, va_list args)
+{
+	struct builder_driver *driver;
+	char subsig[256];
+	const char *sigend;
+	/* Nesting requires an extra stack entry for the base level */
+	struct container stack[DBUS_MAX_NESTING + 1];
+	unsigned int stack_index = 0;
+
+	if (unlikely(!builder))
+		return false;
+
+	driver = builder->driver;
+
+	stack[stack_index].type = DBUS_CONTAINER_TYPE_STRUCT;
+	stack[stack_index].sig_start = signature;
+	stack[stack_index].sig_end = signature + strlen(signature);
+	stack[stack_index].n_items = 0;
+
+	while (stack_index != 0 || stack[0].sig_start != stack[0].sig_end) {
+		const char *s;
+		const char *str;
+
+		if (stack[stack_index].type == DBUS_CONTAINER_TYPE_ARRAY &&
+				stack[stack_index].n_items == 0)
+			stack[stack_index].sig_start =
+				stack[stack_index].sig_end;
+
+		if (stack[stack_index].sig_start ==
+				stack[stack_index].sig_end) {
+			bool ret;
+
+			/*
+			 * Sanity check in case of an invalid signature that
+			 * isn't caught elsewhere.
+			 */
+			if (unlikely(stack_index == 0))
+				return false;
+
+			switch (stack[stack_index].type) {
+			case DBUS_CONTAINER_TYPE_STRUCT:
+				ret = driver->leave_struct(builder->builder);
+				break;
+			case DBUS_CONTAINER_TYPE_DICT_ENTRY:
+				ret = driver->leave_dict(builder->builder);
+				break;
+			case DBUS_CONTAINER_TYPE_VARIANT:
+				ret = driver->leave_variant(builder->builder);
+				break;
+			case DBUS_CONTAINER_TYPE_ARRAY:
+				ret = driver->leave_array(builder->builder);
+				break;
+			default:
+				ret = false;
+			}
+
+			if (!ret)
+				return false;
+
+			stack_index -= 1;
+			continue;
+		}
+
+		s = stack[stack_index].sig_start;
+
+		if (stack[stack_index].type != DBUS_CONTAINER_TYPE_ARRAY)
+			stack[stack_index].sig_start += 1;
+		else
+			stack[stack_index].n_items -= 1;
+
+		switch (*s) {
+		case 'o':
+		case 's':
+		case 'g':
+			str = va_arg(args, const char *);
+
+			if (!driver->append_basic(builder->builder, *s, str))
+				return false;
+			break;
+		case 'b':
+		case 'y':
+		{
+			uint8_t y = (uint8_t) va_arg(args, int);
+
+			if (!driver->append_basic(builder->builder, *s, &y))
+				return false;
+
+			break;
+		}
+		case 'n':
+		case 'q':
+		{
+			uint16_t n = (uint16_t) va_arg(args, int);
+
+			if (!driver->append_basic(builder->builder, *s, &n))
+				return false;
+
+			break;
+		}
+		case 'i':
+		case 'u':
+		{
+			uint32_t u = va_arg(args, uint32_t);
+
+			if (!driver->append_basic(builder->builder, *s, &u))
+				return false;
+
+			break;
+		}
+		case 'h':
+		{
+			int fd = va_arg(args, int);
+			struct l_dbus_message *message = builder->message;
+
+			if (!driver->append_basic(builder->builder, *s,
+							&message->num_fds))
+				return false;
+
+			if (message->num_fds < L_ARRAY_SIZE(message->fds))
+				message->fds[message->num_fds++] =
+					fcntl(fd, F_DUPFD_CLOEXEC, 3);
+
+			break;
+		}
+		case 'x':
+		case 't':
+		{
+			uint64_t x = va_arg(args, uint64_t);
+
+			if (!driver->append_basic(builder->builder, *s, &x))
+				return false;
+			break;
+		}
+		case 'd':
+		{
+			double d = va_arg(args, double);
+
+			if (!driver->append_basic(builder->builder, *s, &d))
+				return false;
+			break;
+		}
+		case '(':
+		case '{':
+			if (stack_index == DBUS_MAX_NESTING)
+				return false;
+
+			sigend = _dbus_signature_end(s);
+			memcpy(subsig, s + 1, sigend - s - 1);
+			subsig[sigend - s - 1] = '\0';
+
+			if (*s == '(' && !driver->enter_struct(builder->builder,
+									subsig))
+				return false;
+
+			if (*s == '{' && !driver->enter_dict(builder->builder,
+									subsig))
+				return false;
+
+			if (stack[stack_index].type !=
+					DBUS_CONTAINER_TYPE_ARRAY)
+				stack[stack_index].sig_start = sigend + 1;
+
+			stack_index += 1;
+			stack[stack_index].sig_start = s + 1;
+			stack[stack_index].sig_end = sigend;
+			stack[stack_index].n_items = 0;
+			stack[stack_index].type = *s == '(' ?
+						DBUS_CONTAINER_TYPE_STRUCT :
+						DBUS_CONTAINER_TYPE_DICT_ENTRY;
+
+			break;
+		case 'v':
+			if (stack_index == DBUS_MAX_NESTING)
+				return false;
+
+			str = va_arg(args, const char *);
+
+			if (!str)
+				return false;
+
+			if (!driver->enter_variant(builder->builder, str))
+				return false;
+
+			stack_index += 1;
+			stack[stack_index].type = DBUS_CONTAINER_TYPE_VARIANT;
+			stack[stack_index].sig_start = str;
+			stack[stack_index].sig_end = str + strlen(str);
+			stack[stack_index].n_items = 0;
+
+			break;
+		case 'a':
+			if (stack_index == DBUS_MAX_NESTING)
+				return false;
+
+			sigend = _dbus_signature_end(s + 1) + 1;
+			memcpy(subsig, s + 1, sigend - s - 1);
+			subsig[sigend - s - 1] = '\0';
+
+			if (!driver->enter_array(builder->builder, subsig))
+				return false;
+
+			if (stack[stack_index].type !=
+					DBUS_CONTAINER_TYPE_ARRAY)
+				stack[stack_index].sig_start = sigend;
+
+			stack_index += 1;
+			stack[stack_index].sig_start = s + 1;
+			stack[stack_index].sig_end = sigend;
+			stack[stack_index].n_items = va_arg(args, unsigned int);
+			stack[stack_index].type = DBUS_CONTAINER_TYPE_ARRAY;
+
+			break;
+		default:
+			return false;
+		}
+	}
+
+	return true;
+}
+
 LIB_EXPORT struct l_dbus_message *l_dbus_message_builder_finalize(
 					struct l_dbus_message_builder *builder)
 {
