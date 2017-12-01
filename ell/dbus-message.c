@@ -1089,239 +1089,26 @@ struct container {
 static bool append_arguments(struct l_dbus_message *message,
 					const char *signature, va_list args)
 {
-	struct dbus_builder *builder;
-	struct builder_driver *driver;
-	char *generated_signature;
-	char subsig[256];
-	const char *sigend;
-	/* Nesting requires an extra stack entry for the base level */
-	struct container stack[DBUS_MAX_NESTING + 1];
-	unsigned int stack_index = 0;
+	struct l_dbus_message_builder *builder;
+	bool ret;
 
-	if (_dbus_message_is_gvariant(message))
-		driver = &gvariant_driver;
-	else
-		driver = &dbus1_driver;
-
-	builder = driver->new(NULL, 0);
-
-	stack[stack_index].type = DBUS_CONTAINER_TYPE_STRUCT;
-	stack[stack_index].sig_start = signature;
-	stack[stack_index].sig_end = signature + strlen(signature);
-	stack[stack_index].n_items = 0;
-
-	while (stack_index != 0 || stack[0].sig_start != stack[0].sig_end) {
-		const char *s;
-		const char *str;
-
-		if (stack[stack_index].type == DBUS_CONTAINER_TYPE_ARRAY &&
-				stack[stack_index].n_items == 0)
-			stack[stack_index].sig_start =
-				stack[stack_index].sig_end;
-
-		if (stack[stack_index].sig_start ==
-				stack[stack_index].sig_end) {
-			bool ret;
-
-			/*
-			 * Sanity check in case of an invalid signature that
-			 * isn't caught elsewhere.
-			 */
-			if (unlikely(stack_index == 0))
-				goto error;
-
-			switch (stack[stack_index].type) {
-			case DBUS_CONTAINER_TYPE_STRUCT:
-				ret = driver->leave_struct(builder);
-				break;
-			case DBUS_CONTAINER_TYPE_DICT_ENTRY:
-				ret = driver->leave_dict(builder);
-				break;
-			case DBUS_CONTAINER_TYPE_VARIANT:
-				ret = driver->leave_variant(builder);
-				break;
-			case DBUS_CONTAINER_TYPE_ARRAY:
-				ret = driver->leave_array(builder);
-				break;
-			default:
-				ret = false;
-			}
-
-			if (!ret)
-				goto error;
-
-			stack_index -= 1;
-			continue;
-		}
-
-		s = stack[stack_index].sig_start;
-
-		if (stack[stack_index].type != DBUS_CONTAINER_TYPE_ARRAY)
-			stack[stack_index].sig_start += 1;
-		else
-			stack[stack_index].n_items -= 1;
-
-		switch (*s) {
-		case 'o':
-		case 's':
-		case 'g':
-			str = va_arg(args, const char *);
-
-			if (!driver->append_basic(builder, *s, str))
-				goto error;
-			break;
-		case 'b':
-		case 'y':
-		{
-			uint8_t y = (uint8_t) va_arg(args, int);
-
-			if (!driver->append_basic(builder, *s, &y))
-				goto error;
-
-			break;
-		}
-		case 'n':
-		case 'q':
-		{
-			uint16_t n = (uint16_t) va_arg(args, int);
-
-			if (!driver->append_basic(builder, *s, &n))
-				goto error;
-
-			break;
-		}
-		case 'i':
-		case 'u':
-		{
-			uint32_t u = va_arg(args, uint32_t);
-
-			if (!driver->append_basic(builder, *s, &u))
-				goto error;
-
-			break;
-		}
-		case 'h':
-		{
-			int fd = va_arg(args, int);
-
-			if (!driver->append_basic(builder, *s,
-							&message->num_fds))
-				goto error;
-
-			if (message->num_fds < L_ARRAY_SIZE(message->fds))
-				message->fds[message->num_fds++] =
-					fcntl(fd, F_DUPFD_CLOEXEC, 3);
-
-			break;
-		}
-		case 'x':
-		case 't':
-		{
-			uint64_t x = va_arg(args, uint64_t);
-
-			if (!driver->append_basic(builder, *s, &x))
-				goto error;
-			break;
-		}
-		case 'd':
-		{
-			double d = va_arg(args, double);
-
-			if (!driver->append_basic(builder, *s, &d))
-				goto error;
-			break;
-		}
-		case '(':
-		case '{':
-			if (stack_index == DBUS_MAX_NESTING)
-				goto error;
-
-			sigend = _dbus_signature_end(s);
-			memcpy(subsig, s + 1, sigend - s - 1);
-			subsig[sigend - s - 1] = '\0';
-
-			if (*s == '(' && !driver->enter_struct(builder, subsig))
-				goto error;
-
-			if (*s == '{' && !driver->enter_dict(builder, subsig))
-				goto error;
-
-			if (stack[stack_index].type !=
-					DBUS_CONTAINER_TYPE_ARRAY)
-				stack[stack_index].sig_start = sigend + 1;
-
-			stack_index += 1;
-			stack[stack_index].sig_start = s + 1;
-			stack[stack_index].sig_end = sigend;
-			stack[stack_index].n_items = 0;
-			stack[stack_index].type = *s == '(' ?
-						DBUS_CONTAINER_TYPE_STRUCT :
-						DBUS_CONTAINER_TYPE_DICT_ENTRY;
-
-			break;
-		case 'v':
-			if (stack_index == DBUS_MAX_NESTING)
-				goto error;
-
-			str = va_arg(args, const char *);
-
-			if (!str)
-				goto error;
-
-			if (!driver->enter_variant(builder, str))
-				goto error;
-
-			stack_index += 1;
-			stack[stack_index].type = DBUS_CONTAINER_TYPE_VARIANT;
-			stack[stack_index].sig_start = str;
-			stack[stack_index].sig_end = str + strlen(str);
-			stack[stack_index].n_items = 0;
-
-			break;
-		case 'a':
-			if (stack_index == DBUS_MAX_NESTING)
-				goto error;
-
-			sigend = _dbus_signature_end(s + 1) + 1;
-			memcpy(subsig, s + 1, sigend - s - 1);
-			subsig[sigend - s - 1] = '\0';
-
-			if (!driver->enter_array(builder, subsig))
-				goto error;
-
-			if (stack[stack_index].type !=
-					DBUS_CONTAINER_TYPE_ARRAY)
-				stack[stack_index].sig_start = sigend;
-
-			stack_index += 1;
-			stack[stack_index].sig_start = s + 1;
-			stack[stack_index].sig_end = sigend;
-			stack[stack_index].n_items = va_arg(args, unsigned int);
-			stack[stack_index].type = DBUS_CONTAINER_TYPE_ARRAY;
-
-			break;
-		default:
-			goto error;
-		}
-	}
-
-	generated_signature = driver->finish(builder, &message->body,
-						&message->body_size);
-	driver->free(builder);
-
-	if (strcmp(signature, generated_signature))
+	builder = l_dbus_message_builder_new(message);
+	if (!builder)
 		return false;
 
-	build_header(message, signature);
-	message->sealed = true;
-	message->signature = generated_signature;
-	message->signature_free = true;
+	if (!l_dbus_message_builder_append_from_valist(builder, signature,
+									args)) {
+		l_dbus_message_builder_destroy(builder);
+		return false;
+	}
 
-	return true;
+	l_dbus_message_builder_finalize(builder);
 
-error:
-	driver->free(builder);
-	return false;
+	ret = strcmp(signature, builder->message->signature) == 0;
+
+	l_dbus_message_builder_destroy(builder);
+
+	return ret;
 }
 
 LIB_EXPORT bool l_dbus_message_get_error(struct l_dbus_message *message,
