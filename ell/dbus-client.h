@@ -39,6 +39,9 @@ typedef void (*l_dbus_client_ready_func_t)(struct l_dbus_client *client,
 							void *user_data);
 typedef void (*l_dbus_client_proxy_func_t) (struct l_dbus_proxy *proxy,
 							void *user_data);
+typedef void (*l_dbus_client_proxy_result_func_t) (struct l_dbus_proxy *proxy,
+						struct l_dbus_message *result,
+						void *user_data);
 typedef void (*l_dbus_client_property_function_t) (struct l_dbus_proxy *proxy,
 						const char *name,
 						struct l_dbus_message *msg,
@@ -75,6 +78,11 @@ const char *l_dbus_proxy_get_interface(struct l_dbus_proxy *proxy);
 
 bool l_dbus_proxy_get_property(struct l_dbus_proxy *proxy, const char *name,
 						const char *signature, ...);
+
+bool l_dbus_proxy_set_property(struct l_dbus_proxy *proxy,
+				l_dbus_client_proxy_result_func_t result,
+				void *user_data, l_dbus_destroy_func_t destroy,
+				const char *name, const char *signature, ...);
 #ifdef __cplusplus
 }
 #endif
