@@ -51,3 +51,4 @@
 #include <ell/genl.h>
 #include <ell/dbus.h>
 #include <ell/dbus-service.h>
+#include <ell/dbus-client.h>

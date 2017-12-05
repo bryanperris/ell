@@ -32,6 +32,7 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/genl.h \
 			ell/dbus.h \
 			ell/dbus-service.h \
+			ell/dbus-client.h \
 			ell/hwdb.h \
 			ell/cipher.h \
 			ell/random.h \
@@ -74,6 +75,7 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/dbus-message.c \
 			ell/dbus-util.c \
 			ell/dbus-service.c \
+			ell/dbus-client.c \
 			ell/dbus-name-cache.c \
 			ell/dbus-filter.c \
 			ell/gvariant-private.h \
