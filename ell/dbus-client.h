@@ -83,6 +83,14 @@ bool l_dbus_proxy_set_property(struct l_dbus_proxy *proxy,
 				l_dbus_client_proxy_result_func_t result,
 				void *user_data, l_dbus_destroy_func_t destroy,
 				const char *name, const char *signature, ...);
+
+uint32_t l_dbus_proxy_method_call(struct l_dbus_proxy *proxy,
+					const char *method,
+					l_dbus_message_func_t setup,
+					l_dbus_client_proxy_result_func_t reply,
+					void *user_data,
+					l_dbus_destroy_func_t destroy);
+
 #ifdef __cplusplus
 }
 #endif

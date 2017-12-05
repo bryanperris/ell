@@ -279,6 +279,37 @@ LIB_EXPORT bool l_dbus_proxy_set_property(struct l_dbus_proxy *proxy,
 	return true;
 }
 
+LIB_EXPORT uint32_t l_dbus_proxy_method_call(struct l_dbus_proxy *proxy,
+					const char *method,
+					l_dbus_message_func_t setup,
+					l_dbus_client_proxy_result_func_t reply,
+					void *user_data,
+					l_dbus_destroy_func_t destroy)
+{
+	struct method_call_request *req;
+
+	req = l_new(struct method_call_request, 1);
+	req->proxy = proxy;
+	req->result = reply;
+	req->user_data = user_data;
+	req->destroy = destroy;
+
+	req->call_id = l_dbus_method_call(proxy->client->dbus,
+						proxy->client->service,
+						proxy->path, proxy->interface,
+						method, setup,
+						method_call_reply, req,
+						method_call_request_free);
+	if (!req->call_id) {
+		l_free(req);
+		return 0;
+	}
+
+	l_queue_push_tail(proxy->pending_calls, L_UINT_TO_PTR(req->call_id));
+
+	return req->call_id;
+}
+
 static void proxy_update_property(struct l_dbus_proxy *proxy,
 					const char *name,
 					struct l_dbus_message_iter *property)
