@@ -499,7 +499,8 @@ LIB_EXPORT unsigned int l_queue_foreach_remove(struct l_queue *queue,
  *
  * Remove the first entry in the @queue where the function returns #true.
  *
- * Returns: Whether an entry was removed or not.
+ * Returns: NULL if no entry was found, or the entry data if removal was
+ * successful.
  **/
 LIB_EXPORT void *l_queue_remove_if(struct l_queue *queue,
 				l_queue_match_func_t function,
