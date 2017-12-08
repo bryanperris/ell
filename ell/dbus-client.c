@@ -186,6 +186,7 @@ struct method_call_request
 {
 	struct l_dbus_proxy *proxy;
 	uint32_t call_id;
+	l_dbus_message_func_t setup;
 	l_dbus_client_proxy_result_func_t result;
 	void *user_data;
 	l_dbus_destroy_func_t destroy;
@@ -201,6 +202,16 @@ static void method_call_request_free(void *user_data)
 		req->destroy(req->user_data);
 
 	l_free(req);
+}
+
+static void method_call_setup(struct l_dbus_message *message, void *user_data)
+{
+	struct method_call_request *req = user_data;
+
+	if (req->setup)
+		req->setup(message, req->user_data);
+	else
+		l_dbus_message_set_arguments(message, "");
 }
 
 static void method_call_reply(struct l_dbus_message *message, void *user_data)
@@ -290,6 +301,7 @@ LIB_EXPORT uint32_t l_dbus_proxy_method_call(struct l_dbus_proxy *proxy,
 
 	req = l_new(struct method_call_request, 1);
 	req->proxy = proxy;
+	req->setup = setup;
 	req->result = reply;
 	req->user_data = user_data;
 	req->destroy = destroy;
@@ -297,7 +309,7 @@ LIB_EXPORT uint32_t l_dbus_proxy_method_call(struct l_dbus_proxy *proxy,
 	req->call_id = l_dbus_method_call(proxy->client->dbus,
 						proxy->client->service,
 						proxy->path, proxy->interface,
-						method, setup,
+						method, method_call_setup,
 						method_call_reply, req,
 						method_call_request_free);
 	if (!req->call_id) {
