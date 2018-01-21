@@ -1,3 +1,7 @@
+ver 0.3:
+	Fox issue with IO handling and re-entrancy.
+	Add support for D-Bus client proxy interface.
+
 ver 0.2:
 	Add support for mainloop integration functions.
 	Add support for PKCS#5 key derivation functions.
