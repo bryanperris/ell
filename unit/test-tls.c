@@ -456,15 +456,15 @@ int main(int argc, char *argv[])
 	l_test_add("Certificate chains", test_certificates, NULL);
 
 	if (!l_getrandom_is_supported()) {
-		printf("getrandom missing, skipping TLS connection tests...");
+		printf("getrandom missing, skipping TLS connection tests...\n");
 		goto done;
 	}
 
 	if (!l_cipher_is_supported(L_CIPHER_DES3_EDE_CBC) ||
 			!l_cipher_is_supported(L_CIPHER_AES_CBC) ||
 			!l_cipher_is_supported(L_CIPHER_ARC4)) {
-		printf("Needed ciphers missing,"
-				"skipping TLS connection tests...");
+		printf("Needed ciphers missing, "
+				"skipping TLS connection tests...\n");
 		goto done;
 	}
 
