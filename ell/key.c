@@ -36,6 +36,7 @@
 #include "key.h"
 #include "string.h"
 #include "random.h"
+#include "key-private.h"
 
 #ifndef KEYCTL_DH_COMPUTE
 #define KEYCTL_DH_COMPUTE 23
@@ -771,4 +772,34 @@ bool l_keyring_unlink(struct l_keyring *keyring, const struct l_key *key)
 	error = kernel_unlink_key(key->serial, keyring->serial);
 
 	return error == 0;
+}
+
+bool l_key_is_supported(uint32_t features)
+{
+	long result;
+
+	if (features & L_KEY_FEATURE_DH) {
+		result = syscall(__NR_keyctl, KEYCTL_DH_COMPUTE, NULL, "x", 1,
+					NULL);
+
+		if (result == -1 && errno == EOPNOTSUPP)
+			return false;
+	}
+
+	if (features & L_KEY_FEATURE_RESTRICT) {
+		result = syscall(__NR_keyctl, KEYCTL_RESTRICT_KEYRING, 0,
+					"asymmetric", "");
+
+		if (result == -1 && errno == EOPNOTSUPP)
+			return false;
+	}
+
+	if (features & L_KEY_FEATURE_CRYPTO) {
+		result = syscall(__NR_keyctl, KEYCTL_PKEY_QUERY, 0, 0, "", 0);
+
+		if (result == -1 && errno == EOPNOTSUPP)
+			return false;
+	}
+
+	return true;
 }
