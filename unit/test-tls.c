@@ -32,6 +32,7 @@
 #include "ell/cipher.h"
 #include "ell/checksum.h"
 #include "ell/tls-private.h"
+#include "ell/key-private.h"
 
 static void test_tls10_prf(const void *data)
 {
@@ -453,7 +454,8 @@ int main(int argc, char *argv[])
 	l_test_add("TLS 1.2 PRF with SHA512", test_tls12_prf,
 			&tls12_prf_sha512_0);
 
-	l_test_add("Certificate chains", test_certificates, NULL);
+	if (l_key_is_supported(L_KEY_FEATURE_RESTRICT))
+		l_test_add("Certificate chains", test_certificates, NULL);
 
 	if (!l_getrandom_is_supported()) {
 		printf("getrandom missing, skipping TLS connection tests...\n");
@@ -465,6 +467,13 @@ int main(int argc, char *argv[])
 			!l_cipher_is_supported(L_CIPHER_ARC4)) {
 		printf("Needed ciphers missing, "
 				"skipping TLS connection tests...\n");
+		goto done;
+	}
+
+	if (!l_key_is_supported(L_KEY_FEATURE_RESTRICT |
+				L_KEY_FEATURE_CRYPTO)) {
+		printf("Kernel lacks key restrictions or crypto, "
+			"skipping TLS connection tests...\n");
 		goto done;
 	}
 
