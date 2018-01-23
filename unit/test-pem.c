@@ -134,6 +134,11 @@ int main(int argc, char *argv[])
 
 	l_test_add("pem/empty label", test_pem, &empty_label);
 
+	if (!l_checksum_is_supported(L_CHECKSUM_MD5, false) ||
+			!l_checksum_is_supported(L_CHECKSUM_SHA1, false) ||
+			!l_cipher_is_supported(L_CIPHER_DES_CBC))
+		goto done;
+
 	l_test_add("pem/v1 MD5AndDES encrypted Private Key",
 			test_encrypted_pkey,
 			CERTDIR "cert-client-key-md5-des.pem");
@@ -142,12 +147,26 @@ int main(int argc, char *argv[])
 			CERTDIR "cert-client-key-sha1-des.pem");
 	l_test_add("pem/v2 DES encrypted Private Key", test_encrypted_pkey,
 			CERTDIR "cert-client-key-v2-des.pem");
-	l_test_add("pem/v2 DES EDE3 encrypted Private Key", test_encrypted_pkey,
-			CERTDIR "cert-client-key-v2-des-ede3.pem");
-	l_test_add("pem/v2 AES128 encrypted Private Key", test_encrypted_pkey,
-			CERTDIR "cert-client-key-v2-aes128.pem");
-	l_test_add("pem/v2 AES256 encrypted Private Key", test_encrypted_pkey,
-			CERTDIR "cert-client-key-v2-aes256.pem");
 
+	if (l_cipher_is_supported(L_CIPHER_DES3_EDE_CBC) &&
+			l_checksum_is_supported(L_CHECKSUM_SHA224, false))
+		l_test_add("pem/v2 DES EDE3 encrypted Private Key",
+				test_encrypted_pkey,
+				CERTDIR "cert-client-key-v2-des-ede3.pem");
+
+	if (!l_cipher_is_supported(L_CIPHER_AES))
+		goto done;
+
+	if (l_checksum_is_supported(L_CHECKSUM_SHA256, false))
+		l_test_add("pem/v2 AES128 encrypted Private Key",
+				test_encrypted_pkey,
+				CERTDIR "cert-client-key-v2-aes128.pem");
+
+	if (l_checksum_is_supported(L_CHECKSUM_SHA512, false))
+		l_test_add("pem/v2 AES256 encrypted Private Key",
+				test_encrypted_pkey,
+				CERTDIR "cert-client-key-v2-aes256.pem");
+
+done:
 	return l_test_run();
 }
