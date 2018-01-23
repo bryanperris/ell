@@ -27,6 +27,7 @@
 #include <assert.h>
 
 #include <ell/ell.h>
+#include "ell/key-private.h"
 
 #define KEY1_STR "This key has exactly _32_ bytes!"
 #define KEY1_LEN (strlen(KEY1_STR))
@@ -618,15 +619,21 @@ int main(int argc, char *argv[])
 
 	l_test_add("user key", test_user, NULL);
 
-	l_test_add("Diffie-Hellman 1", test_dh, &dh_valid1);
-	l_test_add("Diffie-Hellman 2", test_dh, &dh_valid2);
-	l_test_add("Diffie-Hellman 3", test_dh, &dh_degenerate);
+	if (l_key_is_supported(L_KEY_FEATURE_DH)) {
+		l_test_add("Diffie-Hellman 1", test_dh, &dh_valid1);
+		l_test_add("Diffie-Hellman 2", test_dh, &dh_valid2);
+		l_test_add("Diffie-Hellman 3", test_dh, &dh_degenerate);
+	}
 
 	l_test_add("simple keyring", test_simple_keyring, NULL);
-	l_test_add("trusted keyring", test_trusted_keyring, NULL);
-	l_test_add("trust chain", test_trust_chain, NULL);
 
-	l_test_add("key crypto", test_key_crypto, NULL);
+	if (l_key_is_supported(L_KEY_FEATURE_RESTRICT)) {
+		l_test_add("trusted keyring", test_trusted_keyring, NULL);
+		l_test_add("trust chain", test_trust_chain, NULL);
+	}
+
+	if (l_key_is_supported(L_KEY_FEATURE_CRYPTO))
+		l_test_add("key crypto", test_key_crypto, NULL);
 
 	return l_test_run();
 }
