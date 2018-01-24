@@ -357,7 +357,7 @@ static ssize_t operate_cipher(int sk, __u32 operation,
 	if (result < 0)
 		return -errno;
 
-	if (ad) {
+	if (ad_len) {
 		/*
 		 * When AEAD additional data is passed to sendmsg() for
 		 * use in computing the tag, those bytes also appear at
