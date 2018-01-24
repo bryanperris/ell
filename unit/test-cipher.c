@@ -175,6 +175,7 @@ static void test_aes_ccm(const void *data)
 	char *decbuf;
 	size_t decbuflen;
 	int r;
+	bool success;
 	const struct ccm_test_vector *tv = data;
 
 	size_t ptlen;
@@ -200,16 +201,18 @@ static void test_aes_ccm(const void *data)
 	cipher = l_aead_cipher_new(L_AEAD_CIPHER_AES_CCM, key, keylen, taglen);
 	assert(cipher);
 
-	l_aead_cipher_encrypt(cipher, pt, ptlen, aad, aadlen,
-				nonce, noncelen, encbuf, encbuflen);
+	success = l_aead_cipher_encrypt(cipher, pt, ptlen, aad, aadlen,
+					nonce, noncelen, encbuf, encbuflen);
+	assert(success);
 
 	r = memcmp(encbuf, ct, ctlen);
 	assert(!r);
 	r = memcmp(encbuf + ctlen, tag, taglen);
 	assert(!r);
 
-	l_aead_cipher_decrypt(cipher, encbuf, encbuflen, aad, aadlen, nonce,
-				noncelen, decbuf, decbuflen);
+	success = l_aead_cipher_decrypt(cipher, encbuf, encbuflen, aad, aadlen,
+					nonce, noncelen, decbuf, decbuflen);
+	assert (success);
 
 	r = memcmp(decbuf, pt, ptlen);
 	assert(!r);
