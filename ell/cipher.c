@@ -378,8 +378,10 @@ static ssize_t operate_cipher(int sk, __u32 operation,
 
 		result = recvmsg(sk, &msg, 0);
 
-		if (result > (ssize_t) ad_len)
+		if (result >= (ssize_t) ad_len)
 			result -= ad_len;
+		else if (result > 0)
+			result = 0;
 
 		l_free(iov[0].iov_base);
 	} else {
@@ -546,7 +548,8 @@ LIB_EXPORT bool l_aead_cipher_encrypt(struct l_aead_cipher *cipher,
 
 	return operate_cipher(cipher->encrypt_sk, ALG_OP_ENCRYPT, in, in_len,
 				ad, ad_len, nonce, nonce_len, out, out_len,
-				l_aead_cipher_get_ivlen(cipher)) >= 0;
+				l_aead_cipher_get_ivlen(cipher)) ==
+			(ssize_t)out_len;
 }
 
 LIB_EXPORT bool l_aead_cipher_decrypt(struct l_aead_cipher *cipher,
@@ -563,7 +566,8 @@ LIB_EXPORT bool l_aead_cipher_decrypt(struct l_aead_cipher *cipher,
 
 	return operate_cipher(cipher->decrypt_sk, ALG_OP_DECRYPT, in, in_len,
 				ad, ad_len, nonce, nonce_len, out, out_len,
-				l_aead_cipher_get_ivlen(cipher)) >= 0;
+				l_aead_cipher_get_ivlen(cipher)) ==
+			(ssize_t)out_len;
 }
 
 static void init_supported()
