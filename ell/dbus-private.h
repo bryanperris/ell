@@ -79,6 +79,8 @@ void _dbus1_iter_init(struct l_dbus_message_iter *iter,
 			const void *data, size_t len);
 bool _dbus1_iter_next_entry_basic(struct l_dbus_message_iter *iter, char type,
 					void *out);
+bool _dbus1_iter_get_fixed_array(struct l_dbus_message_iter *iter,
+					void *out, uint32_t *n_elem);
 bool _dbus1_iter_enter_struct(struct l_dbus_message_iter *iter,
 					struct l_dbus_message_iter *structure);
 bool _dbus1_iter_enter_variant(struct l_dbus_message_iter *iter,

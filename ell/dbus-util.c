@@ -692,6 +692,32 @@ bool _dbus1_iter_next_entry_basic(struct l_dbus_message_iter *iter,
 	return true;
 }
 
+bool _dbus1_iter_get_fixed_array(struct l_dbus_message_iter *iter,
+					void *out, uint32_t *n_elem)
+{
+	char type;
+	uint32_t size;
+
+	if (iter->container_type != DBUS_CONTAINER_TYPE_ARRAY)
+		return false;
+
+	type = iter->sig_start[iter->sig_pos];
+	size = get_basic_size(type);
+
+	/* Fail if the array is not a fixed size or contains file descriptors */
+	if (!size || type == 'n')
+		return false;
+
+	/*
+	 * enter_array should already align us to our container type, so
+	 * there is no need to align pos here
+	 */
+	*(const void **) out = iter->data + iter->pos;
+	*n_elem = (iter->len - iter->pos) / size;
+
+	return true;
+}
+
 bool _dbus1_iter_enter_struct(struct l_dbus_message_iter *iter,
 					struct l_dbus_message_iter *structure)
 {
