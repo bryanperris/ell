@@ -170,6 +170,8 @@ bool l_dbus_message_get_arguments_valist(struct l_dbus_message *message,
 bool l_dbus_message_iter_next_entry(struct l_dbus_message_iter *iter, ...);
 bool l_dbus_message_iter_get_variant(struct l_dbus_message_iter *iter,
 						const char *signature, ...);
+bool l_dbus_message_iter_get_fixed_array(struct l_dbus_message_iter *iter,
+						void *out, uint32_t *n_elem);
 
 bool l_dbus_message_set_arguments(struct l_dbus_message *message,
 						const char *signature, ...);

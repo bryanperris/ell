@@ -1414,6 +1414,19 @@ LIB_EXPORT bool l_dbus_message_iter_get_variant(
 	return result;
 }
 
+LIB_EXPORT bool l_dbus_message_iter_get_fixed_array(
+					struct l_dbus_message_iter *iter,
+					void *out, uint32_t *n_elem)
+{
+	if (unlikely(!iter))
+		return false;
+
+	if (_dbus_message_is_gvariant(iter->message))
+		return false;
+
+	return _dbus1_iter_get_fixed_array(iter, out, n_elem);
+}
+
 void _dbus_message_set_sender(struct l_dbus_message *message,
 					const char *sender)
 {
