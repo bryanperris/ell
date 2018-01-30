@@ -1933,6 +1933,30 @@ static void check_array_2(const void *data)
 	l_dbus_message_unref(msg);
 }
 
+static void check_fixed_array_2(const void *data)
+{
+	struct l_dbus_message *msg = check_message(data);
+	struct l_dbus_message_iter iter;
+	const uint32_t *array = NULL;
+	uint32_t n_elem;
+	bool result;
+
+	result = l_dbus_message_get_arguments(msg, "ab", &iter);
+	assert(result);
+
+	/* Bools are represented by 4 bytes in dbus, so use a uint32_t array */
+	result = l_dbus_message_iter_get_fixed_array(&iter, &array, &n_elem);
+	assert(result);
+	assert(array);
+	assert(n_elem == 3);
+
+	assert(array[0] == 0x1);
+	assert(array[1] == 0x1);
+	assert(array[2] == 0x0);
+
+	l_dbus_message_unref(msg);
+}
+
 static void build_array_2(const void *data)
 {
 	struct l_dbus_message *msg = build_message(data);
@@ -2880,6 +2904,8 @@ int main(int argc, char *argv[])
 	l_test_add("Array 1 (parse)", check_array_1, &message_data_array_1);
 	l_test_add("Array 1 (build)", build_array_1, &message_data_array_1);
 	l_test_add("Array 2 (parse)", check_array_2, &message_data_array_2);
+	l_test_add("Array 2 (checkfixed)", check_fixed_array_2,
+							&message_data_array_2);
 	l_test_add("Array 2 (build)", build_array_2, &message_data_array_2);
 	l_test_add("Array 3 (parse)", check_array_3, &message_data_array_3);
 	l_test_add("Array 3 (build)", build_array_3, &message_data_array_3);
