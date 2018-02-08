@@ -54,12 +54,12 @@ static void pbkdf2_test(const void *data)
 
 	key_len = test->key_len ? : (strlen(test->key) / 2);
 
-	printf("Password = \"%s\" (%d octects)\n",
+	printf("Password = \"%s\" (%d octets)\n",
 					test->password, password_len);
-	printf("Salt     = \"%s\" (%d octects)\n",
+	printf("Salt     = \"%s\" (%d octets)\n",
 					test->salt, salt_len);
 	printf("Count    = %d\n", test->count);
-	printf("Key      = %s (%d octects)\n", test->key, key_len);
+	printf("Key      = %s (%d octets)\n", test->key, key_len);
 
 	result = l_pkcs5_pbkdf2(L_CHECKSUM_SHA1, test->password,
 				(const uint8_t *) test->salt, salt_len,
