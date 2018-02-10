@@ -1,5 +1,9 @@
+ver 0.4:
+	Fix issue with propagate AEAD cipher failures.
+	Fix issue with AAD length and AEAD result reads.
+
 ver 0.3:
-	Fox issue with IO handling and re-entrancy.
+	Fix issue with IO handling and re-entrancy.
 	Add support for D-Bus client proxy interface.
 
 ver 0.2:
