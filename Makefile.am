@@ -93,6 +93,7 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/tls.c \
 			ell/tls-record.c \
 			ell/uuid.c \
+			ell/key-private.h \
 			ell/key.c \
 			ell/pkcs5-private.h \
 			ell/pkcs5.c \
