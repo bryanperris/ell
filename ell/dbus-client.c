@@ -349,7 +349,7 @@ static void proxy_update_property(struct l_dbus_proxy *proxy,
 done:
 	if (proxy->client->properties_changed_cb && proxy->ready)
 		proxy->client->properties_changed_cb(proxy, name, prop->msg,
-					proxy->client->proxy_cb_data_destroy);
+					proxy->client->proxy_cb_data);
 }
 
 static void proxy_invalidate_properties(struct l_dbus_proxy *proxy,
