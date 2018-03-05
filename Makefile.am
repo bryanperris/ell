@@ -142,7 +142,8 @@ unit_tests = unit/test-unit \
 			unit/test-uintset \
 			unit/test-base64 \
 			unit/test-uuid \
-			unit/test-pbkdf2
+			unit/test-pbkdf2 \
+			unit/test-dhcp
 
 dbus_tests = unit/test-hwdb \
 			unit/test-dbus \
@@ -255,6 +256,8 @@ unit_test_key_LDADD = ell/libell-private.la
 unit_test_key_DEPENDENCIES = $(cert_files) ell/libell-private.la
 
 unit_test_uuid_LDADD = ell/libell-private.la
+
+unit_test_dhcp_LDADD = ell/libell-private.la
 
 if MAINTAINER_MODE
 noinst_LTLIBRARIES += unit/example-plugin.la
