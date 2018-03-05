@@ -44,7 +44,8 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/key.h \
 			ell/pkcs5.h \
 			ell/file.h \
-			ell/net.h
+			ell/net.h \
+			ell/dhcp.h
 
 lib_LTLIBRARIES = ell/libell.la
 
