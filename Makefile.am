@@ -99,7 +99,9 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/pkcs5-private.h \
 			ell/pkcs5.c \
 			ell/file.c \
-			ell/net.c
+			ell/net.c \
+			ell/dhcp-private.h \
+			ell/dhcp.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)
