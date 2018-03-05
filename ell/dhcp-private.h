@@ -54,3 +54,6 @@ bool _dhcp_message_iter_init(struct dhcp_message_iter *iter,
 				const struct dhcp_message *message, size_t len);
 bool _dhcp_message_iter_next(struct dhcp_message_iter *iter, uint8_t *type,
 				uint8_t *len, const void **data);
+
+int _dhcp_option_append(uint8_t **buf, size_t *buflen, uint8_t code,
+					size_t optlen, const void *optval);

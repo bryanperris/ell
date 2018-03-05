@@ -201,6 +201,44 @@ bool _dhcp_message_iter_next(struct dhcp_message_iter *iter, uint8_t *type,
 	return false;
 }
 
+int _dhcp_option_append(uint8_t **buf, size_t *buflen, uint8_t code,
+					size_t optlen, const void *optval)
+{
+	if (!buf || !buflen)
+		return -EINVAL;
+
+	switch (code) {
+
+	case DHCP_OPTION_PAD:
+	case DHCP_OPTION_END:
+		if (*buflen < 1)
+			return -ENOBUFS;
+
+		(*buf)[0] = code;
+		*buf += 1;
+		*buflen -= 1;
+		break;
+
+	default:
+		if (*buflen < optlen + 2)
+			return -ENOBUFS;
+
+		if (!optval)
+			return -EINVAL;
+
+		(*buf)[0] = code;
+		(*buf)[1] = optlen;
+		memcpy(&(*buf)[2], optval, optlen);
+
+		*buf += optlen + 2;
+		*buflen -= (optlen + 2);
+
+		break;
+	}
+
+	return 0;
+}
+
 struct l_dhcp_client {
 	enum dhcp_state state;
 	unsigned long request_options[256 / BITS_PER_LONG];
