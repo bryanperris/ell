@@ -38,3 +38,19 @@ struct dhcp_message {
 	uint8_t file[128];
 	uint8_t options[0];
 } __attribute__ ((packed));
+
+struct dhcp_message_iter {
+	const struct dhcp_message *message;
+	size_t message_len;
+	const uint8_t *options;
+	uint16_t pos;
+	uint16_t max;
+	bool can_overload : 1;
+	bool overload_sname : 1;
+	bool overload_file : 1;
+};
+
+bool _dhcp_message_iter_init(struct dhcp_message_iter *iter,
+				const struct dhcp_message *message, size_t len);
+bool _dhcp_message_iter_next(struct dhcp_message_iter *iter, uint8_t *type,
+				uint8_t *len, const void **data);
