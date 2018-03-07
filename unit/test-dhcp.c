@@ -25,8 +25,11 @@
 #endif
 
 #include <assert.h>
+#include <linux/types.h>
+#include <errno.h>
 
 #include <ell/ell.h>
+#include "ell/dhcp-private.h"
 
 static void test_request_option(const void *data)
 {
@@ -61,11 +64,46 @@ static void test_request_option(const void *data)
 	l_dhcp_client_destroy(dhcp);
 }
 
+static void test_invalid_message_length(const void *data)
+{
+	struct dhcp_message message;
+	struct dhcp_message_iter iter;
+
+	assert(!_dhcp_message_iter_init(&iter, NULL, 0));
+	assert(!_dhcp_message_iter_init(&iter, &message, sizeof(message)));
+}
+
+static void test_cookie(const void *data)
+{
+	struct dhcp_message *message;
+	size_t len = sizeof(struct dhcp_message) + 4;
+	uint8_t *opt;
+	struct dhcp_message_iter iter;
+
+	message = (struct dhcp_message *) l_new(uint8_t, len);
+	opt = (uint8_t *)(message + 1);
+	opt[0] = 0xff;
+
+	assert(!_dhcp_message_iter_init(&iter, message, len));
+
+	opt[0] = 99;
+	opt[1] = 130;
+	opt[2] = 83;
+	opt[3] = 99;
+
+	assert(_dhcp_message_iter_init(&iter, message, len));
+	assert(!_dhcp_message_iter_next(&iter, NULL, NULL, NULL));
+
+	l_free(message);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
 
 	l_test_add("request-option", test_request_option, NULL);
+	l_test_add("invalid-message-length", test_invalid_message_length, NULL);
+	l_test_add("cookie", test_cookie, NULL);
 
 	return l_test_run();
 }
