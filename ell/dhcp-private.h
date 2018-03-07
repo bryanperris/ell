@@ -50,6 +50,8 @@ struct dhcp_message_iter {
 	bool overload_file : 1;
 };
 
+const char *_dhcp_message_type_to_string(uint8_t type);
+
 bool _dhcp_message_iter_init(struct dhcp_message_iter *iter,
 				const struct dhcp_message *message, size_t len);
 bool _dhcp_message_iter_next(struct dhcp_message_iter *iter, uint8_t *type,

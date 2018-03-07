@@ -78,6 +78,28 @@ enum dhcp_state {
 	DHCP_STATE_REBINDING,
 };
 
+const char *_dhcp_message_type_to_string(uint8_t type)
+{
+	switch(type) {
+	case DHCP_MESSAGE_TYPE_DISCOVER:
+		return "DHCPDISCOVER";
+	case DHCP_MESSAGE_TYPE_OFFER:
+		return "DHCPOFFER";
+	case DHCP_MESSAGE_TYPE_REQUEST:
+		return "DHCPREQUEST";
+	case DHCP_MESSAGE_TYPE_DECLINE:
+		return "DHCPDECLINE";
+	case DHCP_MESSAGE_TYPE_ACK:
+		return "DHCPACK";
+	case DHCP_MESSAGE_TYPE_NAK:
+		return "DHCPNAK";
+	case DHCP_MESSAGE_TYPE_RELEASE:
+		return "DHCPRELEASE";
+	default:
+		return "unknown";
+	}
+}
+
 bool _dhcp_message_iter_init(struct dhcp_message_iter *iter,
 				const struct dhcp_message *message, size_t len)
 {
