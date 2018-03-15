@@ -26,6 +26,8 @@
 
 #include <netinet/ip.h>
 #include <linux/types.h>
+#include <linux/if_arp.h>
+#include <net/ethernet.h>
 #include <errno.h>
 
 #include "private.h"
@@ -265,6 +267,9 @@ struct l_dhcp_client {
 	enum dhcp_state state;
 	unsigned long request_options[256 / BITS_PER_LONG];
 	uint32_t ifindex;
+	uint8_t addr[6];
+	uint8_t addr_len;
+	uint8_t addr_type;
 };
 
 static inline void dhcp_enable_option(struct l_dhcp_client *client,
@@ -321,6 +326,30 @@ LIB_EXPORT bool l_dhcp_client_add_request_option(struct l_dhcp_client *client,
 	}
 
 	dhcp_enable_option(client, option);
+
+	return true;
+}
+
+LIB_EXPORT bool l_dhcp_client_set_address(struct l_dhcp_client *client,
+						uint8_t type,
+						const uint8_t *addr,
+						size_t addr_len)
+{
+	if (unlikely(!client))
+		return false;
+
+	switch (type) {
+	case ARPHRD_ETHER:
+		if (addr_len != ETH_ALEN)
+			return false;
+		break;
+	default:
+		return false;
+	}
+
+	client->addr_len = addr_len;
+	memcpy(client->addr, addr, addr_len);
+	client->addr_type = type;
 
 	return true;
 }

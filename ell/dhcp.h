@@ -49,6 +49,9 @@ bool l_dhcp_client_add_request_option(struct l_dhcp_client *client,
 								uint8_t option);
 void l_dhcp_client_destroy(struct l_dhcp_client *client);
 
+bool l_dhcp_client_set_address(struct l_dhcp_client *client, uint8_t type,
+					const uint8_t *addr, size_t addr_len);
+
 #ifdef __cplusplus
 }
 #endif
