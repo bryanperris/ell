@@ -28,6 +28,16 @@
 #include <stddef.h>
 #include <stdarg.h>
 
+/* taken from glibc unistd.h for musl support */
+#ifndef TEMP_FAILURE_RETRY
+#define TEMP_FAILURE_RETRY(expression)             \
+  (__extension__                                   \
+    ({ long int __result;                          \
+       do __result = (long int) (expression);      \
+       while (__result == -1L && errno == EINTR);  \
+       __result; }))
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
