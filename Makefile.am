@@ -271,7 +271,8 @@ unit_example_plugin_la_LDFLAGS = -no-undefined -module -avoid-version \
 unit_test_data_files = unit/settings.test unit/dbus.conf
 
 examples = examples/dbus-service examples/https-client-test \
-		examples/https-server-test examples/dbus-client
+		examples/https-server-test examples/dbus-client \
+		examples/dhcp-client
 
 if GLIB
 examples += examples/glib-eventloop
@@ -287,6 +288,7 @@ examples_https_server_test_LDADD = ell/libell-private.la
 examples_dbus_client_LDADD = ell/libell-private.la
 examples_glib_eventloop_CFLAGS = @GLIB_CFLAGS@
 examples_glib_eventloop_LDADD = ell/libell-private.la @GLIB_LIBS@
+examples_dhcp_client_LDADD = ell/libell-private.la
 
 
 EXTRA_DIST = $(unit_test_data_files) unit/gencerts.cnf unit/plaintext.txt

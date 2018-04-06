@@ -67,4 +67,5 @@ examples/https-server-test
 examples/https-client-test
 examples/dbus-client
 examples/glib-eventloop
+examples/dhcp-client
 test-suite.log
