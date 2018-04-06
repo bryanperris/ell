@@ -43,7 +43,8 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/uuid.h \
 			ell/key.h \
 			ell/pkcs5.h \
-			ell/file.h
+			ell/file.h \
+			ell/net.h
 
 lib_LTLIBRARIES = ell/libell.la
 
@@ -97,7 +98,8 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/key.c \
 			ell/pkcs5-private.h \
 			ell/pkcs5.c \
-			ell/file.c
+			ell/file.c \
+			ell/net.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)
