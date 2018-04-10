@@ -420,6 +420,26 @@ static void test_option_set(const void *data)
 	}
 }
 
+static void test_checksum(const void *data)
+{
+	static const uint8_t buf[20] = {
+		0x45, 0x00, 0x02, 0x40, 0x00, 0x00, 0x00, 0x00,
+		0x40, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0xff, 0xff, 0xff, 0xff
+	};
+
+	struct iovec iov[2];
+
+	assert(_dhcp_checksum(&buf, 20) == L_BE16_TO_CPU(0x78ae));
+
+	iov[0].iov_base = (void *) buf;
+	iov[0].iov_len = 8;
+	iov[1].iov_base = (void *) buf + 8;
+	iov[1].iov_len = 12;
+
+	assert(_dhcp_checksumv(iov, 2) == L_BE16_TO_CPU(0x78ae));
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -438,6 +458,8 @@ int main(int argc, char *argv[])
 	l_test_add("option test 8", test_option_8, &option_test_8);
 
 	l_test_add("option set", test_option_set, NULL);
+
+	l_test_add("checksum", test_checksum, NULL);
 
 	return l_test_run();
 }
