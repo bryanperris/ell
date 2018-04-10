@@ -31,6 +31,7 @@ extern "C" {
 #endif
 
 bool l_net_get_mac_address(uint32_t ifindex, uint8_t *out_addr);
+char *l_net_get_name(uint32_t ifindex);
 
 #ifdef __cplusplus
 }

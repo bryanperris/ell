@@ -80,3 +80,32 @@ error:
 	close(sk);
 	return false;
 }
+
+/**
+ * l_net_get_name:
+ * @ifindex: Interface index to query
+ *
+ * Obtains the name of the network inderface given by @ifindex
+ *
+ * Returns: A newly allocated string with the name or NULL on failure
+ **/
+LIB_EXPORT char *l_net_get_name(uint32_t ifindex)
+{
+	struct ifreq ifr;
+	int sk, err;
+
+	sk = socket(PF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+	if (sk < 0)
+		return NULL;
+
+	memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_ifindex = ifindex;
+
+	err = ioctl(sk, SIOCGIFNAME, &ifr);
+	close(sk);
+
+	if (err < 0)
+		return NULL;
+
+	return l_strdup(ifr.ifr_name);
+}
