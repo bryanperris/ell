@@ -52,6 +52,9 @@ struct dhcp_message_iter {
 
 const char *_dhcp_message_type_to_string(uint8_t type);
 
+uint16_t _dhcp_checksum(const void *buf, size_t len);
+uint16_t _dhcp_checksumv(const struct iovec *iov, size_t iov_cnt);
+
 bool _dhcp_message_iter_init(struct dhcp_message_iter *iter,
 				const struct dhcp_message *message, size_t len);
 bool _dhcp_message_iter_next(struct dhcp_message_iter *iter, uint8_t *type,
