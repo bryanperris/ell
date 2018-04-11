@@ -506,6 +506,22 @@ LIB_EXPORT bool l_dhcp_client_set_interface_name(struct l_dhcp_client *client,
 	return true;
 }
 
+bool _dhcp_client_set_transport(struct l_dhcp_client *client,
+					struct dhcp_transport *transport)
+{
+	if (unlikely(!client))
+		return false;
+
+	if (unlikely(client->state != DHCP_STATE_INIT))
+		return false;
+
+	if (client->transport)
+		_dhcp_transport_free(transport);
+
+	client->transport = transport;
+	return true;
+}
+
 LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
 {
 	int err;

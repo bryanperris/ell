@@ -20,6 +20,8 @@
  *
  */
 
+struct l_dhcp_client;
+
 /* RFC 2131, Figure 1 */
 struct dhcp_message {
 	uint8_t op;
@@ -79,3 +81,6 @@ bool _dhcp_message_iter_next(struct dhcp_message_iter *iter, uint8_t *type,
 
 int _dhcp_option_append(uint8_t **buf, size_t *buflen, uint8_t code,
 					size_t optlen, const void *optval);
+
+bool _dhcp_client_set_transport(struct l_dhcp_client *client,
+					struct dhcp_transport *transport);
