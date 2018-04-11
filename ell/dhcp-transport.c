@@ -31,6 +31,10 @@
 #include <unistd.h>
 #include <errno.h>
 #include <stddef.h>
+#include <linux/if_packet.h>
+#include <netinet/udp.h>
+#include <netinet/ip.h>
+#include <linux/if_ether.h>
 
 #include "io.h"
 #include "util.h"
@@ -138,7 +142,98 @@ static int _dhcp_default_transport_open(struct dhcp_transport *s,
 	transport->io = l_io_new(fd);
 	l_io_set_close_on_destroy(transport->io, true);
 
+	transport->super.ifindex = ifindex;
+
 	return 0;
+}
+
+static void dhcp_set_ip_udp_headers(struct iphdr *ip, struct udphdr *udp,
+					uint32_t saddr, uint16_t sport,
+					uint32_t daddr, uint16_t dport,
+					const void *data, size_t len)
+{
+	struct iovec iov[3];
+
+	ip->version = IPVERSION;
+	ip->ihl = sizeof(struct iphdr) / 4;
+	ip->tot_len = L_CPU_TO_BE16(len + sizeof(*ip) + sizeof(*udp));
+
+	ip->protocol = IPPROTO_UDP;
+	ip->saddr = L_CPU_TO_BE32(saddr);
+	ip->daddr = L_CPU_TO_BE32(daddr);
+
+	udp->source = L_CPU_TO_BE16(sport);
+	udp->dest = L_CPU_TO_BE16(dport);
+
+	udp->len = L_CPU_TO_BE16(len + sizeof(*udp));
+
+	ip->check = udp->len;
+
+	iov[0].iov_base = &ip->ttl;
+	iov[0].iov_len = sizeof(*ip) - 8;
+	iov[1].iov_base = udp;
+	iov[1].iov_len = sizeof(*udp);
+	iov[2].iov_base = (void *) data;
+	iov[2].iov_len = len;
+	udp->check = _dhcp_checksumv(iov, 3);
+
+	ip->ttl = IPDEFTTL;
+	ip->check = 0;
+
+	iov[0].iov_base = ip;
+	iov[0].iov_len = sizeof(*ip);
+	ip->check = _dhcp_checksumv(iov, 1);
+}
+
+static int _dhcp_default_transport_broadcast(struct dhcp_transport *s,
+						uint32_t saddr, uint16_t sport,
+						uint32_t daddr, uint16_t dport,
+						const void *data, size_t len)
+{
+	int sk;
+	struct sockaddr_ll addr;
+	struct iovec iov[3];
+	struct iphdr ip;
+	struct udphdr udp;
+	struct msghdr msg;
+
+	sk = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC, htons(ETH_P_IP));
+	if (sk < 0)
+		return -errno;
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sll_family = AF_PACKET;
+	addr.sll_protocol = htons(ETH_P_IP);
+	addr.sll_ifindex = s->ifindex;
+	addr.sll_halen = ETH_ALEN;
+	memset(addr.sll_addr, 0xff, ETH_ALEN);
+
+	if (bind(sk, (struct sockaddr *) &addr, sizeof(addr)) < 0)
+		goto error;
+
+	dhcp_set_ip_udp_headers(&ip, &udp,
+					saddr, sport, daddr, dport, data, len);
+	iov[0].iov_base = &ip;
+	iov[0].iov_len = sizeof(ip);
+	iov[1].iov_base = &udp;
+	iov[1].iov_len = sizeof(udp);
+	iov[2].iov_base = (void *) data;
+	iov[2].iov_len = len;
+
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_name = &addr;
+	msg.msg_namelen = sizeof(addr);
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 3;
+
+	if (sendmsg(sk, &msg, 0) < 0)
+		goto error;
+
+	errno = 0;
+
+error:
+	close(sk);
+	return -errno;
 }
 
 static int _dhcp_default_transport_send(struct dhcp_transport *s,
@@ -176,6 +271,7 @@ struct dhcp_transport *_dhcp_default_transport_new(void)
 	transport->super.open = _dhcp_default_transport_open;
 	transport->super.close = _dhcp_default_transport_close;
 	transport->super.send = _dhcp_default_transport_send;
+	transport->super.broadcast = _dhcp_default_transport_broadcast;
 
 	return &transport->super;
 }

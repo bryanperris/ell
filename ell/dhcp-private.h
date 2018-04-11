@@ -61,7 +61,12 @@ struct dhcp_transport {
 	int (*send)(struct dhcp_transport *transport,
 					const struct sockaddr_in *dest,
 					const void *data, size_t len);
+	int (*broadcast)(struct dhcp_transport *transport,
+						uint32_t saddr, uint16_t sport,
+						uint32_t daddr, uint16_t dport,
+						const void *data, size_t len);
 	void (*close)(struct dhcp_transport *transport);
+	uint32_t ifindex;
 };
 
 struct dhcp_transport *_dhcp_default_transport_new(void);
