@@ -31,6 +31,8 @@
 #include <errno.h>
 
 #include "private.h"
+#include "random.h"
+#include "net.h"
 #include "dhcp.h"
 #include "dhcp-private.h"
 
@@ -67,6 +69,11 @@ enum dhcp_message_type {
 enum dhcp_op_code {
 	DHCP_OP_CODE_BOOTREQUEST = 1,
 	DHCP_OP_CODE_BOOTREPLY = 2,
+};
+
+enum {
+	DHCP_PORT_SERVER = 67,
+	DHCP_PORT_CLIENT = 68,
 };
 
 enum dhcp_state {
@@ -271,6 +278,9 @@ struct l_dhcp_client {
 	uint8_t addr[6];
 	uint8_t addr_len;
 	uint8_t addr_type;
+	uint32_t xid;
+	struct dhcp_transport *transport;
+	bool have_addr : 1;
 };
 
 static inline void dhcp_enable_option(struct l_dhcp_client *client,
@@ -278,6 +288,11 @@ static inline void dhcp_enable_option(struct l_dhcp_client *client,
 {
 	client->request_options[option / BITS_PER_LONG] |=
 						1UL << (option % BITS_PER_LONG);
+}
+
+static int dhcp_client_send_discover(struct l_dhcp_client *client)
+{
+	return 0;
 }
 
 LIB_EXPORT struct l_dhcp_client *l_dhcp_client_new(uint32_t ifindex)
@@ -305,6 +320,7 @@ LIB_EXPORT void l_dhcp_client_destroy(struct l_dhcp_client *client)
 	if (unlikely(!client))
 		return;
 
+	_dhcp_transport_free(client->transport);
 	l_free(client->ifname);
 
 	l_free(client);
@@ -354,6 +370,8 @@ LIB_EXPORT bool l_dhcp_client_set_address(struct l_dhcp_client *client,
 	memcpy(client->addr, addr, addr_len);
 	client->addr_type = type;
 
+	client->have_addr = true;
+
 	return true;
 }
 
@@ -370,4 +388,49 @@ LIB_EXPORT bool l_dhcp_client_set_interface_name(struct l_dhcp_client *client,
 	client->ifname = l_strdup(ifname);
 
 	return true;
+}
+
+LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
+{
+	int err;
+
+	if (unlikely(!client))
+		return false;
+
+	if (unlikely(client->state != DHCP_STATE_INIT))
+		return false;
+
+	if (!client->have_addr) {
+		uint8_t mac[6];
+
+		if (!l_net_get_mac_address(client->ifindex, mac))
+			return false;
+
+		l_dhcp_client_set_address(client, ARPHRD_ETHER, mac, 6);
+	}
+
+	if (!client->ifname) {
+		client->ifname = l_net_get_name(client->ifindex);
+
+		if (!client->ifname)
+			return false;
+	}
+
+	if (!client->transport) {
+		client->transport =
+			_dhcp_default_transport_new();
+
+		if (!client->transport)
+			return false;
+	}
+
+	if (client->transport->open)
+		if (client->transport->open(client->transport, client->ifindex,
+					client->ifname, DHCP_PORT_CLIENT) < 0)
+			return false;
+
+	l_getrandom(&client->xid, sizeof(client->xid));
+
+	err = dhcp_client_send_discover(client);
+	return err >= 0;
 }

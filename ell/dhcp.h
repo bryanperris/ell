@@ -54,6 +54,7 @@ bool l_dhcp_client_set_address(struct l_dhcp_client *client, uint8_t type,
 bool l_dhcp_client_set_interface_name(struct l_dhcp_client *client,
 							const char *ifname);
 
+bool l_dhcp_client_start(struct l_dhcp_client *client);
 #ifdef __cplusplus
 }
 #endif
