@@ -64,6 +64,7 @@ enum dhcp_message_type {
 };
 
 #define DHCP_OPTION_PARAMETER_REQUEST_LIST 55 /* Section 9.8 */
+#define DHCP_OPTION_CLIENT_IDENTIFIER 61 /* Section 9.14 */
 
 /* RFC 2131, Table 1 */
 enum dhcp_op_code {
@@ -270,6 +271,68 @@ int _dhcp_option_append(uint8_t **buf, size_t *buflen, uint8_t code,
 	return 0;
 }
 
+static int dhcp_message_init(struct dhcp_message *message,
+				enum dhcp_op_code op,
+				uint8_t type, uint32_t xid,
+				uint8_t **opt, size_t *optlen)
+{
+	int err;
+
+	message->op = op;
+	message->xid = L_CPU_TO_BE32(xid);
+
+	if (*optlen < 4)
+		return -ENOBUFS;
+
+	*optlen -= 4;
+	*opt = (uint8_t *)(message + 1);
+	l_put_be32(DHCP_MAGIC, *opt);
+	*opt += 4;
+
+	err = _dhcp_option_append(opt, optlen,
+					DHCP_OPTION_MESSAGE_TYPE, 1, &type);
+	if (err < 0)
+		return err;
+
+	return 0;
+}
+
+static void dhcp_message_set_address_type(struct dhcp_message *message,
+						uint8_t addr_type,
+						uint8_t addr_len)
+{
+	message->htype = addr_type;
+
+	switch (addr_type) {
+	case ARPHRD_ETHER:
+		message->hlen = addr_len;
+		break;
+	default:
+		message->hlen = 0;
+	}
+}
+
+static inline int dhcp_message_optimize(struct dhcp_message *message,
+					const uint8_t *end)
+{
+	/*
+	 * Don't bother sending a full sized dhcp_message as it is most likely
+	 * mostly zeros.  Instead truncate it at DHCP_OPTION_END and align to
+	 * the nearest 4 byte boundary.  Many implementations expect a packet
+	 * of a certain size or it is filtered, so we cap the length in
+	 * accordance to RFC 1542:
+	 * "The IP Total Length and UDP Length must be large enough to contain
+	 * the minimal BOOTP header of 300 octets"
+	 */
+	size_t len = align_len(end - (uint8_t *) message, 4);
+	if (len < 300)
+		len = 300;
+
+	return len;
+}
+
+#define DHCP_MIN_OPTIONS_SIZE 312
+
 struct l_dhcp_client {
 	enum dhcp_state state;
 	unsigned long request_options[256 / BITS_PER_LONG];
@@ -290,9 +353,62 @@ static inline void dhcp_enable_option(struct l_dhcp_client *client,
 						1UL << (option % BITS_PER_LONG);
 }
 
+static int client_message_init(struct l_dhcp_client *client,
+					struct dhcp_message *message,
+					uint8_t type,
+					uint8_t **opt, size_t *optlen)
+{
+	int err;
+
+	err = dhcp_message_init(message, DHCP_OP_CODE_BOOTREQUEST,
+				type, client->xid, opt, optlen);
+	if (err < 0)
+		return err;
+
+	dhcp_message_set_address_type(message, client->addr_type,
+							client->addr_len);
+	/*
+	 * RFC2132 section 4.1.1:
+	 * The client MUST include its hardware address in the ’chaddr’ field,
+	 * if necessary for delivery of DHCP reply messages.  Non-Ethernet
+	 * interfaces will leave 'chaddr' empty and use the client identifier
+	 * instead
+	 */
+	if (client->addr_type == ARPHRD_ETHER)
+		memcpy(message->chaddr, &client->addr, client->addr_len);
+
+	return 0;
+}
+
 static int dhcp_client_send_discover(struct l_dhcp_client *client)
 {
-	return 0;
+	uint8_t *opt;
+	size_t optlen = DHCP_MIN_OPTIONS_SIZE;
+	size_t len = sizeof(struct dhcp_message) + optlen;
+	L_AUTO_FREE_VAR(struct dhcp_message *, discover);
+	int err;
+	struct sockaddr_in si;
+
+	discover = (struct dhcp_message *) l_new(uint8_t, len);
+
+	err = client_message_init(client, discover,
+					DHCP_MESSAGE_TYPE_DISCOVER,
+					&opt, &optlen);
+	if (err < 0)
+		return err;
+
+	err = _dhcp_option_append(&opt, &optlen, DHCP_OPTION_END, 0, NULL);
+	if (err < 0)
+		return err;
+
+	len = dhcp_message_optimize(discover, opt);
+
+	memset(&si, 0, sizeof(si));
+	si.sin_family = AF_INET;
+	si.sin_port = L_CPU_TO_BE16(DHCP_PORT_SERVER);
+	si.sin_addr.s_addr = 0xffffffff;
+
+	return client->transport->send(client->transport, &si, discover, len);
 }
 
 LIB_EXPORT struct l_dhcp_client *l_dhcp_client_new(uint32_t ifindex)
