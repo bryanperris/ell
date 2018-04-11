@@ -141,6 +141,24 @@ static int _dhcp_default_transport_open(struct dhcp_transport *s,
 	return 0;
 }
 
+static int _dhcp_default_transport_send(struct dhcp_transport *s,
+					const struct sockaddr_in *dest,
+					const void *data, size_t len)
+{
+	struct dhcp_default_transport *transport =
+		container_of(s, struct dhcp_default_transport, super);
+	int fd = l_io_get_fd(transport->io);
+	int err;
+
+	err = sendto(fd, data, len, 0,
+			(const struct sockaddr *) dest, sizeof(*dest));
+
+	if (err < 0)
+		return -errno;
+
+	return 0;
+}
+
 static void _dhcp_default_transport_close(struct dhcp_transport *s)
 {
 	struct dhcp_default_transport *transport =
@@ -157,6 +175,7 @@ struct dhcp_transport *_dhcp_default_transport_new(void)
 
 	transport->super.open = _dhcp_default_transport_open;
 	transport->super.close = _dhcp_default_transport_close;
+	transport->super.send = _dhcp_default_transport_send;
 
 	return &transport->super;
 }

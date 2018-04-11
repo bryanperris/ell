@@ -58,6 +58,9 @@ uint16_t _dhcp_checksumv(const struct iovec *iov, size_t iov_cnt);
 struct dhcp_transport {
 	int (*open)(struct dhcp_transport *s, uint32_t ifindex,
 					const char *ifname, uint32_t port);
+	int (*send)(struct dhcp_transport *transport,
+					const struct sockaddr_in *dest,
+					const void *data, size_t len);
 	void (*close)(struct dhcp_transport *transport);
 };
 
