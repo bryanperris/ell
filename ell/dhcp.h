@@ -51,6 +51,8 @@ void l_dhcp_client_destroy(struct l_dhcp_client *client);
 
 bool l_dhcp_client_set_address(struct l_dhcp_client *client, uint8_t type,
 					const uint8_t *addr, size_t addr_len);
+bool l_dhcp_client_set_interface_name(struct l_dhcp_client *client,
+							const char *ifname);
 
 #ifdef __cplusplus
 }

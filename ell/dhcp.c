@@ -267,6 +267,7 @@ struct l_dhcp_client {
 	enum dhcp_state state;
 	unsigned long request_options[256 / BITS_PER_LONG];
 	uint32_t ifindex;
+	char *ifname;
 	uint8_t addr[6];
 	uint8_t addr_len;
 	uint8_t addr_type;
@@ -303,6 +304,8 @@ LIB_EXPORT void l_dhcp_client_destroy(struct l_dhcp_client *client)
 {
 	if (unlikely(!client))
 		return;
+
+	l_free(client->ifname);
 
 	l_free(client);
 }
@@ -350,6 +353,21 @@ LIB_EXPORT bool l_dhcp_client_set_address(struct l_dhcp_client *client,
 	client->addr_len = addr_len;
 	memcpy(client->addr, addr, addr_len);
 	client->addr_type = type;
+
+	return true;
+}
+
+LIB_EXPORT bool l_dhcp_client_set_interface_name(struct l_dhcp_client *client,
+							const char *ifname)
+{
+	if (unlikely(!client))
+		return false;
+
+	if (unlikely(client->state != DHCP_STATE_INIT))
+		return false;
+
+	l_free(client->ifname);
+	client->ifname = l_strdup(ifname);
 
 	return true;
 }
