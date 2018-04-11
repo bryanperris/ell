@@ -26,9 +26,21 @@
 
 #include <linux/types.h>
 #include <sys/uio.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <errno.h>
+#include <stddef.h>
 
+#include "io.h"
+#include "util.h"
 #include "private.h"
 #include "dhcp-private.h"
+
+struct dhcp_default_transport {
+	struct dhcp_transport super;
+	struct l_io *io;
+};
 
 /*
  * For efficiency and simplicity of implementation, this function assumes that
@@ -68,4 +80,94 @@ uint16_t _dhcp_checksum(const void *buf, size_t len)
 	iov[0].iov_len = len;
 
 	return _dhcp_checksumv(iov, 1);
+}
+
+static int kernel_socket_open(uint32_t ifindex,
+					const char *ifname, uint32_t port)
+{
+	int s;
+	int err;
+	int one = 1;
+	struct sockaddr_in saddr;
+
+	s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (s < 0)
+		return -errno;
+
+	if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one)) < 0)
+		goto error;
+
+	if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) < 0)
+		goto error;
+
+	if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE,
+					ifname, strlen(ifname) + 1) < 0)
+		goto error;
+
+	memset(&saddr, 0, sizeof(saddr));
+	saddr.sin_family = AF_INET;
+	saddr.sin_port = htons(port);
+	saddr.sin_addr.s_addr = INADDR_ANY;
+
+	err = bind(s, (struct sockaddr *) &saddr, sizeof(struct sockaddr_in));
+	if (err < 0)
+		goto error;
+
+	return s;
+
+error:
+	close(s);
+	return -errno;
+}
+
+static int _dhcp_default_transport_open(struct dhcp_transport *s,
+					uint32_t ifindex, const char *ifname,
+					uint32_t port)
+{
+	struct dhcp_default_transport *transport =
+		container_of(s, struct dhcp_default_transport, super);
+	int fd;
+
+	if (transport->io)
+		return -EALREADY;
+
+	fd = kernel_socket_open(ifindex, ifname, port);
+	if (fd < 0)
+		return fd;
+
+	transport->io = l_io_new(fd);
+	l_io_set_close_on_destroy(transport->io, true);
+
+	return 0;
+}
+
+static void _dhcp_default_transport_close(struct dhcp_transport *s)
+{
+	struct dhcp_default_transport *transport =
+		container_of(s, struct dhcp_default_transport, super);
+
+	l_io_destroy(transport->io);
+	transport->io = NULL;
+}
+
+struct dhcp_transport *_dhcp_default_transport_new(void)
+{
+	struct dhcp_default_transport *transport;
+	transport = l_new(struct dhcp_default_transport, 1);
+
+	transport->super.open = _dhcp_default_transport_open;
+	transport->super.close = _dhcp_default_transport_close;
+
+	return &transport->super;
+}
+
+void _dhcp_transport_free(struct dhcp_transport *transport)
+{
+	if (!transport)
+		return;
+
+	if (transport->close)
+		transport->close(transport);
+
+	l_free(transport);
 }
