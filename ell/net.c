@@ -24,6 +24,7 @@
 #include <config.h>
 #endif
 
+#include <sys/socket.h>
 #include <linux/if_arp.h>
 #include <unistd.h>
 #include <errno.h>
