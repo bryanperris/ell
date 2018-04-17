@@ -112,6 +112,46 @@ const char *_dhcp_message_type_to_string(uint8_t type)
 	}
 }
 
+const char *_dhcp_option_to_string(uint8_t option)
+{
+	switch (option) {
+	case DHCP_OPTION_PAD:
+		return "Pad";
+	case L_DHCP_OPTION_SUBNET_MASK:
+		return "Subnet Mask";
+	case L_DHCP_OPTION_ROUTER:
+		return "Router";
+	case L_DHCP_OPTION_DOMAIN_NAME_SERVER:
+		return "Domain Name Server";
+	case L_DHCP_OPTION_HOST_NAME:
+		return "Host Name";
+	case L_DHCP_OPTION_DOMAIN_NAME:
+		return "Domain Name";
+	case L_DHCP_OPTION_NTP_SERVERS:
+		return "NTP Servers";
+	case L_DHCP_OPTION_REQUESTED_IP_ADDRESS:
+		return "IP Address";
+	case L_DHCP_OPTION_IP_ADDRESS_LEASE_TIME:
+		return "IP Address Lease Time";
+	case DHCP_OPTION_OVERLOAD:
+		return "Overload";
+	case DHCP_OPTION_MESSAGE_TYPE:
+		return "DHCP Message Type";
+	case L_DHCP_OPTION_SERVER_IDENTIFIER:
+		return "Server Identifier";
+	case DHCP_OPTION_PARAMETER_REQUEST_LIST:
+		return "Parameter Request List";
+	case DHCP_OPTION_MAXIMUM_MESSAGE_SIZE:
+		return "Maximum Message Size";
+	case DHCP_OPTION_CLIENT_IDENTIFIER:
+		return "Client Identifier";
+	case DHCP_OPTION_END:
+		return "End";
+	default:
+		return "unknown";
+	};
+}
+
 bool _dhcp_message_iter_init(struct dhcp_message_iter *iter,
 				const struct dhcp_message *message, size_t len)
 {
