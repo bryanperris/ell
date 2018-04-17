@@ -418,6 +418,7 @@ struct l_dhcp_client {
 	uint8_t addr[6];
 	uint8_t addr_len;
 	uint8_t addr_type;
+	char *hostname;
 	uint32_t xid;
 	struct dhcp_transport *transport;
 	time_t start_t;
@@ -512,6 +513,15 @@ static int dhcp_client_send_discover(struct l_dhcp_client *client)
 	if (err < 0)
 		return err;
 
+	if (client->hostname) {
+		err = _dhcp_option_append(&opt, &optlen,
+						L_DHCP_OPTION_HOST_NAME,
+						strlen(client->hostname),
+						client->hostname);
+		if (err < 0)
+			return err;
+	}
+
 	err = _dhcp_option_append(&opt, &optlen, DHCP_OPTION_END, 0, NULL);
 	if (err < 0)
 		return err;
@@ -553,6 +563,7 @@ LIB_EXPORT void l_dhcp_client_destroy(struct l_dhcp_client *client)
 
 	_dhcp_transport_free(client->transport);
 	l_free(client->ifname);
+	l_free(client->hostname);
 
 	l_free(client);
 }
@@ -617,6 +628,28 @@ LIB_EXPORT bool l_dhcp_client_set_interface_name(struct l_dhcp_client *client,
 
 	l_free(client->ifname);
 	client->ifname = l_strdup(ifname);
+
+	return true;
+}
+
+LIB_EXPORT bool l_dhcp_client_set_hostname(struct l_dhcp_client *client,
+						const char *hostname)
+{
+	if (unlikely(!client))
+		return false;
+
+	if (unlikely(client->state != DHCP_STATE_INIT))
+		return false;
+
+	if (!hostname)
+		goto done;
+
+	if (client->hostname && !strcmp(client->hostname, hostname))
+		return true;
+
+done:
+	l_free(client->hostname);
+	client->hostname = l_strdup(hostname);
 
 	return true;
 }
