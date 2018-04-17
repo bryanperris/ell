@@ -603,3 +603,27 @@ LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
 	err = dhcp_client_send_discover(client);
 	return err >= 0;
 }
+
+LIB_EXPORT bool l_dhcp_client_stop(struct l_dhcp_client *client)
+{
+	if (unlikely(!client))
+		return false;
+
+	if (client->transport && client->transport->close)
+		client->transport->close(client->transport);
+
+	switch (client->state) {
+	case DHCP_STATE_INIT:
+	case DHCP_STATE_SELECTING:
+		break;
+	case DHCP_STATE_INIT_REBOOT:
+	case DHCP_STATE_REBOOTING:
+	case DHCP_STATE_REQUESTING:
+	case DHCP_STATE_BOUND:
+	case DHCP_STATE_RENEWING:
+	case DHCP_STATE_REBINDING:
+		break;
+	}
+
+	return true;
+}
