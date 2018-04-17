@@ -29,6 +29,7 @@
 #include <linux/if_arp.h>
 #include <net/ethernet.h>
 #include <errno.h>
+#include <time.h>
 
 #include "private.h"
 #include "random.h"
@@ -343,6 +344,7 @@ struct l_dhcp_client {
 	uint8_t addr_type;
 	uint32_t xid;
 	struct dhcp_transport *transport;
+	time_t start_t;
 	bool have_addr : 1;
 };
 
@@ -351,6 +353,20 @@ static inline void dhcp_enable_option(struct l_dhcp_client *client,
 {
 	client->request_options[option / BITS_PER_LONG] |=
 						1UL << (option % BITS_PER_LONG);
+}
+
+static uint16_t dhcp_attempt_secs(time_t start)
+{
+	time_t now = time(NULL);
+	time_t elapsed = now - start;
+
+	if (elapsed == 0)
+		return 1;
+
+	if (elapsed > UINT16_MAX)
+		return UINT16_MAX;
+
+	return elapsed;
 }
 
 static int client_message_init(struct l_dhcp_client *client,
@@ -376,6 +392,13 @@ static int client_message_init(struct l_dhcp_client *client,
 	 */
 	if (client->addr_type == ARPHRD_ETHER)
 		memcpy(message->chaddr, &client->addr, client->addr_len);
+
+	/*
+	 * Althrough RFC 2131 says that secs should be initialized to 0,
+	 * some servers refuse to give us a lease unless we set this to a
+	 * non-zero value
+	 */
+	message->secs = L_CPU_TO_BE16(dhcp_attempt_secs(client->start_t));
 
 	return 0;
 }
@@ -562,6 +585,7 @@ LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
 			return false;
 
 	l_getrandom(&client->xid, sizeof(client->xid));
+	client->start_t = time(NULL);
 
 	err = dhcp_client_send_discover(client);
 	return err >= 0;
