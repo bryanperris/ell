@@ -65,6 +65,7 @@ enum dhcp_message_type {
 };
 
 #define DHCP_OPTION_PARAMETER_REQUEST_LIST 55 /* Section 9.8 */
+#define DHCP_OPTION_MAXIMUM_MESSAGE_SIZE 57 /* Section 9.10 */
 #define DHCP_OPTION_CLIENT_IDENTIFIER 61 /* Section 9.14 */
 
 /* RFC 2131, Table 1 */
@@ -375,6 +376,7 @@ static int client_message_init(struct l_dhcp_client *client,
 					uint8_t **opt, size_t *optlen)
 {
 	int err;
+	uint16_t max_size;
 
 	err = dhcp_message_init(message, DHCP_OP_CODE_BOOTREQUEST,
 				type, client->xid, opt, optlen);
@@ -399,6 +401,17 @@ static int client_message_init(struct l_dhcp_client *client,
 	 * non-zero value
 	 */
 	message->secs = L_CPU_TO_BE16(dhcp_attempt_secs(client->start_t));
+
+	/*
+	 * Set the maximum DHCP message size to the minimum legal value.  This
+	 * helps some buggy DHCP servers to not send bigger packets
+	 */
+	max_size = L_CPU_TO_BE16(576);
+	err = _dhcp_option_append(opt, optlen,
+					DHCP_OPTION_MAXIMUM_MESSAGE_SIZE,
+					2, &max_size);
+	if (err < 0)
+		return err;
 
 	return 0;
 }
