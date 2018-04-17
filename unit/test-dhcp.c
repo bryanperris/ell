@@ -31,6 +31,8 @@
 #include <ell/ell.h>
 #include "ell/dhcp-private.h"
 
+static bool verbose = false;
+
 static void test_request_option(const void *data)
 {
 	struct l_dhcp_client *dhcp;
@@ -356,6 +358,68 @@ static void test_option_8(const void *data)
 	l_free(message);
 }
 
+static void test_option_set(const void *data)
+{
+	static uint8_t result[64] = {'A', 'B', 'C', 'D' };
+	static uint8_t options[64] = {
+			'A', 'B', 'C', 'D',
+			160, 2, 0x11, 0x12,
+			0,
+			31, 8, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38,
+			0,
+			55, 3, 0x51, 0x52, 0x53,
+			17, 7, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77,
+			255
+	};
+
+	size_t len, oldlen;
+	int pos, i;
+	uint8_t *opt;
+
+	assert(_dhcp_option_append(NULL, NULL, 0, 0, NULL) == -EINVAL);
+
+	len = 0;
+	opt = &result[0];
+	assert(_dhcp_option_append(&opt, NULL, 0, 0, NULL) == -EINVAL);
+	assert(opt == &result[0] && len == 0);
+
+	assert(_dhcp_option_append(&opt, &len, 0, 0, NULL) == -ENOBUFS);
+	assert(opt == &result[0] && len == 0);
+
+	opt = &result[4];
+	len = 1;
+	assert(_dhcp_option_append(&opt, &len, 0, 0, NULL) >= 0);
+	assert(opt == &result[5] && len == 0);
+
+	pos = 4;
+	len = 60;
+	while (pos < 64 && options[pos] != 255) {
+		opt = &result[pos];
+		oldlen = len;
+
+		assert(_dhcp_option_append(&opt, &len, options[pos],
+						options[pos + 1],
+						&options[pos + 2]) >= 0);
+
+		if (options[pos] == 0) {
+			assert(opt == &result[pos + 1]);
+			assert(len == oldlen - 1);
+			pos++;
+		} else {
+			assert(opt == &result[pos + 2 + options[pos + 1]]);
+			assert(len == oldlen - 2 - options[pos + 1]);
+			pos += 2 + options[pos + 1];
+		}
+	}
+
+	for (i = 0; i < pos; i++) {
+		if (verbose)
+			l_info("%2d: 0x%02x(0x%02x)\n",
+					i, result[i], options[i]);
+		assert(result[i] == options[i]);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -372,6 +436,8 @@ int main(int argc, char *argv[])
 	l_test_add("option test 6", test_option_6, &option_test_6);
 	l_test_add("option test 7", test_option_7, &option_test_7);
 	l_test_add("option test 8", test_option_8, &option_test_8);
+
+	l_test_add("option set", test_option_set, NULL);
 
 	return l_test_run();
 }
