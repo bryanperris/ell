@@ -313,6 +313,41 @@ int _dhcp_option_append(uint8_t **buf, size_t *buflen, uint8_t code,
 	return 0;
 }
 
+static int dhcp_append_prl(const unsigned long *reqopts,
+					uint8_t **buf, size_t *buflen)
+{
+	uint8_t optlen = 0;
+	unsigned int i;
+	unsigned int j;
+
+	if (!buf || !buflen)
+		return -EINVAL;
+
+	for (i = 0; i < 256 / BITS_PER_LONG; i++)
+		optlen += __builtin_popcountl(reqopts[i]);
+
+	/*
+	 * This function assumes that there's enough space to put the PRL
+	 * into the buffer without resorting to file or sname overloading
+	 */
+	if (*buflen < optlen + 2U)
+		return -ENOBUFS;
+
+	i = 0;
+	(*buf)[i++] = DHCP_OPTION_PARAMETER_REQUEST_LIST;
+	(*buf)[i++] = optlen;
+
+	for (j = 0; j < 256; j++) {
+		if (reqopts[j / BITS_PER_LONG] & 1UL << (j % BITS_PER_LONG))
+			(*buf)[i++] = j;
+	}
+
+	*buf += optlen + 2;
+	*buflen -= (optlen + 2);
+
+	return 0;
+}
+
 static int dhcp_message_init(struct dhcp_message *message,
 				enum dhcp_op_code op,
 				uint8_t type, uint32_t xid,
@@ -441,6 +476,10 @@ static int client_message_init(struct l_dhcp_client *client,
 	 * non-zero value
 	 */
 	message->secs = L_CPU_TO_BE16(dhcp_attempt_secs(client->start_t));
+
+	err = dhcp_append_prl(client->request_options, opt, optlen);
+	if (err < 0)
+		return err;
 
 	/*
 	 * Set the maximum DHCP message size to the minimum legal value.  This
