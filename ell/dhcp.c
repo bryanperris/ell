@@ -424,6 +424,7 @@ struct l_dhcp_client {
 	struct dhcp_transport *transport;
 	time_t start_t;
 	struct l_timeout *timeout_resend;
+	struct l_dhcp_lease *lease;
 	bool have_addr : 1;
 };
 
@@ -549,6 +550,81 @@ static void dhcp_client_timeout_resend(struct l_timeout *timeout,
 	case DHCP_STATE_SELECTING:
 		l_timeout_modify(timeout, 5);
 		dhcp_client_send_discover(client);
+		break;
+	case DHCP_STATE_INIT_REBOOT:
+	case DHCP_STATE_REBOOTING:
+	case DHCP_STATE_REQUESTING:
+	case DHCP_STATE_BOUND:
+	case DHCP_STATE_RENEWING:
+	case DHCP_STATE_REBINDING:
+		break;
+	}
+}
+
+static int dhcp_client_receive_offer(struct l_dhcp_client *client,
+					const struct dhcp_message *offer,
+					size_t len)
+{
+	struct dhcp_message_iter iter;
+
+	if (offer->yiaddr == 0)
+		return -ENOMSG;
+
+	if (!_dhcp_message_iter_init(&iter, offer, len))
+		return -EINVAL;
+
+	client->lease = _dhcp_lease_parse_options(&iter);
+	if (!client->lease)
+		return -ENOMSG;
+
+	client->lease->address = offer->yiaddr;
+
+	return 0;
+}
+
+static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
+{
+	struct l_dhcp_client *client = userdata;
+	const struct dhcp_message *message = data;
+	struct dhcp_message_iter iter;
+	uint8_t msg_type = 0;
+	uint8_t t, l;
+	const void *v;
+
+	if (len < sizeof(struct dhcp_message) + 4)
+		return;
+
+	if (message->op != DHCP_OP_CODE_BOOTREPLY)
+		return;
+
+	if (L_BE32_TO_CPU(message->xid) != client->xid)
+		return;
+
+	if (memcmp(message->chaddr, client->addr, client->addr_len))
+		return;
+
+	if (!_dhcp_message_iter_init(&iter, message, len))
+		return;
+
+	while (_dhcp_message_iter_next(&iter, &t, &l, &v) && !msg_type) {
+		switch (t) {
+		case DHCP_OPTION_MESSAGE_TYPE:
+			if (l == 1)
+				msg_type = l_get_u8(v);
+			break;
+		}
+	}
+
+	switch (client->state) {
+	case DHCP_STATE_INIT:
+		return;
+	case DHCP_STATE_SELECTING:
+		if (msg_type != DHCP_MESSAGE_TYPE_OFFER)
+			return;
+
+		if (dhcp_client_receive_offer(client, message, len) < 0)
+			return;
+
 		break;
 	case DHCP_STATE_INIT_REBOOT:
 	case DHCP_STATE_REBOOTING:
@@ -735,6 +811,10 @@ LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
 					client->ifname, DHCP_PORT_CLIENT) < 0)
 			return false;
 
+	_dhcp_transport_set_rx_callback(client->transport,
+						dhcp_client_rx_message,
+						client);
+
 	l_getrandom(&client->xid, sizeof(client->xid));
 	client->start_t = time(NULL);
 
@@ -769,5 +849,6 @@ LIB_EXPORT bool l_dhcp_client_stop(struct l_dhcp_client *client)
 		break;
 	}
 
+	_dhcp_lease_free(client->lease);
 	return true;
 }
