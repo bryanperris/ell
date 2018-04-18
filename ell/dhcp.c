@@ -507,6 +507,13 @@ static int client_message_init(struct l_dhcp_client *client,
 	return 0;
 }
 
+static void dhcp_client_event_notify(struct l_dhcp_client *client,
+						enum l_dhcp_client_event event)
+{
+	if (client->event_handler)
+		client->event_handler(client, event, client->event_data);
+}
+
 static int dhcp_client_send_discover(struct l_dhcp_client *client)
 {
 	uint8_t *opt;
@@ -652,6 +659,47 @@ error:
 	l_dhcp_client_stop(client);
 }
 
+static int dhcp_client_receive_ack(struct l_dhcp_client *client,
+					const struct dhcp_message *ack,
+					size_t len)
+{
+	struct dhcp_message_iter iter;
+	struct l_dhcp_lease *lease;
+	int r;
+
+	if (ack->yiaddr == 0)
+		return -ENOMSG;
+
+	if (!_dhcp_message_iter_init(&iter, ack, len))
+		return -EINVAL;
+
+	lease = _dhcp_lease_parse_options(&iter);
+	if (!lease)
+		return -ENOMSG;
+
+	lease->address = ack->yiaddr;
+
+	r = L_DHCP_CLIENT_EVENT_LEASE_RENEWED;
+
+	if (client->lease) {
+		if (client->lease->subnet_mask != lease->subnet_mask ||
+				client->lease->address != lease->address ||
+				client->lease->router != lease->router)
+			r = L_DHCP_CLIENT_EVENT_IP_CHANGED;
+
+		_dhcp_lease_free(client->lease);
+	}
+
+	client->lease = lease;
+
+	/* In case this is an initial request, override to LEASE_OBTAINED */
+	if (client->state == DHCP_STATE_REQUESTING ||
+			client->state == DHCP_STATE_REBOOTING)
+		r = L_DHCP_CLIENT_EVENT_LEASE_OBTAINED;
+
+	return r;
+}
+
 static int dhcp_client_receive_offer(struct l_dhcp_client *client,
 					const struct dhcp_message *offer,
 					size_t len)
@@ -681,6 +729,7 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 	uint8_t msg_type = 0;
 	uint8_t t, l;
 	const void *v;
+	int r;
 
 	if (len < sizeof(struct dhcp_message) + 4)
 		return;
@@ -723,9 +772,22 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 
 		l_timeout_modify(client->timeout_resend, 5);
 		break;
+	case DHCP_STATE_REQUESTING:
+		if (msg_type != DHCP_MESSAGE_TYPE_ACK)
+			return;
+
+		r = dhcp_client_receive_ack(client, message, len);
+		if (r < 0)
+			return;
+
+		client->state = DHCP_STATE_BOUND;
+		l_timeout_remove(client->timeout_resend);
+		client->timeout_resend = NULL;
+
+		dhcp_client_event_notify(client, r);
+		break;
 	case DHCP_STATE_INIT_REBOOT:
 	case DHCP_STATE_REBOOTING:
-	case DHCP_STATE_REQUESTING:
 	case DHCP_STATE_BOUND:
 	case DHCP_STATE_RENEWING:
 	case DHCP_STATE_REBINDING:
