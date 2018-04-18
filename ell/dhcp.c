@@ -540,6 +540,79 @@ static int dhcp_client_send_discover(struct l_dhcp_client *client)
 	return client->transport->send(client->transport, &si, discover, len);
 }
 
+static int dhcp_client_send_request(struct l_dhcp_client *client)
+{
+	uint8_t *opt;
+	size_t optlen = DHCP_MIN_OPTIONS_SIZE;
+	size_t len = sizeof(struct dhcp_message) + optlen;
+	L_AUTO_FREE_VAR(struct dhcp_message *, request);
+	int err;
+	struct sockaddr_in si;
+
+	request = (struct dhcp_message *) l_new(uint8_t, len);
+
+	err = client_message_init(client, request,
+					DHCP_MESSAGE_TYPE_REQUEST,
+					&opt, &optlen);
+	if (err < 0)
+		return err;
+
+	switch (client->state) {
+	case DHCP_STATE_REQUESTING:
+		/*
+		 * RFC 2131, Section 4.3.2:
+		 * "If the DHCPREQUEST message contains a 'server identifier'
+		 * option, the message is in response to a DHCPOFFER message."
+		 *
+		 * and
+		 *
+		 * "DHCPREQUEST generated during SELECTING state:
+		 * Client inserts the address of the selected server in
+		 * 'server identifier', 'ciaddr' MUST be zero, 'requested IP
+		 * address' MUST be filled in with the yiaddr value from the
+		 * chosen DHCPOFFER."
+		 *
+		 * NOTE: 'SELECTING' is meant to be 'REQUESTING' in the RFC
+		 */
+		err = _dhcp_option_append(&opt, &optlen,
+					L_DHCP_OPTION_SERVER_IDENTIFIER,
+					4, &client->lease->server_address);
+		if (err < 0)
+			return err;
+
+		err = _dhcp_option_append(&opt, &optlen,
+					L_DHCP_OPTION_REQUESTED_IP_ADDRESS,
+					4, &client->lease->address);
+		if (err < 0)
+			return err;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (client->hostname) {
+		err = _dhcp_option_append(&opt, &optlen,
+						L_DHCP_OPTION_HOST_NAME,
+						strlen(client->hostname),
+						client->hostname);
+		if (err < 0)
+			return err;
+	}
+
+	err = _dhcp_option_append(&opt, &optlen, DHCP_OPTION_END, 0, NULL);
+	if (err < 0)
+		return err;
+
+	len = dhcp_message_optimize(request, opt);
+
+	memset(&si, 0, sizeof(si));
+	si.sin_family = AF_INET;
+	si.sin_port = L_CPU_TO_BE16(DHCP_PORT_SERVER);
+	si.sin_addr.s_addr = 0xffffffff;
+
+	return client->transport->send(client->transport, &si, request, len);
+}
+
 static void dhcp_client_timeout_resend(struct l_timeout *timeout,
 								void *user_data)
 {
@@ -552,14 +625,24 @@ static void dhcp_client_timeout_resend(struct l_timeout *timeout,
 		l_timeout_modify(timeout, 5);
 		dhcp_client_send_discover(client);
 		break;
+	case DHCP_STATE_REQUESTING:
+		if (dhcp_client_send_request(client) < 0)
+			goto error;
+
+		l_timeout_modify(timeout, 5);
+		break;
 	case DHCP_STATE_INIT_REBOOT:
 	case DHCP_STATE_REBOOTING:
-	case DHCP_STATE_REQUESTING:
 	case DHCP_STATE_BOUND:
 	case DHCP_STATE_RENEWING:
 	case DHCP_STATE_REBINDING:
 		break;
 	}
+
+	return;
+
+error:
+	l_dhcp_client_stop(client);
 }
 
 static int dhcp_client_receive_offer(struct l_dhcp_client *client,
@@ -626,6 +709,12 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 		if (dhcp_client_receive_offer(client, message, len) < 0)
 			return;
 
+		client->state = DHCP_STATE_REQUESTING;
+
+		if (dhcp_client_send_request(client) < 0)
+			goto error;
+
+		l_timeout_modify(client->timeout_resend, 5);
 		break;
 	case DHCP_STATE_INIT_REBOOT:
 	case DHCP_STATE_REBOOTING:
@@ -635,6 +724,11 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 	case DHCP_STATE_REBINDING:
 		break;
 	}
+
+	return;
+
+error:
+	l_dhcp_client_stop(client);
 }
 
 LIB_EXPORT struct l_dhcp_client *l_dhcp_client_new(uint32_t ifindex)
