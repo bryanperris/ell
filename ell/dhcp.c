@@ -34,6 +34,7 @@
 #include "private.h"
 #include "random.h"
 #include "net.h"
+#include "timeout.h"
 #include "dhcp.h"
 #include "dhcp-private.h"
 
@@ -422,6 +423,7 @@ struct l_dhcp_client {
 	uint32_t xid;
 	struct dhcp_transport *transport;
 	time_t start_t;
+	struct l_timeout *timeout_resend;
 	bool have_addr : 1;
 };
 
@@ -536,6 +538,28 @@ static int dhcp_client_send_discover(struct l_dhcp_client *client)
 	return client->transport->send(client->transport, &si, discover, len);
 }
 
+static void dhcp_client_timeout_resend(struct l_timeout *timeout,
+								void *user_data)
+{
+	struct l_dhcp_client *client = user_data;
+
+	switch (client->state) {
+	case DHCP_STATE_INIT:
+		break;
+	case DHCP_STATE_SELECTING:
+		l_timeout_modify(timeout, 5);
+		dhcp_client_send_discover(client);
+		break;
+	case DHCP_STATE_INIT_REBOOT:
+	case DHCP_STATE_REBOOTING:
+	case DHCP_STATE_REQUESTING:
+	case DHCP_STATE_BOUND:
+	case DHCP_STATE_RENEWING:
+	case DHCP_STATE_REBINDING:
+		break;
+	}
+}
+
 LIB_EXPORT struct l_dhcp_client *l_dhcp_client_new(uint32_t ifindex)
 {
 	struct l_dhcp_client *client;
@@ -560,6 +584,8 @@ LIB_EXPORT void l_dhcp_client_destroy(struct l_dhcp_client *client)
 {
 	if (unlikely(!client))
 		return;
+
+	l_timeout_remove(client->timeout_resend);
 
 	_dhcp_transport_free(client->transport);
 	l_free(client->ifname);
@@ -713,7 +739,13 @@ LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
 	client->start_t = time(NULL);
 
 	err = dhcp_client_send_discover(client);
-	return err >= 0;
+	if (err < 0)
+		return false;
+
+	client->timeout_resend = l_timeout_create(5, dhcp_client_timeout_resend,
+							client, NULL);
+	client->state = DHCP_STATE_SELECTING;
+	return true;
 }
 
 LIB_EXPORT bool l_dhcp_client_stop(struct l_dhcp_client *client)
