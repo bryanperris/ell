@@ -92,3 +92,15 @@ int _dhcp_option_append(uint8_t **buf, size_t *buflen, uint8_t code,
 
 bool _dhcp_client_set_transport(struct l_dhcp_client *client,
 					struct dhcp_transport *transport);
+
+struct l_dhcp_lease {
+	uint32_t address;
+	uint32_t server_address;
+	uint32_t subnet_mask;
+	uint32_t lifetime;
+	uint32_t router;
+};
+
+struct l_dhcp_lease *_dhcp_lease_new(void);
+void _dhcp_lease_free(struct l_dhcp_lease *lease);
+struct l_dhcp_lease *_dhcp_lease_parse_options(struct dhcp_message_iter *iter);

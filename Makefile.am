@@ -103,7 +103,8 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/net.c \
 			ell/dhcp-private.h \
 			ell/dhcp.c \
-			ell/dhcp-transport.c
+			ell/dhcp-transport.c \
+			ell/dhcp-lease.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)
