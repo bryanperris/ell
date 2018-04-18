@@ -426,6 +426,7 @@ struct l_dhcp_client {
 	struct l_timeout *timeout_resend;
 	struct l_dhcp_lease *lease;
 	bool have_addr : 1;
+	bool override_xid : 1;
 };
 
 static inline void dhcp_enable_option(struct l_dhcp_client *client,
@@ -772,6 +773,12 @@ bool _dhcp_client_set_transport(struct l_dhcp_client *client,
 	return true;
 }
 
+void _dhcp_client_override_xid(struct l_dhcp_client *client, uint32_t xid)
+{
+	client->override_xid = true;
+	client->xid = xid;
+}
+
 LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
 {
 	int err;
@@ -815,7 +822,9 @@ LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
 						dhcp_client_rx_message,
 						client);
 
-	l_getrandom(&client->xid, sizeof(client->xid));
+	if (!client->override_xid)
+		l_getrandom(&client->xid, sizeof(client->xid));
+
 	client->start_t = time(NULL);
 
 	err = dhcp_client_send_discover(client);
