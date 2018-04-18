@@ -58,6 +58,8 @@ const char *_dhcp_option_to_string(uint8_t option);
 uint16_t _dhcp_checksum(const void *buf, size_t len);
 uint16_t _dhcp_checksumv(const struct iovec *iov, size_t iov_cnt);
 
+typedef void (*dhcp_transport_rx_cb_t)(const void *, size_t, void *);
+
 struct dhcp_transport {
 	int (*open)(struct dhcp_transport *s, uint32_t ifindex,
 					const char *ifname, uint32_t port);
@@ -70,10 +72,15 @@ struct dhcp_transport {
 						const void *data, size_t len);
 	void (*close)(struct dhcp_transport *transport);
 	uint32_t ifindex;
+	dhcp_transport_rx_cb_t rx_cb;
+	void *rx_data;
 };
 
 struct dhcp_transport *_dhcp_default_transport_new(void);
 void _dhcp_transport_free(struct dhcp_transport *transport);
+void _dhcp_transport_set_rx_callback(struct dhcp_transport *transport,
+					dhcp_transport_rx_cb_t rx_cb,
+					void *userdata);
 
 bool _dhcp_message_iter_init(struct dhcp_message_iter *iter,
 				const struct dhcp_message *message, size_t len);

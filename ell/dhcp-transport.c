@@ -86,6 +86,24 @@ uint16_t _dhcp_checksum(const void *buf, size_t len)
 	return _dhcp_checksumv(iov, 1);
 }
 
+static bool _dhcp_default_transport_read_handler(struct l_io *io,
+							void *userdata)
+{
+	struct dhcp_default_transport *transport = userdata;
+	int fd = l_io_get_fd(io);
+	char buf[1024];
+	ssize_t len;
+
+	len = read(fd, buf, sizeof(buf));
+	if (len < 0)
+		return false;
+
+	if (transport->super.rx_cb)
+		transport->super.rx_cb(buf, len, transport->super.rx_data);
+
+	return true;
+}
+
 static int kernel_socket_open(uint32_t ifindex,
 					const char *ifname, uint32_t port)
 {
@@ -141,6 +159,9 @@ static int _dhcp_default_transport_open(struct dhcp_transport *s,
 
 	transport->io = l_io_new(fd);
 	l_io_set_close_on_destroy(transport->io, true);
+	l_io_set_read_handler(transport->io,
+					_dhcp_default_transport_read_handler,
+					transport, NULL);
 
 	transport->super.ifindex = ifindex;
 
@@ -285,4 +306,15 @@ void _dhcp_transport_free(struct dhcp_transport *transport)
 		transport->close(transport);
 
 	l_free(transport);
+}
+
+void _dhcp_transport_set_rx_callback(struct dhcp_transport *transport,
+					dhcp_transport_rx_cb_t rx_cb,
+					void *userdata)
+{
+	if (!transport)
+		return;
+
+	transport->rx_cb = rx_cb;
+	transport->rx_data = userdata;
 }
