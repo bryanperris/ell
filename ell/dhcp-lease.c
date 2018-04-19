@@ -26,6 +26,7 @@
 
 #include <linux/types.h>
 #include <netinet/ip.h>
+#include <arpa/inet.h>
 
 #include "private.h"
 #include "dhcp.h"
@@ -106,4 +107,79 @@ struct l_dhcp_lease *_dhcp_lease_parse_options(struct dhcp_message_iter *iter)
 error:
 	l_free(lease);
 	return NULL;
+}
+
+static inline char *get_ip(uint32_t ip)
+{
+	struct in_addr addr;
+
+	if (ip == 0)
+		return NULL;
+
+	addr.s_addr = ip;
+	return l_strdup(inet_ntoa(addr));
+}
+
+LIB_EXPORT char *l_dhcp_lease_get_address(const struct l_dhcp_lease *lease)
+{
+	if (unlikely(!lease))
+		return NULL;
+
+	return get_ip(lease->address);
+}
+
+LIB_EXPORT char *l_dhcp_lease_get_gateway(const struct l_dhcp_lease *lease)
+{
+	if (unlikely(!lease))
+		return NULL;
+
+	return get_ip(lease->router);
+}
+
+LIB_EXPORT char *l_dhcp_lease_get_netmask(const struct l_dhcp_lease *lease)
+{
+	if (unlikely(!lease))
+		return NULL;
+
+	return get_ip(lease->subnet_mask);
+}
+
+LIB_EXPORT char *l_dhcp_lease_get_broadcast(const struct l_dhcp_lease *lease)
+{
+	if (unlikely(!lease))
+		return NULL;
+
+	return get_ip(lease->broadcast);
+}
+
+LIB_EXPORT char *l_dhcp_lease_get_server_id(const struct l_dhcp_lease *lease)
+{
+	if (unlikely(!lease))
+		return NULL;
+
+	return get_ip(lease->server_address);
+}
+
+LIB_EXPORT uint32_t l_dhcp_lease_get_t1(const struct l_dhcp_lease *lease)
+{
+	if (unlikely(!lease))
+		return 0;
+
+	return lease->t1;
+}
+
+LIB_EXPORT uint32_t l_dhcp_lease_get_t2(const struct l_dhcp_lease *lease)
+{
+	if (unlikely(!lease))
+		return 0;
+
+	return lease->t2;
+}
+
+LIB_EXPORT uint32_t l_dhcp_lease_get_lifetime(const struct l_dhcp_lease *lease)
+{
+	if (unlikely(!lease))
+		return 0;
+
+	return lease->lifetime;
 }

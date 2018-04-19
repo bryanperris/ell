@@ -82,6 +82,16 @@ bool l_dhcp_client_set_event_handler(struct l_dhcp_client *client,
 					l_dhcp_client_event_cb_t handler,
 					void *userdata,
 					l_dhcp_destroy_cb_t destroy);
+
+char *l_dhcp_lease_get_address(const struct l_dhcp_lease *lease);
+char *l_dhcp_lease_get_gateway(const struct l_dhcp_lease *lease);
+char *l_dhcp_lease_get_netmask(const struct l_dhcp_lease *lease);
+char *l_dhcp_lease_get_broadcast(const struct l_dhcp_lease *lease);
+char *l_dhcp_lease_get_server_id(const struct l_dhcp_lease *lease);
+
+uint32_t l_dhcp_lease_get_t1(const struct l_dhcp_lease *lease);
+uint32_t l_dhcp_lease_get_t2(const struct l_dhcp_lease *lease);
+uint32_t l_dhcp_lease_get_lifetime(const struct l_dhcp_lease *lease);
 #ifdef __cplusplus
 }
 #endif
