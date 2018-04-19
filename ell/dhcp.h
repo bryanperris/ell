@@ -41,6 +41,8 @@ enum l_dhcp_option {
 	L_DHCP_OPTION_NTP_SERVERS = 42, /* Section 8.3 */
 	L_DHCP_OPTION_REQUESTED_IP_ADDRESS = 50, /* Section 9.1 */
 	L_DHCP_OPTION_IP_ADDRESS_LEASE_TIME = 51, /* Section 9.2 */
+	L_DHCP_OPTION_RENEWAL_T1_TIME = 58, /* Section 9.11 */
+	L_DHCP_OPTION_REBINDING_T2_TIME = 59, /* Section 9.12 */
 	L_DHCP_OPTION_SERVER_IDENTIFIER = 54, /* Section 9.7 */
 };
 

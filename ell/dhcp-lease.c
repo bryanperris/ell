@@ -70,12 +70,33 @@ struct l_dhcp_lease *_dhcp_lease_parse_options(struct dhcp_message_iter *iter)
 			if (l == 4)
 				lease->router = l_get_u32(v);
 			break;
+		case L_DHCP_OPTION_RENEWAL_T1_TIME:
+			if (l == 4)
+				lease->t1 = l_get_be32(v);
+		case L_DHCP_OPTION_REBINDING_T2_TIME:
+			if (l == 4)
+				lease->t2 = l_get_be32(v);
 		default:
 			break;
 		}
 	}
 
 	if (!lease->server_address || !lease->lifetime)
+		goto error;
+
+	if (lease->lifetime < 10)
+		goto error;
+
+	if (!lease->t1)
+		lease->t1 = lease->lifetime / 2;
+
+	if (!lease->t2)
+		lease->t2 = lease->lifetime * 7 / 8;
+
+	if (lease->t1 > lease->t2)
+		goto error;
+
+	if (lease->t2 > lease->lifetime)
 		goto error;
 
 	return lease;

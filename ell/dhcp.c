@@ -144,6 +144,10 @@ const char *_dhcp_option_to_string(uint8_t option)
 		return "Parameter Request List";
 	case DHCP_OPTION_MAXIMUM_MESSAGE_SIZE:
 		return "Maximum Message Size";
+	case L_DHCP_OPTION_RENEWAL_T1_TIME:
+		return "Renewal Time";
+	case L_DHCP_OPTION_REBINDING_T2_TIME:
+		return "Rebinding Time";
 	case DHCP_OPTION_CLIENT_IDENTIFIER:
 		return "Client Identifier";
 	case DHCP_OPTION_END:

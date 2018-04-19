@@ -99,6 +99,8 @@ struct l_dhcp_lease {
 	uint32_t server_address;
 	uint32_t subnet_mask;
 	uint32_t lifetime;
+	uint32_t t1;
+	uint32_t t2;
 	uint32_t router;
 };
 
