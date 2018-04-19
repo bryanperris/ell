@@ -46,6 +46,18 @@ enum l_dhcp_option {
 	L_DHCP_OPTION_SERVER_IDENTIFIER = 54, /* Section 9.7 */
 };
 
+enum l_dhcp_client_event {
+	L_DHCP_CLIENT_EVENT_LEASE_OBTAINED = 0,
+	L_DHCP_CLIENT_EVENT_IP_CHANGED,
+	L_DHCP_CLIENT_EVENT_LEASE_EXPIRED,
+	L_DHCP_CLIENT_EVENT_LEASE_RENEWED,
+};
+
+typedef void (*l_dhcp_client_event_cb_t)(struct l_dhcp_client *client,
+						enum l_dhcp_client_event event,
+						void *userdata);
+typedef void (*l_dhcp_destroy_cb_t)(void *userdata);
+
 struct l_dhcp_client *l_dhcp_client_new(uint32_t ifindex);
 bool l_dhcp_client_add_request_option(struct l_dhcp_client *client,
 								uint8_t option);
@@ -60,6 +72,11 @@ bool l_dhcp_client_set_hostname(struct l_dhcp_client *client,
 
 bool l_dhcp_client_start(struct l_dhcp_client *client);
 bool l_dhcp_client_stop(struct l_dhcp_client *client);
+
+bool l_dhcp_client_set_event_handler(struct l_dhcp_client *client,
+					l_dhcp_client_event_cb_t handler,
+					void *userdata,
+					l_dhcp_destroy_cb_t destroy);
 #ifdef __cplusplus
 }
 #endif

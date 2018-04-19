@@ -429,6 +429,9 @@ struct l_dhcp_client {
 	time_t start_t;
 	struct l_timeout *timeout_resend;
 	struct l_dhcp_lease *lease;
+	l_dhcp_client_event_cb_t event_handler;
+	void *event_data;
+	l_dhcp_destroy_cb_t event_destroy;
 	bool have_addr : 1;
 	bool override_xid : 1;
 };
@@ -760,6 +763,9 @@ LIB_EXPORT void l_dhcp_client_destroy(struct l_dhcp_client *client)
 	if (unlikely(!client))
 		return;
 
+	if (client->event_destroy)
+		client->event_destroy(client->event_data);
+
 	l_timeout_remove(client->timeout_resend);
 
 	_dhcp_transport_free(client->transport);
@@ -957,5 +963,23 @@ LIB_EXPORT bool l_dhcp_client_stop(struct l_dhcp_client *client)
 	}
 
 	_dhcp_lease_free(client->lease);
+	return true;
+}
+
+LIB_EXPORT bool l_dhcp_client_set_event_handler(struct l_dhcp_client *client,
+					l_dhcp_client_event_cb_t handler,
+					void *userdata,
+					l_dhcp_destroy_cb_t destroy)
+{
+	if (unlikely(!client))
+		return false;
+
+	if (client->event_destroy)
+		client->event_destroy(client->event_data);
+
+	client->event_handler = handler;
+	client->event_data = userdata;
+	client->event_destroy = destroy;
+
 	return true;
 }
