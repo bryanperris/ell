@@ -128,6 +128,8 @@ const char *_dhcp_option_to_string(uint8_t option)
 		return "Host Name";
 	case L_DHCP_OPTION_DOMAIN_NAME:
 		return "Domain Name";
+	case L_DHCP_OPTION_BROADCAST_ADDRESS:
+		return "Broadcast Address";
 	case L_DHCP_OPTION_NTP_SERVERS:
 		return "NTP Servers";
 	case L_DHCP_OPTION_REQUESTED_IP_ADDRESS:

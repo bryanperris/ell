@@ -39,6 +39,7 @@ enum l_dhcp_option {
 	L_DHCP_OPTION_DOMAIN_NAME_SERVER = 6, /* Section 3.8 */
 	L_DHCP_OPTION_HOST_NAME = 12, /* Section 3.14 */
 	L_DHCP_OPTION_DOMAIN_NAME = 15, /* Section 3.17 */
+	L_DHCP_OPTION_BROADCAST_ADDRESS = 28, /* Section 5.3 */
 	L_DHCP_OPTION_NTP_SERVERS = 42, /* Section 8.3 */
 	L_DHCP_OPTION_REQUESTED_IP_ADDRESS = 50, /* Section 9.1 */
 	L_DHCP_OPTION_IP_ADDRESS_LEASE_TIME = 51, /* Section 9.2 */
