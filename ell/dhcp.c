@@ -827,10 +827,10 @@ LIB_EXPORT void l_dhcp_client_destroy(struct l_dhcp_client *client)
 	if (unlikely(!client))
 		return;
 
+	l_dhcp_client_stop(client);
+
 	if (client->event_destroy)
 		client->event_destroy(client->event_data);
-
-	l_timeout_remove(client->timeout_resend);
 
 	_dhcp_transport_free(client->transport);
 	l_free(client->ifname);
@@ -1019,21 +1019,13 @@ LIB_EXPORT bool l_dhcp_client_stop(struct l_dhcp_client *client)
 	if (unlikely(!client))
 		return false;
 
+	l_timeout_remove(client->timeout_resend);
+	client->timeout_resend = NULL;
+
 	if (client->transport && client->transport->close)
 		client->transport->close(client->transport);
 
-	switch (client->state) {
-	case DHCP_STATE_INIT:
-	case DHCP_STATE_SELECTING:
-		break;
-	case DHCP_STATE_INIT_REBOOT:
-	case DHCP_STATE_REBOOTING:
-	case DHCP_STATE_REQUESTING:
-	case DHCP_STATE_BOUND:
-	case DHCP_STATE_RENEWING:
-	case DHCP_STATE_REBINDING:
-		break;
-	}
+	client->state = DHCP_STATE_INIT;
 
 	_dhcp_lease_free(client->lease);
 	return true;
