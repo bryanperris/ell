@@ -30,6 +30,7 @@ extern "C" {
 #include <stdbool.h>
 
 struct l_dhcp_client;
+struct l_dhcp_lease;
 
 /* RFC 2132 */
 enum l_dhcp_option {
@@ -69,6 +70,9 @@ bool l_dhcp_client_set_interface_name(struct l_dhcp_client *client,
 							const char *ifname);
 bool l_dhcp_client_set_hostname(struct l_dhcp_client *client,
 							const char *hostname);
+
+const struct l_dhcp_lease *l_dhcp_client_get_lease(
+					const struct l_dhcp_client *client);
 
 bool l_dhcp_client_start(struct l_dhcp_client *client);
 bool l_dhcp_client_stop(struct l_dhcp_client *client);

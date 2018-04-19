@@ -945,6 +945,15 @@ void _dhcp_client_override_xid(struct l_dhcp_client *client, uint32_t xid)
 	client->xid = xid;
 }
 
+LIB_EXPORT const struct l_dhcp_lease *l_dhcp_client_get_lease(
+					const struct l_dhcp_client *client)
+{
+	if (unlikely(!client))
+		return NULL;
+
+	return client->lease;
+}
+
 LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
 {
 	int err;
