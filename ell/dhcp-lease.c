@@ -74,12 +74,15 @@ struct l_dhcp_lease *_dhcp_lease_parse_options(struct dhcp_message_iter *iter)
 		case L_DHCP_OPTION_RENEWAL_T1_TIME:
 			if (l == 4)
 				lease->t1 = l_get_be32(v);
+			break;
 		case L_DHCP_OPTION_REBINDING_T2_TIME:
 			if (l == 4)
 				lease->t2 = l_get_be32(v);
+			break;
 		case L_DHCP_OPTION_BROADCAST_ADDRESS:
 			if (l == 4)
 				lease->broadcast = l_get_u32(v);
+			break;
 		default:
 			break;
 		}
