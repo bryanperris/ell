@@ -44,6 +44,7 @@ L_PLUGIN_DEFINE(__builtin_desc, builtin_demo, "Builtin demo plugin", VERSION,
 int main(int argc, char *argv[])
 {
 	l_log_set_stderr();
+	l_debug_enable("*");
 
 	l_plugin_add(&__builtin_desc, VERSION);
 

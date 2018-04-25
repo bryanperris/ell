@@ -29,6 +29,7 @@
 static int demo_init(void)
 {
 	l_info("External demo plugin init");
+	l_debug("some debug info");
 
 	return 0;
 }
@@ -36,6 +37,7 @@ static int demo_init(void)
 static void demo_exit(void)
 {
 	l_info("External demo plugin exit");
+	l_debug("some more debug info");
 }
 
 L_PLUGIN_DEFINE_DEBUG(demo_plugin_desc, demo, "External demo plugin",
