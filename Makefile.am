@@ -202,6 +202,7 @@ unit_test_io_LDADD = ell/libell-private.la
 
 unit_test_ringbuf_LDADD = ell/libell-private.la
 
+unit_test_plugin_LDFLAGS = -Wl,-export-dynamic
 unit_test_plugin_LDADD = ell/libell-private.la -ldl
 
 unit_test_checksum_LDADD = ell/libell-private.la
