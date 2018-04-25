@@ -65,7 +65,7 @@ struct l_debug_desc {
 
 #define L_DEBUG_SYMBOL(symbol, format, args...) do { \
 	static struct l_debug_desc symbol \
-	__attribute__((used, section("__debug"), aligned(8))) = { \
+	__attribute__((used, section("__ell_debug"), aligned(8))) = { \
 		.file = __FILE__, .func = __FUNCTION__, \
 		.flags = L_DEBUG_FLAG_DEFAULT, \
 	}; \
@@ -74,7 +74,18 @@ struct l_debug_desc {
 					__PRETTY_FUNCTION__ , ## args); \
 } while (0)
 
-void l_debug_enable(const char *pattern);
+void l_debug_enable_full(const char *pattern,
+				struct l_debug_desc *start,
+				struct l_debug_desc *stop);
+void l_debug_add_section(struct l_debug_desc *start,
+					struct l_debug_desc *end);
+
+#define l_debug_enable(pattern) do { \
+	extern struct l_debug_desc __start___ell_debug[]; \
+	extern struct l_debug_desc __stop___ell_debug[]; \
+	l_debug_enable_full(pattern, __start___ell_debug, __stop___ell_debug); \
+} while (0)
+
 void l_debug_disable(void);
 
 #define l_error(format, args...)  l_log(L_LOG_ERR, format, ## args)
