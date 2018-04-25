@@ -37,6 +37,7 @@
 struct l_debug_desc;
 
 void debug_enable(struct l_debug_desc *start, struct l_debug_desc *stop);
+void debug_disable(struct l_debug_desc *start, struct l_debug_desc *stop);
 
 void plugin_update_debug(void);
 

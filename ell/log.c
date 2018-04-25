@@ -339,6 +339,16 @@ void debug_enable(struct l_debug_desc *start, struct l_debug_desc *stop)
 	}
 }
 
+void debug_disable(struct l_debug_desc *start, struct l_debug_desc *stop)
+{
+	struct l_debug_desc *desc;
+
+	for (desc = start; desc < stop; desc++)
+		desc->flags &= ~L_DEBUG_FLAG_PRINT;
+
+	debug_pattern = NULL;
+}
+
 extern struct l_debug_desc __start___debug[];
 extern struct l_debug_desc __stop___debug[];
 
@@ -365,10 +375,5 @@ LIB_EXPORT void l_debug_enable(const char *pattern)
  **/
 LIB_EXPORT void l_debug_disable(void)
 {
-	struct l_debug_desc *desc;
-
-	for (desc = __start___debug; desc < __stop___debug; desc++)
-		desc->flags &= ~L_DEBUG_FLAG_PRINT;
-
-	debug_pattern = NULL;
+	debug_disable(__start___debug, __stop___debug);
 }
