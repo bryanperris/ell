@@ -33,6 +33,7 @@
 #include "util.h"
 #include "queue.h"
 #include "plugin.h"
+#include "log.h"
 #include "private.h"
 
 /**
@@ -178,8 +179,11 @@ LIB_EXPORT void l_plugin_load(const char *pattern, const char *symbol,
 		struct l_plugin_desc *desc;
 
 		handle = dlopen(gl.gl_pathv[i], RTLD_NOW);
-		if (!handle)
+		if (!handle) {
+			l_info("Unable to load %s: %s",
+					gl.gl_pathv[i], dlerror());
 			continue;
+		}
 
 		desc = dlsym(handle, symbol);
 		if (!desc) {
