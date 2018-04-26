@@ -81,9 +81,12 @@ void l_debug_add_section(struct l_debug_desc *start,
 					struct l_debug_desc *end);
 
 #define l_debug_enable(pattern) do { \
+_Pragma("GCC diagnostic push") \
+_Pragma("GCC diagnostic ignored \"-Wredundant-decls\"") \
 	extern struct l_debug_desc __start___ell_debug[]; \
 	extern struct l_debug_desc __stop___ell_debug[]; \
 	l_debug_enable_full(pattern, __start___ell_debug, __stop___ell_debug); \
+_Pragma("GCC diagnostic pop") \
 } while (0)
 
 void l_debug_disable(void);
