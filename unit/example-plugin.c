@@ -42,4 +42,4 @@ static void demo_exit(void)
 
 L_PLUGIN_DEFINE_DEBUG(demo_plugin_desc, demo, "External demo plugin",
 					VERSION, L_PLUGIN_PRIORITY_DEFAULT,
-					demo_init, demo_exit, __debug)
+					demo_init, demo_exit, __ell_debug)
