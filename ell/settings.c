@@ -61,6 +61,7 @@ static void setting_destroy(void *data)
 	struct setting_data *pair = data;
 
 	l_free(pair->key);
+	memset(pair->value, 0, strlen(pair->value));
 	l_free(pair->value);
 	l_free(pair);
 }
