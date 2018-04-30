@@ -39,6 +39,7 @@ static const char *data1 = "[Foobar]\n#Comment\n#Comment2\nKey=Value\n"
 		"IntegerI=9223372036854775808\n"
 		"IntegerJ=18446744073709551616\n"
 		"String=\\tFoobar\\s\n"
+		"StringEmpty=\n"
 		"StringBad1=Foobar\\\n"
 		"StringBad2=Foobar\\b123\n"
 		"StringList=Foo,Bar,Baz\n"
@@ -52,6 +53,7 @@ static const char *data2 = "[Group1]\nKey=Value\n"
 			"IntegerF=18446744073709551615\n"
 			"IntegerG=2247483647\nIntegerH=4294967296\n"
 			"String=\\tFoobar\\s\n"
+			"StringEmpty=\n"
 			"StringBad1=Foobar\\\n"
 			"StringBad2=Foobar\\b123\n"
 			"StringList=Foo,Bar,Baz\n"
@@ -95,6 +97,11 @@ static void test_settings(struct l_settings *settings)
 	str = l_settings_get_string(settings, "Foobar", "String");
 	assert(str);
 	assert(!strcmp(str, "\tFoobar "));
+	l_free(str);
+
+	str = l_settings_get_string(settings, "Foobar", "StringEmpty");
+	assert(str);
+	assert(!strcmp(str, ""));
 	l_free(str);
 
 	str = l_settings_get_string(settings, "Foobar", "StringBad1");

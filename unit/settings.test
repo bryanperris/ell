@@ -13,6 +13,7 @@ IntegerH=4294967296
 IntegerI=9223372036854775808
 IntegerJ=18446744073709551616
 String=\tFoobar\s
+StringEmpty=
 StringBad1=Foobar\
 StringBad2=Foobar\b123
 StringList=Foo,Bar,Baz
