@@ -147,6 +147,7 @@ struct l_tls {
 	uint8_t *record_buf;
 	int record_buf_len;
 	int record_buf_max_len;
+	bool record_flush;
 
 	uint8_t *message_buf;
 	int message_buf_len;

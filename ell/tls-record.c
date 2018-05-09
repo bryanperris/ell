@@ -181,6 +181,9 @@ void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
 	uint16_t fragment_len;
 	uint16_t version = tls->negotiated_version ?: TLS_MIN_VERSION;
 
+	if (type == TLS_CT_ALERT)
+		tls->record_flush = true;
+
 	while (len) {
 		fragment = buf + TX_RECORD_HEADROOM;
 		fragment_len = len < TX_RECORD_MAX_LEN ?
@@ -492,6 +495,8 @@ LIB_EXPORT void l_tls_handle_rx(struct l_tls *tls, const uint8_t *data,
 	int need_len;
 	int chunk_len;
 
+	tls->record_flush = false;
+
 	/* Reassemble TLSCiphertext structures from the received chunks */
 
 	while (1) {
@@ -506,6 +511,11 @@ LIB_EXPORT void l_tls_handle_rx(struct l_tls *tls, const uint8_t *data,
 
 				tls->record_buf_len = 0;
 				need_len = 5;
+
+				if (tls->record_flush) {
+					tls->record_flush = false;
+					break;
+				}
 			}
 
 			if (!len)
