@@ -24,6 +24,7 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
 #include <linux/types.h>
 #include <sys/uio.h>
 #include <sys/socket.h>
