@@ -25,9 +25,9 @@
 #endif
 
 #include <netinet/ip.h>
+#include <net/ethernet.h>
 #include <linux/types.h>
 #include <linux/if_arp.h>
-#include <net/ethernet.h>
 #include <errno.h>
 #include <time.h>
 
