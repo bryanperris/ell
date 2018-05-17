@@ -223,8 +223,8 @@ LIB_EXPORT struct l_checksum *l_checksum_new_cmac_aes(const void *key,
 	return checksum;
 }
 
-struct l_checksum *l_checksum_new_hmac(enum l_checksum_type type,
-					const void *key, size_t key_len)
+LIB_EXPORT struct l_checksum *l_checksum_new_hmac(enum l_checksum_type type,
+					  const void *key, size_t key_len)
 {
 	struct l_checksum *checksum;
 	int fd;
@@ -309,7 +309,7 @@ LIB_EXPORT void l_checksum_free(struct l_checksum *checksum)
  *
  * Resets the internal state of @checksum.
  **/
-void l_checksum_reset(struct l_checksum *checksum)
+LIB_EXPORT void l_checksum_reset(struct l_checksum *checksum)
 {
 	if (unlikely(!checksum))
 		return;
@@ -353,7 +353,7 @@ LIB_EXPORT bool l_checksum_update(struct l_checksum *checksum,
  *
  * Returns: true if the operation succeeded, false otherwise.
  **/
-bool l_checksum_updatev(struct l_checksum *checksum,
+LIB_EXPORT bool l_checksum_updatev(struct l_checksum *checksum,
 					const struct iovec *iov, size_t iov_len)
 {
 	struct msghdr msg;
