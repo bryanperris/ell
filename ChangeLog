@@ -1,3 +1,7 @@
+ver 0.6:
+	Fix issue with TLS failure handling.
+	Fix issue with loading empty settings file.
+
 ver 0.5:
 	Fix issue with missing exported debug symbols.
 	Add support for DHCP client library.
