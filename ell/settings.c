@@ -466,6 +466,12 @@ LIB_EXPORT bool l_settings_load_from_file(struct l_settings *settings,
 		return false;
 	}
 
+	/* Nothing to do, assume success */
+	if (st.st_size == 0) {
+		close(fd);
+		return true;
+	}
+
 	data = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
 	if (data == MAP_FAILED) {
 		l_util_debug(settings->debug_handler, settings->debug_data,
