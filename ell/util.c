@@ -414,6 +414,25 @@ LIB_EXPORT char *l_strjoinv(char **str_array, const char delim)
 }
 
 /**
+ * l_strv_length:
+ * @str_array: a %NULL terminated array of strings
+ *
+ * Returns: the number of strings in @str_array
+ */
+LIB_EXPORT unsigned int l_strv_length(char **str_array)
+{
+	unsigned int i = 0;
+
+	if (unlikely(!str_array))
+		return 0;
+
+	while (str_array[i])
+		i += 1;
+
+	return i;
+}
+
+/**
  * l_str_has_prefix:
  * @str: A string to be examined
  * @delim: Prefix string
