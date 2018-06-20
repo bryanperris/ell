@@ -265,6 +265,7 @@ char **l_strsplit(const char *str, const char sep);
 char **l_strsplit_set(const char *str, const char *separators);
 char *l_strjoinv(char **str_array, const char delim);
 unsigned int l_strv_length(char **str_array);
+bool l_strv_contains(char **str_array, const char *item);
 
 bool l_str_has_prefix(const char *str, const char *prefix);
 bool l_str_has_suffix(const char *str, const char *suffix);

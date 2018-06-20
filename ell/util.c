@@ -433,6 +433,30 @@ LIB_EXPORT unsigned int l_strv_length(char **str_array)
 }
 
 /**
+ * l_strv_contains:
+ * @str_array: a %NULL terminated array of strings
+ * @item: An item to search for, must be not %NULL
+ *
+ * Returns: #true if @str_array contains item
+ */
+LIB_EXPORT bool l_strv_contains(char **str_array, const char *item)
+{
+	unsigned int i = 0;
+
+	if (unlikely(!str_array || !item))
+		return false;
+
+	while (str_array[i]) {
+		if (!strcmp(str_array[i], item))
+			return true;
+
+		i += 1;
+	}
+
+	return false;
+}
+
+/**
  * l_str_has_prefix:
  * @str: A string to be examined
  * @delim: Prefix string
