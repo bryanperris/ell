@@ -224,6 +224,16 @@ static void test_joinv(const void *test_data)
 	l_strfreev(strv3);
 }
 
+static void test_strv_length(const void *test_data)
+{
+	char *strv1[] = { NULL };
+	char *strv2[] = { "Foo", "Bar", NULL };
+
+	assert(l_strv_length(NULL) == 0);
+	assert(l_strv_length(strv1) == 0);
+	assert(l_strv_length(strv2) == 2);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -241,6 +251,8 @@ int main(int argc, char *argv[])
 	l_test_add("strsplit_set", test_strsplit_set, NULL);
 
 	l_test_add("joinv", test_joinv, NULL);
+
+	l_test_add("strv_length", test_strv_length, NULL);
 
 	return l_test_run();
 }
