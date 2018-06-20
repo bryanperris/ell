@@ -234,6 +234,25 @@ static void test_strv_length(const void *test_data)
 	assert(l_strv_length(strv2) == 2);
 }
 
+static void test_strv_contains(const void *test_data)
+{
+	char *strv1[] = { NULL };
+	char *strv2[] = { "Foo", "Bar", NULL };
+	char *strv3[] = { "Foo", "Bar", "", NULL };
+
+	assert(l_strv_contains(NULL, "Foo") == false);
+	assert(l_strv_contains(strv2, NULL) == false);
+	assert(l_strv_contains(NULL, NULL) == false);
+	assert(l_strv_contains(strv1, "Baz") == false);
+	assert(l_strv_contains(strv1, "") == false);
+	assert(l_strv_contains(strv2, "Baz") == false);
+	assert(l_strv_contains(strv2, "") == false);
+	assert(l_strv_contains(strv2, "Bar") == true);
+	assert(l_strv_contains(strv3, "Baz") == false);
+	assert(l_strv_contains(strv3, "") == true);
+	assert(l_strv_contains(strv3, "Bar") == true);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -253,6 +272,7 @@ int main(int argc, char *argv[])
 	l_test_add("joinv", test_joinv, NULL);
 
 	l_test_add("strv_length", test_strv_length, NULL);
+	l_test_add("strv_contains", test_strv_contains, NULL);
 
 	return l_test_run();
 }
