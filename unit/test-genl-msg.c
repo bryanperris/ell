@@ -219,7 +219,7 @@ static void build_set_rekey_offload(const void *data)
 	const void *raw;
 	size_t size;
 
-	msg = l_genl_msg_new_sized(79, 512);
+	msg = l_genl_msg_new_sized(79, 0);
 	assert(msg);
 
 	assert(l_genl_msg_append_attr(msg, 3, 4, &index));
@@ -339,7 +339,7 @@ static void build_libnl_nested(const void *data)
 	const void *raw;
 	size_t size;
 
-	msg = l_genl_msg_new_sized(1, 512);
+	msg = l_genl_msg_new_sized(1, 16);
 	assert(msg);
 
 	assert(l_genl_msg_append_attr(msg, 1, 4, &index));
@@ -357,7 +357,8 @@ static void build_libnl_nested(const void *data)
 					&size);
 	if (do_print) {
 		l_util_hexdump(false, raw, size, do_debug, "[MSG] ");
-		l_util_hexdump(true, libnl_nested, size, do_debug, "[MSG] ");
+		l_util_hexdump(true, libnl_nested, sizeof(libnl_nested),
+							do_debug, "[MSG] ");
 	}
 
 	assert(size == sizeof(libnl_nested));
