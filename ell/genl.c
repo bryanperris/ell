@@ -39,6 +39,11 @@
 
 #define MAX_NESTING_LEVEL 4
 
+struct nest_info {
+	uint16_t type;
+	uint16_t offset;
+};
+
 struct genl_unicast_notify {
 	l_genl_msg_func_t handler;
 	l_genl_destroy_func_t destroy;
@@ -74,7 +79,7 @@ struct l_genl_msg {
 	void *data;
 	uint32_t size;
 	uint32_t len;
-	struct nlattr *nests[MAX_NESTING_LEVEL];
+	struct nest_info nests[MAX_NESTING_LEVEL];
 	uint8_t nesting_level;
 };
 
@@ -251,10 +256,30 @@ static struct l_genl_msg *msg_alloc(uint8_t cmd, uint8_t version, uint32_t size)
 	msg->len = NLMSG_HDRLEN + GENL_HDRLEN;
 	msg->size = msg->len + NLMSG_ALIGN(size);
 
-	msg->data = l_new(unsigned char, msg->size);
+	msg->data = l_realloc(NULL, msg->size);
+	memset(msg->data, 0, msg->size);
 	msg->nesting_level = 0;
 
 	return l_genl_msg_ref(msg);
+}
+
+static bool msg_grow(struct l_genl_msg *msg, uint32_t needed)
+{
+	uint32_t grow_by;
+
+	if (msg->size >= msg->len + needed)
+		return true;
+
+	grow_by = msg->size - needed;
+
+	if (grow_by < 32)
+		grow_by = 128;
+
+	msg->data = l_realloc(msg->data, msg->size + grow_by);
+	memset(msg->data + msg->size, 0, grow_by);
+	msg->size += grow_by;
+
+	return true;
 }
 
 struct l_genl_msg *_genl_msg_create(const struct nlmsghdr *nlmsg)
@@ -783,7 +808,7 @@ LIB_EXPORT bool l_genl_msg_append_attr(struct l_genl_msg *msg, uint16_t type,
 	if (unlikely(!msg))
 		return false;
 
-	if (msg->len + NLA_HDRLEN + NLA_ALIGN(len) > msg->size)
+	if (!msg_grow(msg, NLA_HDRLEN + NLA_ALIGN(len)))
 		return false;
 
 	nla = msg->data + msg->len;
@@ -810,7 +835,7 @@ LIB_EXPORT bool l_genl_msg_append_attrv(struct l_genl_msg *msg, uint16_t type,
 	for (i = 0; i < iov_len; i++)
 		len += iov[i].iov_len;
 
-	if (msg->len + NLA_HDRLEN + NLA_ALIGN(len) > msg->size)
+	if (!msg_grow(msg, NLA_HDRLEN + NLA_ALIGN(len)))
 		return false;
 
 	nla = msg->data + msg->len;
@@ -831,22 +856,17 @@ LIB_EXPORT bool l_genl_msg_append_attrv(struct l_genl_msg *msg, uint16_t type,
 
 LIB_EXPORT bool l_genl_msg_enter_nested(struct l_genl_msg *msg, uint16_t type)
 {
-	struct nlattr *nla;
-
 	if (unlikely(!msg))
 		return false;
 
 	if (unlikely(msg->nesting_level == MAX_NESTING_LEVEL))
 		return false;
 
-	if (msg->len + NLA_HDRLEN > msg->size)
+	if (!msg_grow(msg, NLA_HDRLEN))
 		return false;
 
-	nla = msg->data + msg->len;
-	nla->nla_type = type;
-	nla->nla_len = msg->len; /* Save position */
-
-	msg->nests[msg->nesting_level] = nla;
+	msg->nests[msg->nesting_level].type = type;
+	msg->nests[msg->nesting_level].offset = msg->len;
 	msg->nesting_level += 1;
 
 	msg->len += NLA_HDRLEN;
@@ -864,8 +884,9 @@ LIB_EXPORT bool l_genl_msg_leave_nested(struct l_genl_msg *msg)
 	if (unlikely(msg->nesting_level == 0))
 		return false;
 
-	nla = msg->nests[msg->nesting_level - 1];
-	nla->nla_len = msg->len - nla->nla_len;
+	nla = msg->data + msg->nests[msg->nesting_level - 1].offset;
+	nla->nla_type = msg->nests[msg->nesting_level - 1].type;
+	nla->nla_len = msg->len - msg->nests[msg->nesting_level - 1].offset;
 
 	msg->nesting_level -= 1;
 
