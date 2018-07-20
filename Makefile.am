@@ -45,7 +45,8 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/pkcs5.h \
 			ell/file.h \
 			ell/net.h \
-			ell/dhcp.h
+			ell/dhcp.h \
+			ell/fswatch.h
 
 lib_LTLIBRARIES = ell/libell.la
 
@@ -104,7 +105,8 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/dhcp-private.h \
 			ell/dhcp.c \
 			ell/dhcp-transport.c \
-			ell/dhcp-lease.c
+			ell/dhcp-lease.c \
+			ell/fswatch.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)
