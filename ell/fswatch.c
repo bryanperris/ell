@@ -26,6 +26,7 @@
 
 #include <dirent.h>
 #include <unistd.h>
+#include <limits.h>
 #include <sys/inotify.h>
 
 #include "private.h"
