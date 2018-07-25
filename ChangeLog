@@ -1,3 +1,7 @@
+ver 0.7:
+	Fix issue with generic netlink message sizes.
+	Add support for filesystem watch functionality.
+
 ver 0.6:
 	Fix issue with TLS failure handling.
 	Fix issue with loading empty settings file.
