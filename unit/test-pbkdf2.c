@@ -45,8 +45,7 @@ static void pbkdf2_test(const void *data)
 	unsigned int salt_len;
 	unsigned int key_len;
 	unsigned char output[25];
-	char key[50];
-	unsigned int i;
+	char *key;
 	bool result;
 
 	password_len = strlen(test->password);
@@ -67,12 +66,13 @@ static void pbkdf2_test(const void *data)
 
 	assert(result == true);
 
-	for (i = 0; i < key_len; i++)
-		sprintf(key + (i * 2), "%02x", output[i]);
+	key = l_util_hexstring(output, key_len);
 
 	printf("Result   = %s\n", key);
 
 	assert(strcmp(test->key, key) == 0);
+
+	l_free(key);
 }
 
 static const struct pbkdf2_data pbkdf2_test_vector_1 = {
