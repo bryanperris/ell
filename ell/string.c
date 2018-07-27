@@ -647,3 +647,208 @@ LIB_EXPORT void *l_utf8_to_utf16(const char *utf8, size_t *out_size)
 
 	return utf16;
 }
+
+struct arg {
+	size_t max_len;
+	size_t cur_len;
+	char *chars;
+};
+
+static inline void arg_init(struct arg *arg)
+{
+	arg->max_len = 0;
+	arg->cur_len = 0;
+	arg->chars = NULL;
+}
+
+static void arg_putchar(struct arg *arg, char ch)
+{
+	if (arg->cur_len == arg->max_len) {
+		arg->max_len += 32; /* Grow by at least 32 bytes */
+		arg->chars = l_realloc(arg->chars, 1 + arg->max_len);
+	}
+
+	arg->chars[arg->cur_len++] = ch;
+	arg->chars[arg->cur_len] = '\0';
+}
+
+static void arg_putmem(struct arg *arg, const void *mem, size_t len)
+{
+	if (len == 0)
+		return;
+
+	if (arg->cur_len + len > arg->max_len) {
+		size_t growby = len * 2;
+
+		if (growby < 32)
+			growby = 32;
+
+		arg->max_len += growby;
+		arg->chars = l_realloc(arg->chars, 1 + arg->max_len);
+	}
+
+	memcpy(arg->chars + arg->cur_len, mem, len);
+	arg->cur_len += len;
+	arg->chars[arg->cur_len] = '\0';
+}
+
+static bool parse_backslash(struct arg *arg, const char *args, size_t *pos)
+{
+	/* We're at the backslash, not within double quotes */
+	char c = args[*pos + 1];
+
+	switch (c) {
+	case 0:
+		return false;
+	case '\n':
+		break;
+	default:
+		arg_putchar(arg, c);
+		break;
+	}
+
+	*pos += 1;
+	return true;
+}
+
+static bool parse_quoted_backslash(struct arg *arg,
+						const char *args, size_t *pos)
+{
+	/* We're at the backslash, within double quotes */
+	char c = args[*pos + 1];
+
+	switch (c) {
+	case 0:
+		return false;
+	case '\n':
+		break;
+	case '"':
+	case '\\':
+		arg_putchar(arg, c);
+		break;
+	default:
+		arg_putchar(arg, '\\');
+		arg_putchar(arg, c);
+		break;
+	}
+
+	*pos += 1;
+	return true;
+}
+
+static bool parse_single_quote(struct arg *arg, const char *args, size_t *pos)
+{
+	/* We're just past the single quote */
+	size_t start = *pos;
+
+	for (; args[*pos]; *pos += 1) {
+		if (args[*pos] != '\'')
+			continue;
+
+		arg_putmem(arg, args + start, *pos - start);
+		return true;
+	}
+
+	/* Unterminated ' */
+	return false;
+}
+
+static bool parse_double_quote(struct arg *arg, const char *args, size_t *pos)
+{
+	/* We're just past the double quote */
+	for (; args[*pos]; *pos += 1) {
+		char c = args[*pos];
+
+		switch (c) {
+		case '"':
+			return true;
+		case '\\':
+			if (!parse_quoted_backslash(arg, args, pos))
+				return false;
+
+			break;
+		default:
+			arg_putchar(arg, c);
+			break;
+		}
+	}
+
+	/* Unterminated */
+	return false;
+}
+
+static void add_arg(char ***args, char *arg, int *n_args)
+{
+	*args = l_realloc(*args, sizeof(char *) * (2 + *n_args));
+	(*args)[*n_args] = arg;
+	(*args)[*n_args + 1] = NULL;
+
+	*n_args += 1;
+}
+
+LIB_EXPORT char **l_parse_args(const char *args, int *out_n_args)
+{
+	size_t i;
+	struct arg arg;
+	char **ret = l_realloc(NULL, sizeof(char *));
+	int n_args = 0;
+
+	ret[0] = NULL;
+	arg_init(&arg);
+
+	for (i = 0; args[i]; i++) {
+		switch (args[i]) {
+		case '\\':
+			if (!parse_backslash(&arg, args, &i))
+				goto error;
+			break;
+		case '"':
+			i += 1;
+			if (!parse_double_quote(&arg, args, &i))
+				goto error;
+
+			/* Add an empty string */
+			if (!arg.cur_len)
+				add_arg(&ret, l_strdup(""), &n_args);
+
+			break;
+		case '\'':
+			i += 1;
+			if (!parse_single_quote(&arg, args, &i))
+				goto error;
+
+			/* Add an empty string */
+			if (!arg.cur_len)
+				add_arg(&ret, l_strdup(""), &n_args);
+
+			break;
+		default:
+			if (!strchr(" \t", args[i])) {
+				if (args[i] == '\n')
+					goto error;
+
+				arg_putchar(&arg, args[i]);
+				continue;
+			}
+
+			if (arg.cur_len)
+				add_arg(&ret, arg.chars, &n_args);
+
+			arg_init(&arg);
+			break;
+		}
+	}
+
+	if (arg.cur_len)
+		add_arg(&ret, arg.chars, &n_args);
+
+	if (out_n_args)
+		*out_n_args = n_args;
+
+	return ret;
+
+error:
+	l_free(arg.chars);
+	l_strfreev(ret);
+	return NULL;
+}

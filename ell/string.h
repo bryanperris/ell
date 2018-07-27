@@ -124,6 +124,8 @@ size_t l_utf8_strlen(const char *src);
 char *l_utf8_from_utf16(const void *utf16, ssize_t utf16_size);
 void *l_utf8_to_utf16(const char *utf8, size_t *out_size);
 
+char **l_parse_args(const char *args, int *out_n_args);
+
 #ifdef __cplusplus
 }
 #endif
