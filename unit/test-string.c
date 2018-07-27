@@ -253,6 +253,52 @@ static void test_strv_contains(const void *test_data)
 	assert(l_strv_contains(strv3, "Bar") == true);
 }
 
+static void test_parse_args(const void *test_data)
+{
+	static struct test_case {
+		bool retval;
+		const char *args;
+		int n_args;
+		const char *result[10];
+	} tests[] = {
+	{ true, "one", 1, { "one" } },
+	{ true, "one two", 2, { "one", "two" } },
+	{ true, "one two three ", 3, { "one", "two", "three" } },
+	{ true, " \tfoo\t\tbar ", 2, { "foo", "bar" } },
+	{ true, "red , white blue", 4, { "red", ",", "white", "blue" } },
+	{ true, "one \"two three\"", 2, { "one", "two three" } },
+	{ true, "\"quoted\"", 1, { "quoted" } },
+	{ true, "'singly-quoted'", 1, { "singly-quoted" } },
+	{ true, "contin\\\nuation", 1, { "continuation" } },
+	{ true, "explicit ''", 2, { "explicit", "" } },
+	{ true, "explicit \"\"", 2, { "explicit", "" } },
+	{ true, "", 0, { } },
+	{ false, "new\nline", 0, { } },
+	};
+
+	unsigned int i;
+
+	for (i = 0; i < L_ARRAY_SIZE(tests); i++) {
+		int j;
+		int n_args;
+		char **args = l_parse_args(tests[i].args, &n_args);
+
+		if (!tests[i].retval) {
+			assert(!args);
+			continue;
+		}
+
+		assert(args);
+		assert(n_args == tests[i].n_args);
+
+		for (j = 0; j < n_args; j++)
+			assert(!strcmp(args[j], tests[i].result[j]));
+
+		assert(!args[j]);
+		l_strfreev(args);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -273,6 +319,8 @@ int main(int argc, char *argv[])
 
 	l_test_add("strv_length", test_strv_length, NULL);
 	l_test_add("strv_contains", test_strv_contains, NULL);
+
+	l_test_add("parse_args", test_parse_args, NULL);
 
 	return l_test_run();
 }
