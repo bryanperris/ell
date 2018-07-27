@@ -41,24 +41,15 @@ struct pbkdf2_data {
 static void pbkdf2_test(const void *data)
 {
 	const struct pbkdf2_data *test = data;
-	unsigned int password_len;
 	unsigned int salt_len;
 	unsigned int key_len;
 	unsigned char output[25];
 	char *key;
 	bool result;
 
-	password_len = strlen(test->password);
 	salt_len = test->salt_len ? : strlen(test->salt);
 
 	key_len = test->key_len ? : (strlen(test->key) / 2);
-
-	printf("Password = \"%s\" (%d octets)\n",
-					test->password, password_len);
-	printf("Salt     = \"%s\" (%d octets)\n",
-					test->salt, salt_len);
-	printf("Count    = %d\n", test->count);
-	printf("Key      = %s (%d octets)\n", test->key, key_len);
 
 	result = l_pkcs5_pbkdf2(L_CHECKSUM_SHA1, test->password,
 				(const uint8_t *) test->salt, salt_len,
@@ -67,8 +58,6 @@ static void pbkdf2_test(const void *data)
 	assert(result == true);
 
 	key = l_util_hexstring(output, key_len);
-
-	printf("Result   = %s\n", key);
 
 	assert(strcmp(test->key, key) == 0);
 
