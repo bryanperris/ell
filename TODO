@@ -18,17 +18,6 @@ Background
 DBus API
 ========
 
-- Add APIs that would allow an application to listen to a particular signal or
-  set of signals.  The set of signals can be specified by using signal filtering
-  mechanisms specified in the DBus specification.  Whenever a given signal
-  matches one of the filters, the relevant callback function should be called.
-
-  For DBus classic this implies managing a set of appropriate filters with the
-  DBus daemon as specified in the DBus specification.
-
-  Priority: Medium
-  Complexity: C4
-
 - Add builder APIs for appending fixed-size array data.  Currently arrays are
   built one element at a time which can get pretty expensive for large arrays.
   A function that appends multiple fixed elements at once to the gvariant and
