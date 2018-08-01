@@ -78,27 +78,3 @@ TLS Support
 
   Priority: High
   Complexity: C2
-
-
-Big endian support
-==================
-
-- Fix big endian support for D-Bus message handling. Following test cases
-  fail at the moment:
-
-  TEST: Basic 1 (parse)
-  /bin/bash: line 5: 28857 Segmentation fault      ${dir}$tst
-  FAIL: unit/test-dbus-message
-
-  TEST: Iter Test Basic 'is'
-  test-gvariant-util: unit/test-gvariant-util.c:288: test_iter_basic_2: Assertion `i == 5' failed.
-  /bin/bash: line 5: 28868 Aborted                 ${dir}$tst
-  FAIL: unit/test-gvariant-util
-
-  TEST: Basic 1 (parse)
-  ell/util.c:67:l_malloc(): failed to allocate 2030043152 bytes
-  /bin/bash: line 5: 28873 Aborted                 ${dir}$tst
-  FAIL: unit/test-gvariant-message
-
-  Priority: Medium
-  Complexity: C2
