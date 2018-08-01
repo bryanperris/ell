@@ -60,10 +60,3 @@ TLS Support
 
   Priority: Medium
   Complexity: C2
-
-- Implement tls_cert_verify_certchain
-
-  Implement certificate chain verification.
-
-  Priority: High
-  Complexity: C2
