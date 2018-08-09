@@ -140,8 +140,12 @@ static void file_watch_cb(struct l_fswatch *watch, const char *filename,
 		test_file_modify_check();
 		break;
 	case TEST_FILE_REMOVE:
-		assert(event == L_FSWATCH_EVENT_DELETE);
+		assert(event == L_FSWATCH_EVENT_DELETE ||
+				event == L_FSWATCH_EVENT_ATTRIB);
 		assert(!(substate & TEST_FILE_REMOVE_FILE_EVENT));
+
+		if (event == L_FSWATCH_EVENT_ATTRIB)
+			break;
 
 		substate |= TEST_FILE_REMOVE_FILE_EVENT;
 
