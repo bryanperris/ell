@@ -30,6 +30,7 @@ enum l_fswatch_event {
 	L_FSWATCH_EVENT_MOVE,
 	L_FSWATCH_EVENT_MODIFY,
 	L_FSWATCH_EVENT_DELETE,
+	L_FSWATCH_EVENT_ATTRIB,
 };
 
 typedef void (*l_fswatch_cb_t) (struct l_fswatch *watch, const char *filename,

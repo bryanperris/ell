@@ -48,7 +48,8 @@ struct l_fswatch {
 };
 
 #define EVENT_MASK	(IN_CREATE | IN_DELETE | IN_DELETE_SELF | \
-				IN_MODIFY | IN_MOVE | IN_MOVE_SELF)
+				IN_MODIFY | IN_MOVE | IN_MOVE_SELF | \
+				IN_ATTRIB)
 
 static void l_fswatch_free(void *data)
 {
@@ -123,6 +124,10 @@ static bool inotify_read_cb(struct l_io *io, void *user_data)
 			if ((event->mask & (IN_DELETE | IN_DELETE_SELF)) &&
 					watch->cb)
 				watch->cb(watch, name, L_FSWATCH_EVENT_DELETE,
+						watch->user_data);
+
+			if ((event->mask & IN_ATTRIB) && watch->cb)
+				watch->cb(watch, name, L_FSWATCH_EVENT_ATTRIB,
 						watch->user_data);
 
 			if (event->mask & IN_IGNORED) {
