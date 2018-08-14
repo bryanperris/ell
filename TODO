@@ -60,3 +60,10 @@ TLS Support
 
   Priority: Medium
   Complexity: C2
+
+- Implement Suite B Profile for TLS
+
+  Described in RFC 6460
+
+  Priority: Medium
+  Complexity: C8
