@@ -649,7 +649,8 @@ static struct object_node *makepath_recurse(struct object_node *node,
 	child = node->children;
 
 	while (child) {
-		if (!strncmp(child->subpath, path, end - path))
+		if (!strncmp(child->subpath, path, end - path) &&
+				child->subpath[end - path] == '\0')
 			goto done;
 
 		child = child->next;
@@ -690,7 +691,8 @@ static struct object_node *lookup_recurse(struct object_node *node,
 	child = node->children;
 
 	while (child) {
-		if (!strncmp(child->subpath, path, end - path))
+		if (!strncmp(child->subpath, path, end - path) &&
+				child->subpath[end - path] == '\0')
 			return lookup_recurse(child->node, end);
 
 		child = child->next;
