@@ -1990,17 +1990,16 @@ recurse:
 	return true;
 }
 
-static struct l_dbus_message *get_managed_objects(struct l_dbus *dbus,
-						struct l_dbus_message *message,
-						void *user_data)
+struct l_dbus_message *_dbus_object_tree_get_objects(
+						struct _dbus_object_tree *tree,
+						struct l_dbus *dbus,
+						const char *path,
+						struct l_dbus_message *message)
 {
-	struct _dbus_object_tree *tree = _dbus_get_tree(dbus);
 	const struct object_node *node;
 	struct l_dbus_message *reply;
 	struct l_dbus_message_builder *builder;
-	const char *path;
 
-	path = l_dbus_message_get_path(message);
 	node = l_hashmap_lookup(tree->objects, path);
 
 	reply = l_dbus_message_new_method_return(message);
@@ -2025,6 +2024,16 @@ static struct l_dbus_message *get_managed_objects(struct l_dbus *dbus,
 	l_dbus_message_builder_destroy(builder);
 
 	return reply;
+}
+
+static struct l_dbus_message *get_managed_objects(struct l_dbus *dbus,
+						struct l_dbus_message *message,
+						void *user_data)
+{
+	struct _dbus_object_tree *tree = _dbus_get_tree(dbus);
+	const char *path = l_dbus_message_get_path(message);
+
+	return _dbus_object_tree_get_objects(tree, dbus, path, message);
 }
 
 static void object_manager_setup_func(struct l_dbus_interface *interface)
