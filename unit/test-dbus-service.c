@@ -299,6 +299,102 @@ static void test_dbus_object_tree_2(const void *test_data)
 	_dbus_object_tree_free(tree);
 }
 
+#define TEST_3_OBJ_COUNT 20000
+static void test_dbus_object_tree_3(const void *test_data)
+{
+	struct _dbus_object_tree *tree;
+	char path[50];
+	struct l_hashmap *paths;
+	unsigned int count = 0;
+	struct l_dbus_message *message, *reply;
+	struct l_dbus_message_iter objects, interfaces;
+	const char *obj_path;
+
+	tree = _dbus_object_tree_new();
+	assert(tree);
+
+	assert(_dbus_object_tree_register_interface(tree, "org.example",
+						setup_dummy_interface,
+						NULL, false));
+
+	srand48(50);
+	paths = l_hashmap_string_new();
+	while (count < TEST_3_OBJ_COUNT) {
+		unsigned int len = 0;
+		unsigned int subpath_len = 0;
+		bool repeat;
+
+		/* Generate a random legal path composed of a, b and / chars */
+		path[len++] = '/';
+
+		while (len < sizeof(path) - 1) {
+			const char *allowed;
+			char ch;
+
+			if (subpath_len)
+				allowed = "aabb/E";
+			else /* At least one letter required after a / */
+				allowed = "ab";
+
+			ch = allowed[lrand48() % strlen(allowed)];
+
+			if (ch == 'E')
+				break;
+			else if (ch == '/')
+				subpath_len = 0;
+			else
+				subpath_len++;
+
+			path[len++] = ch;
+		}
+
+		/* Last character can't be a / */
+		if (path[len - 1] == '/')
+			len--;
+		path[len] = '\0';
+
+		repeat = l_hashmap_lookup(paths, path) != NULL;
+
+		assert(_dbus_object_tree_add_interface(tree, path,
+					"org.example", NULL) == !repeat);
+
+		if (!repeat) {
+			l_hashmap_insert(paths, path, path);
+			count++;
+		}
+	}
+
+	assert(_dbus_object_tree_add_interface(tree, "/",
+					L_DBUS_INTERFACE_OBJECT_MANAGER, NULL));
+	l_hashmap_insert(paths, "/", path);
+
+	message = _dbus_message_new_method_call(1, "org.example", "/",
+						L_DBUS_INTERFACE_OBJECT_MANAGER,
+						"GetManagedObjects");
+	l_dbus_message_set_arguments(message, "");
+	_dbus_message_set_serial(message, 0);
+
+	reply = _dbus_object_tree_get_objects(tree, NULL, "/", message);
+	assert(reply);
+	assert(!l_dbus_message_get_error(reply, NULL, NULL));
+	assert(l_dbus_message_get_arguments(reply, "a{oa{sa{sv}}}", &objects));
+
+	while (l_dbus_message_iter_next_entry(&objects, &obj_path, &interfaces))
+		assert(l_hashmap_remove(paths, obj_path));
+
+	l_dbus_message_unref(message);
+	l_dbus_message_unref(reply);
+
+	assert(l_hashmap_isempty(paths));
+	l_hashmap_destroy(paths, NULL);
+
+	assert(_dbus_object_tree_remove_interface(tree, "/",
+					L_DBUS_INTERFACE_OBJECT_MANAGER));
+
+	assert(_dbus_object_tree_unregister_interface(tree, "org.example"));
+	_dbus_object_tree_free(tree);
+}
+
 static struct l_dbus_message *get_modems_callback(struct l_dbus *dbus,
 					struct l_dbus_message *message,
 					void *user_data)
@@ -451,6 +547,9 @@ int main(int argc, char *argv[])
 
 	l_test_add("_dbus_object_tree Sanity Tests 2",
 					test_dbus_object_tree_2, NULL);
+
+	l_test_add("_dbus_object_tree Sanity Tests 3",
+					test_dbus_object_tree_3, NULL);
 
 	l_test_add("_dbus_object_tree Introspection",
 					test_dbus_object_tree_introspection,
