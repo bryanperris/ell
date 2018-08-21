@@ -1467,7 +1467,7 @@ bool _dbus_object_tree_add_interface(struct _dbus_object_tree *tree,
 		manager = entry->data;
 		path_len = strlen(manager->path);
 
-		if (memcmp(path, manager->path, path_len) ||
+		if (strncmp(path, manager->path, path_len) ||
 				(path[path_len] != '\0' &&
 				 path[path_len] != '/' && path_len > 1))
 			continue;
@@ -1544,7 +1544,7 @@ bool _dbus_object_tree_remove_interface(struct _dbus_object_tree *tree,
 		manager = entry->data;
 		path_len = strlen(manager->path);
 
-		if (memcmp(path, manager->path, path_len) ||
+		if (strncmp(path, manager->path, path_len) ||
 				(path[path_len] != '\0' &&
 				 path[path_len] != '/' && path_len > 1))
 			continue;
