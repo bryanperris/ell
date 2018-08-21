@@ -1410,6 +1410,43 @@ bool _dbus_object_tree_unregister_interface(struct _dbus_object_tree *tree,
 	return true;
 }
 
+static void collect_instances(struct object_node *node,
+				const char *path,
+				struct l_queue *announce)
+{
+	const struct l_queue_entry *entry;
+	struct interface_add_record *change_rec;
+	const struct child_node *child;
+
+	if (!node->instances)
+		goto recurse;
+
+	change_rec = l_new(struct interface_add_record, 1);
+	change_rec->path = l_strdup(path);
+	change_rec->object = node;
+	change_rec->instances = l_queue_new();
+
+	for (entry = l_queue_get_entries(node->instances); entry;
+			entry = entry->next)
+		l_queue_push_tail(change_rec->instances, entry->data);
+
+	l_queue_push_tail(announce, change_rec);
+
+recurse:
+	if (!strcmp(path, "/"))
+		path = "";
+
+	for (child = node->children; child; child = child->next) {
+		char *child_path;
+
+		child_path = l_strdup_printf("%s/%s", path, child->subpath);
+
+		collect_instances(child->node, child_path, announce);
+
+		l_free(child_path);
+	}
+}
+
 static bool match_interfaces_added_object(const void *a, const void *b)
 {
 	const struct interface_add_record *rec = a;
@@ -1498,6 +1535,12 @@ bool _dbus_object_tree_add_interface(struct _dbus_object_tree *tree,
 		manager->announce_removed = l_queue_new();
 
 		l_queue_push_tail(tree->object_managers, manager);
+
+		/* Emit InterfacesAdded for interfaces added before OM */
+		collect_instances(object, path, manager->announce_added);
+
+		if (manager->dbus && !l_queue_isempty(manager->announce_added))
+			schedule_emit_signals(manager->dbus);
 	}
 
 	return true;
