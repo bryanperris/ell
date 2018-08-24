@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <sys/socket.h>
 #include <linux/if_arp.h>
 
 #include <ell/ell.h>
