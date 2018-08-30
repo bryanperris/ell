@@ -1419,7 +1419,7 @@ static void tls_handle_certificate(struct l_tls *tls,
 					const uint8_t *buf, size_t len)
 {
 	size_t total;
-	struct tls_cert *certchain = NULL, **tail = &certchain;
+	struct tls_cert *certchain = NULL;
 	struct tls_cert *ca_cert = NULL;
 	bool dummy;
 
@@ -1433,29 +1433,8 @@ static void tls_handle_certificate(struct l_tls *tls,
 	if (total + 3 != len)
 		goto decode_error;
 
-	while (total) {
-		size_t cert_len;
-
-		if (total < 3)
-			goto decode_error;
-
-		cert_len = *buf++ << 16;
-		cert_len |= *buf++ << 8;
-		cert_len |= *buf++ << 0;
-
-		if (cert_len + 3 > total)
-			goto decode_error;
-
-		*tail = l_malloc(sizeof(struct tls_cert) + cert_len);
-		(*tail)->size = cert_len;
-		(*tail)->issuer = NULL;
-		memcpy((*tail)->asn1, buf, cert_len);
-
-		tail = &(*tail)->issuer;
-
-		buf += cert_len;
-		total -= cert_len + 3;
-	}
+	if (tls_cert_from_certificate_list(buf + 3, total, &certchain) < 0)
+		goto decode_error;
 
 	/*
 	 * "Note that a client MAY send no certificates if it does not have any
@@ -2360,6 +2339,46 @@ struct tls_cert *tls_cert_load_file(const char *filename)
 	l_free(der);
 
 	return cert;
+}
+
+int tls_cert_from_certificate_list(const void *data, size_t len,
+					struct tls_cert **out_certchain)
+{
+	const uint8_t *buf = data;
+	struct tls_cert *certchain = NULL, **tail = &certchain;
+
+	while (len) {
+		size_t cert_len;
+
+		if (len < 3)
+			goto decode_error;
+
+		cert_len = *buf++ << 16;
+		cert_len |= *buf++ << 8;
+		cert_len |= *buf++ << 0;
+
+		if (cert_len + 3 > len)
+			goto decode_error;
+
+		*tail = l_malloc(sizeof(struct tls_cert) + cert_len);
+		(*tail)->size = cert_len;
+		(*tail)->issuer = NULL;
+		memcpy((*tail)->asn1, buf, cert_len);
+
+		tail = &(*tail)->issuer;
+
+		buf += cert_len;
+		len -= cert_len + 3;
+	}
+
+	if (out_certchain)
+		*out_certchain = certchain;
+
+	return 0;
+
+decode_error:
+	tls_cert_free_certchain(certchain);
+	return -EBADMSG;
 }
 
 bool tls_cert_find_certchain(struct tls_cert *cert,

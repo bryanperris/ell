@@ -235,6 +235,8 @@ enum tls_cert_key_type {
 };
 
 struct tls_cert *tls_cert_load_file(const char *filename);
+int tls_cert_from_certificate_list(const void *data, size_t len,
+					struct tls_cert **out_certchain);
 
 bool tls_cert_find_certchain(struct tls_cert *cert,
 				const char *cacert_filename);
