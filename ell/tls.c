@@ -1418,20 +1418,27 @@ decode_error:
 static void tls_handle_certificate(struct l_tls *tls,
 					const uint8_t *buf, size_t len)
 {
-	int total, cert_len;
+	size_t total;
 	struct tls_cert *certchain = NULL, **tail = &certchain;
 	struct tls_cert *ca_cert = NULL;
 	bool dummy;
 
-	/* Length checks */
+	if (len < 3)
+		goto decode_error;
 
+	/* Length checks */
 	total = *buf++ << 16;
 	total |= *buf++ << 8;
 	total |= *buf++ << 0;
-	if ((size_t) total + 3 != len)
+	if (total + 3 != len)
 		goto decode_error;
 
 	while (total) {
+		size_t cert_len;
+
+		if (total < 3)
+			goto decode_error;
+
 		cert_len = *buf++ << 16;
 		cert_len |= *buf++ << 8;
 		cert_len |= *buf++ << 0;
