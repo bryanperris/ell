@@ -70,3 +70,4 @@ examples/dbus-client
 examples/glib-eventloop
 examples/dhcp-client
 test-suite.log
+tools/certchain-verify

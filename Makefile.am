@@ -296,6 +296,9 @@ examples_glib_eventloop_CFLAGS = @GLIB_CFLAGS@
 examples_glib_eventloop_LDADD = ell/libell-private.la @GLIB_LIBS@
 examples_dhcp_client_LDADD = ell/libell-private.la
 
+noinst_PROGRAMS += tools/certchain-verify
+tools_certchain_verify_SOURCES = tools/certchain-verify.c
+tools_certchain_verify_LDADD = ell/libell-private.la
 
 EXTRA_DIST = $(unit_test_data_files) unit/gencerts.cnf unit/plaintext.txt
 
