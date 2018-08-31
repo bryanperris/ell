@@ -398,7 +398,7 @@ static const char *lookup_checksum(enum l_checksum_type checksum)
 	return ret;
 }
 
-bool l_key_get_info(struct l_key *key, enum l_key_cipher_type cipher,
+LIB_EXPORT bool l_key_get_info(struct l_key *key, enum l_key_cipher_type cipher,
 			enum l_checksum_type checksum, size_t *bits,
 			bool *public)
 {
