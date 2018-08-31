@@ -1223,10 +1223,12 @@ bool _dbus_object_tree_property_changed(struct l_dbus *dbus,
 	return true;
 }
 
-static void set_property_complete(struct l_dbus *dbus,
+static void pending_property_set_done(struct l_dbus *dbus,
 					struct l_dbus_message *message,
 					struct l_dbus_message *reply)
 {
+	const char *member;
+	const char *interface_name;
 	const char *property_name;
 	struct l_dbus_message_iter variant;
 
@@ -1237,16 +1239,24 @@ static void set_property_complete(struct l_dbus *dbus,
 
 	l_dbus_send(dbus, l_dbus_message_ref(reply));
 
-	if (!l_dbus_message_is_error(reply)) {
-		l_dbus_message_get_arguments(message, "sv", &property_name,
-						&variant);
+	member = l_dbus_message_get_member(message);
+	if (!strcmp(member, "SetProperty")) {
+		if (!l_dbus_message_get_arguments(message, "sv",
+						&property_name, &variant))
+			goto done;
 
-		_dbus_object_tree_property_changed(dbus,
+		interface_name = l_dbus_message_get_interface(message);
+	} else if (strcmp(member, "Set") ||
+			!l_dbus_message_get_arguments(message, "ssv",
+							&interface_name,
+							&property_name,
+							&variant))
+		goto done;
+
+	_dbus_object_tree_property_changed(dbus,
 					l_dbus_message_get_path(message),
-					l_dbus_message_get_interface(message),
-					property_name);
-	}
-
+					interface_name, property_name);
+done:
 	l_dbus_message_unref(message);
 	l_dbus_message_unref(reply);
 }
@@ -1289,10 +1299,10 @@ static struct l_dbus_message *old_set_property(struct l_dbus *dbus,
 						property_name);
 
 	reply = property->setter(dbus, l_dbus_message_ref(message), &variant,
-					set_property_complete, user_data);
+					pending_property_set_done, user_data);
 
 	if (reply)
-		set_property_complete(dbus, message, reply);
+		pending_property_set_done(dbus, message, reply);
 
 	return NULL;
 }
@@ -1815,33 +1825,6 @@ static struct l_dbus_message *properties_get(struct l_dbus *dbus,
 	return reply;
 }
 
-static void properties_set_complete(struct l_dbus *dbus,
-					struct l_dbus_message *message,
-					struct l_dbus_message *reply)
-{
-	const char *interface_name, *property_name;
-	struct l_dbus_message_iter variant;
-
-	if (!reply) {
-		reply = l_dbus_message_new_method_return(message);
-		l_dbus_message_set_arguments(reply, "");
-	}
-
-	l_dbus_send(dbus, l_dbus_message_ref(reply));
-
-	if (!l_dbus_message_is_error(reply)) {
-		l_dbus_message_get_arguments(message, "ssv", &interface_name,
-						&property_name, &variant);
-
-		_dbus_object_tree_property_changed(dbus,
-					l_dbus_message_get_path(message),
-					interface_name, property_name);
-	}
-
-	l_dbus_message_unref(message);
-	l_dbus_message_unref(reply);
-}
-
 static struct l_dbus_message *properties_set(struct l_dbus *dbus,
 						struct l_dbus_message *message,
 						void *user_data)
@@ -1900,11 +1883,11 @@ static struct l_dbus_message *properties_set(struct l_dbus *dbus,
 						interface_name);
 
 	reply = property->setter(dbus, l_dbus_message_ref(message), &variant,
-					properties_set_complete,
+					pending_property_set_done,
 					instance->user_data);
 
 	if (reply)
-		properties_set_complete(dbus, message, reply);
+		pending_property_set_done(dbus, message, reply);
 
 	return NULL;
 }
