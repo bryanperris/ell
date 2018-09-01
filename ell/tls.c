@@ -1433,7 +1433,7 @@ static void tls_handle_certificate(struct l_tls *tls,
 	if (total + 3 != len)
 		goto decode_error;
 
-	if (tls_cert_from_certificate_list(buf + 3, total, &certchain) < 0)
+	if (tls_cert_from_certificate_list(buf, total, &certchain) < 0)
 		goto decode_error;
 
 	/*
