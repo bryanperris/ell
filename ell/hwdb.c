@@ -136,7 +136,7 @@ LIB_EXPORT struct l_hwdb *l_hwdb_new(const char *pathname)
 	if (L_LE64_TO_CPU(hdr->child_size) != sizeof(struct trie_child))
 		goto failed;
 
-	if (L_LE64_TO_CPU(hdr->entry_size) != sizeof(struct trie_entry))
+	if (L_LE64_TO_CPU(hdr->entry_size) < sizeof(struct trie_entry))
 		goto failed;
 
 	if (L_LE64_TO_CPU(hdr->header_size) + L_LE64_TO_CPU(hdr->nodes_size) +
