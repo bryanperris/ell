@@ -69,8 +69,10 @@ int main(int argc, char *argv[])
 	struct l_hwdb *hwdb;
 
 	hwdb = l_hwdb_new_default();
-	if (!hwdb)
+	if (!hwdb) {
+		printf("hwdb.bin not loaded\n");
 		return 0;
+	}
 
 	l_hwdb_foreach(hwdb, print_entry, NULL);
 
