@@ -24,9 +24,15 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 
 #include <ell/ell.h>
+
+struct hwdb_stats {
+	int aliases;
+	int entries;
+};
 
 static void print_modalias(struct l_hwdb *hwdb, const char *format, ...)
 {
@@ -51,22 +57,26 @@ static void print_modalias(struct l_hwdb *hwdb, const char *format, ...)
 	printf("\n");
 }
 
-static void print_entry(const char *modalias,
-				struct l_hwdb_entry *entries, void *user_data)
+static void check_entry(const char *modalias, struct l_hwdb_entry *entries,
+			void *user_data)
 {
 	struct l_hwdb_entry *entry;
+	struct hwdb_stats *stats = user_data;
 
-	printf("%s\n", modalias);
+	assert(modalias);
+	stats->aliases++;
 
-	for (entry = entries; entry; entry = entry->next)
-		printf(" %s=%s\n", entry->key, entry->value);
-
-	printf("\n");
+	for (entry = entries; entry; entry = entry->next) {
+		assert(entry->key);
+		assert(entry->value);
+		stats->entries++;
+	}
 }
 
 int main(int argc, char *argv[])
 {
 	struct l_hwdb *hwdb;
+	struct hwdb_stats stats = { 0 };
 
 	hwdb = l_hwdb_new_default();
 	if (!hwdb) {
@@ -74,7 +84,9 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	l_hwdb_foreach(hwdb, print_entry, NULL);
+	l_hwdb_foreach(hwdb, check_entry, &stats);
+	printf("Found %d aliases with %d total entries\n\n",
+	       stats.aliases, stats.entries);
 
 	/* Bluetooth Interest Group Inc. */
 	print_modalias(hwdb, "OUI:000F79");
