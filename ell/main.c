@@ -185,10 +185,9 @@ int watch_modify(int fd, uint32_t events, bool force)
 	return 0;
 }
 
-int watch_remove(int fd)
+int watch_clear(int fd)
 {
 	struct watch_data *data;
-	int err;
 
 	if (unlikely(fd < 0))
 		return -EINVAL;
@@ -202,8 +201,6 @@ int watch_remove(int fd)
 
 	watch_list[fd] = NULL;
 
-	err = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, data->fd, NULL);
-
 	if (data->destroy)
 		data->destroy(data->user_data);
 
@@ -212,7 +209,17 @@ int watch_remove(int fd)
 	else
 		l_free(data);
 
-	return err;
+	return 0;
+}
+
+int watch_remove(int fd)
+{
+	int err = watch_clear(fd);
+
+	if (err < 0)
+		return err;
+
+	return epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
 }
 
 static bool idle_remove_by_id(void *data, void *user_data)
