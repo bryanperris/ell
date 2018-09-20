@@ -195,9 +195,6 @@ LIB_EXPORT void l_io_destroy(struct l_io *io)
 	if (unlikely(!io))
 		return;
 
-	io->read_handler = NULL;
-	io->write_handler = NULL;
-
 	if (io->fd != -1)
 		watch_remove(io->fd);
 
