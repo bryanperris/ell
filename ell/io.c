@@ -172,7 +172,7 @@ LIB_EXPORT struct l_io *l_io_new(int fd)
 	io = l_new(struct l_io, 1);
 
 	io->fd = fd;
-	io->events = 0;
+	io->events = EPOLLHUP | EPOLLERR;
 	io->close_on_destroy = false;
 
 	err = watch_add(io->fd, io->events, io_callback, io, io_cleanup);
