@@ -86,33 +86,36 @@ static void io_cleanup(void *user_data)
 	io->fd = -1;
 }
 
+static void io_closed(struct l_io *io)
+{
+	/*
+	 * Save off copies of disconnect_handler, disconnect_destroy
+	 * and disconnect_data in case the handler calls io_destroy
+	 */
+	l_io_disconnect_cb_t handler = io->disconnect_handler;
+	l_io_destroy_cb_t destroy = io->disconnect_destroy;
+	void *disconnect_data = io->disconnect_data;
+
+	io->disconnect_handler = NULL;
+	io->disconnect_destroy = NULL;
+	io->disconnect_data = NULL;
+
+	if (handler)
+		handler(io, disconnect_data);
+
+	if (destroy)
+		destroy(disconnect_data);
+}
+
 static void io_callback(int fd, uint32_t events, void *user_data)
 {
 	struct l_io *io = user_data;
 
 	if (unlikely(events & (EPOLLERR | EPOLLHUP))) {
-		/*
-		 * Save off copies of disconnect_handler, disconnect_destroy
-		 * and disconnect_data in case the handler calls io_destroy
-		 */
-		l_io_disconnect_cb_t handler = io->disconnect_handler;
-		l_io_destroy_cb_t destroy = io->disconnect_destroy;
-		void *disconnect_data = io->disconnect_data;
-
-		watch_remove(io->fd);
-		io->disconnect_handler = NULL;
-		io->disconnect_destroy = NULL;
-		io->disconnect_data = NULL;
-
 		l_util_debug(io->debug_handler, io->debug_data,
 						"disconnect event <%p>", io);
-
-		if (handler)
-			handler(io, disconnect_data);
-
-		if (destroy)
-			destroy(disconnect_data);
-
+		watch_remove(io->fd);
+		io_closed(io);
 		return;
 	}
 
@@ -130,7 +133,12 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 
 			io->events &= ~EPOLLIN;
 
-			watch_modify(io->fd, io->events, false);
+			if (watch_modify(io->fd, io->events, false) == -EBADF) {
+				io->close_on_destroy = false;
+				watch_clear(io->fd);
+				io_closed(io);
+				return;
+			}
 		}
 	}
 
@@ -148,7 +156,12 @@ static void io_callback(int fd, uint32_t events, void *user_data)
 
 			io->events &= ~EPOLLOUT;
 
-			watch_modify(io->fd, io->events, false);
+			if (watch_modify(io->fd, io->events, false) == -EBADF) {
+				io->close_on_destroy = false;
+				watch_clear(io->fd);
+				io_closed(io);
+				return;
+			}
 		}
 	}
 }
@@ -198,11 +211,7 @@ LIB_EXPORT void l_io_destroy(struct l_io *io)
 	if (io->fd != -1)
 		watch_remove(io->fd);
 
-	if (io->disconnect_handler)
-		io->disconnect_handler(io, io->disconnect_data);
-
-	if (io->disconnect_destroy)
-		io->disconnect_destroy(io->disconnect_data);
+	io_closed(io);
 
 	if (io->debug_destroy)
 		io->debug_destroy(io->debug_data);
