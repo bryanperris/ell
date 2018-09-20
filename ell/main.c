@@ -145,7 +145,7 @@ int watch_add(int fd, uint32_t events, watch_event_cb_t callback,
 	err = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, data->fd, &ev);
 	if (err < 0) {
 		l_free(data);
-		return err;
+		return -errno;
 	}
 
 	watch_list[fd] = data;
@@ -178,7 +178,7 @@ int watch_modify(int fd, uint32_t events, bool force)
 
 	err = epoll_ctl(epoll_fd, EPOLL_CTL_MOD, data->fd, &ev);
 	if (err < 0)
-		return err;
+		return -errno;
 
 	data->events = events;
 
@@ -219,7 +219,11 @@ int watch_remove(int fd)
 	if (err < 0)
 		return err;
 
-	return epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+	err = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+	if (err < 0)
+		return -errno;
+
+	return err;
 }
 
 static bool idle_remove_by_id(void *data, void *user_data)
