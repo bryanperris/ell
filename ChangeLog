@@ -1,3 +1,7 @@
+ver 0.10:
+	Fix issue with verifying total length of certificates.
+	Fix issue with loading v2 and v3 formatted hwdb.bin files.
+
 ver 0.9:
 	Fix issue with D-Bus subpath comparisons in object tree walk.
 	Fix issue with D-Bus InterfacesAdded on new ObjectManager addition.
