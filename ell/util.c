@@ -457,6 +457,34 @@ LIB_EXPORT bool l_strv_contains(char **str_array, const char *item)
 }
 
 /**
+ * l_strv_append:
+ * @str_array: a %NULL terminated array of strings or %NULL
+ * @str: A string to be appened at the end of @str_array
+ *
+ * Returns: New %NULL terminated array of strings with @str added
+ */
+LIB_EXPORT char **l_strv_append(char **str_array, const char *str)
+{
+	char **ret;
+	unsigned int i, len;
+
+	if (unlikely(!str))
+		return str_array;
+
+	len = l_strv_length(str_array);
+	ret = l_new(char *, len + 2);
+
+	for (i = 0; i < len; i++)
+		ret[i] = str_array[i];
+
+	ret[i++] = l_strdup(str);
+
+	l_free(str_array);
+
+	return ret;
+}
+
+/**
  * l_str_has_prefix:
  * @str: A string to be examined
  * @delim: Prefix string
