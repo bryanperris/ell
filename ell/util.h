@@ -264,6 +264,7 @@ void l_strfreev(char **strlist);
 char **l_strsplit(const char *str, const char sep);
 char **l_strsplit_set(const char *str, const char *separators);
 char *l_strjoinv(char **str_array, const char delim);
+void l_strv_free(char **str_array);
 unsigned int l_strv_length(char **str_array);
 bool l_strv_contains(char **str_array, const char *item);
 char **l_strv_append(char **str_array, const char *str);

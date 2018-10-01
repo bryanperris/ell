@@ -250,14 +250,7 @@ LIB_EXPORT char *l_strdup_vprintf(const char *format, va_list args)
  **/
 LIB_EXPORT void l_strfreev(char **strlist)
 {
-	if (likely(strlist)) {
-		int i;
-
-		for (i = 0; strlist[i]; i++)
-			l_free(strlist[i]);
-
-		l_free(strlist);
-	}
+	l_strv_free(strlist);
 }
 
 /**
@@ -411,6 +404,24 @@ LIB_EXPORT char *l_strjoinv(char **str_array, const char delim)
 	}
 
 	return ret;
+}
+
+/**
+ * l_strv_free:
+ * @str_array: a %NULL terminated array of strings
+ *
+ * Frees strings in @str_array and @str_array itself
+ **/
+LIB_EXPORT void l_strv_free(char **str_array)
+{
+	if (likely(str_array)) {
+		int i;
+
+		for (i = 0; str_array[i]; i++)
+			l_free(str_array[i]);
+
+		l_free(str_array);
+	}
 }
 
 /**
