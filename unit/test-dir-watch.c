@@ -570,6 +570,26 @@ static const struct test_data test_data_3[] = {
 	{ }
 };
 
+static const struct test_data test_data_4[] = {
+	{
+		test_creat(DIR_1, FILE_1, "ABC"),
+		result_created(DIR_1, FILE_1),
+	},
+	{
+		test_creat(DIR_1, FILE_2, "XYZ"),
+		result_created(DIR_1, FILE_2),
+	},
+	{
+		test_rename(DIR_1, FILE_2, DIR_1, FILE_1),
+		results(removed(DIR_1, FILE_2), created(DIR_1, FILE_1)),
+	},
+	{
+		test_unlink(DIR_1, FILE_1),
+		result_removed(DIR_1, FILE_1),
+	},
+	{ }
+};
+
 int main(int argc, char *argv[])
 {
 	int opt, exit_status;
@@ -589,6 +609,7 @@ int main(int argc, char *argv[])
 	add_test("Single directory test", test_data_1);
 	add_test("Move between directories", test_data_2);
 	add_test("Create and open file", test_data_3);
+	add_test("Replace existing file", test_data_4);
 
 	l_idle_oneshot(process_test_queue, NULL, NULL);
 	exit_status = l_main_run();
