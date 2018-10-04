@@ -150,6 +150,7 @@ unit_tests = unit/test-unit \
 			unit/test-uuid \
 			unit/test-pbkdf2 \
 			unit/test-dhcp \
+			unit/test-dir-watch \
 			unit/test-fswatch
 
 dbus_tests = unit/test-hwdb \
@@ -266,6 +267,8 @@ unit_test_key_DEPENDENCIES = $(cert_files) ell/libell-private.la
 unit_test_uuid_LDADD = ell/libell-private.la
 
 unit_test_dhcp_LDADD = ell/libell-private.la
+
+unit_test_dir_watch_LDADD = ell/libell-private.la
 
 unit_test_fswatch_LDADD = ell/libell-private.la
 
