@@ -44,6 +44,7 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/key.h \
 			ell/pkcs5.h \
 			ell/file.h \
+			ell/dir.h \
 			ell/net.h \
 			ell/dhcp.h \
 			ell/fswatch.h
@@ -101,6 +102,7 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/pkcs5-private.h \
 			ell/pkcs5.c \
 			ell/file.c \
+			ell/dir.c \
 			ell/net.c \
 			ell/dhcp-private.h \
 			ell/dhcp.c \
