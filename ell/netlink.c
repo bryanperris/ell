@@ -178,7 +178,7 @@ static void process_message(struct l_netlink *netlink, struct nlmsghdr *nlmsg)
 		case NLMSG_ERROR:
 			err = data + NLMSG_HDRLEN;
 
-			command->handler(-err->error, 0, NULL, 0,
+			command->handler(err->error, 0, NULL, 0,
 							command->user_data);
 			break;
 		}
