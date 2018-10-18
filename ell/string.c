@@ -38,7 +38,7 @@
  * Growable string buffer support
  */
 
-unsigned char l_ascii_table[256] = {
+LIB_EXPORT unsigned char l_ascii_table[256] = {
 	[0x00 ... 0x08] = L_ASCII_CNTRL,
 	[0x09 ... 0x0D] = L_ASCII_CNTRL | L_ASCII_SPACE,
 	[0x0E ... 0x1F] = L_ASCII_CNTRL,
