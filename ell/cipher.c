@@ -614,7 +614,7 @@ static void init_supported()
 	close(sk);
 }
 
-bool l_cipher_is_supported(enum l_cipher_type type)
+LIB_EXPORT bool l_cipher_is_supported(enum l_cipher_type type)
 {
 	if (!is_valid_type(type))
 		return false;
@@ -624,7 +624,7 @@ bool l_cipher_is_supported(enum l_cipher_type type)
 	return supported_ciphers & (1 << type);
 }
 
-bool l_aead_cipher_is_supported(enum l_aead_cipher_type type)
+LIB_EXPORT bool l_aead_cipher_is_supported(enum l_aead_cipher_type type)
 {
 	if (type != L_AEAD_CIPHER_AES_CCM)
 		return false;
