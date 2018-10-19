@@ -159,8 +159,7 @@ static void process_event(struct watch_desc *desc, const char *pathname,
 								pathname);
 		if (event) {
 			if (event->mask & IN_ACCESS)
-
-			handle_callback(desc, pathname,
+				handle_callback(desc, pathname,
 						L_DIR_WATCH_EVENT_ACCESSED);
 			free_event(event);
 		}
