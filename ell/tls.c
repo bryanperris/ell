@@ -47,6 +47,16 @@ void tls10_prf(const uint8_t *secret, size_t secret_len,
 	uint8_t l_s1 = (secret_len + 1) / 2;
 	unsigned int i;
 
+	/*
+	 * RFC2246 section 5:
+	 * S1 and S2 are the two halves of the secret, and each is the same
+	 * length.  S1 is taken from the first half of the secret, S2 from the
+	 * second half.  Their length is created by rounding up the length of
+	 * the overall secret, divided by two; thus, if the original secret is
+	 * an odd number of bytes long, the last byte of S1 will be the same as
+	 * the first byte of S2.
+	 */
+
 	tls12_prf(L_CHECKSUM_MD5, 16,
 			secret, l_s1,
 			label, seed, seed_len,
