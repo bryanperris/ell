@@ -98,7 +98,7 @@ void tls12_prf(enum l_checksum_type type, size_t hash_len,
 	l_checksum_free(hmac);
 }
 
-LIB_EXPORT void l_tls_prf_get_bytes(struct l_tls *tls,
+void tls_prf_get_bytes(struct l_tls *tls,
 				enum l_checksum_type type, size_t hash_len,
 				const uint8_t *secret, size_t secret_len,
 				const char *label,
@@ -110,6 +110,22 @@ LIB_EXPORT void l_tls_prf_get_bytes(struct l_tls *tls,
 				seed, seed_len, buf, len);
 	else
 		tls10_prf(secret, secret_len, label, seed, seed_len, buf, len);
+}
+
+LIB_EXPORT bool l_tls_prf_get_bytes(struct l_tls *tls,
+				enum l_checksum_type type, size_t hash_len,
+				const uint8_t *secret, size_t secret_len,
+				const char *label,
+				const uint8_t *seed, size_t seed_len,
+				uint8_t *buf, size_t len)
+{
+	if (unlikely(!tls))
+		return false;
+
+	tls_prf_get_bytes(tls, type, hash_len, secret, secret_len,
+					label, seed, seed_len, buf, len);
+
+	return true;
 }
 
 static void tls_write_random(uint8_t *buf)
@@ -814,7 +830,7 @@ static void tls_generate_master_secret(struct l_tls *tls,
 	memcpy(seed +  0, tls->pending.client_random, 32);
 	memcpy(seed + 32, tls->pending.server_random, 32);
 
-	l_tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
+	tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
 				pre_master_secret, pre_master_secret_len,
 				"master secret", seed, 64,
 				tls->pending.master_secret, 48);
@@ -842,7 +858,7 @@ static void tls_generate_master_secret(struct l_tls *tls,
 	memcpy(seed +  0, tls->pending.server_random, 32);
 	memcpy(seed + 32, tls->pending.client_random, 32);
 
-	l_tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
+	tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
 				tls->pending.master_secret, 48,
 				"key expansion", seed, 64,
 				tls->pending.key_block, key_block_size);
@@ -1131,7 +1147,7 @@ static void tls_send_finished(struct l_tls *tls)
 		seed_len = 36;
 	}
 
-	l_tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
+	tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
 				tls->pending.master_secret, 48,
 				tls->server ? "server finished" :
 				"client finished",
@@ -1165,7 +1181,7 @@ static bool tls_verify_finished(struct l_tls *tls, const uint8_t *received,
 		seed_len = 36;
 	}
 
-	l_tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
+	tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
 				tls->pending.master_secret, 48,
 				tls->server ? "client finished" :
 				"server finished",

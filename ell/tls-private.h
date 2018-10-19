@@ -247,3 +247,10 @@ bool tls_cert_verify_certchain(struct tls_cert *certchain,
 void tls_cert_free_certchain(struct tls_cert *cert);
 
 enum tls_cert_key_type tls_cert_get_pubkey_type(struct tls_cert *cert);
+
+void tls_prf_get_bytes(struct l_tls *tls,
+				enum l_checksum_type type, size_t hash_len,
+				const uint8_t *secret, size_t secret_len,
+				const char *label,
+				const uint8_t *seed, size_t seed_len,
+				uint8_t *buf, size_t len);
