@@ -36,7 +36,6 @@
 #include "key.h"
 #include "string.h"
 #include "random.h"
-#include "key-private.h"
 
 #ifndef KEYCTL_DH_COMPUTE
 #define KEYCTL_DH_COMPUTE 23
@@ -774,7 +773,7 @@ LIB_EXPORT bool l_keyring_unlink(struct l_keyring *keyring,
 	return error == 0;
 }
 
-bool l_key_is_supported(uint32_t features)
+LIB_EXPORT bool l_key_is_supported(uint32_t features)
 {
 	long result;
 

@@ -35,6 +35,12 @@ extern "C" {
 struct l_key;
 struct l_keyring;
 
+enum l_key_feature {
+	L_KEY_FEATURE_DH	= 1 << 0,
+	L_KEY_FEATURE_RESTRICT	= 1 << 1,
+	L_KEY_FEATURE_CRYPTO	= 1 << 2,
+};
+
 enum l_key_type {
 	L_KEY_RAW = 0,
 	L_KEY_RSA,
@@ -99,6 +105,8 @@ void l_keyring_free_norevoke(struct l_keyring *keyring);
 bool l_keyring_link(struct l_keyring *keyring, const struct l_key *key);
 
 bool l_keyring_unlink(struct l_keyring *keyring, const struct l_key *key);
+
+bool l_key_is_supported(uint32_t features);
 
 #ifdef __cplusplus
 }
