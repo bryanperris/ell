@@ -56,7 +56,6 @@ unit/test-key
 unit/test-pbkdf2
 unit/test-dhcp
 unit/test-dir-watch
-unit/test-fswatch
 unit/cert-*.pem
 unit/cert-*.csr
 unit/cert-*.srl
