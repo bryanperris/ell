@@ -103,6 +103,15 @@ bool l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
 
 const char *l_tls_alert_to_str(enum l_tls_alert_desc desc);
 
+enum l_checksum_type;
+
+void tls_prf_get_bytes(struct l_tls *tls,
+				enum l_checksum_type type, size_t hash_len,
+				const uint8_t *secret, size_t secret_len,
+				const char *label,
+				const uint8_t *seed, size_t seed_len,
+				uint8_t *buf, size_t len);
+
 #ifdef __cplusplus
 }
 #endif
