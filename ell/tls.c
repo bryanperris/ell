@@ -113,8 +113,8 @@ void tls_prf_get_bytes(struct l_tls *tls,
 }
 
 LIB_EXPORT bool l_tls_prf_get_bytes(struct l_tls *tls,
-				enum l_checksum_type type, size_t hash_len,
-				const uint8_t *secret, size_t secret_len,
+				enum l_checksum_type type,
+				size_t hash_len, bool use_master_secret,
 				const char *label, uint8_t *buf, size_t len)
 {
 	uint8_t seed[64];
@@ -125,8 +125,13 @@ LIB_EXPORT bool l_tls_prf_get_bytes(struct l_tls *tls,
 	memcpy(seed +  0, tls->pending.client_random, 32);
 	memcpy(seed + 32, tls->pending.server_random, 32);
 
-	tls_prf_get_bytes(tls, type, hash_len, secret, secret_len,
-					label, seed, 64, buf, len);
+	if (use_master_secret)
+		tls_prf_get_bytes(tls, type, hash_len,
+						tls->pending.master_secret, 48,
+						label, seed, 64, buf, len);
+	else
+		tls_prf_get_bytes(tls, type, hash_len, NULL, 0,
+						label, seed, 64, buf, len);
 
 	memset(seed, 0, 64);
 
