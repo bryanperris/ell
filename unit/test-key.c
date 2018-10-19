@@ -27,7 +27,6 @@
 #include <assert.h>
 
 #include <ell/ell.h>
-#include "ell/key-private.h"
 
 #define KEY1_STR "This key has exactly _32_ bytes!"
 #define KEY1_LEN (strlen(KEY1_STR))

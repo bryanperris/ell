@@ -32,7 +32,6 @@
 #include "ell/cipher.h"
 #include "ell/checksum.h"
 #include "ell/tls-private.h"
-#include "ell/key-private.h"
 
 static void test_tls10_prf(const void *data)
 {
