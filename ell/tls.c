@@ -38,9 +38,9 @@
 #include "key.h"
 #include "asn1-private.h"
 
-void tls10_prf(const uint8_t *secret, size_t secret_len,
+void tls10_prf(const void *secret, size_t secret_len,
 		const char *label,
-		const uint8_t *seed, size_t seed_len,
+		const void *seed, size_t seed_len,
 		uint8_t *out, size_t out_len)
 {
 	uint8_t p_hash2[out_len];
@@ -75,9 +75,9 @@ void tls10_prf(const uint8_t *secret, size_t secret_len,
 }
 
 void tls12_prf(enum l_checksum_type type, size_t hash_len,
-		const uint8_t *secret, size_t secret_len,
+		const void *secret, size_t secret_len,
 		const char *label,
-		const uint8_t *seed, size_t seed_len,
+		const void *seed, size_t seed_len,
 		uint8_t *out, size_t out_len)
 {
 	struct l_checksum *hmac = l_checksum_new_hmac(type, secret, secret_len);
@@ -114,9 +114,9 @@ void tls12_prf(enum l_checksum_type type, size_t hash_len,
 
 void tls_prf_get_bytes(struct l_tls *tls,
 				enum l_checksum_type type, size_t hash_len,
-				const uint8_t *secret, size_t secret_len,
+				const void *secret, size_t secret_len,
 				const char *label,
-				const uint8_t *seed, size_t seed_len,
+				const void *seed, size_t seed_len,
 				uint8_t *buf, size_t len)
 {
 	if (tls->negotiated_version >= TLS_V12)

@@ -202,15 +202,15 @@ struct l_tls {
 	bool ready;
 };
 
-void tls10_prf(const uint8_t *secret, size_t secret_len,
+void tls10_prf(const void *secret, size_t secret_len,
 		const char *label,
-		const uint8_t *seed, size_t seed_len,
+		const void *seed, size_t seed_len,
 		uint8_t *out, size_t out_len);
 
 void tls12_prf(enum l_checksum_type type, size_t hash_len,
-		const uint8_t *secret, size_t secret_len,
+		const void *secret, size_t secret_len,
 		const char *label,
-		const uint8_t *seed, size_t seed_len,
+		const void *seed, size_t seed_len,
 		uint8_t *out, size_t out_len);
 
 void tls_disconnect(struct l_tls *tls, enum l_tls_alert_desc desc,
@@ -250,7 +250,7 @@ enum tls_cert_key_type tls_cert_get_pubkey_type(struct tls_cert *cert);
 
 void tls_prf_get_bytes(struct l_tls *tls,
 				enum l_checksum_type type, size_t hash_len,
-				const uint8_t *secret, size_t secret_len,
+				const void *secret, size_t secret_len,
 				const char *label,
-				const uint8_t *seed, size_t seed_len,
+				const void *seed, size_t seed_len,
 				uint8_t *buf, size_t len);
