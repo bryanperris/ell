@@ -108,9 +108,7 @@ enum l_checksum_type;
 bool l_tls_prf_get_bytes(struct l_tls *tls,
 				enum l_checksum_type type, size_t hash_len,
 				const uint8_t *secret, size_t secret_len,
-				const char *label,
-				const uint8_t *seed, size_t seed_len,
-				uint8_t *buf, size_t len);
+				const char *label, uint8_t *buf, size_t len);
 
 #ifdef __cplusplus
 }
