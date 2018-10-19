@@ -51,8 +51,12 @@ void tls10_prf(const uint8_t *secret, size_t secret_len,
 			secret, l_s1,
 			label, seed, seed_len,
 			out, out_len);
+
+	if (secret_len > 0)
+		secret += secret_len - l_s1;
+
 	tls12_prf(L_CHECKSUM_SHA1, 20,
-			secret + secret_len - l_s1, l_s1,
+			secret, l_s1,
 			label, seed, seed_len,
 			p_hash2, out_len);
 
@@ -130,7 +134,7 @@ LIB_EXPORT bool l_tls_prf_get_bytes(struct l_tls *tls,
 						tls->pending.master_secret, 48,
 						label, seed, 64, buf, len);
 	else
-		tls_prf_get_bytes(tls, type, hash_len, NULL, 0,
+		tls_prf_get_bytes(tls, type, hash_len, "", 0,
 						label, seed, 64, buf, len);
 
 	memset(seed, 0, 64);
