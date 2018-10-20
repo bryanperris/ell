@@ -1,3 +1,10 @@
+ver 0.12:
+	Fix issue with unexported public API symbols.
+	Fix issue with handling netlink error return values.
+	Fix issue with handling hashmap removing of last entry.
+	Fix issue with handling zero-length secret for PRF.
+	Add support for directory watch interface.
+
 ver 0.11:
 	Fix issue with handling EPOLLHUP and EPOLLERR in IO watch.
 	Fix issue with closing of the fd inside IO watch handlers.
