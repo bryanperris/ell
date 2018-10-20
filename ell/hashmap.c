@@ -607,6 +607,8 @@ LIB_EXPORT unsigned int l_hashmap_foreach_remove(struct l_hashmap *hashmap,
 				free_key(hashmap, entry->key);
 				l_free(entry);
 				entry = prev->next;
+				if (entry == head)
+					break;
 				continue;
 			}
 
