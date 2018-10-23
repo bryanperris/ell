@@ -48,7 +48,8 @@ struct l_plugin_desc {
 		extern struct l_plugin_desc symbol \
 				__attribute__ ((visibility("default"))); \
 		struct l_plugin_desc symbol = { \
-			#name, description, version, priority, init, exit \
+			#name, description, version, priority, init, exit, \
+			NULL, NULL \
 		};
 
 #define L_PLUGIN_DEFINE_DEBUG(symbol, name, description, version, \
