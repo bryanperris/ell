@@ -9,7 +9,8 @@ to help your code survive under maintainer's fastidious eyes so that you
 can get a passport for your patch ASAP.
 
 First of all, the Embedded Linux Library coding style must follow every rule
-for the Linux kernel (http://www.kernel.org/doc/Documentation/CodingStyle).
+for the Linux kernel
+(https://www.kernel.org/doc/html/latest/process/coding-style.html).
 There also exists a tool named checkpatch.pl to help you check the compliance
 with it. Just type "checkpatch.pl --no-tree --no-signoff patch_name" to check
 your patch.
