@@ -41,11 +41,11 @@ extern "C" {
 #define L_STRINGIFY(val) L_STRINGIFY_ARG(val)
 #define L_STRINGIFY_ARG(contents) #contents
 
-#define L_WARN_ON(condition) ({						\
+#define L_WARN_ON(condition) __extension__ ({				\
 		bool r = !!(condition);					\
 		if (unlikely(r))					\
 			l_warn("WARNING: %s:%s() condition %s failed",	\
-				__FILE__, __PRETTY_FUNCTION__,		\
+				__FILE__, __func__,			\
 				#condition);				\
 		unlikely(r);						\
 	})
@@ -56,7 +56,7 @@ extern "C" {
 #define L_PTR_TO_INT(p) ((int) ((intptr_t) (p)))
 #define L_INT_TO_PTR(u) ((void *) ((intptr_t) (u)))
 
-#define L_GET_UNALIGNED(ptr)			\
+#define L_GET_UNALIGNED(ptr) __extension__	\
 ({						\
 	struct __attribute__((packed)) {	\
 		typeof(*(ptr)) __v;		\

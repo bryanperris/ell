@@ -64,7 +64,7 @@ LIB_EXPORT void *l_malloc(size_t size)
 			return ptr;
 
 		fprintf(stderr, "%s:%s(): failed to allocate %zd bytes\n",
-					STRLOC, __PRETTY_FUNCTION__, size);
+					STRLOC, __func__, size);
 		abort();
 	}
 
@@ -94,7 +94,7 @@ LIB_EXPORT void *l_realloc(void *mem, size_t size)
 			return ptr;
 
 		fprintf(stderr, "%s:%s(): failed to re-allocate %zd bytes\n",
-					STRLOC, __PRETTY_FUNCTION__, size);
+					STRLOC, __func__, size);
 		abort();
 	} else
 		l_free(mem);
@@ -154,7 +154,7 @@ LIB_EXPORT char *l_strdup(const char *str)
 			return tmp;
 
 		fprintf(stderr, "%s:%s(): failed to allocate string\n",
-						STRLOC, __PRETTY_FUNCTION__);
+						STRLOC, __func__);
 		abort();
 	}
 
@@ -182,7 +182,7 @@ LIB_EXPORT char *l_strndup(const char *str, size_t max)
 			return tmp;
 
 		fprintf(stderr, "%s:%s(): failed to allocate string\n",
-						STRLOC, __PRETTY_FUNCTION__);
+						STRLOC, __func__);
 		abort();
 	}
 
@@ -208,7 +208,7 @@ LIB_EXPORT char *l_strdup_printf(const char *format, ...)
 
 	if (len < 0) {
 		fprintf(stderr, "%s:%s(): failed to allocate string\n",
-					STRLOC, __PRETTY_FUNCTION__);
+					STRLOC, __func__);
 		abort();
 
 		return NULL;
@@ -233,7 +233,7 @@ LIB_EXPORT char *l_strdup_vprintf(const char *format, va_list args)
 
 	if (len < 0) {
 		fprintf(stderr, "%s:%s(): failed to allocate string\n",
-					STRLOC, __PRETTY_FUNCTION__);
+					STRLOC, __func__);
 		abort();
 
 		return NULL;
