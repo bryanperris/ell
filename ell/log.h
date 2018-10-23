@@ -66,12 +66,12 @@ struct l_debug_desc {
 #define L_DEBUG_SYMBOL(symbol, format, args...) do { \
 	static struct l_debug_desc symbol \
 	__attribute__((used, section("__ell_debug"), aligned(8))) = { \
-		.file = __FILE__, .func = __FUNCTION__, \
+		.file = __FILE__, .func = __func__, \
 		.flags = L_DEBUG_FLAG_DEFAULT, \
 	}; \
 	if (symbol.flags & L_DEBUG_FLAG_PRINT) \
 		l_log(L_LOG_DEBUG, "%s:%s() " format, __FILE__, \
-					__PRETTY_FUNCTION__ , ## args); \
+					__func__ , ## args); \
 } while (0)
 
 void l_debug_enable_full(const char *pattern,
