@@ -523,8 +523,8 @@ static void signal_handler(struct l_signal *signal, uint32_t signo,
  * Returns: #EXIT_SUCCESS after successful execution or #EXIT_FAILURE in
  *          case of failure
  **/
-LIB_EXPORT
-int l_main_run_with_signal(l_main_signal_cb_t callback, void *user_data)
+LIB_EXPORT int l_main_run_with_signal(l_main_signal_cb_t callback,
+							void *user_data)
 {
 	struct signal_data *data;
 	struct l_signal *signal;
