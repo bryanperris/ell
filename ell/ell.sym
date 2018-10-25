@@ -1,0 +1,99 @@
+ELL_0.10 {
+global:
+	/* util */
+	l_malloc;
+	l_realloc;
+	l_memdup;
+	l_free;
+	l_strdup;
+	l_strndup;
+	l_strdup_printf;
+	l_strdup_vprintf;
+	l_str_has_prefix;
+	l_strlcpy;
+	l_str_has_suffix;
+	l_util_hexstring;
+	l_util_from_hexstring;
+	l_util_hexdump;
+	l_util_hexdump_two;
+	l_util_hexdumpv;
+	l_util_debug;
+	l_util_get_debugfs_path;
+	/* test */
+	l_test_init;
+	l_test_run;
+	l_test_add;
+	/* strv */
+	l_strfreev;
+	l_strsplit;
+	l_strsplit_set;
+	l_strjoinv;
+	l_strv_free;
+	l_strv_length;
+	l_strv_contains;
+	l_strv_append;
+	/* queue */
+	l_queue_new;
+	l_queue_destroy;
+	l_queue_clear;
+	l_queue_push_tail;
+	l_queue_push_head;
+	l_queue_pop_head;
+	l_queue_peek_head;
+	l_queue_peek_tail;
+	l_queue_insert;
+	l_queue_find;
+	l_queue_remove;
+	l_queue_reverse;
+	l_queue_foreach;
+	l_queue_foreach_remove;
+	l_queue_remove_if;
+	l_queue_length;
+	l_queue_isempty;
+	l_queue_get_entries;
+	/* hashmap */
+	l_hashmap_new;
+	l_str_hash;
+	l_hashmap_string_new;
+	l_hashmap_set_hash_function;
+	l_hashmap_set_compare_function;
+	l_hashmap_set_key_copy_function;
+	l_hashmap_set_key_free_function;
+	l_hashmap_destroy;
+	l_hashmap_insert;
+	l_hashmap_remove;
+	l_hashmap_lookup;
+	l_hashmap_foreach;
+	l_hashmap_foreach_remove;
+	l_hashmap_size;
+	l_hashmap_isempty;
+	/* string */
+	l_ascii_table;
+	l_string_new;
+	l_string_free;
+	l_string_unwrap;
+	l_string_append;
+	l_string_append_c;
+	l_string_append_fixed;
+	l_string_append_vprintf;
+	l_string_append_printf;
+	l_string_length;
+	l_string_truncate;
+	l_utf8_get_codepoint;
+	l_utf8_validate;
+	l_utf8_strlen;
+	l_utf8_from_utf16;
+	l_utf8_to_utf16;
+	l_parse_args;
+	/* main */
+	l_main_init;
+	l_main_prepare;
+	l_main_iterate;
+	l_main_run;
+	l_main_exit;
+	l_main_quit;
+	l_main_run_with_signal;
+	l_main_get_epoll_fd;
+local:
+	*;
+};

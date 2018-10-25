@@ -110,7 +110,10 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/dhcp-lease.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
+			-Wl,--version-script=$(top_srcdir)/ell/ell.sym \
 			-version-info $(ELL_CURRENT):$(ELL_REVISION):$(ELL_AGE)
+
+ell_libell_la_DEPENDENCIES = ell/ell.sym
 
 noinst_LTLIBRARIES = ell/libell-private.la
 
@@ -301,7 +304,8 @@ noinst_PROGRAMS += tools/certchain-verify
 tools_certchain_verify_SOURCES = tools/certchain-verify.c
 tools_certchain_verify_LDADD = ell/libell-private.la
 
-EXTRA_DIST = $(unit_test_data_files) unit/gencerts.cnf unit/plaintext.txt
+EXTRA_DIST = ell/ell.sym \
+		$(unit_test_data_files) unit/gencerts.cnf unit/plaintext.txt
 
 TESTS = $(unit_tests)
 
