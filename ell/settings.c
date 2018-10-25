@@ -34,6 +34,7 @@
 #include <sys/mman.h>
 
 #include "util.h"
+#include "strv.h"
 #include "string.h"
 #include "queue.h"
 #include "settings.h"

@@ -15,6 +15,7 @@ ELL_AGE = 0
 pkginclude_HEADERS = ell/ell.h \
 			ell/util.h \
 			ell/test.h \
+			ell/strv.h \
 			ell/queue.h \
 			ell/hashmap.h \
 			ell/string.h \
@@ -56,6 +57,7 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/missing.h \
 			ell/util.c \
 			ell/test.c \
+			ell/strv.c \
 			ell/queue.c \
 			ell/hashmap.c \
 			ell/string.c \

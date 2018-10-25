@@ -260,14 +260,6 @@ char *l_strdup(const char *str);
 char *l_strndup(const char *str, size_t max);
 char *l_strdup_printf(const char *format, ...);
 char *l_strdup_vprintf(const char *format, va_list args);
-void l_strfreev(char **strlist);
-char **l_strsplit(const char *str, const char sep);
-char **l_strsplit_set(const char *str, const char *separators);
-char *l_strjoinv(char **str_array, const char delim);
-void l_strv_free(char **str_array);
-unsigned int l_strv_length(char **str_array);
-bool l_strv_contains(char **str_array, const char *item);
-char **l_strv_append(char **str_array, const char *str);
 
 bool l_str_has_prefix(const char *str, const char *prefix);
 bool l_str_has_suffix(const char *str, const char *suffix);
