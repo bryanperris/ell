@@ -9,8 +9,8 @@ global:
 	l_strndup;
 	l_strdup_printf;
 	l_strdup_vprintf;
-	l_str_has_prefix;
 	l_strlcpy;
+	l_str_has_prefix;
 	l_str_has_suffix;
 	l_util_hexstring;
 	l_util_from_hexstring;
