@@ -75,18 +75,18 @@ LIB_EXPORT bool l_getrandom(void *buf, size_t len)
 LIB_EXPORT bool l_getrandom_is_supported()
 {
 	static bool initialized = false;
-	static bool supported = false;
+	static bool supported = true;
 	uint8_t buf[4];
 	int ret;
 
 	if (initialized)
 		return supported;
 
-	initialized = true;
 	ret = getrandom(buf, sizeof(buf), GRND_NONBLOCK);
 
 	if (ret < 0 && errno == ENOSYS)
-		return false;
+		supported = false;
 
-	return true;
+	initialized = true;
+	return supported;
 }
