@@ -32,6 +32,13 @@ global:
 	l_strv_length;
 	l_strv_contains;
 	l_strv_append;
+	/* utf8 */
+	l_ascii_table;
+	l_utf8_get_codepoint;
+	l_utf8_validate;
+	l_utf8_strlen;
+	l_utf8_from_utf16;
+	l_utf8_to_utf16;
 	/* queue */
 	l_queue_new;
 	l_queue_destroy;
@@ -68,7 +75,6 @@ global:
 	l_hashmap_size;
 	l_hashmap_isempty;
 	/* string */
-	l_ascii_table;
 	l_string_new;
 	l_string_free;
 	l_string_unwrap;
@@ -79,11 +85,6 @@ global:
 	l_string_append_printf;
 	l_string_length;
 	l_string_truncate;
-	l_utf8_get_codepoint;
-	l_utf8_validate;
-	l_utf8_strlen;
-	l_utf8_from_utf16;
-	l_utf8_to_utf16;
 	l_parse_args;
 	/* main */
 	l_main_init;
