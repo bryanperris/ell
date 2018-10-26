@@ -35,7 +35,7 @@
 #include "private.h"
 #include "pem.h"
 #include "base64.h"
-#include "string.h"
+#include "utf8.h"
 #include "asn1-private.h"
 #include "pkcs5-private.h"
 #include "cipher.h"

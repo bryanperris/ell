@@ -23,6 +23,7 @@
 #include <ell/util.h>
 #include <ell/test.h>
 #include <ell/strv.h>
+#include <ell/utf8.h>
 #include <ell/queue.h>
 #include <ell/hashmap.h>
 #include <ell/string.h>

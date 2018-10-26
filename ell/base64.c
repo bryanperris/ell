@@ -22,11 +22,11 @@
 #include <config.h>
 #endif
 
-#define _GNU_SOURCE
+#include <stdint.h>
 
-#include "private.h"
+#include "utf8.h"
 #include "base64.h"
-#include "string.h"
+#include "private.h"
 
 LIB_EXPORT uint8_t *l_base64_decode(const char *in, size_t in_len,
 					size_t *n_written)

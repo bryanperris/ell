@@ -16,6 +16,7 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/util.h \
 			ell/test.h \
 			ell/strv.h \
+			ell/utf8.h \
 			ell/queue.h \
 			ell/hashmap.h \
 			ell/string.h \
@@ -58,6 +59,7 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/util.c \
 			ell/test.c \
 			ell/strv.c \
+			ell/utf8.c \
 			ell/queue.c \
 			ell/hashmap.c \
 			ell/string.c \

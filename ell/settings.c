@@ -35,6 +35,7 @@
 
 #include "util.h"
 #include "strv.h"
+#include "utf8.h"
 #include "string.h"
 #include "queue.h"
 #include "settings.h"
