@@ -25,7 +25,9 @@
 #include <config.h>
 #endif
 
-#include "ell.h"
+#include "dbus.h"
+#include "dbus-client.h"
+#include "queue.h"
 #include "private.h"
 
 struct l_dbus_client {
