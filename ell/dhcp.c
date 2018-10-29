@@ -935,7 +935,7 @@ bool _dhcp_client_set_transport(struct l_dhcp_client *client,
 		return false;
 
 	if (client->transport)
-		_dhcp_transport_free(transport);
+		_dhcp_transport_free(client->transport);
 
 	client->transport = transport;
 	return true;
