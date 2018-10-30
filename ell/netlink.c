@@ -237,6 +237,9 @@ static bool can_read_data(struct l_io *io, void *user_data)
 	ssize_t len;
 	int sk;
 
+	memset(buffer, 0, sizeof(buffer));
+	memset(control, 0, sizeof(control));
+
 	sk = l_io_get_fd(io);
 
 	iov.iov_base = buffer;
