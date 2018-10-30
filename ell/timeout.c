@@ -24,11 +24,13 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
+#include <time.h>
 #include <limits.h>
 
 #include "util.h"
