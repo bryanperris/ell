@@ -24,6 +24,9 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
+#include <string.h>
+
 #include "util.h"
 #include "strv.h"
 #include "private.h"
