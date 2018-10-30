@@ -24,10 +24,12 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <signal.h>
 #include <sys/epoll.h>
 
 #include "signal.h"
