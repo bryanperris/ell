@@ -24,10 +24,13 @@
 #include <config.h>
 #endif
 
-#include <ell/ell.h>
+#define _GNU_SOURCE
 #include <unistd.h>
 #include <assert.h>
 #include <limits.h>
+#include <signal.h>
+
+#include <ell/ell.h>
 
 static void signal_handler(struct l_signal *signal, uint32_t signo,
 							void *user_data)

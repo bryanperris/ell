@@ -24,16 +24,18 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <sys/wait.h>
-#include <stdio.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
 
 #include <ell/ell.h>
-#include <ell/dbus-private.h>
+#include "ell/dbus-private.h"
 
 #define TEST_BUS_ADDRESS "unix:path=/tmp/ell-test-bus"
 

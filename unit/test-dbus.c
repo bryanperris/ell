@@ -24,8 +24,10 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <sys/wait.h>
 
 #include <ell/ell.h>
