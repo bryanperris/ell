@@ -1,3 +1,7 @@
+ver 0.13:
+	Fix issue with using -std=c99 compiler option.
+	Fix issue with return value of l_getrandom_is_supported.
+
 ver 0.12:
 	Fix issue with unexported public API symbols.
 	Fix issue with handling netlink error return values.
