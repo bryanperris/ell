@@ -40,8 +40,7 @@ static void do_debug(const char *str, void *user_data)
 	l_info("%s%s", prefix, str);
 }
 
-static void signal_handler(struct l_signal *signal, uint32_t signo,
-							void *user_data)
+static void signal_handler(uint32_t signo, void *user_data)
 {
 	switch (signo) {
 	case SIGINT:
@@ -179,17 +178,10 @@ static void setup_test_interface(struct l_dbus_interface *interface)
 int main(int argc, char *argv[])
 {
 	struct l_dbus *dbus;
-	struct l_signal *signal;
-	sigset_t mask;
 	struct test_data *test;
 
 	if (!l_main_init())
 		return -1;
-
-	sigemptyset(&mask);
-	sigaddset(&mask, SIGINT);
-	sigaddset(&mask, SIGTERM);
-	signal = l_signal_create(&mask, signal_handler, NULL, NULL);
 
 	l_log_set_stderr();
 
@@ -230,13 +222,12 @@ int main(int argc, char *argv[])
 		goto cleanup;
 	}
 
-	l_main_run();
+	l_main_run_with_signal(signal_handler, NULL);
 
 	l_dbus_unregister_object(dbus, "/test");
 
 cleanup:
 	l_dbus_destroy(dbus);
-	l_signal_remove(signal);
 
 	l_main_exit();
 

@@ -24,7 +24,6 @@
 #define __ELL_SIGNAL_H
 
 #include <stdint.h>
-#include <signal.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,13 +31,11 @@ extern "C" {
 
 struct l_signal;
 
-typedef void (*l_signal_notify_cb_t) (struct l_signal *signal,
-					uint32_t signo, void *user_data);
+typedef void (*l_signal_notify_cb_t) (void *user_data);
 typedef void (*l_signal_destroy_cb_t) (void *user_data);
 
-struct l_signal *l_signal_create(const __sigset_t *mask,
-			l_signal_notify_cb_t callback,
-			void *user_data, l_signal_destroy_cb_t destroy);
+struct l_signal *l_signal_create(uint32_t signo, l_signal_notify_cb_t callback,
+				void *user_data, l_signal_destroy_cb_t destroy);
 void l_signal_remove(struct l_signal *signal);
 
 #ifdef __cplusplus

@@ -75,8 +75,7 @@ static bool start_dbus_daemon(void)
 	return true;
 }
 
-static void signal_handler(struct l_signal *signal, uint32_t signo,
-							void *user_data)
+static void signal_handler(uint32_t signo, void *user_data)
 {
 	switch (signo) {
 	case SIGINT:
@@ -84,24 +83,25 @@ static void signal_handler(struct l_signal *signal, uint32_t signo,
 		l_info("Terminate");
 		l_main_quit();
 		break;
-	case SIGCHLD:
-		while (1) {
-			pid_t pid;
-			int status;
+	}
+}
 
-			pid = waitpid(WAIT_ANY, &status, WNOHANG);
-			if (pid < 0 || pid == 0)
-				break;
+static void sigchld_handler(void *user_data)
+{
+	while (1) {
+		pid_t pid;
+		int status;
 
-			l_info("process %d terminated with status=%d\n",
-								pid, status);
+		pid = waitpid(WAIT_ANY, &status, WNOHANG);
+		if (pid < 0 || pid == 0)
+			break;
 
-			if (pid == dbus_daemon_pid) {
-				dbus_daemon_pid = -1;
-				l_main_quit();
-			}
+		l_info("process %d terminated with status=%d\n", pid, status);
+
+		if (pid == dbus_daemon_pid) {
+			dbus_daemon_pid = -1;
+			l_main_quit();
 		}
-		break;
 	}
 }
 
@@ -315,13 +315,12 @@ static void test_run(void)
 		return;
 	}
 
-	l_main_run();
+	l_main_run_with_signal(signal_handler, NULL);
 }
 
 int main(int argc, char *argv[])
 {
-	struct l_signal *signal;
-	sigset_t mask;
+	struct l_signal *sigchld;
 	int i;
 
 	if (!l_main_init())
@@ -329,12 +328,7 @@ int main(int argc, char *argv[])
 
 	test_add("FD passing 1", test_fd_passing_1, NULL);
 
-	sigemptyset(&mask);
-	sigaddset(&mask, SIGINT);
-	sigaddset(&mask, SIGTERM);
-	sigaddset(&mask, SIGCHLD);
-
-	signal = l_signal_create(&mask, signal_handler, NULL, NULL);
+	sigchld = l_signal_create(SIGCHLD, sigchld_handler, NULL, NULL);
 
 	l_log_set_stderr();
 
@@ -360,7 +354,7 @@ done:
 	if (dbus_daemon_pid > 0)
 		kill(dbus_daemon_pid, SIGKILL);
 
-	l_signal_remove(signal);
+	l_signal_remove(sigchld);
 	l_queue_destroy(tests, l_free);
 
 	l_main_exit();

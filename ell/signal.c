@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/epoll.h>
 #include <sys/signalfd.h>
 
@@ -50,6 +51,7 @@
 struct l_signal {
 	int fd;
 	sigset_t mask;
+	uint32_t signo;
 	l_signal_notify_cb_t callback;
 	l_signal_destroy_cb_t destroy;
 	void *user_data;
@@ -78,8 +80,11 @@ static void signal_callback(int fd, uint32_t events, void *user_data)
 	if (result != sizeof(si))
 		return;
 
+	if (signal->signo != si.ssi_signo)
+		return;
+
 	if (signal->callback)
-		signal->callback(signal, si.ssi_signo, signal->user_data);
+		signal->callback(signal->user_data);
 }
 
 static int masked_signals_add(const sigset_t *mask)
@@ -150,29 +155,34 @@ static int masked_signals_del(const sigset_t *mask)
  *
  * Returns: a newly allocated #l_signal object
  **/
-LIB_EXPORT struct l_signal *l_signal_create(const sigset_t *mask,
-			l_signal_notify_cb_t callback,
-			void *user_data, l_signal_destroy_cb_t destroy)
+LIB_EXPORT struct l_signal *l_signal_create(uint32_t signo,
+				l_signal_notify_cb_t callback,
+				void *user_data, l_signal_destroy_cb_t destroy)
 {
 	struct l_signal *signal;
+	sigset_t mask;
 	int err;
 
-	if (unlikely(!mask || !callback))
+	if (unlikely(signo <= 1 || signo >= _NSIG || !callback))
 		return NULL;
 
 	signal = l_new(struct l_signal, 1);
 
+	sigemptyset(&mask);
+	sigaddset(&mask, signo);
+
+	signal->signo = signo;
 	signal->callback = callback;
 	signal->destroy = destroy;
 	signal->user_data = user_data;
-	memcpy(&signal->mask, mask, sizeof(sigset_t));
+	memcpy(&signal->mask, &mask, sizeof(sigset_t));
 
-	if (masked_signals_add(mask) < 0) {
+	if (masked_signals_add(&mask) < 0) {
 		l_free(signal);
 		return NULL;
 	}
 
-	signal->fd = signalfd(-1, mask, SFD_NONBLOCK | SFD_CLOEXEC);
+	signal->fd = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
 	if (signal->fd < 0)
 		goto error;
 
@@ -185,7 +195,7 @@ LIB_EXPORT struct l_signal *l_signal_create(const sigset_t *mask,
 	return signal;
 
 error:
-	masked_signals_del(mask);
+	masked_signals_del(&mask);
 	l_free(signal);
 	return NULL;
 }

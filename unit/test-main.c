@@ -32,8 +32,7 @@
 
 #include <ell/ell.h>
 
-static void signal_handler(struct l_signal *signal, uint32_t signo,
-							void *user_data)
+static void signal_handler(uint32_t signo, void *user_data)
 {
 	switch (signo) {
 	case SIGINT:
@@ -92,18 +91,10 @@ int main(int argc, char *argv[])
 	struct l_timeout *race1;
 	struct l_timeout *race2;
 	struct l_timeout *remove_self;
-	struct l_signal *signal;
 	struct l_idle *idle;
-	sigset_t mask;
 
 	if (!l_main_init())
 		return -1;
-
-	sigemptyset(&mask);
-	sigaddset(&mask, SIGINT);
-	sigaddset(&mask, SIGTERM);
-
-	signal = l_signal_create(&mask, signal_handler, NULL, NULL);
 
 	timeout_quit = l_timeout_create(3, timeout_quit_handler, NULL, NULL);
 
@@ -129,15 +120,13 @@ int main(int argc, char *argv[])
 
 	l_idle_oneshot(oneshot_handler, NULL, NULL);
 
-	l_main_run();
+	l_main_run_with_signal(signal_handler, NULL);
 
 	l_timeout_remove(race_delay);
 	l_timeout_remove(race1);
 	l_timeout_remove(race2);
 
 	l_timeout_remove(timeout_quit);
-
-	l_signal_remove(signal);
 
 	l_idle_remove(idle);
 
