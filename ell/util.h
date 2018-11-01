@@ -114,47 +114,47 @@ static inline void l_put_u8(uint8_t val, void *ptr)
 
 static inline uint16_t l_get_u16(const void *ptr)
 {
-	return *((const uint16_t *) ptr);
+	return L_GET_UNALIGNED((const uint16_t *) ptr);
 }
 
 static inline void l_put_u16(uint16_t val, void *ptr)
 {
-	*((uint16_t *) ptr) = val;
+	L_PUT_UNALIGNED(val, (uint16_t *) ptr);
 }
 
 static inline uint32_t l_get_u32(const void *ptr)
 {
-	return *((const uint32_t *) ptr);
+	return L_GET_UNALIGNED((const uint32_t *) ptr);
 }
 
 static inline void l_put_u32(uint32_t val, void *ptr)
 {
-	*((uint32_t *) ptr) = val;
+	L_PUT_UNALIGNED(val, (uint32_t *) ptr);
 }
 
 static inline uint64_t l_get_u64(const void *ptr)
 {
-	return *((const uint64_t *) ptr);
+	return L_GET_UNALIGNED((const uint64_t *) ptr);
 }
 
 static inline void l_put_u64(uint64_t val, void *ptr)
 {
-	*((uint64_t *) ptr) = val;
+	L_PUT_UNALIGNED(val, (uint64_t *) ptr);
 }
 
 static inline int16_t l_get_s16(const void *ptr)
 {
-	return *((const int16_t *) ptr);
+	return L_GET_UNALIGNED((const int16_t *) ptr);
 }
 
 static inline int32_t l_get_s32(const void *ptr)
 {
-	return *((const int32_t *) ptr);
+	return L_GET_UNALIGNED((const int32_t *) ptr);
 }
 
 static inline int64_t l_get_s64(const void *ptr)
 {
-	return *((const int64_t *) ptr);
+	return L_GET_UNALIGNED((const int64_t *) ptr);
 }
 
 static inline uint16_t l_get_le16(const void *ptr)
