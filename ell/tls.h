@@ -60,6 +60,9 @@ typedef void (*l_tls_write_cb_t)(const uint8_t *data, size_t len,
 typedef void (*l_tls_ready_cb_t)(const char *peer_identity, void *user_data);
 typedef void (*l_tls_disconnect_cb_t)(enum l_tls_alert_desc reason,
 					bool remote, void *user_data);
+typedef void (*l_tls_debug_cb_t)(const char *str, void *user_data);
+typedef void (*l_tls_destroy_cb_t)(void *user_data);
+
 
 /*
  * app_data_handler gets called with newly received decrypted data.
@@ -109,6 +112,9 @@ bool l_tls_prf_get_bytes(struct l_tls *tls,
 				enum l_checksum_type type,
 				size_t hash_len, bool use_master_secret,
 				const char *label, uint8_t *buf, size_t len);
+
+bool l_tls_set_debug(struct l_tls *tls, l_tls_debug_cb_t function,
+			void *user_data, l_tls_destroy_cb_t destroy);
 
 #ifdef __cplusplus
 }

@@ -413,6 +413,7 @@ global:
 	l_tls_set_cacert;
 	l_tls_set_auth_data;
 	l_tls_alert_to_str;
+	l_tls_set_debug;
 	/* uintset */
 	l_uintset_new_from_range;
 	l_uintset_new;

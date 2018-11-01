@@ -208,13 +208,9 @@ void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
 static bool tls_handle_plaintext(struct l_tls *tls, const uint8_t *plaintext,
 					int len, uint8_t type, uint16_t version)
 {
-	int header_len, need_len;
-	int chunk_len;
-
-	uint32_t hs_len;
-
 	if (len > (1 << 14)) {
-		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+		TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
+				"Plaintext message too long: %i", len);
 		return false;
 	}
 
@@ -246,30 +242,39 @@ static bool tls_handle_plaintext(struct l_tls *tls, const uint8_t *plaintext,
 		break;
 
 	default:
-		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+		TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
+				"Unknown content type %i", type);
 		return false;
 	}
 
 	if (tls->message_buf_len && type != tls->message_content_type) {
-		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+		TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
+				"Message fragment type %i doesn't match "
+				"previous type %i", type,
+				tls->message_content_type);
 		return false;
 	}
 
 	tls->message_content_type = type;
 
 	while (1) {
+		int header_len, need_len;
+		int chunk_len;
+
 		/* Do we have a full header in tls->message_buf? */
 		header_len = (type == TLS_CT_ALERT) ? 2 : 4;
 		need_len = header_len;
 
 		if (tls->message_buf_len >= header_len) {
 			if (type == TLS_CT_HANDSHAKE) {
-				hs_len = (tls->message_buf[1] << 16) |
+				uint32_t hs_len = (tls->message_buf[1] << 16) |
 					(tls->message_buf[2] << 8) |
 					(tls->message_buf[3] << 0);
 				if (hs_len > (1 << 14)) {
-					tls_disconnect(tls,
-						TLS_ALERT_DECODE_ERROR, 0);
+					TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR,
+							0, "Handshake message "
+							"too long: %i",
+							(int) hs_len);
 					return false;
 				}
 
@@ -333,19 +338,22 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 	fragment_len = l_get_be16(tls->record_buf + 3);
 
 	if (fragment_len > (1 << 14) + 2048) {
-		tls_disconnect(tls, TLS_ALERT_RECORD_OVERFLOW, 0);
+		TLS_DISCONNECT(TLS_ALERT_RECORD_OVERFLOW, 0,
+				"Record fragment too long: %u", fragment_len);
 		return false;
 	}
 
 	if ((tls->negotiated_version && tls->negotiated_version != version) ||
 			(!tls->negotiated_version &&
 			 tls->record_buf[1] != 0x03 /* Appending E.1 */)) {
-		tls_disconnect(tls, TLS_ALERT_PROTOCOL_VERSION, 0);
+		TLS_DISCONNECT(TLS_ALERT_PROTOCOL_VERSION, 0,
+				"Record version mismatch: %02x", version);
 		return false;
 	}
 
 	if (fragment_len < tls->mac_length[0]) {
-		tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+		TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
+				"Record fragment too short: %u", fragment_len);
 		return false;
 	}
 
@@ -366,7 +374,8 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 		else if (!l_cipher_decrypt(tls->cipher[0], tls->record_buf + 5,
 						compressed + 13,
 						cipher_output_len)) {
-			tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
+			TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+					"Decrypting record fragment failed");
 			return false;
 		}
 
@@ -376,7 +385,8 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 
 		if (memcmp(mac_buf, compressed + 13 + compressed_len,
 							tls->mac_length[0])) {
-			tls_disconnect(tls, TLS_ALERT_BAD_RECORD_MAC, 0);
+			TLS_DISCONNECT(TLS_ALERT_BAD_RECORD_MAC, 0,
+					"Record fragment MAC mismatch");
 			return false;
 		}
 
@@ -390,7 +400,9 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 			i = tls->record_iv_length[0];
 
 		if (fragment_len <= tls->mac_length[0] + i) {
-			tls_disconnect(tls, TLS_ALERT_DECODE_ERROR, 0);
+			TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
+					"Record fragment too short: %u",
+					fragment_len);
 			return false;
 		}
 
@@ -402,7 +414,11 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 			 * should be returned here but that was declared
 			 * unsafe in the TLS 1.1 spec.
 			 */
-			tls_disconnect(tls, TLS_ALERT_BAD_RECORD_MAC, 0);
+			TLS_DISCONNECT(TLS_ALERT_BAD_RECORD_MAC, 0,
+					"Fragment data len %i not a multiple "
+					"of block length %zi",
+					cipher_output_len,
+					tls->block_length[0]);
 			return false;
 		}
 
@@ -410,22 +426,23 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 			if (!l_cipher_set_iv(tls->cipher[0],
 						tls->record_buf + 5,
 						tls->record_iv_length[0])) {
-				tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
-						0);
+				TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+						"Setting fragment IV failed");
 				return false;
 			}
 		} else if (tls->negotiated_version >= TLS_V11)
 			if (!l_cipher_decrypt(tls->cipher[0],
 						tls->record_buf + 5, iv,
 						tls->record_iv_length[0])) {
-				tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR,
-						0);
+				TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+						"Setting fragment IV failed");
 				return false;
 			}
 
 		if (!l_cipher_decrypt(tls->cipher[0], tls->record_buf + 5 + i,
 					compressed + 13, cipher_output_len)) {
-			tls_disconnect(tls, TLS_ALERT_INTERNAL_ERROR, 0);
+			TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+					"Fragment decryption failed");
 			return false;
 		}
 
@@ -469,7 +486,8 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 		if ((tls->mac_length[0] && memcmp(mac_buf, compressed + 13 +
 					compressed_len, tls->mac_length[0])) ||
 				error) {
-			tls_disconnect(tls, TLS_ALERT_BAD_RECORD_MAC, 0);
+			TLS_DISCONNECT(TLS_ALERT_BAD_RECORD_MAC, 0,
+					"Record fragment MAC mismatch");
 			return false;
 		}
 

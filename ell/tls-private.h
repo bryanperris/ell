@@ -48,6 +48,7 @@ struct tls_hash_algorithm {
 	uint8_t tls_id;
 	enum l_checksum_type l_id;
 	size_t length;
+	const char *name;
 };
 
 typedef bool (*tls_get_hash_t)(struct l_tls *tls, uint8_t tls_id,
@@ -89,6 +90,7 @@ struct tls_cipher_suite {
 
 struct tls_compression_method {
 	int id;
+	const char *name;
 };
 
 enum tls_handshake_state {
@@ -136,6 +138,9 @@ struct l_tls {
 	l_tls_ready_cb_t ready_handle;
 	l_tls_disconnect_cb_t disconnected;
 	void *user_data;
+	l_tls_debug_cb_t debug_handler;
+	l_tls_destroy_cb_t debug_destroy;
+	void *debug_data;
 
 	char *ca_cert_path;
 	char *cert_path;
@@ -254,3 +259,22 @@ void tls_prf_get_bytes(struct l_tls *tls,
 				const char *label,
 				const void *seed, size_t seed_len,
 				uint8_t *buf, size_t len);
+
+#define TLS_DEBUG(fmt, args...)	\
+	l_util_debug(tls->debug_handler, tls->debug_data, "%s:%i " fmt,	\
+			__func__, __LINE__, ## args)
+#define TLS_SET_STATE(new_state)	\
+	do {	\
+		TLS_DEBUG("New state %s",	\
+				tls_handshake_state_to_str(new_state));	\
+		tls->state = new_state;	\
+	} while (0)
+#define TLS_DISCONNECT(desc, local_desc, fmt, args...)	\
+	do {	\
+		TLS_DEBUG("Disconnect desc=%s local-desc=%s reason=" fmt,\
+				l_tls_alert_to_str(desc),	\
+				l_tls_alert_to_str(local_desc), ## args);\
+		tls_disconnect(tls, desc, local_desc);	\
+	} while (0)
+
+const char *tls_handshake_state_to_str(enum tls_handshake_state state);
