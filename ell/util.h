@@ -258,7 +258,8 @@ static inline void auto_free(void *a)
 
 char *l_strdup(const char *str);
 char *l_strndup(const char *str, size_t max);
-char *l_strdup_printf(const char *format, ...);
+char *l_strdup_printf(const char *format, ...)
+			__attribute__((format(printf, 1, 2)));
 char *l_strdup_vprintf(const char *format, va_list args);
 
 size_t l_strlcpy(char* dst, const char *src, size_t len);
@@ -280,7 +281,8 @@ void l_util_hexdumpv(bool in, const struct iovec *iov, size_t n_iov,
 					l_util_hexdump_func_t function,
 					void *user_data);
 void l_util_debug(l_util_hexdump_func_t function, void *user_data,
-						const char *format, ...);
+						const char *format, ...)
+			__attribute__((format(printf, 3, 4)));
 
 const char *l_util_get_debugfs_path(void);
 

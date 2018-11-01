@@ -118,7 +118,8 @@ struct l_dbus_message *l_dbus_message_new_error_valist(
 struct l_dbus_message *l_dbus_message_new_error(
 					struct l_dbus_message *method_call,
 					const char *name,
-					const char *format, ...);
+					const char *format, ...)
+					__attribute__((format(printf, 3, 4)));
 
 struct l_dbus_message *l_dbus_message_ref(struct l_dbus_message *message);
 void l_dbus_message_unref(struct l_dbus_message *message);
