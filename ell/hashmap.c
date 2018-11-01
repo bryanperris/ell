@@ -86,8 +86,8 @@ static inline unsigned int hash_superfast(const uint8_t *key, unsigned int len)
 
 	/* Main loop */
 	for (; len > 0; len--) {
-		hash += L_GET_UNALIGNED((uint16_t *) key);
-		tmp = (L_GET_UNALIGNED((uint16_t *)(key + 2)) << 11) ^ hash;
+		hash += l_get_u16(key);
+		tmp = (l_get_u16(key + 2) << 11) ^ hash;
 		hash = (hash << 16) ^ tmp;
 		key += 4;
 		hash += hash >> 11;
@@ -96,14 +96,14 @@ static inline unsigned int hash_superfast(const uint8_t *key, unsigned int len)
 	/* Handle end cases */
 	switch (rem) {
 	case 3:
-		hash += L_GET_UNALIGNED((uint16_t *) key);
+		hash += l_get_u16(key);
 		hash ^= hash << 16;
 		hash ^= key[2] << 18;
 		hash += hash >> 11;
 		break;
 
 	case 2:
-		hash += L_GET_UNALIGNED((uint16_t *) key);
+		hash += l_get_u16(key);
 		hash ^= hash << 11;
 		hash += hash >> 17;
 		break;
