@@ -255,7 +255,7 @@ LIB_EXPORT char *l_utf8_from_utf16(const void *utf16, ssize_t utf16_size)
 		return NULL;
 
 	while (utf16_size < 0 || i < utf16_size) {
-		in = L_GET_UNALIGNED((const uint16_t *) (utf16 + i));
+		in = l_get_u16(utf16 + i);
 
 		if (!in)
 			break;
@@ -295,7 +295,7 @@ next:
 	i = 0;
 
 	while (utf16_size < 0 || i < utf16_size) {
-		in = L_GET_UNALIGNED((const uint16_t *) (utf16 + i));
+		in = l_get_u16(utf16 + i);
 
 		if (!in)
 			break;
@@ -303,7 +303,7 @@ next:
 		if (in >= 0xd800 && in < 0xdc00) {
 			high_surrogate = in;
 			i += 2;
-			in = L_GET_UNALIGNED((const uint16_t *) (utf16 + i));
+			in = l_get_u16(utf16 + i);
 			c = surrogate_value(high_surrogate, in);
 		} else
 			c = in;
