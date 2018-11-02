@@ -50,7 +50,6 @@
  */
 struct l_signal {
 	int fd;
-	sigset_t mask;
 	uint32_t signo;
 	l_signal_notify_cb_t callback;
 	l_signal_destroy_cb_t destroy;
@@ -168,14 +167,13 @@ LIB_EXPORT struct l_signal *l_signal_create(uint32_t signo,
 
 	signal = l_new(struct l_signal, 1);
 
-	sigemptyset(&mask);
-	sigaddset(&mask, signo);
-
 	signal->signo = signo;
 	signal->callback = callback;
 	signal->destroy = destroy;
 	signal->user_data = user_data;
-	memcpy(&signal->mask, &mask, sizeof(sigset_t));
+
+	sigemptyset(&mask);
+	sigaddset(&mask, signo);
 
 	if (masked_signals_add(&mask) < 0) {
 		l_free(signal);
@@ -208,11 +206,17 @@ error:
  **/
 LIB_EXPORT void l_signal_remove(struct l_signal *signal)
 {
+	sigset_t mask;
+
 	if (unlikely(!signal))
 		return;
 
 	watch_remove(signal->fd);
-	masked_signals_del(&signal->mask);
+
+	sigemptyset(&mask);
+	sigaddset(&mask, signal->signo);
+
+	masked_signals_del(&mask);
 
 	l_free(signal);
 }
