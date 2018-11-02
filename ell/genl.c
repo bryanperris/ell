@@ -65,7 +65,6 @@ struct l_genl {
 	unsigned int next_notify_id;
 	struct l_queue *family_list;
 	struct l_genl_family *nlctrl;
-	struct genl_unicast_notify *unicast_notify;
 	l_genl_debug_func_t debug_callback;
 	l_genl_destroy_func_t debug_destroy;
 	void *debug_data;
@@ -129,6 +128,7 @@ struct l_genl_family {
 	l_genl_destroy_func_t watch_destroy;
 	void *watch_data;
 	unsigned int nlctrl_cmd;
+	struct genl_unicast_notify *unicast_notify;
 };
 
 static void destroy_request(void *data)
@@ -392,7 +392,6 @@ static void process_unicast(struct l_genl *genl, const struct nlmsghdr *nlmsg)
 {
 	struct l_genl_msg *msg;
 	struct genl_request *request;
-	struct genl_unicast_notify *notify;
 
 	if (nlmsg->nlmsg_type == NLMSG_NOOP ||
 					nlmsg->nlmsg_type == NLMSG_OVERRUN)
@@ -425,9 +424,22 @@ static void process_unicast(struct l_genl *genl, const struct nlmsghdr *nlmsg)
 			wakeup_writer(genl);
 		}
 	} else {
-		notify = genl->unicast_notify;
-		if (notify && notify->handler)
-			notify->handler(msg, notify->user_data);
+		const struct l_queue_entry *entry;
+		struct genl_unicast_notify *notify;
+
+		for (entry = l_queue_get_entries(genl->family_list);
+				entry; entry = entry->next) {
+			struct l_genl_family *family = entry->data;
+
+			if (family->id != nlmsg->nlmsg_type)
+				continue;
+
+			notify = family->unicast_notify;
+			if (notify->handler)
+				notify->handler(msg, notify->user_data);
+
+			break;
+		}
 	}
 
 	l_genl_msg_unref(msg);
@@ -649,8 +661,6 @@ LIB_EXPORT void l_genl_unref(struct l_genl *genl)
 	if (genl->debug_destroy)
 		genl->debug_destroy(genl->debug_data);
 
-	l_genl_set_unicast_handler(genl, NULL, NULL, NULL);
-
 	l_free(genl);
 }
 
@@ -678,41 +688,6 @@ LIB_EXPORT bool l_genl_set_close_on_unref(struct l_genl *genl, bool do_close)
 		return false;
 
 	genl->close_on_unref = do_close;
-
-	return true;
-}
-
-LIB_EXPORT bool l_genl_set_unicast_handler(struct l_genl *genl,
-						l_genl_msg_func_t handler,
-						void *user_data,
-						l_genl_destroy_func_t destroy)
-{
-	struct genl_unicast_notify *notify;
-
-	if (!genl)
-		return false;
-
-	notify = genl->unicast_notify;
-	if (notify) {
-		if (notify->destroy)
-			notify->destroy(notify->user_data);
-
-		if (!handler) {
-			l_free(notify);
-			genl->unicast_notify = NULL;
-			return true;
-		}
-	} else {
-		if (!handler)
-			return false;
-
-		notify = l_new(struct genl_unicast_notify, 1);
-		genl->unicast_notify = notify;
-	}
-
-	notify->handler = handler;
-	notify->destroy = destroy;
-	notify->user_data = user_data;
 
 	return true;
 }
@@ -1168,7 +1143,44 @@ LIB_EXPORT void l_genl_family_unref(struct l_genl_family *family)
 	if (family->watch_destroy)
 		family->watch_destroy(family->watch_data);
 
+	l_genl_family_set_unicast_handler(family, NULL, NULL, NULL);
+
 	l_free(family);
+}
+
+LIB_EXPORT bool l_genl_family_set_unicast_handler(struct l_genl_family *family,
+						l_genl_msg_func_t handler,
+						void *user_data,
+						l_genl_destroy_func_t destroy)
+{
+	struct genl_unicast_notify *notify;
+
+	if (!family)
+		return false;
+
+	notify = family->unicast_notify;
+	if (notify) {
+		if (notify->destroy)
+			notify->destroy(notify->user_data);
+
+		if (!handler) {
+			l_free(notify);
+			family->unicast_notify = NULL;
+			return true;
+		}
+	} else {
+		if (!handler)
+			return false;
+
+		notify = l_new(struct genl_unicast_notify, 1);
+		family->unicast_notify = notify;
+	}
+
+	notify->handler = handler;
+	notify->destroy = destroy;
+	notify->user_data = user_data;
+
+	return true;
 }
 
 LIB_EXPORT bool l_genl_family_set_watches(struct l_genl_family *family,

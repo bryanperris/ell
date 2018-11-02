@@ -86,16 +86,15 @@ struct l_genl_family *l_genl_family_new(struct l_genl *genl, const char *name);
 struct l_genl_family *l_genl_family_ref(struct l_genl_family *family);
 void l_genl_family_unref(struct l_genl_family *family);
 
+bool l_genl_family_set_unicast_handler(struct l_genl_family *family,
+						l_genl_msg_func_t handler,
+						void *user_data,
+						l_genl_destroy_func_t destroy);
 
 bool l_genl_family_set_watches(struct l_genl_family *family,
 				l_genl_watch_func_t appeared,
 				l_genl_watch_func_t vanished,
 				void *user_data, l_genl_destroy_func_t destroy);
-
-bool l_genl_set_unicast_handler(struct l_genl *genl,
-						l_genl_msg_func_t handler,
-						void *user_data,
-						l_genl_destroy_func_t destroy);
 
 uint32_t l_genl_family_get_version(struct l_genl_family *family);
 struct l_genl *l_genl_family_get_genl(struct l_genl_family *family);
