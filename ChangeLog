@@ -1,3 +1,7 @@
+ver 0.14:
+	Fix issue with supporting l_genl_family_set_unicast_handler.
+	Fix issue with utilizing single shared signalfd file descriptor.
+
 ver 0.13:
 	Fix issue with using -std=c99 compiler option.
 	Fix issue with return value of l_getrandom_is_supported.
