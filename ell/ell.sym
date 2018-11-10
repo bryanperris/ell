@@ -239,7 +239,6 @@ global:
 	l_genl_unref;
 	l_genl_set_debug;
 	l_genl_set_close_on_unref;
-	l_genl_set_unicast_handler;
 	l_genl_msg_new;
 	l_genl_msg_new_sized;
 	l_genl_msg_ref;
@@ -257,6 +256,7 @@ global:
 	l_genl_family_new;
 	l_genl_family_ref;
 	l_genl_family_unref;
+	l_genl_family_set_unicast_handler;
 	l_genl_family_set_watches;
 	l_genl_family_get_version;
 	l_genl_family_get_genl;
