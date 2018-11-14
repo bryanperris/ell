@@ -64,7 +64,7 @@ struct signal_desc {
 
 static struct l_io *signalfd_io = NULL;
 static struct l_queue *signal_list = NULL;
-sigset_t signal_mask;
+static sigset_t signal_mask;
 
 static void handle_callback(struct signal_desc *desc)
 {
