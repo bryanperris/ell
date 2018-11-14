@@ -62,6 +62,7 @@ struct l_aead_cipher;
 
 enum l_aead_cipher_type {
 	L_AEAD_CIPHER_AES_CCM = 0,
+	L_AEAD_CIPHER_AES_GCM,
 };
 
 struct l_aead_cipher *l_aead_cipher_new(enum l_aead_cipher_type type,

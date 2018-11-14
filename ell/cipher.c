@@ -202,6 +202,8 @@ static const char *aead_cipher_type_to_name(enum l_aead_cipher_type type)
 	switch (type) {
 	case L_AEAD_CIPHER_AES_CCM:
 		return "ccm(aes)";
+	case L_AEAD_CIPHER_AES_GCM:
+		return "gcm(aes)";
 	}
 
 	return NULL;
@@ -218,7 +220,7 @@ LIB_EXPORT struct l_aead_cipher *l_aead_cipher_new(enum l_aead_cipher_type type,
 	if (unlikely(!key))
 		return NULL;
 
-	if (type != L_AEAD_CIPHER_AES_CCM)
+	if (type != L_AEAD_CIPHER_AES_CCM && type != L_AEAD_CIPHER_AES_GCM)
 		return NULL;
 
 	cipher = l_new(struct l_aead_cipher, 1);
@@ -529,6 +531,8 @@ static size_t l_aead_cipher_get_ivlen(struct l_aead_cipher *cipher)
 	switch (cipher->type) {
 	case L_AEAD_CIPHER_AES_CCM:
 		return 16;
+	case L_AEAD_CIPHER_AES_GCM:
+		return 12;
 	}
 
 	return 0;
@@ -602,7 +606,7 @@ static void init_supported()
 
 	strcpy((char *) salg.salg_type, "aead");
 
-	for (a = L_AEAD_CIPHER_AES_CCM; a <= L_AEAD_CIPHER_AES_CCM; a++) {
+	for (a = L_AEAD_CIPHER_AES_CCM; a <= L_AEAD_CIPHER_AES_GCM; a++) {
 		strcpy((char *) salg.salg_name, aead_cipher_type_to_name(a));
 
 		if (bind(sk, (struct sockaddr *) &salg, sizeof(salg)) < 0)
@@ -626,7 +630,7 @@ LIB_EXPORT bool l_cipher_is_supported(enum l_cipher_type type)
 
 LIB_EXPORT bool l_aead_cipher_is_supported(enum l_aead_cipher_type type)
 {
-	if (type != L_AEAD_CIPHER_AES_CCM)
+	if (type != L_AEAD_CIPHER_AES_CCM && type != L_AEAD_CIPHER_AES_GCM)
 		return false;
 
 	init_supported();
