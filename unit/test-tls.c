@@ -364,6 +364,11 @@ static void tls_test_disconnected(enum l_tls_alert_desc reason, bool remote,
 	assert(false);
 }
 
+static void tls_debug_cb(const char *str, void *user_data)
+{
+	l_info("%s %s", (const char *) user_data, str);
+}
+
 static void test_tls_test(const void *data)
 {
 	bool auth_ok;
@@ -398,6 +403,12 @@ static void test_tls_test(const void *data)
 
 	assert(s[0].tls);
 	assert(s[1].tls);
+
+	if (getenv("TLS_SERVER_DEBUG"))
+		l_tls_set_debug(s[0].tls, tls_debug_cb, "server", NULL);
+
+	if (getenv("TLS_DEBUG"))
+		l_tls_set_debug(s[1].tls, tls_debug_cb, "client", NULL);
 
 	auth_ok = l_tls_set_auth_data(s[0].tls, test->server_cert_path,
 					test->server_key_path,
