@@ -204,7 +204,7 @@ static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx,
 	struct tls_bulk_encryption_algorithm *enc;
 	struct tls_mac_algorithm *mac;
 	int key_offset;
-	char error_buf[50];
+	static char error_buf[200];
 
 	if (tls->cipher[txrx]) {
 		l_cipher_free(tls->cipher[txrx]);
@@ -533,7 +533,7 @@ enum tls_handshake_type {
 
 static const char *tls_handshake_type_to_str(enum tls_handshake_type type)
 {
-	static char buf[40];
+	static char buf[100];
 
 	switch (type) {
 	SWITCH_ENUM_TO_STR(TLS_HELLO_REQUEST)
@@ -2529,7 +2529,7 @@ LIB_EXPORT const char *l_tls_alert_to_str(enum l_tls_alert_desc desc)
 
 const char *tls_handshake_state_to_str(enum tls_handshake_state state)
 {
-	static char buf[40];
+	static char buf[100];
 
 	switch (state) {
 	SWITCH_ENUM_TO_STR(TLS_HANDSHAKE_WAIT_HELLO)
