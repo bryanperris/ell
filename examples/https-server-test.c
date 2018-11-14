@@ -107,6 +107,11 @@ static void https_tls_ready(const char *peer_identity, void *user_data)
 		printf("Client not authenticated\n");
 }
 
+static void https_tls_debug_cb(const char *str, void *user_data)
+{
+	l_info("%s", str);
+}
+
 int main(int argc, char *argv[])
 {
 	struct sockaddr_in addr;
@@ -162,6 +167,10 @@ int main(int argc, char *argv[])
 
 	tls = l_tls_new(true, https_new_data, https_tls_write,
 			https_tls_ready, https_tls_disconnected, NULL);
+
+	if (getenv("TLS_DEBUG"))
+		l_tls_set_debug(tls, https_tls_debug_cb, NULL, NULL);
+
 	auth_ok = l_tls_set_auth_data(tls, argv[1], argv[2], argv[3]);
 	l_tls_set_cacert(tls, argc > 4 ? argv[4] : NULL);
 

@@ -113,6 +113,11 @@ static void https_tls_ready(const char *peer_identity, void *user_data)
 	l_tls_write(tls, buf, l);
 }
 
+static void https_tls_debug_cb(const char *str, void *user_data)
+{
+	l_info("%s", str);
+}
+
 int main(int argc, char *argv[])
 {
 	struct hostent *he;
@@ -171,6 +176,10 @@ int main(int argc, char *argv[])
 
 	tls = l_tls_new(false, https_new_data, https_tls_write,
 			https_tls_ready, https_tls_disconnected, NULL);
+
+	if (getenv("TLS_DEBUG"))
+		l_tls_set_debug(tls, https_tls_debug_cb, NULL, NULL);
+
 	if (argc > 2)
 		l_tls_set_cacert(tls, argv[2]);
 	if (argc > 5)
