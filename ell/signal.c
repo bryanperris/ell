@@ -64,6 +64,7 @@ struct signal_desc {
 
 static struct l_io *signalfd_io = NULL;
 static struct l_queue *signal_list = NULL;
+sigset_t signal_mask;
 
 static void handle_callback(struct signal_desc *desc)
 {
@@ -105,78 +106,60 @@ static bool signalfd_read_cb(struct l_io *io, void *user_data)
 	return true;
 }
 
-static void create_sigmask(sigset_t *mask)
+static bool signalfd_add(int signo)
 {
-	const struct l_queue_entry *entry;
-
-	sigemptyset(mask);
-
-	for (entry = l_queue_get_entries(signal_list); entry;
-							entry = entry->next) {
-		struct signal_desc *desc = entry->data;
-
-		sigaddset(mask, desc->signo);
-	}
-}
-
-static bool setup_signalfd(void)
-{
-	sigset_t mask;
-	struct l_io *io;
 	int fd;
 
-	create_sigmask(&mask);
+	if (!signalfd_io) {
+		fd = -1;
+		sigemptyset(&signal_mask);
+	} else
+		fd = l_io_get_fd(signalfd_io);
 
-	if (signalfd_io)
-		goto done;
+	sigaddset(&signal_mask, signo);
 
-	fd = signalfd(-1, &mask, SFD_CLOEXEC);
+	fd = signalfd(fd, &signal_mask, SFD_CLOEXEC);
 	if (fd < 0)
 		return false;
 
-	io = l_io_new(fd);
-	if (!io) {
+	if (signalfd_io)
+		return true;
+
+	signalfd_io = l_io_new(fd);
+	if (!signalfd_io) {
 		close(fd);
 		return false;
 	}
 
-	l_io_set_close_on_destroy(io, true);
+	l_io_set_close_on_destroy(signalfd_io, true);
 
-	if (!l_io_set_read_handler(io, signalfd_read_cb, NULL, NULL)) {
-		l_io_destroy(io);
+	if (!l_io_set_read_handler(signalfd_io, signalfd_read_cb, NULL, NULL)) {
+		l_io_destroy(signalfd_io);
 		return false;
 	}
 
 	signal_list = l_queue_new();
-	signalfd_io = io;
-
-done:
-	fd = l_io_get_fd(signalfd_io);
-
-	if (signalfd(fd, &mask, SFD_CLOEXEC) < 0)
-		return false;
 
 	return true;
 }
 
-static void shutdown_signalfd(void)
+static void signalfd_remove(int signo)
 {
 	if (!signalfd_io)
 		return;
 
-	if (l_queue_isempty(signal_list)) {
-		l_io_destroy(signalfd_io);
-		signalfd_io = NULL;
+	sigdelset(&signal_mask, signo);
 
-		l_queue_destroy(signal_list, NULL);
-		signal_list = NULL;
-	} else {
-		int fd = l_io_get_fd(signalfd_io);
-		sigset_t mask;
-
-		create_sigmask(&mask);
-		signalfd(fd, &mask, SFD_CLOEXEC);
+	if (!sigisemptyset(&signal_mask)) {
+		signalfd(l_io_get_fd(signalfd_io), &signal_mask, SFD_CLOEXEC);
+		return;
 	}
+
+	l_io_destroy(signalfd_io);
+	signalfd_io = NULL;
+
+	l_queue_destroy(signal_list, NULL);
+	signal_list = NULL;
 }
 
 /**
@@ -218,7 +201,7 @@ LIB_EXPORT struct l_signal *l_signal_create(uint32_t signo,
 		return NULL;
 	}
 
-	if (!setup_signalfd()) {
+	if (!signalfd_add(signo)) {
 		sigprocmask(SIG_UNBLOCK, &mask, NULL);
 		l_free(signal);
 		return NULL;
@@ -266,17 +249,16 @@ LIB_EXPORT void l_signal_remove(struct l_signal *signal)
 	sigemptyset(&mask);
 	sigaddset(&mask, desc->signo);
 
-	l_queue_destroy(desc->callbacks, NULL);
-	l_free(desc);
-
 	/*
 	 * When the number of signals goes to zero, then this will close
 	 * the signalfd file descriptor, otherwise it will only adjust the
 	 * signal mask to account for the removed signal.
 	 *
 	 */
-	shutdown_signalfd();
+	signalfd_remove(desc->signo);
 	sigprocmask(SIG_UNBLOCK, &mask, NULL);
+	l_queue_destroy(desc->callbacks, NULL);
+	l_free(desc);
 
 done:
 	if (signal->destroy)
