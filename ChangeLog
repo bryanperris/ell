@@ -1,3 +1,6 @@
+ver 0.15:
+	Fix issue with signals not being registered properly.
+
 ver 0.14:
 	Fix issue with supporting l_genl_family_set_unicast_handler.
 	Fix issue with utilizing single shared signalfd file descriptor.
