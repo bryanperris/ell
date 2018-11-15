@@ -368,9 +368,6 @@ static const char *lookup_cipher(enum l_key_cipher_type cipher)
 
 	switch (cipher) {
 	case L_KEY_RSA_PKCS1_V1_5:
-		/* Padding is handled in userspace, so the kernel only sees
-		 * raw RSA operations
-		 */
 		ret = "pkcs1";
 		break;
 	case L_KEY_RSA_RAW:
