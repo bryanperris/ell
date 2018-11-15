@@ -178,7 +178,7 @@ LIB_EXPORT struct l_signal *l_signal_create(uint32_t signo,
 {
 	struct l_signal *signal;
 	struct signal_desc *desc;
-	sigset_t mask;
+	sigset_t mask, oldmask;
 
 	if (signo <= 1 || signo >= _NSIG)
 		return NULL;
@@ -196,13 +196,13 @@ LIB_EXPORT struct l_signal *l_signal_create(uint32_t signo,
 	sigemptyset(&mask);
 	sigaddset(&mask, signo);
 
-	if (sigprocmask(SIG_BLOCK, &mask, NULL) < 0) {
+	if (sigprocmask(SIG_BLOCK, &mask, &oldmask) < 0) {
 		l_free(signal);
 		return NULL;
 	}
 
 	if (!signalfd_add(signo)) {
-		sigprocmask(SIG_UNBLOCK, &mask, NULL);
+		sigprocmask(SIG_SETMASK, &oldmask, NULL);
 		l_free(signal);
 		return NULL;
 	}
