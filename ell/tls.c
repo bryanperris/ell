@@ -513,6 +513,88 @@ static struct tls_cipher_suite tls_cipher_suite_pref[] = {
 	},
 };
 
+static bool tls_cipher_suite_is_compatible(struct l_tls *tls,
+					const struct tls_cipher_suite *suite,
+					const char **error)
+{
+	static char error_buf[200];
+
+	if (suite->encryption &&
+			suite->encryption->cipher_type == TLS_CIPHER_AEAD) {
+		if (tls->negotiated_version &&
+				tls->negotiated_version < TLS_V12) {
+			if (error) {
+				*error = error_buf;
+				snprintf(error_buf, sizeof(error_buf),
+						"Cipher suite %s uses an AEAD "
+						"cipher but TLS < 1.2 was "
+						"negotiated", suite->name);
+			}
+
+			return false;
+		}
+
+		if (!l_aead_cipher_is_supported(suite->encryption->l_aead_id)) {
+			if (error) {
+				*error = error_buf;
+				snprintf(error_buf, sizeof(error_buf),
+						"Cipher suite %s's AEAD cipher "
+						"algorithm not supported by "
+						"the kernel", suite->name);
+			}
+
+			return false;
+		}
+	} else if (suite->encryption) { /* Block or stream cipher */
+		if (!l_cipher_is_supported(suite->encryption->l_id)) {
+			if (error) {
+				*error = error_buf;
+				snprintf(error_buf, sizeof(error_buf),
+						"Cipher suite %s's block/stream"
+						" cipher algorithm not "
+						"supported by the kernel",
+						suite->name);
+			}
+
+			return false;
+		}
+	}
+
+	if (suite->mac &&
+			!l_checksum_is_supported(suite->mac->hmac_type, true)) {
+		if (error) {
+			*error = error_buf;
+			snprintf(error_buf, sizeof(error_buf),
+					"Cipher suite %s's HMAC algorithm not "
+					"supported by the kernel", suite->name);
+		}
+
+		return false;
+	}
+
+	if ((tls->negotiated_version && tls->negotiated_version < TLS_V12 &&
+			(!l_checksum_is_supported(L_CHECKSUM_MD5, true) ||
+			 !l_checksum_is_supported(L_CHECKSUM_SHA1, true))) ||
+			(tls->negotiated_version >= TLS_V12 &&
+			 !l_checksum_is_supported(
+					suite->prf_hmac != L_CHECKSUM_NONE ?
+					suite->prf_hmac : L_CHECKSUM_SHA256,
+					true))) {
+		if (error) {
+			*error = error_buf;
+			snprintf(error_buf, sizeof(error_buf),
+					"Cipher suite %s's PRF algorithm not "
+					"supported by the kernel", suite->name);
+		}
+
+		return false;
+	}
+
+	/* TODO: Check suite->key_xchg->validate_cert_key_type(tls->cert) */
+
+	return true;
+}
+
 static struct tls_cipher_suite *tls_find_cipher_suite(const uint8_t *id)
 {
 	int i;
@@ -759,11 +841,12 @@ static void tls_tx_handshake(struct l_tls *tls, int type, uint8_t *buf,
 	tls_tx_record(tls, TLS_CT_HANDSHAKE, buf, length);
 }
 
-static void tls_send_client_hello(struct l_tls *tls)
+static bool tls_send_client_hello(struct l_tls *tls)
 {
 	uint8_t buf[128 + L_ARRAY_SIZE(tls_compression_pref) +
 			2 * L_ARRAY_SIZE(tls_cipher_suite_pref)];
 	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
+	uint8_t *len_ptr;
 	int i;
 
 	/* Fill in the Client Hello body */
@@ -778,27 +861,38 @@ static void tls_send_client_hello(struct l_tls *tls)
 	*ptr++ = 0; /* No SessionID */
 
 	/*
-	 * We can list all supported key exchange mechanisms regardless of the
-	 * certificate type we are actually presenting (if any).
-	 *
-	 * TODO: perhaps scan /proc/crypto for supported ciphers so we don't
-	 * include ones that will cause an internal error later in the
-	 * handshake.  We can add camellia whan this is done.
+	 * FIXME: We do need to filter the cipher suites by key exchange
+	 * mechanism compatibility with the certificate but we don't normally
+	 * have the certificate at this point because we're called from
+	 * l_tls_new.  We also don't know the TLS version that's going to
+	 * be negotiated yet.
 	 */
-	l_put_be16(L_ARRAY_SIZE(tls_cipher_suite_pref) * 2, ptr);
+	len_ptr = ptr;
 	ptr += 2;
 
 	for (i = 0; i < (int) L_ARRAY_SIZE(tls_cipher_suite_pref); i++) {
+		if (!tls_cipher_suite_is_compatible(tls,
+						&tls_cipher_suite_pref[i],
+						NULL))
+			continue;
+
 		*ptr++ = tls_cipher_suite_pref[i].id[0];
 		*ptr++ = tls_cipher_suite_pref[i].id[1];
 	}
 
+	if (ptr == len_ptr + 2) {
+		TLS_DEBUG("No compatible cipher suites, check kernel config");
+		return false;
+	}
+
+	l_put_be16((ptr - len_ptr - 2), len_ptr);
 	*ptr++ = L_ARRAY_SIZE(tls_compression_pref);
 
 	for (i = 0; i < (int) L_ARRAY_SIZE(tls_compression_pref); i++)
 		*ptr++ = tls_compression_pref[i].id;
 
 	tls_tx_handshake(tls, TLS_CLIENT_HELLO, buf, ptr - buf);
+	return true;
 }
 
 static void tls_send_server_hello(struct l_tls *tls)
@@ -1499,17 +1593,13 @@ static void tls_handle_client_hello(struct l_tls *tls,
 
 	/* Select a cipher suite according to client's preference list */
 	while (cipher_suites_size) {
-		/*
-		 * TODO: filter supported cipher suites by the certificate/key
-		 * type that was submitted by tls_set_auth_data() if any.
-		 * Perhaps just call cipher_suite->verify_cert_type() on each
-		 * cipher suite passing a pre-parsed certificate ASN.1 struct.
-		 */
-		tls->pending.cipher_suite =
-					tls_find_cipher_suite(cipher_suites);
+		struct tls_cipher_suite *suite =
+			tls_find_cipher_suite(cipher_suites);
 
-		if (tls->pending.cipher_suite)
+		if (suite && tls_cipher_suite_is_compatible(tls, suite, NULL)) {
+			tls->pending.cipher_suite = suite;
 			break;
+		}
 
 		cipher_suites += 2;
 		cipher_suites_size -= 2;
@@ -1517,7 +1607,8 @@ static void tls_handle_client_hello(struct l_tls *tls,
 
 	if (!cipher_suites_size) {
 		TLS_DISCONNECT(TLS_ALERT_HANDSHAKE_FAIL, 0,
-				"No common cipher suites");
+				"No common cipher suites matching negotiated "
+				"TLS version and our certificate's key type");
 		return;
 	}
 
@@ -1583,6 +1674,7 @@ static void tls_handle_server_hello(struct l_tls *tls,
 					const uint8_t *buf, size_t len)
 {
 	uint8_t session_id_size, cipher_suite_id[2], compression_method_id;
+	const char *error;
 	int i;
 
 	/* Do we have enough for ProtocolVersion + Random + SessionID len ? */
@@ -1634,6 +1726,14 @@ static void tls_handle_server_hello(struct l_tls *tls,
 		TLS_DISCONNECT(TLS_ALERT_HANDSHAKE_FAIL, 0,
 				"Unknown cipher suite %04x",
 				l_get_be16(cipher_suite_id));
+		return;
+	}
+
+	if (!tls_cipher_suite_is_compatible(tls, tls->pending.cipher_suite,
+						&error)) {
+		TLS_DISCONNECT(TLS_ALERT_HANDSHAKE_FAIL, 0,
+				"Selected cipher suite not compatible: %s",
+				error);
 		return;
 	}
 
@@ -2297,6 +2397,9 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 {
 	struct l_tls *tls;
 
+	if (!l_key_is_supported(L_KEY_FEATURE_CRYPTO))
+		return NULL;
+
 	tls = l_new(struct l_tls, 1);
 	tls->server = server;
 	tls->rx = app_data_handler;
@@ -2309,13 +2412,12 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 
 	/* If we're the client, start the handshake right away */
 	if (!tls->server) {
-		if (!tls_init_handshake_hash(tls)) {
+		if (!tls_init_handshake_hash(tls) ||
+				!tls_send_client_hello(tls)) {
 			l_free(tls);
 
 			return NULL;
 		}
-
-		tls_send_client_hello(tls);
 	}
 
 	TLS_SET_STATE(TLS_HANDSHAKE_WAIT_HELLO);
@@ -2502,7 +2604,7 @@ LIB_EXPORT void l_tls_close(struct l_tls *tls)
 	TLS_DISCONNECT(TLS_ALERT_CLOSE_NOTIFY, 0, "Closing session");
 }
 
-LIB_EXPORT void l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path)
+LIB_EXPORT bool l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path)
 {
 	TLS_DEBUG("ca-cert-path=%s", ca_cert_path);
 
@@ -2511,8 +2613,17 @@ LIB_EXPORT void l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path)
 		tls->ca_cert_path = NULL;
 	}
 
-	if (ca_cert_path)
+	if (ca_cert_path) {
+		if (!l_key_is_supported(L_KEY_FEATURE_RESTRICT)) {
+			TLS_DEBUG("keyctl restrict support missing, "
+					"check kernel configuration");
+			return false;
+		}
+
 		tls->ca_cert_path = l_strdup(ca_cert_path);
+	}
+
+	return true;
 }
 
 LIB_EXPORT bool l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,

@@ -87,7 +87,7 @@ void l_tls_write(struct l_tls *tls, const uint8_t *data, size_t len);
 void l_tls_handle_rx(struct l_tls *tls, const uint8_t *data, size_t len);
 
 /* If peer is to be authenticated, supply the CA certificate */
-void l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path);
+bool l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path);
 
 /*
  * If we are to be authenticated, supply our certificate, private key and
