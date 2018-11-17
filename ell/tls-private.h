@@ -91,6 +91,7 @@ struct tls_cipher_suite {
 	struct tls_bulk_encryption_algorithm *encryption;
 	struct tls_key_exchange_algorithm *key_xchg;
 	struct tls_mac_algorithm *mac;
+	enum l_checksum_type prf_hmac;
 };
 
 struct tls_compression_method {
@@ -123,8 +124,8 @@ enum tls_content_type {
  * Finished message.  If we're sent a hash of a different type (in TLS 1.2+)
  * and need to verify we'll give up.
  * SHA1 and MD5 are explicitly required by versions < 1.2 and 1.2 requires
- * that the Finished hash is the same as used for the PRF, which in all
- * our supported cipher suites is defined to be SHA256.
+ * that the Finished hash is the same as used for the PRF so we need to
+ * keep at least the hashes our supported cipher suites specify for the PRF.
  */
 enum handshake_hash_type {
 	HANDSHAKE_HASH_SHA256,
@@ -133,8 +134,6 @@ enum handshake_hash_type {
 	__HANDSHAKE_HASH_COUNT,
 };
 #define HANDSHAKE_HASH_MAX_SIZE	32
-
-#define HANDSHAKE_HASH_TLS12 HANDSHAKE_HASH_SHA256
 
 struct l_tls {
 	bool server;
@@ -178,6 +177,7 @@ struct l_tls {
 	struct l_key *peer_pubkey;
 	size_t peer_pubkey_size;
 	enum handshake_hash_type signature_hash;
+	const struct tls_hash_algorithm *prf_hmac;
 
 	/* SecurityParameters current and pending */
 
@@ -265,7 +265,6 @@ void tls_cert_free_certchain(struct tls_cert *cert);
 enum tls_cert_key_type tls_cert_get_pubkey_type(struct tls_cert *cert);
 
 void tls_prf_get_bytes(struct l_tls *tls,
-				enum l_checksum_type type, size_t hash_len,
 				const void *secret, size_t secret_len,
 				const char *label,
 				const void *seed, size_t seed_len,

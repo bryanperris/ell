@@ -114,39 +114,35 @@ void tls12_prf(enum l_checksum_type type, size_t hash_len,
 }
 
 void tls_prf_get_bytes(struct l_tls *tls,
-				enum l_checksum_type type, size_t hash_len,
 				const void *secret, size_t secret_len,
 				const char *label,
 				const void *seed, size_t seed_len,
 				uint8_t *buf, size_t len)
 {
 	if (tls->negotiated_version >= TLS_V12)
-		tls12_prf(type, hash_len, secret, secret_len, label,
+		tls12_prf(tls->prf_hmac->l_id, tls->prf_hmac->length,
+				secret, secret_len, label,
 				seed, seed_len, buf, len);
 	else
 		tls10_prf(secret, secret_len, label, seed, seed_len, buf, len);
 }
 
-LIB_EXPORT bool l_tls_prf_get_bytes(struct l_tls *tls,
-				enum l_checksum_type type,
-				size_t hash_len, bool use_master_secret,
+LIB_EXPORT bool l_tls_prf_get_bytes(struct l_tls *tls, bool use_master_secret,
 				const char *label, uint8_t *buf, size_t len)
 {
 	uint8_t seed[64];
 
-	if (unlikely(!tls))
+	if (unlikely(!tls || !tls->prf_hmac))
 		return false;
 
 	memcpy(seed +  0, tls->pending.client_random, 32);
 	memcpy(seed + 32, tls->pending.server_random, 32);
 
 	if (use_master_secret)
-		tls_prf_get_bytes(tls, type, hash_len,
-						tls->pending.master_secret, 48,
-						label, seed, 64, buf, len);
+		tls_prf_get_bytes(tls, tls->pending.master_secret, 48,
+					label, seed, 64, buf, len);
 	else
-		tls_prf_get_bytes(tls, type, hash_len, "", 0,
-						label, seed, 64, buf, len);
+		tls_prf_get_bytes(tls, "", 0, label, seed, 64, buf, len);
 
 	memset(seed, 0, 64);
 
@@ -568,6 +564,25 @@ err:
 	return false;
 }
 
+static const struct tls_hash_algorithm *tls_set_prf_hmac(struct l_tls *tls)
+{
+	enum handshake_hash_type hash;
+
+	if (tls->pending.cipher_suite->prf_hmac == L_CHECKSUM_NONE) {
+		tls->prf_hmac = &tls_handshake_hash_data[HANDSHAKE_HASH_SHA256];
+		return tls->prf_hmac;
+	}
+
+	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+		if (tls_handshake_hash_data[hash].l_id ==
+				tls->pending.cipher_suite->prf_hmac) {
+			tls->prf_hmac = &tls_handshake_hash_data[hash];
+			return tls->prf_hmac;
+		}
+
+	return NULL;
+}
+
 enum tls_handshake_type {
 	TLS_HELLO_REQUEST	= 0,
 	TLS_CLIENT_HELLO	= 1,
@@ -972,8 +987,7 @@ static void tls_generate_master_secret(struct l_tls *tls,
 	memcpy(seed +  0, tls->pending.client_random, 32);
 	memcpy(seed + 32, tls->pending.server_random, 32);
 
-	tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
-				pre_master_secret, pre_master_secret_len,
+	tls_prf_get_bytes(tls, pre_master_secret, pre_master_secret_len,
 				"master secret", seed, 64,
 				tls->pending.master_secret, 48);
 
@@ -1003,8 +1017,7 @@ static void tls_generate_master_secret(struct l_tls *tls,
 	memcpy(seed +  0, tls->pending.server_random, 32);
 	memcpy(seed + 32, tls->pending.client_random, 32);
 
-	tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
-				tls->pending.master_secret, 48,
+	tls_prf_get_bytes(tls, tls->pending.master_secret, 48,
 				"key expansion", seed, 64,
 				tls->pending.key_block, key_block_size);
 
@@ -1267,10 +1280,10 @@ static bool tls_send_certificate_verify(struct l_tls *tls)
 	if (sign_len < 0)
 		return false;
 
-	/* Stop maintaining handshake message hashes other than SHA256. */
+	/* Stop maintaining handshake message hashes other than the PRF hash */
 	if (tls->negotiated_version >= TLS_V12)
 		for (i = 0; i < __HANDSHAKE_HASH_COUNT; i++)
-			if (i != HANDSHAKE_HASH_SHA256)
+			if (&tls_handshake_hash_data[i] != tls->prf_hmac)
 				tls_drop_handshake_hash(tls, i);
 
 	tls_tx_handshake(tls, TLS_CERTIFICATE_VERIFY, buf,
@@ -1294,23 +1307,22 @@ static void tls_send_finished(struct l_tls *tls)
 	size_t seed_len;
 
 	if (tls->negotiated_version >= TLS_V12) {
-		/*
-		 * Same hash type as that used for the PRF, i.e. SHA256
-		 * unless an exotic cipher suite was negotiated that
-		 * dictates a different hash for the PRF and for the
-		 * Finished hash.  We don't support any such ciphers so
-		 * it's always SHA256.
-		 */
-		tls_get_handshake_hash(tls, HANDSHAKE_HASH_TLS12, seed);
-		seed_len = tls_handshake_hash_data[HANDSHAKE_HASH_TLS12].length;
+		/* Same hash type as that used for the PRF (usually SHA256) */
+		enum handshake_hash_type hash;
+
+		for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+			if (&tls_handshake_hash_data[hash] == tls->prf_hmac)
+				break;
+
+		tls_get_handshake_hash(tls, hash, seed);
+		seed_len = tls_handshake_hash_data[hash].length;
 	} else {
 		tls_get_handshake_hash(tls, HANDSHAKE_HASH_MD5, seed + 0);
 		tls_get_handshake_hash(tls, HANDSHAKE_HASH_SHA1, seed + 16);
 		seed_len = 36;
 	}
 
-	tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
-				tls->pending.master_secret, 48,
+	tls_prf_get_bytes(tls, tls->pending.master_secret, 48,
 				tls->server ? "server finished" :
 				"client finished",
 				seed, seed_len,
@@ -1336,8 +1348,14 @@ static bool tls_verify_finished(struct l_tls *tls, const uint8_t *received,
 	}
 
 	if (tls->negotiated_version >= TLS_V12) {
-		seed = tls->prev_digest[HANDSHAKE_HASH_TLS12];
-		seed_len = tls_handshake_hash_data[HANDSHAKE_HASH_TLS12].length;
+		enum handshake_hash_type hash;
+
+		for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+			if (&tls_handshake_hash_data[hash] == tls->prf_hmac)
+				break;
+
+		seed = tls->prev_digest[hash];
+		seed_len = tls_handshake_hash_data[hash].length;
 	} else {
 		seed = alloca(36);
 		memcpy(seed + 0, tls->prev_digest[HANDSHAKE_HASH_MD5], 16);
@@ -1345,8 +1363,7 @@ static bool tls_verify_finished(struct l_tls *tls, const uint8_t *received,
 		seed_len = 36;
 	}
 
-	tls_prf_get_bytes(tls, L_CHECKSUM_SHA256, 32,
-				tls->pending.master_secret, 48,
+	tls_prf_get_bytes(tls, tls->pending.master_secret, 48,
 				tls->server ? "client finished" :
 				"server finished",
 				seed, seed_len,
@@ -1488,6 +1505,12 @@ static void tls_handle_client_hello(struct l_tls *tls,
 		return;
 	}
 
+	if (!tls_set_prf_hmac(tls)) {
+		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+				"Error selecting the PRF HMAC");
+		return;
+	}
+
 	TLS_DEBUG("Negotiated %s", tls->pending.cipher_suite->name);
 
 	/* Select a compression method */
@@ -1595,6 +1618,12 @@ static void tls_handle_server_hello(struct l_tls *tls,
 		TLS_DISCONNECT(TLS_ALERT_HANDSHAKE_FAIL, 0,
 				"Unknown cipher suite %04x",
 				l_get_be16(cipher_suite_id));
+		return;
+	}
+
+	if (!tls_set_prf_hmac(tls)) {
+		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+				"Error selecting the PRF HMAC");
 		return;
 	}
 
@@ -1839,11 +1868,11 @@ static void tls_handle_certificate_request(struct l_tls *tls,
 
 		/*
 		 * We can now safely stop maintaining handshake message
-		 * hashes other than SHA256 and the one selected for
+		 * hashes other than the PRF hash and the one selected for
 		 * signing.
 		 */
 		for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
-			if (hash != HANDSHAKE_HASH_SHA256 &&
+			if (&tls_handshake_hash_data[hash] != tls->prf_hmac &&
 					hash != tls->signature_hash)
 				tls_drop_handshake_hash(tls, hash);
 	}
@@ -1991,10 +2020,10 @@ static void tls_handle_certificate_verify(struct l_tls *tls,
 						tls_get_prev_digest_by_id))
 		return;
 
-	/* Stop maintaining handshake message hashes other than SHA256. */
+	/* Stop maintaining handshake message hashes other than the PRF hash */
 	if (tls->negotiated_version >= TLS_V12)
 		for (i = 0; i < __HANDSHAKE_HASH_COUNT; i++)
-			if (i != HANDSHAKE_HASH_SHA256)
+			if (&tls_handshake_hash_data[i] != tls->prf_hmac)
 				tls_drop_handshake_hash(tls, i);
 
 	/*
