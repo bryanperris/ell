@@ -413,6 +413,13 @@ static struct tls_bulk_encryption_algorithm tls_rc4 = {
 	.key_length = 24,
 	.iv_length = 8,
 	.block_length = 8,
+}, tls_aes128_gcm = {
+	.cipher_type = TLS_CIPHER_AEAD,
+	.l_aead_id = L_AEAD_CIPHER_AES_GCM,
+	.key_length = 16,
+	.iv_length = 12,
+	.fixed_iv_length = 4,
+	.auth_tag_length = 16,
 };
 
 static struct tls_mac_algorithm tls_md5 = {
@@ -460,6 +467,13 @@ static struct tls_cipher_suite tls_cipher_suite_pref[] = {
 		.verify_data_length = 12,
 		.encryption = &tls_aes128,
 		.mac = &tls_sha256,
+		.key_xchg = &tls_rsa,
+	},
+	{
+		.id = { 0x00, 0x9c },
+		.name = "TLS_RSA_WITH_AES_128_GCM_SHA256",
+		.verify_data_length = 12,
+		.encryption = &tls_aes128_gcm,
 		.key_xchg = &tls_rsa,
 	},
 	{
