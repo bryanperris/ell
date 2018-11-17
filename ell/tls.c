@@ -113,7 +113,7 @@ void tls12_prf(enum l_checksum_type type, size_t hash_len,
 	l_checksum_free(hmac);
 }
 
-void tls_prf_get_bytes(struct l_tls *tls,
+static void tls_prf_get_bytes(struct l_tls *tls,
 				const void *secret, size_t secret_len,
 				const char *label,
 				const void *seed, size_t seed_len,

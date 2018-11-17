@@ -265,12 +265,6 @@ void tls_cert_free_certchain(struct tls_cert *cert);
 
 enum tls_cert_key_type tls_cert_get_pubkey_type(struct tls_cert *cert);
 
-void tls_prf_get_bytes(struct l_tls *tls,
-				const void *secret, size_t secret_len,
-				const char *label,
-				const void *seed, size_t seed_len,
-				uint8_t *buf, size_t len);
-
 #define TLS_DEBUG(fmt, args...)	\
 	l_util_debug(tls->debug_handler, tls->debug_data, "%s:%i " fmt,	\
 			__func__, __LINE__, ## args)
