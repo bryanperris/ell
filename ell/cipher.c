@@ -268,28 +268,11 @@ LIB_EXPORT void l_aead_cipher_free(struct l_aead_cipher *cipher)
 	l_free(cipher);
 }
 
-static ssize_t build_iv(const void *nonce, uint8_t nonce_len, uint8_t *iv,
-			uint8_t iv_len)
-{
-	const size_t iv_overhead = 2;
-
-	if (nonce_len + iv_overhead > iv_len)
-		return -EINVAL;
-
-	iv[0] = iv_len - iv_overhead - nonce_len;
-	memcpy(iv + 1, nonce, nonce_len);
-
-	/* Assumes that remaining bytes in iv were already zeroed out */
-
-	return iv_len;
-}
-
 static ssize_t operate_cipher(int sk, __u32 operation,
 				const void *in, size_t in_len,
 				const void *ad, size_t ad_len,
-				const void *nonce, size_t nonce_len,
-				void *out, size_t out_len,
-				size_t iv_len)
+				const void *iv, size_t iv_len,
+				void *out, size_t out_len)
 {
 	char *c_msg_buf;
 	size_t c_msg_size;
@@ -300,7 +283,7 @@ static ssize_t operate_cipher(int sk, __u32 operation,
 
 	c_msg_size = CMSG_SPACE(sizeof(operation));
 	c_msg_size += ad_len ? CMSG_SPACE(sizeof(uint32_t)) : 0;
-	c_msg_size += (nonce && iv_len) ?
+	c_msg_size += iv_len ?
 		CMSG_SPACE(sizeof(struct af_alg_iv) + iv_len) : 0;
 
 	c_msg_buf = alloca(c_msg_size);
@@ -340,7 +323,7 @@ static ssize_t operate_cipher(int sk, __u32 operation,
 		msg.msg_iovlen = 1;
 	}
 
-	if (nonce && iv_len) {
+	if (iv_len) {
 		struct af_alg_iv *algiv;
 
 		c_msg = CMSG_NXTHDR(&msg, c_msg);
@@ -350,9 +333,7 @@ static ssize_t operate_cipher(int sk, __u32 operation,
 
 		algiv = (void *)CMSG_DATA(c_msg);
 		algiv->ivlen = iv_len;
-		result = build_iv(nonce, nonce_len, &algiv->iv[0], iv_len);
-		if (result < 0)
-			return result;
+		memcpy(algiv->iv, iv, iv_len);
 	}
 
 	result = sendmsg(sk, &msg, 0);
@@ -446,7 +427,7 @@ LIB_EXPORT bool l_cipher_encrypt(struct l_cipher *cipher,
 		return false;
 
 	return operate_cipher(cipher->encrypt_sk, ALG_OP_ENCRYPT, in, len,
-				NULL, 0, NULL, 0, out, len, 0) >= 0;
+				NULL, 0, NULL, 0, out, len) >= 0;
 }
 
 LIB_EXPORT bool l_cipher_encryptv(struct l_cipher *cipher,
@@ -473,7 +454,7 @@ LIB_EXPORT bool l_cipher_decrypt(struct l_cipher *cipher,
 		return false;
 
 	return operate_cipher(cipher->decrypt_sk, ALG_OP_DECRYPT, in, len,
-				NULL, 0, NULL, 0, out, len, 0) >= 0;
+				NULL, 0, NULL, 0, out, len) >= 0;
 }
 
 LIB_EXPORT bool l_cipher_decryptv(struct l_cipher *cipher,
@@ -526,16 +507,35 @@ LIB_EXPORT bool l_cipher_set_iv(struct l_cipher *cipher, const uint8_t *iv,
 	return true;
 }
 
+#define CCM_IV_SIZE 16
+
 static size_t l_aead_cipher_get_ivlen(struct l_aead_cipher *cipher)
 {
 	switch (cipher->type) {
 	case L_AEAD_CIPHER_AES_CCM:
-		return 16;
+		return CCM_IV_SIZE;
 	case L_AEAD_CIPHER_AES_GCM:
 		return 12;
 	}
 
 	return 0;
+}
+
+/* RFC3610 Section 2.3 */
+static ssize_t build_ccm_iv(const void *nonce, uint8_t nonce_len,
+				uint8_t (*iv)[CCM_IV_SIZE])
+{
+	const size_t iv_overhead = 2;
+	int lprime = 15 - nonce_len - 1;
+
+	if (unlikely(nonce_len + iv_overhead > CCM_IV_SIZE || lprime > 7))
+		return -EINVAL;
+
+	(*iv)[0] = lprime;
+	memcpy(*iv + 1, nonce, nonce_len);
+	memset(*iv + 1 + nonce_len, 0, lprime + 1);
+
+	return CCM_IV_SIZE;
 }
 
 LIB_EXPORT bool l_aead_cipher_encrypt(struct l_aead_cipher *cipher,
@@ -544,15 +544,32 @@ LIB_EXPORT bool l_aead_cipher_encrypt(struct l_aead_cipher *cipher,
 					const void *nonce, size_t nonce_len,
 					void *out, size_t out_len)
 {
+	uint8_t ccm_iv[CCM_IV_SIZE];
+	const uint8_t *iv;
+	ssize_t iv_len;
+
 	if (unlikely(!cipher))
 		return false;
 
 	if (unlikely(!in) || unlikely(!out))
 		return false;
 
+	if (cipher->type == L_AEAD_CIPHER_AES_CCM) {
+		iv_len = build_ccm_iv(nonce, nonce_len, &ccm_iv);
+		if (unlikely(iv_len < 0))
+			return false;
+
+		iv = ccm_iv;
+	} else {
+		if (unlikely(nonce_len != l_aead_cipher_get_ivlen(cipher)))
+			return false;
+
+		iv = nonce;
+		iv_len = nonce_len;
+	}
+
 	return operate_cipher(cipher->encrypt_sk, ALG_OP_ENCRYPT, in, in_len,
-				ad, ad_len, nonce, nonce_len, out, out_len,
-				l_aead_cipher_get_ivlen(cipher)) ==
+				ad, ad_len, iv, iv_len, out, out_len) ==
 			(ssize_t)out_len;
 }
 
@@ -562,15 +579,32 @@ LIB_EXPORT bool l_aead_cipher_decrypt(struct l_aead_cipher *cipher,
 					const void *nonce, size_t nonce_len,
 					void *out, size_t out_len)
 {
+	uint8_t ccm_iv[CCM_IV_SIZE];
+	const uint8_t *iv;
+	ssize_t iv_len;
+
 	if (unlikely(!cipher))
 		return false;
 
 	if (unlikely(!in) || unlikely(!out))
 		return false;
 
+	if (cipher->type == L_AEAD_CIPHER_AES_CCM) {
+		iv_len = build_ccm_iv(nonce, nonce_len, &ccm_iv);
+		if (unlikely(iv_len < 0))
+			return false;
+
+		iv = ccm_iv;
+	} else {
+		if (unlikely(nonce_len != l_aead_cipher_get_ivlen(cipher)))
+			return false;
+
+		iv = nonce;
+		iv_len = nonce_len;
+	}
+
 	return operate_cipher(cipher->decrypt_sk, ALG_OP_DECRYPT, in, in_len,
-				ad, ad_len, nonce, nonce_len, out, out_len,
-				l_aead_cipher_get_ivlen(cipher)) ==
+				ad, ad_len, iv, iv_len, out, out_len) ==
 			(ssize_t)out_len;
 }
 
