@@ -38,10 +38,15 @@ enum tls_cipher_type {
 
 struct tls_bulk_encryption_algorithm {
 	enum tls_cipher_type cipher_type;
-	enum l_cipher_type l_id;
+	union {
+		enum l_cipher_type l_id;
+		enum l_aead_cipher_type l_aead_id;
+	};
 	size_t key_length;
 	size_t iv_length;
+	size_t fixed_iv_length;
 	size_t block_length;
+	size_t auth_tag_length;
 };
 
 struct tls_hash_algorithm {
@@ -192,11 +197,17 @@ struct l_tls {
 
 	enum tls_cipher_type cipher_type[2];
 	struct tls_cipher_suite *cipher_suite[2];
-	struct l_cipher *cipher[2];
+	union {
+		struct l_cipher *cipher[2];
+		struct l_aead_cipher *aead_cipher[2];
+	};
 	struct l_checksum *mac[2];
 	size_t mac_length[2];
 	size_t block_length[2];
 	size_t record_iv_length[2];
+	size_t fixed_iv_length[2];
+	uint8_t fixed_iv[2][32];
+	size_t auth_tag_length[2];
 	uint64_t seq_num[2];
 	/*
 	 * Some of the key and IV parts of the "current" state are kept

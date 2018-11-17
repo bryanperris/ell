@@ -75,6 +75,7 @@ static void tls_tx_record_plaintext(struct l_tls *tls,
 	uint8_t buf[TX_RECORD_HEADROOM + TX_RECORD_MAX_LEN +
 				TX_RECORD_TAILROOM];
 	uint8_t iv[32];
+	uint8_t *assocdata;
 	int offset;
 
 	/*
@@ -156,7 +157,49 @@ static void tls_tx_record_plaintext(struct l_tls *tls,
 		break;
 
 	case TLS_CIPHER_AEAD:
-		/* No AEAD ciphers supported today */
+		/* Prepend seq_num to TLSCompressed.type + .version + .length */
+		assocdata = compressed - 8;
+		l_put_be64(tls->seq_num[1]++, assocdata);
+
+		cipher_input = compressed + 5;
+		cipher_input_len = compressed_len;
+
+		/*
+		 * Build the IV.  The explicit part generation method is
+		 * actually cipher suite-specific but our only AEAD cipher
+		 * suites only require this part to be unique for each
+		 * record.  For future suites there may need to be a callback
+		 * that generates the per-record IV or an enum for the suite
+		 * to select one of a few IV types.
+		 *
+		 * Note kernel's rfc4106(gcm(...)) algorithm could potentially
+		 * be used to build the IV.
+		 */
+		memcpy(iv, tls->fixed_iv[1], tls->fixed_iv_length[1]);
+		l_put_le64(tls->seq_num[1], iv + tls->fixed_iv_length[1]);
+
+		if (tls->record_iv_length[1] > 8)
+			memset(iv + tls->fixed_iv_length[1] + 8, 42,
+				tls->record_iv_length[1] - 8);
+
+		/* Build the GenericAEADCipher struct */
+		ciphertext = buf + TX_RECORD_HEADROOM;
+		memcpy(ciphertext, iv + tls->fixed_iv_length[1],
+			tls->record_iv_length[1]);
+		l_aead_cipher_encrypt(tls->aead_cipher[1],
+					cipher_input, cipher_input_len,
+					assocdata, 13,
+					iv, tls->fixed_iv_length[1] +
+					tls->record_iv_length[1],
+					ciphertext + tls->record_iv_length[1],
+					cipher_input_len +
+					tls->auth_tag_length[1]);
+
+		ciphertext_len = tls->record_iv_length[1] +
+			cipher_input_len + tls->auth_tag_length[1];
+
+		break;
+
 	default:
 		return;
 	}
@@ -332,6 +375,7 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 	uint8_t *compressed;
 	int compressed_len;
 	uint8_t iv[32];
+	uint8_t *assocdata;
 
 	type = tls->record_buf[0];
 	version = l_get_be16(tls->record_buf + 1);
@@ -496,7 +540,41 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 		break;
 
 	case TLS_CIPHER_AEAD:
-		/* No AEAD ciphers supported today */
+		if (fragment_len <= tls->record_iv_length[0] +
+				tls->auth_tag_length[0]) {
+			TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
+					"Record fragment too short: %u",
+					fragment_len);
+			return false;
+		}
+
+		compressed_len = fragment_len - tls->record_iv_length[0] -
+			tls->auth_tag_length[0];
+		l_put_be16(compressed_len, compressed + 11);
+
+		/* Prepend seq_num to TLSCompressed.type + .version + .length */
+		assocdata = compressed;
+		l_put_be64(tls->seq_num[0]++, assocdata);
+		compressed += 13;
+
+		/* Build the IV */
+		memcpy(iv, tls->fixed_iv[0], tls->fixed_iv_length[0]);
+		memcpy(iv + tls->fixed_iv_length[0], tls->record_buf + 5,
+			tls->record_iv_length[0]);
+
+		if (!l_aead_cipher_decrypt(tls->aead_cipher[0],
+				tls->record_buf + 5 + tls->record_iv_length[0],
+				fragment_len - tls->record_iv_length[0],
+				assocdata, 13, iv, tls->fixed_iv_length[0] +
+				tls->record_iv_length[0],
+				compressed, compressed_len)) {
+			TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+					"Decrypting record fragment failed");
+			return false;
+		}
+
+		break;
+
 	default:
 		return false;
 	}

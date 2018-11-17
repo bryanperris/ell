@@ -206,11 +206,19 @@ static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx,
 	int key_offset;
 	static char error_buf[200];
 
-	if (tls->cipher[txrx]) {
-		l_cipher_free(tls->cipher[txrx]);
-		tls->cipher[txrx] = NULL;
-		tls->cipher_type[txrx] = TLS_CIPHER_STREAM;
+	if (tls->cipher_type[txrx] == TLS_CIPHER_AEAD) {
+		if (tls->aead_cipher[txrx]) {
+			l_aead_cipher_free(tls->aead_cipher[txrx]);
+			tls->aead_cipher[txrx] = NULL;
+		}
+	} else {
+		if (tls->cipher[txrx]) {
+			l_cipher_free(tls->cipher[txrx]);
+			tls->cipher[txrx] = NULL;
+		}
 	}
+
+	tls->cipher_type[txrx] = TLS_CIPHER_STREAM;
 
 	if (tls->mac[txrx]) {
 		l_checksum_free(tls->mac[txrx]);
@@ -221,6 +229,12 @@ static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx,
 	tls->block_length[txrx] = 0;
 	tls->record_iv_length[txrx] = 0;
 
+	if (tls->fixed_iv_length[txrx]) {
+		memset(tls->fixed_iv[txrx], 0, tls->fixed_iv_length[txrx]);
+		tls->fixed_iv_length[txrx] = 0;
+	}
+
+	tls->auth_tag_length[txrx] = 0;
 	tls->seq_num[txrx] = 0;
 
 	tls->cipher_suite[txrx] = tls->pending.cipher_suite;
@@ -261,20 +275,31 @@ static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx,
 	}
 
 	if (tls->cipher_suite[txrx]->encryption) {
+		void *cipher;
+
 		enc = tls->cipher_suite[txrx]->encryption;
 
 		/* Server write / client read is 4th in the key block */
 		if ((tls->server && txrx) || (!tls->server && !txrx))
 			key_offset += enc->key_length;
 
-		tls->cipher[txrx] = l_cipher_new(enc->l_id,
+		if (enc->cipher_type == TLS_CIPHER_AEAD) {
+			cipher = l_aead_cipher_new(enc->l_aead_id,
+						tls->pending.key_block +
+						key_offset, enc->key_length,
+						enc->auth_tag_length);
+			tls->aead_cipher[txrx] = cipher;
+		} else {
+			cipher = l_cipher_new(enc->l_id,
 						tls->pending.key_block +
 						key_offset, enc->key_length);
+			tls->cipher[txrx] = cipher;
+		}
 
 		/* Wipe out the now unneeded part of the key block */
 		memset(tls->pending.key_block + key_offset, 0, enc->key_length);
 
-		if (!tls->cipher[txrx]) {
+		if (!cipher) {
 			if (error) {
 				*error = error_buf;
 				snprintf(error_buf, sizeof(error_buf),
@@ -287,10 +312,10 @@ static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx,
 		}
 
 		tls->cipher_type[txrx] = enc->cipher_type;
-		if (enc->cipher_type == TLS_CIPHER_BLOCK) {
-			tls->record_iv_length[txrx] = enc->iv_length;
-			tls->block_length[txrx] = enc->block_length;
-		}
+		tls->record_iv_length[txrx] = enc->iv_length -
+			enc->fixed_iv_length;
+		tls->block_length[txrx] = enc->block_length;
+		tls->auth_tag_length[txrx] = enc->auth_tag_length;
 
 		if ((tls->server && txrx) || (!tls->server && !txrx))
 			key_offset += enc->key_length;
@@ -313,6 +338,21 @@ static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx,
 
 		/* Wipe out the now unneeded part of the key block */
 		memset(tls->pending.key_block + key_offset, 0, enc->iv_length);
+	} else if (tls->cipher_suite[txrx]->encryption &&
+			tls->cipher_suite[txrx]->encryption->fixed_iv_length) {
+		enc = tls->cipher_suite[txrx]->encryption;
+
+		/* Server write / client read is 6th in the key block */
+		if ((tls->server && txrx) || (!tls->server && !txrx))
+			key_offset += enc->fixed_iv_length;
+
+		tls->fixed_iv_length[txrx] = enc->fixed_iv_length;
+		memcpy(tls->fixed_iv[txrx], tls->pending.key_block + key_offset,
+			enc->fixed_iv_length);
+
+		/* Wipe out the now unneeded part of the key block */
+		memset(tls->pending.key_block + key_offset, 0,
+			enc->fixed_iv_length);
 	}
 
 	return true;
@@ -940,7 +980,10 @@ static void tls_generate_master_secret(struct l_tls *tls,
 			TLS_CIPHER_BLOCK)
 		key_block_size += 2 *
 			tls->pending.cipher_suite->encryption->iv_length;
-	/* Note: 2x fixed_IV_length also needed for AEAD ciphers */
+
+	if (tls->pending.cipher_suite->encryption)
+		key_block_size += 2 * tls->pending.cipher_suite->encryption->
+			fixed_iv_length;
 
 	/* Reverse order from the master secret seed */
 	memcpy(seed +  0, tls->pending.server_random, 32);
