@@ -416,6 +416,13 @@ static struct tls_bulk_encryption_algorithm tls_rc4 = {
 	.iv_length = 12,
 	.fixed_iv_length = 4,
 	.auth_tag_length = 16,
+}, tls_aes256_gcm = {
+	.cipher_type = TLS_CIPHER_AEAD,
+	.l_aead_id = L_AEAD_CIPHER_AES_GCM,
+	.key_length = 32,
+	.iv_length = 12,
+	.fixed_iv_length = 4,
+	.auth_tag_length = 16,
 };
 
 static struct tls_mac_algorithm tls_md5 = {
@@ -463,6 +470,14 @@ static struct tls_cipher_suite tls_cipher_suite_pref[] = {
 		.verify_data_length = 12,
 		.encryption = &tls_aes128,
 		.mac = &tls_sha256,
+		.key_xchg = &tls_rsa,
+	},
+	{
+		.id = { 0x00, 0x9d },
+		.name = "TLS_RSA_WITH_AES_256_GCM_SHA384",
+		.verify_data_length = 12,
+		.encryption = &tls_aes256_gcm,
+		.prf_hmac = L_CHECKSUM_SHA384,
 		.key_xchg = &tls_rsa,
 	},
 	{
@@ -530,6 +545,7 @@ static struct tls_compression_method *tls_find_compression_method(
 }
 
 static const struct tls_hash_algorithm tls_handshake_hash_data[] = {
+	[HANDSHAKE_HASH_SHA384]	= { 5, L_CHECKSUM_SHA384, 48, "SHA384" },
 	[HANDSHAKE_HASH_SHA256]	= { 4, L_CHECKSUM_SHA256, 32, "SHA256" },
 	[HANDSHAKE_HASH_MD5]	= { 1, L_CHECKSUM_MD5, 16, "MD5" },
 	[HANDSHAKE_HASH_SHA1]	= { 2, L_CHECKSUM_SHA1, 20, "SHA1" },

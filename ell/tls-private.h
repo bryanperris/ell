@@ -128,12 +128,13 @@ enum tls_content_type {
  * keep at least the hashes our supported cipher suites specify for the PRF.
  */
 enum handshake_hash_type {
+	HANDSHAKE_HASH_SHA384,
 	HANDSHAKE_HASH_SHA256,
 	HANDSHAKE_HASH_MD5,
 	HANDSHAKE_HASH_SHA1,
 	__HANDSHAKE_HASH_COUNT,
 };
-#define HANDSHAKE_HASH_MAX_SIZE	32
+#define HANDSHAKE_HASH_MAX_SIZE	48
 
 struct l_tls {
 	bool server;
