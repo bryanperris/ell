@@ -28,8 +28,6 @@
 #define TLS_VERSION	TLS_V12
 #define TLS_MIN_VERSION	TLS_V10
 
-struct tls_cert;
-
 enum tls_cipher_type {
 	TLS_CIPHER_STREAM,
 	TLS_CIPHER_BLOCK,
@@ -65,7 +63,7 @@ struct tls_key_exchange_algorithm {
 
 	bool certificate_check;
 
-	bool (*validate_cert_key_type)(struct tls_cert *cert);
+	bool (*validate_cert_key_type)(struct l_cert *cert);
 
 	bool (*send_client_key_exchange)(struct l_tls *tls);
 	void (*handle_client_key_exchange)(struct l_tls *tls,
@@ -147,8 +145,8 @@ struct l_tls {
 	l_tls_destroy_cb_t debug_destroy;
 	void *debug_data;
 
-	char *ca_cert_path;
-	char *cert_path;
+	struct l_cert *ca_cert;
+	struct l_certchain *cert;
 	struct l_key *priv_key;
 	size_t priv_key_size;
 
@@ -174,7 +172,7 @@ struct l_tls {
 	uint16_t negotiated_version;
 	bool cert_requested, cert_sent;
 	bool peer_authenticated;
-	struct tls_cert *peer_cert;
+	struct l_cert *peer_cert;
 	struct l_key *peer_pubkey;
 	size_t peer_pubkey_size;
 	enum handshake_hash_type signature_hash;
@@ -238,22 +236,9 @@ void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
 bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 			int len, enum tls_content_type type, uint16_t version);
 
-/* X509 Certificates and Certificate Chains */
-
-struct tls_cert {
-	size_t size;
-	struct tls_cert *issuer;
-	uint8_t asn1[0];
-};
-
-enum tls_cert_key_type {
-	TLS_CERT_KEY_RSA,
-	TLS_CERT_KEY_UNKNOWN,
-};
-
-struct tls_cert *tls_cert_load_file(const char *filename);
-int tls_cert_from_certificate_list(const void *data, size_t len,
-					struct tls_cert **out_certchain);
+struct l_cert *tls_cert_load_file(const char *filename);
+int tls_parse_certificate_list(const void *data, size_t len,
+				struct l_certchain **out_certchain);
 
 #define TLS_DEBUG(fmt, args...)	\
 	l_util_debug(tls->debug_handler, tls->debug_data, "%s:%i " fmt,	\

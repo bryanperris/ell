@@ -29,6 +29,7 @@
 #include "tls.h"
 #include "checksum.h"
 #include "cipher.h"
+#include "cert.h"
 #include "tls-private.h"
 #include "random.h"
 
