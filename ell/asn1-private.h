@@ -46,8 +46,14 @@ static inline int asn1_parse_definite_length(const uint8_t **buf,
 	int n;
 	size_t result = 0;
 
-	(*len)--;
+	/* Decrease the buffer length left */
+	if ((*len)-- < 1)
+		return -1;
 
+	/*
+	 * If short form length, move the pointer to start of data and
+	 * return the data length.
+	 */
 	if (!(**buf & 0x80))
 		return *(*buf)++;
 
