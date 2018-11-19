@@ -255,16 +255,6 @@ struct tls_cert *tls_cert_load_file(const char *filename);
 int tls_cert_from_certificate_list(const void *data, size_t len,
 					struct tls_cert **out_certchain);
 
-bool tls_cert_find_certchain(struct tls_cert *cert,
-				const char *cacert_filename);
-
-bool tls_cert_verify_certchain(struct tls_cert *certchain,
-				struct tls_cert *ca_cert);
-
-void tls_cert_free_certchain(struct tls_cert *cert);
-
-enum tls_cert_key_type tls_cert_get_pubkey_type(struct tls_cert *cert);
-
 #define TLS_DEBUG(fmt, args...)	\
 	l_util_debug(tls->debug_handler, tls->debug_data, "%s:%i " fmt,	\
 			__func__, __LINE__, ## args)

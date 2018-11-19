@@ -443,6 +443,8 @@ global:
 	l_certchain_get_leaf;
 	l_certchain_foreach_from_leaf;
 	l_certchain_foreach_from_ca;
+	l_certchain_find;
+	l_certchain_verify;
 local:
 	*;
 };

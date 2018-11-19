@@ -57,6 +57,9 @@ bool l_certchain_foreach_from_ca(struct l_certchain *chain,
 					l_cert_foreach_cb_t cb,
 					void *user_data);
 
+bool l_certchain_find(struct l_certchain *chain, struct l_cert *ca_cert);
+bool l_certchain_verify(struct l_certchain *chain, struct l_cert *ca_cert);
+
 #ifdef __cplusplus
 }
 #endif
