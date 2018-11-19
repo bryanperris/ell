@@ -29,9 +29,8 @@
 
 #include <ell/ell.h>
 
-#include "ell/cipher.h"
-#include "ell/checksum.h"
 #include "ell/tls-private.h"
+#include "ell/cert-private.h"
 
 static void test_tls10_prf(const void *data)
 {
@@ -213,12 +212,14 @@ static void test_tls12_prf(const void *data)
 
 static void test_certificates(const void *data)
 {
-	struct tls_cert *cert;
-	struct tls_cert *cacert;
-	struct tls_cert *wrongca;
+	struct l_cert *cert;
+	struct l_cert *cacert;
+	struct l_cert *wrongca;
+	struct l_certchain *chain;
 
 	cert = tls_cert_load_file(CERTDIR "cert-server.pem");
 	assert(cert);
+	chain = certchain_new_from_leaf(cert);
 
 	cacert = tls_cert_load_file(CERTDIR "cert-ca.pem");
 	assert(cacert);
@@ -226,15 +227,15 @@ static void test_certificates(const void *data)
 	wrongca = tls_cert_load_file(CERTDIR "cert-intca.pem");
 	assert(wrongca);
 
-	assert(!tls_cert_verify_certchain(cert, wrongca));
+	assert(!l_certchain_verify(chain, wrongca));
 
-	assert(tls_cert_verify_certchain(cert, cacert));
+	assert(l_certchain_verify(chain, cacert));
 
-	assert(tls_cert_verify_certchain(cert, NULL));
+	assert(l_certchain_verify(chain, NULL));
 
-	l_free(cert);
-	l_free(cacert);
-	l_free(wrongca);
+	l_certchain_free(chain);
+	l_cert_free(cacert);
+	l_cert_free(wrongca);
 }
 
 struct tls_conn_test {
@@ -418,8 +419,8 @@ static void test_tls_test(const void *data)
 					test->client_key_path,
 					test->client_key_passphrase);
 	assert(auth_ok);
-	l_tls_set_cacert(s[0].tls, test->server_ca_cert_path);
-	l_tls_set_cacert(s[1].tls, test->client_ca_cert_path);
+	assert(l_tls_set_cacert(s[0].tls, test->server_ca_cert_path));
+	assert(l_tls_set_cacert(s[1].tls, test->client_ca_cert_path));
 
 	while (1) {
 		if (s[0].raw_buf_len) {

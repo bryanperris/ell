@@ -28,6 +28,8 @@
 
 #include <ell/ell.h>
 
+#include "ell/tls-private.h"
+
 #define KEY1_STR "This key has exactly _32_ bytes!"
 #define KEY1_LEN (strlen(KEY1_STR))
 #define KEY2_STR "This key is longer than 32 bytes, just to be different."
@@ -394,23 +396,20 @@ static void test_trusted_keyring(const void *data)
 {
 	struct l_keyring *ring;
 	struct l_keyring *trust;
-	uint8_t *cacert;
-	size_t cacertlen;
-	uint8_t *cert;
-	size_t certlen;
+	struct l_cert *cacert;
+	struct l_cert *cert;
 	struct l_key *cakey;
 	struct l_key *key;
 	bool success;
 
-	cacert = l_pem_load_certificate(CERTDIR "cert-ca.pem", &cacertlen);
+	cacert = tls_cert_load_file(CERTDIR "cert-ca.pem");
 	assert(cacert);
-	cert = l_pem_load_certificate(CERTDIR "cert-server.pem",
-					&certlen);
+	cert = tls_cert_load_file(CERTDIR "cert-server.pem");
 	assert(cert);
 
-	cakey = l_key_new(L_KEY_RSA, cacert, cacertlen);
+	cakey = l_cert_get_pubkey(cacert);
 	assert(cakey);
-	key = l_key_new(L_KEY_RSA, cert, certlen);
+	key = l_cert_get_pubkey(cert);
 	assert(key);
 
 	trust = l_keyring_new();
@@ -431,39 +430,34 @@ static void test_trusted_keyring(const void *data)
 	l_keyring_free(ring);
 	l_key_free(cakey);
 	l_key_free(key);
-	l_free(cacert);
-	l_free(cert);
+	l_cert_free(cacert);
+	l_cert_free(cert);
 }
 
 static void test_trust_chain(const void *data)
 {
 	struct l_keyring *ring;
 	struct l_keyring *trust;
-	uint8_t *cacert;
-	size_t cacertlen;
-	uint8_t *intcert;
-	size_t intcertlen;
-	uint8_t *cert;
-	size_t certlen;
+	struct l_cert *cacert;
+	struct l_cert *intcert;
+	struct l_cert *cert;
 	struct l_key *cakey;
 	struct l_key *intkey;
 	struct l_key *key;
 	bool success;
 
-	cacert = l_pem_load_certificate(CERTDIR "cert-ca.pem", &cacertlen);
+	cacert = tls_cert_load_file(CERTDIR "cert-ca.pem");
 	assert(cacert);
-	intcert = l_pem_load_certificate(CERTDIR "cert-intca.pem",
-						&intcertlen);
+	intcert = tls_cert_load_file(CERTDIR "cert-intca.pem");
 	assert(intcert);
-	cert = l_pem_load_certificate(CERTDIR "cert-entity-int.pem",
-					&certlen);
+	cert = tls_cert_load_file(CERTDIR "cert-entity-int.pem");
 	assert(cert);
 
-	cakey = l_key_new(L_KEY_RSA, cacert, cacertlen);
+	cakey = l_cert_get_pubkey(cacert);
 	assert(cakey);
-	intkey = l_key_new(L_KEY_RSA, intcert, intcertlen);
+	intkey = l_cert_get_pubkey(intcert);
 	assert(intkey);
-	key = l_key_new(L_KEY_RSA, cert, certlen);
+	key = l_cert_get_pubkey(cert);
 	assert(key);
 
 	trust = l_keyring_new();
@@ -492,17 +486,16 @@ static void test_trust_chain(const void *data)
 	l_key_free(cakey);
 	l_key_free(intkey);
 	l_key_free(key);
-	l_free(cacert);
-	l_free(intcert);
-	l_free(cert);
+	l_cert_free(cacert);
+	l_cert_free(intcert);
+	l_cert_free(cert);
 }
 
 static void test_key_crypto(const void *data)
 {
-	uint8_t *cert;
-	size_t certlen;
-	uint8_t *pubcert;
-	size_t pubcertlen;
+	uint8_t *privkey;
+	size_t privkeylen;
+	struct l_cert *cert;
 	struct l_key *key;
 	struct l_key *pubkey;
 	bool is_public;
@@ -514,18 +507,17 @@ static void test_key_crypto(const void *data)
 	int hash = L_CHECKSUM_NONE;
 	int rsa = L_KEY_RSA_PKCS1_V1_5;
 
-	cert = l_pem_load_private_key(CERTDIR "cert-client-key-pkcs8.pem",
-					NULL, NULL, &certlen);
+	privkey = l_pem_load_private_key(CERTDIR "cert-client-key-pkcs8.pem",
+						NULL, NULL, &privkeylen);
+	assert(privkey);
+	cert = tls_cert_load_file(CERTDIR "cert-client.pem");
 	assert(cert);
-	pubcert = l_pem_load_certificate(CERTDIR "cert-client.pem",
-						&pubcertlen);
-	assert(pubcert);
 
-	key = l_key_new(L_KEY_RSA, cert, certlen);
-	assert(key);
-	pubkey = l_key_new(L_KEY_RSA, pubcert, pubcertlen);
+	pubkey = l_cert_get_pubkey(cert);
 	assert(pubkey);
 
+	key = l_key_new(L_KEY_RSA, privkey, privkeylen);
+	assert(key);
 	success = l_key_get_info(key, rsa, hash, &keybits, &is_public);
 	assert(success);
 	assert(keybits == 2048);
@@ -606,8 +598,8 @@ static void test_key_crypto(const void *data)
 
 	l_key_free(key);
 	l_key_free(pubkey);
-	l_free(cert);
-	l_free(pubcert);
+	l_free(privkey);
+	l_cert_free(cert);
 }
 
 int main(int argc, char *argv[])
