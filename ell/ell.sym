@@ -435,7 +435,14 @@ global:
 	/* cert */
 	l_cert_new_from_der;
 	l_cert_free;
+	l_cert_get_der_data;
+	l_cert_get_dn;
+	l_cert_get_pubkey_type;
+	l_cert_get_pubkey;
 	l_certchain_free;
+	l_certchain_get_leaf;
+	l_certchain_foreach_from_leaf;
+	l_certchain_foreach_from_ca;
 local:
 	*;
 };

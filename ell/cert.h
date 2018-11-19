@@ -37,10 +37,25 @@ enum l_cert_key_type {
 	L_CERT_KEY_UNKNOWN,
 };
 
+typedef bool (*l_cert_foreach_cb_t)(struct l_cert *cert, void *user_data);
+
 struct l_cert *l_cert_new_from_der(const uint8_t *buf, size_t buf_len);
 void l_cert_free(struct l_cert *cert);
 
+const uint8_t *l_cert_get_der_data(struct l_cert *cert, size_t *out_len);
+const uint8_t *l_cert_get_dn(struct l_cert *cert, size_t *out_len);
+enum l_cert_key_type l_cert_get_pubkey_type(struct l_cert *cert);
+struct l_key *l_cert_get_pubkey(struct l_cert *cert);
+
 void l_certchain_free(struct l_certchain *chain);
+
+struct l_cert *l_certchain_get_leaf(struct l_certchain *chain);
+bool l_certchain_foreach_from_leaf(struct l_certchain *chain,
+					l_cert_foreach_cb_t cb,
+					void *user_data);
+bool l_certchain_foreach_from_ca(struct l_certchain *chain,
+					l_cert_foreach_cb_t cb,
+					void *user_data);
 
 #ifdef __cplusplus
 }
