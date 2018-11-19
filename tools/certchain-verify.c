@@ -35,7 +35,7 @@
 #include <ell/ell.h>
 #include "ell/tls-private.h"
 
-static int load_cert_chain(const char *file, struct tls_cert **certchain)
+static int load_cert_chain(const char *file, struct l_certchain **certchain)
 {
 	int fd;
 	struct stat st;
@@ -70,7 +70,7 @@ static int load_cert_chain(const char *file, struct tls_cert **certchain)
 		goto close_file;
 	}
 
-	err = tls_cert_from_certificate_list(data, st.st_size, certchain);
+	err = tls_parse_certificate_list(data, st.st_size, certchain);
 	if (err < 0)
 		fprintf(stderr, "Could not parse certificate list: %s\n",
 						strerror(-err));
@@ -95,8 +95,8 @@ static void usage(const char *bin)
 int main(int argc, char *argv[])
 {
 	int status = EXIT_FAILURE;
-	struct tls_cert *certchain;
-	struct tls_cert *ca_cert;
+	struct l_certchain *certchain;
+	struct l_cert *ca_cert;
 	int err;
 
 	if (argc != 3) {
@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 		goto free_certchain;
 	}
 
-	if (!tls_cert_verify_certchain(certchain, ca_cert)) {
+	if (!l_certchain_verify(certchain, ca_cert)) {
 		fprintf(stderr, "Verification failed\n");
 		goto free_cacert;
 	}
@@ -131,9 +131,9 @@ int main(int argc, char *argv[])
 	status = EXIT_SUCCESS;
 
 free_cacert:
-	l_free(ca_cert);
+	l_cert_free(ca_cert);
 free_certchain:
-	tls_cert_free_certchain(certchain);
+	l_certchain_free(certchain);
 done:
 	return status;
 }
