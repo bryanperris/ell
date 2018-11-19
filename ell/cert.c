@@ -1,0 +1,199 @@
+/*
+ *  Embedded Linux library
+ *
+ *  Copyright (C) 2018  Intel Corporation. All rights reserved.
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <string.h>
+
+#include "private.h"
+#include "key.h"
+#include "asn1-private.h"
+#include "cert.h"
+#include "cert-private.h"
+
+#define X509_CERTIFICATE_POS			0
+#define   X509_TBSCERTIFICATE_POS		  0
+#define     X509_TBSCERT_VERSION_POS		    0
+#define     X509_TBSCERT_SERIAL_POS		    1
+#define     X509_TBSCERT_SIGNATURE_POS		    2
+#define       X509_ALGORITHM_ID_ALGORITHM_POS	      0
+#define       X509_ALGORITHM_ID_PARAMS_POS	      1
+#define     X509_TBSCERT_ISSUER_DN_POS		    3
+#define     X509_TBSCERT_VALIDITY_POS		    4
+#define     X509_TBSCERT_SUBJECT_DN_POS		    5
+#define     X509_TBSCERT_SUBJECT_KEY_POS	    6
+#define       X509_SUBJECT_KEY_ALGORITHM_POS	      0
+#define       X509_SUBJECT_KEY_VALUE_POS	      1
+#define     X509_TBSCERT_ISSUER_UID_POS		    7
+#define     X509_TBSCERT_SUBJECT_UID_POS	    8
+#define     X509_TBSCERT_EXTENSIONS_POS		    9
+#define   X509_SIGNATURE_ALGORITHM_POS		  1
+#define   X509_SIGNATURE_VALUE_POS		  2
+
+struct l_cert {
+	enum l_cert_key_type pubkey_type;
+	struct l_cert *issuer;
+	struct l_cert *issued;
+	size_t asn1_len;
+	uint8_t asn1[0];
+};
+
+struct l_certchain {
+	struct l_cert *leaf;	/* Bottom of the doubly-linked list */
+	struct l_cert *ca;	/* Top of the doubly-linked list */
+};
+
+static const struct pkcs1_encryption_oid {
+	enum l_cert_key_type key_type;
+	struct asn1_oid oid;
+} pkcs1_encryption_oids[] = {
+	{ /* rsaEncryption */
+		L_CERT_KEY_RSA,
+		{ 9, { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01 } },
+	},
+};
+
+static bool cert_set_pubkey_type(struct l_cert *cert)
+{
+	const uint8_t *key_type;
+	size_t key_type_len;
+	int i;
+
+	key_type = asn1_der_find_elem_by_path(cert->asn1, cert->asn1_len,
+						ASN1_ID_OID, &key_type_len,
+						X509_CERTIFICATE_POS,
+						X509_TBSCERTIFICATE_POS,
+						X509_TBSCERT_SUBJECT_KEY_POS,
+						X509_SUBJECT_KEY_ALGORITHM_POS,
+						X509_ALGORITHM_ID_ALGORITHM_POS,
+						-1);
+	if (!key_type)
+		return false;
+
+	for (i = 0; i < (int) L_ARRAY_SIZE(pkcs1_encryption_oids); i++)
+		if (asn1_oid_eq(&pkcs1_encryption_oids[i].oid,
+					key_type_len, key_type))
+			break;
+
+	if (i == L_ARRAY_SIZE(pkcs1_encryption_oids))
+		cert->pubkey_type = L_CERT_KEY_UNKNOWN;
+	else
+		cert->pubkey_type = pkcs1_encryption_oids[i].key_type;
+
+	return true;
+}
+
+LIB_EXPORT struct l_cert *l_cert_new_from_der(const uint8_t *buf,
+						size_t buf_len)
+{
+	const uint8_t *seq = buf;
+	size_t seq_len = buf_len;
+	size_t content_len;
+	struct l_cert *cert;
+
+	/* Sanity check: outer element is a SEQUENCE */
+	if (seq_len-- < 1 || *seq++ != ASN1_ID_SEQUENCE)
+		return NULL;
+
+	/* Sanity check: the SEQUENCE spans the whole buffer */
+	content_len = asn1_parse_definite_length(&seq, &seq_len);
+	if (content_len < 64 || content_len != seq_len)
+		return NULL;
+
+	/*
+	 * We could require the signature algorithm and the key algorithm
+	 * to be one of our supported types here but instead we only
+	 * require that when the user wants to verify this certificate or
+	 * get the public key respectively.
+	 */
+
+	cert = l_malloc(sizeof(struct l_cert) + buf_len);
+	cert->issuer = NULL;
+	cert->issued = NULL;
+	cert->asn1_len = buf_len;
+	memcpy(cert->asn1, buf, buf_len);
+
+	/* Sanity check: structure is correct up to the Public Key Algorithm */
+	if (!cert_set_pubkey_type(cert)) {
+		l_free(cert);
+		return NULL;
+	}
+
+	return cert;
+}
+
+LIB_EXPORT void l_cert_free(struct l_cert *cert)
+{
+	l_free(cert);
+}
+
+/*
+ * Note: takes ownership of the certificate.  The certificate is
+ * assumed to be new and not linked into any certchain object.
+ */
+struct l_certchain *certchain_new_from_leaf(struct l_cert *leaf)
+{
+	struct l_certchain *chain;
+
+	chain = l_new(struct l_certchain, 1);
+	chain->leaf = leaf;
+	chain->ca = leaf;
+	return chain;
+}
+
+/*
+ * Note: takes ownership of the certificate.  The certificate is
+ * assumed to be new and not linked into any certchain object.
+ */
+void certchain_link_issuer(struct l_certchain *chain, struct l_cert *ca)
+{
+	ca->issued = chain->ca;
+	chain->ca->issuer = ca;
+	chain->ca = ca;
+}
+
+static struct l_cert *certchain_pop_ca(struct l_certchain *chain)
+{
+	struct l_cert *ca = chain->ca;
+
+	if (!ca)
+		return NULL;
+
+	if (ca->issued) {
+		chain->ca = ca->issued;
+		ca->issued->issuer = NULL;
+		ca->issued = NULL;
+	} else {
+		chain->ca = NULL;
+		chain->leaf = NULL;
+	}
+
+	return ca;
+}
+
+LIB_EXPORT void l_certchain_free(struct l_certchain *chain)
+{
+	while (chain && chain->ca)
+		l_cert_free(certchain_pop_ca(chain));
+
+	l_free(chain);
+}

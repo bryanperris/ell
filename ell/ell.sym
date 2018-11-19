@@ -432,6 +432,10 @@ global:
 	l_uuid_is_valid;
 	l_uuid_get_version;
 	l_uuid_to_string;
+	/* cert */
+	l_cert_new_from_der;
+	l_cert_free;
+	l_certchain_free;
 local:
 	*;
 };

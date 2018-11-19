@@ -1,0 +1,49 @@
+/*
+ *
+ *  Embedded Linux library
+ *
+ *  Copyright (C) 2018  Intel Corporation. All rights reserved.
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ */
+
+#ifndef __ELL_CERT_H
+#define __ELL_CERT_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stddef.h>
+
+struct l_cert;
+struct l_certchain;
+
+enum l_cert_key_type {
+	L_CERT_KEY_RSA,
+	L_CERT_KEY_UNKNOWN,
+};
+
+struct l_cert *l_cert_new_from_der(const uint8_t *buf, size_t buf_len);
+void l_cert_free(struct l_cert *cert);
+
+void l_certchain_free(struct l_certchain *chain);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ELL_CERT_H */
