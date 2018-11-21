@@ -162,7 +162,7 @@ LIB_EXPORT const uint8_t *l_cert_get_dn(struct l_cert *cert, size_t *out_len)
 		return NULL;
 
 	return asn1_der_find_elem_by_path(cert->asn1, cert->asn1_len,
-						ASN1_ID_OID, out_len,
+						ASN1_ID_SEQUENCE, out_len,
 						X509_CERTIFICATE_POS,
 						X509_TBSCERTIFICATE_POS,
 						X509_TBSCERT_SUBJECT_DN_POS,
