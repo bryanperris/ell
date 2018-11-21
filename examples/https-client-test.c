@@ -86,7 +86,7 @@ static void https_tls_write(const uint8_t *data, size_t len, void *user_data)
 	int r;
 
 	while (len) {
-		r = write(l_io_get_fd(io), data, len);
+		r = send(l_io_get_fd(io), data, len, MSG_NOSIGNAL);
 		if (r < 0) {
 			l_main_quit();
 			break;
