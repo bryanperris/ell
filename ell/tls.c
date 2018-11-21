@@ -2640,14 +2640,11 @@ LIB_EXPORT bool l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
 	}
 
 	if (cert_path) {
-		struct l_cert *cert = tls_cert_load_file(cert_path);
-
-		if (!cert) {
+		tls->cert = l_pem_load_certificate_chain(cert_path);
+		if (!tls->cert) {
 			TLS_DEBUG("Error loading %s", cert_path);
 			return false;
 		}
-
-		tls->cert = certchain_new_from_leaf(cert);
 	}
 
 	if (priv_key_path) {
