@@ -29,6 +29,8 @@ extern "C" {
 
 #include <stddef.h>
 
+#include <ell/queue.h>
+
 struct l_cert;
 struct l_certchain;
 
@@ -57,8 +59,8 @@ bool l_certchain_foreach_from_ca(struct l_certchain *chain,
 					l_cert_foreach_cb_t cb,
 					void *user_data);
 
-bool l_certchain_find(struct l_certchain *chain, struct l_cert *ca_cert);
-bool l_certchain_verify(struct l_certchain *chain, struct l_cert *ca_cert);
+bool l_certchain_find(struct l_certchain *chain, struct l_queue *ca_certs);
+bool l_certchain_verify(struct l_certchain *chain, struct l_queue *ca_certs);
 
 #ifdef __cplusplus
 }

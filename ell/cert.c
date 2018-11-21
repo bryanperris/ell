@@ -285,20 +285,20 @@ LIB_EXPORT bool l_certchain_foreach_from_ca(struct l_certchain *chain,
 }
 
 LIB_EXPORT bool l_certchain_find(struct l_certchain *chain,
-					struct l_cert *ca_cert)
+					struct l_queue *ca_certs)
 {
 	if (unlikely(!chain || !chain->leaf))
 		return false;
 
 	/* Nothing to do if no CA certificates supplied */
-	if (!ca_cert)
+	if (!ca_certs)
 		return true;
 
 	/*
 	 * Also nothing to do if the user already supplied a working
 	 * certificate chain.
 	 */
-	if (l_certchain_verify(chain, ca_cert))
+	if (l_certchain_verify(chain, ca_certs))
 		return true;
 
 	/* Actual search for a chain to the CA cert is unimplemented, fail */
@@ -312,7 +312,7 @@ static void cert_key_cleanup(struct l_key **p)
 
 static bool certchain_verify_with_keyring(struct l_cert *cert,
 						struct l_keyring *ring,
-						struct l_cert *root,
+						struct l_queue *roots,
 						struct l_keyring *trusted)
 {
 	if (!cert)
@@ -328,12 +328,30 @@ static bool certchain_verify_with_keyring(struct l_cert *cert,
 	 * specifies the root certificate authority MAY be omitted from
 	 * the chain, under the assumption that the remote end must
 	 * already possess it in order to validate it in any case."
+	 *
+	 * This is an optimization to skip adding the root cert if
+	 * it's already in the trusted keyring.  It also happens to
+	 * work around a kernel issue preventing self-signed certificates
+	 * missing the AKID extension from being linked.
+	 *
+	 * If 'roots' were supplied we assume the keyring is already
+	 * restricted.
 	 */
-	if (!cert->issuer && root && cert->asn1_len == root->asn1_len &&
-			!memcmp(cert->asn1, root->asn1, root->asn1_len))
-		return true;
+	if (!cert->issuer && roots) {
+		const struct l_queue_entry *entry;
 
-	if (certchain_verify_with_keyring(cert->issuer, ring, root, trusted)) {
+		for (entry = l_queue_get_entries(roots); entry;
+				entry = entry->next) {
+			struct l_cert *root = entry->data;
+
+			if (cert->asn1_len == root->asn1_len &&
+					!memcmp(cert->asn1, root->asn1,
+						root->asn1_len))
+				return true;
+		}
+	}
+
+	if (certchain_verify_with_keyring(cert->issuer, ring, roots, trusted)) {
 		L_AUTO_CLEANUP_VAR(struct l_key *, key, cert_key_cleanup);
 
 		key = l_key_new(L_KEY_RSA, cert->asn1, cert->asn1_len);
@@ -371,7 +389,7 @@ static void cert_keyring_cleanup(struct l_keyring **p)
 }
 
 LIB_EXPORT bool l_certchain_verify(struct l_certchain *chain,
-					struct l_cert *ca_cert)
+					struct l_queue *ca_certs)
 {
 	L_AUTO_CLEANUP_VAR(struct l_keyring *, ca_ring,
 				cert_keyring_cleanup) = NULL;
@@ -381,39 +399,48 @@ LIB_EXPORT bool l_certchain_verify(struct l_certchain *chain,
 	if (unlikely(!chain || !chain->leaf))
 		return false;
 
-	if (ca_cert && ca_cert->pubkey_type != L_CERT_KEY_RSA)
-		return false;
-
-	if (ca_cert) {
-		L_AUTO_CLEANUP_VAR(struct l_key *, ca_key, cert_key_cleanup);
-		ca_key = NULL;
-
-		ca_ring = l_keyring_new();
-		if (!ca_ring)
-			return false;
-
-		ca_key = l_cert_get_pubkey(ca_cert);
-		if (!ca_key || !l_keyring_link(ca_ring, ca_key))
-			return false;
-	}
-
 	verify_ring = l_keyring_new();
 	if (!verify_ring)
 		return false;
 
 	/*
-	 * If a CA cert was supplied, restrict verify_ring now so
-	 * everything else in certchain is validated against the CA.
+	 * If CA cert(s) were supplied, restrict verify_ring now so
+	 * everything else in certchain is validated against the CA(s).
 	 * Otherwise, verify_ring will be restricted after the root of
 	 * certchain is added to verify_ring by
-	 * cert_verify_with_keyring().
+	 * certchain_verify_with_keyring().
 	 */
-	if (ca_ring && !l_keyring_restrict(verify_ring,
-						L_KEYRING_RESTRICT_ASYM_CHAIN,
-						ca_ring)) {
-		return false;
+	if (ca_certs) {
+		const struct l_queue_entry *entry;
+
+		ca_ring = l_keyring_new();
+		if (!ca_ring)
+			return false;
+
+		for (entry = l_queue_get_entries(ca_certs); entry;
+				entry = entry->next) {
+			struct l_cert *ca = entry->data;
+			struct l_key *ca_key;
+
+			if (ca->pubkey_type != L_CERT_KEY_RSA)
+				return false;
+
+			ca_key = l_cert_get_pubkey(ca);
+			if (!ca_key)
+				return false;
+
+			if (!l_keyring_link(ca_ring, ca_key)) {
+				l_key_free(ca_key);
+				return false;
+			}
+		}
+
+		if (!l_keyring_restrict(verify_ring,
+					L_KEYRING_RESTRICT_ASYM_CHAIN,
+					ca_ring))
+			return false;
 	}
 
-	return certchain_verify_with_keyring(chain->leaf, verify_ring, ca_cert,
+	return certchain_verify_with_keyring(chain->leaf, verify_ring, ca_certs,
 						ca_ring);
 }
