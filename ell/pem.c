@@ -33,6 +33,9 @@
 
 #include "util.h"
 #include "private.h"
+#include "key.h"
+#include "cert.h"
+#include "queue.h"
 #include "pem.h"
 #include "base64.h"
 #include "utf8.h"

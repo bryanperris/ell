@@ -29,8 +29,7 @@ extern "C" {
 
 #include <stddef.h>
 
-#include <ell/queue.h>
-
+struct l_queue;
 struct l_cert;
 struct l_certchain;
 

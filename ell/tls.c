@@ -34,6 +34,7 @@
 #include "checksum.h"
 #include "cipher.h"
 #include "random.h"
+#include "queue.h"
 #include "pem.h"
 #include "cert.h"
 #include "cert-private.h"

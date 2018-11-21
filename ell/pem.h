@@ -27,9 +27,10 @@
 extern "C" {
 #endif
 
-#include <ell/key.h>
-#include <ell/cert.h>
-#include <ell/queue.h>
+struct l_queue;
+struct l_key;
+struct l_cert;
+struct l_certchain;
 
 uint8_t *l_pem_load_buffer(const uint8_t *buf, size_t buf_len,
 				int index, char **type_label, size_t *out_len);

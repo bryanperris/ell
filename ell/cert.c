@@ -26,6 +26,7 @@
 
 #include "private.h"
 #include "key.h"
+#include "queue.h"
 #include "asn1-private.h"
 #include "cert.h"
 #include "cert-private.h"
