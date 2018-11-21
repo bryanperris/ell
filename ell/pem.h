@@ -27,12 +27,17 @@
 extern "C" {
 #endif
 
+#include <ell/cert.h>
+#include <ell/queue.h>
+
 uint8_t *l_pem_load_buffer(const uint8_t *buf, size_t buf_len,
 				int index, char **type_label, size_t *out_len);
 uint8_t *l_pem_load_file(const char *filename, int index,
 				char **type_label, size_t *len);
 
 uint8_t *l_pem_load_certificate(const char *filename, size_t *len);
+struct l_certchain *l_pem_load_certificate_chain(const char *filename);
+struct l_queue *l_pem_load_certificate_list(const char *filename);
 
 uint8_t *l_pem_load_private_key(const char *filename, const char *passphrase,
 				bool *encrypted, size_t *len);

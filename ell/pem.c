@@ -39,6 +39,7 @@
 #include "asn1-private.h"
 #include "pkcs5-private.h"
 #include "cipher.h"
+#include "cert-private.h"
 
 #define PEM_START_BOUNDARY	"-----BEGIN "
 #define PEM_END_BOUNDARY	"-----END "
@@ -119,7 +120,8 @@ static bool is_end_boundary(const uint8_t *buf, size_t buf_len,
 }
 
 static uint8_t *pem_load_buffer(const uint8_t *buf, size_t buf_len, int index,
-				char **type_label, size_t *len)
+				char **type_label, size_t *len,
+				const uint8_t **endp)
 {
 	const uint8_t *base64_data = NULL, *label = NULL, *eol;
 	uint8_t *data;
@@ -152,6 +154,9 @@ static uint8_t *pem_load_buffer(const uint8_t *buf, size_t buf_len, int index,
 				*type_label = l_strndup((const char *) label,
 							label_len);
 
+				if (endp)
+					*endp = eol + 1;
+
 				return data;
 			}
 
@@ -171,6 +176,10 @@ static uint8_t *pem_load_buffer(const uint8_t *buf, size_t buf_len, int index,
 		}
 	}
 
+	/* If we found no label signal EOF rather than parse error */
+	if (!base64_data && endp)
+		*endp = NULL;
+
 	return NULL;
 }
 
@@ -178,38 +187,58 @@ LIB_EXPORT uint8_t *l_pem_load_buffer(const uint8_t *buf, size_t buf_len,
 					int index, char **type_label,
 					size_t *out_len)
 {
-	return pem_load_buffer(buf, buf_len, index, type_label, out_len);
+	return pem_load_buffer(buf, buf_len, index, type_label, out_len, NULL);
+}
+
+struct pem_file_info {
+	int fd;
+	struct stat st;
+	uint8_t *data;
+};
+
+static int pem_file_open(struct pem_file_info *info, const char *filename)
+{
+	info->fd = open(filename, O_RDONLY);
+	if (info->fd < 0)
+		return -errno;
+
+	if (fstat(info->fd, &info->st) < 0) {
+		int r = -errno;
+
+		close(info->fd);
+		return r;
+	}
+
+	info->data = mmap(NULL, info->st.st_size,
+				PROT_READ, MAP_SHARED, info->fd, 0);
+	if (info->data == MAP_FAILED) {
+		int r = -errno;
+
+		close(info->fd);
+		return r;
+	}
+
+	return 0;
+}
+
+static void pem_file_close(struct pem_file_info *info)
+{
+	munmap(info->data, info->st.st_size);
+	close(info->fd);
 }
 
 LIB_EXPORT uint8_t *l_pem_load_file(const char *filename, int index,
 					char **type_label, size_t *len)
 {
-	int fd;
-	struct stat st;
-	uint8_t *data, *result;
+	struct pem_file_info file;
+	uint8_t *result;
 
-	fd = open(filename, O_RDONLY);
-	if (fd < 0)
+	if (pem_file_open(&file, filename) < 0)
 		return NULL;
 
-	if (fstat(fd, &st) < 0) {
-		close(fd);
-
-		return NULL;
-	}
-
-	data = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
-	if (data == MAP_FAILED) {
-		close(fd);
-
-		return NULL;
-	}
-
-	result = pem_load_buffer(data, st.st_size, index, type_label, len);
-
-	munmap(data, st.st_size);
-	close(fd);
-
+	result = pem_load_buffer(file.data, file.st.st_size, index,
+					type_label, len, NULL);
+	pem_file_close(&file);
 	return result;
 }
 
@@ -231,6 +260,76 @@ LIB_EXPORT uint8_t *l_pem_load_certificate(const char *filename, size_t *len)
 	l_free(label);
 
 	return content;
+}
+
+LIB_EXPORT struct l_certchain *l_pem_load_certificate_chain(
+							const char *filename)
+{
+	struct l_queue *list = l_pem_load_certificate_list(filename);
+	struct l_certchain *chain;
+
+	if (!list)
+		return NULL;
+
+	chain = certchain_new_from_leaf(l_queue_pop_head(list));
+
+	while (!l_queue_isempty(list))
+		certchain_link_issuer(chain, l_queue_pop_head(list));
+
+	l_queue_destroy(list, NULL);
+	return chain;
+}
+
+LIB_EXPORT struct l_queue *l_pem_load_certificate_list(const char *filename)
+{
+	struct pem_file_info file;
+	const uint8_t *ptr, *end;
+	struct l_queue *list = NULL;
+
+	if (pem_file_open(&file, filename) < 0)
+		return NULL;
+
+	ptr = file.data;
+	end = file.data + file.st.st_size;
+
+	while (ptr && ptr < end) {
+		uint8_t *der;
+		size_t der_len;
+		char *label;
+		struct l_cert *cert;
+
+		der = pem_load_buffer(ptr, end - ptr, 0, &label, &der_len, &ptr);
+
+		if (!der || strcmp(label, "CERTIFICATE")) {
+			l_free(der);
+			l_free(label);
+
+			if (!ptr)	/* EOF */
+				break;
+			else
+				goto error;
+		}
+
+		l_free(label);
+		cert = l_cert_new_from_der(der, der_len);
+		l_free(der);
+
+		if (!cert)
+			goto error;
+
+		if (!list)
+			list = l_queue_new();
+
+		l_queue_push_tail(list, cert);
+	}
+
+	pem_file_close(&file);
+	return list;
+
+error:
+	l_queue_destroy(list, (l_queue_destroy_func_t) l_cert_free);
+	pem_file_close(&file);
+	return NULL;
 }
 
 /**
