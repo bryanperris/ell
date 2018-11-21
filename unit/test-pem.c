@@ -91,36 +91,47 @@ static void test_encrypted_pkey(const void *data)
 {
 	const char *encrypted_pem = data;
 	const char *plaintext_pem = CERTDIR "cert-client-key-pkcs8.pem";
-	bool encrypted;
-	size_t size1, size2;
-	uint8_t *pkey1, *pkey2;
+	bool is_encrypted;
+	size_t size;
+	uint8_t encrypted1[256], encrypted2[256], plaintext[256];
+	struct l_key *pkey1, *pkey2;
+	bool is_public;
 
-	encrypted = false;
-	assert(!l_pem_load_private_key(encrypted_pem, NULL,
-					&encrypted, &size1));
-	assert(encrypted);
+	is_encrypted = false;
+	assert(!l_pem_load_private_key(encrypted_pem, NULL, &is_encrypted));
+	assert(is_encrypted);
 
-	encrypted = false;
+	is_encrypted = false;
 	assert(!l_pem_load_private_key(encrypted_pem, "wrong-passwd",
-					&encrypted, &size1));
-	assert(encrypted);
+					&is_encrypted));
+	assert(is_encrypted);
 
-	encrypted = false;
-	pkey1 = l_pem_load_private_key(encrypted_pem, "abc",
-					&encrypted, &size1);
+	is_encrypted = false;
+	pkey1 = l_pem_load_private_key(encrypted_pem, "abc", &is_encrypted);
 	assert(pkey1);
-	assert(encrypted);
+	assert(is_encrypted);
 
-	pkey2 = l_pem_load_private_key(plaintext_pem, NULL,
-					&encrypted, &size2);
+	pkey2 = l_pem_load_private_key(plaintext_pem, NULL, &is_encrypted);
 	assert(pkey2);
-	assert(!encrypted);
+	assert(!is_encrypted);
 
-	assert(size1 == size2);
-	assert(!memcmp(pkey1, pkey2, size1));
+	/*
+	 * l_key_extract doesn't work for private keys so compare encrypt
+	 * results instead of key exponent.
+	 */
+	memset(plaintext, 42, 256);
+	assert(l_key_get_info(pkey1, L_KEY_RSA_RAW, L_CHECKSUM_NONE,
+				&size, &is_public));
+	assert(size == 2048);
+	assert(!is_public);
+	assert(l_key_encrypt(pkey1, L_KEY_RSA_RAW, L_CHECKSUM_NONE,
+				plaintext, encrypted1, 256, 256) == 256);
+	assert(l_key_encrypt(pkey2, L_KEY_RSA_RAW, L_CHECKSUM_NONE,
+				plaintext, encrypted2, 256, 256) == 256);
+	assert(!memcmp(encrypted1, encrypted2, 256));
 
-	l_free(pkey1);
-	l_free(pkey2);
+	l_key_free(pkey1);
+	l_key_free(pkey2);
 }
 
 int main(int argc, char *argv[])
@@ -136,7 +147,8 @@ int main(int argc, char *argv[])
 
 	if (!l_checksum_is_supported(L_CHECKSUM_MD5, false) ||
 			!l_checksum_is_supported(L_CHECKSUM_SHA1, false) ||
-			!l_cipher_is_supported(L_CIPHER_DES_CBC))
+			!l_cipher_is_supported(L_CIPHER_DES_CBC) ||
+			!l_key_is_supported(L_KEY_FEATURE_CRYPTO))
 		goto done;
 
 	l_test_add("pem/v1 MD5AndDES encrypted Private Key",

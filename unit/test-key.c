@@ -493,10 +493,8 @@ static void test_trust_chain(const void *data)
 
 static void test_key_crypto(const void *data)
 {
-	uint8_t *privkey;
-	size_t privkeylen;
 	struct l_cert *cert;
-	struct l_key *key;
+	struct l_key *privkey;
 	struct l_key *pubkey;
 	bool is_public;
 	size_t keybits;
@@ -507,23 +505,21 @@ static void test_key_crypto(const void *data)
 	int hash = L_CHECKSUM_NONE;
 	int rsa = L_KEY_RSA_PKCS1_V1_5;
 
-	privkey = l_pem_load_private_key(CERTDIR "cert-client-key-pkcs8.pem",
-						NULL, NULL, &privkeylen);
-	assert(privkey);
 	cert = tls_cert_load_file(CERTDIR "cert-client.pem");
 	assert(cert);
-
 	pubkey = l_cert_get_pubkey(cert);
 	assert(pubkey);
+	l_cert_free(cert);
 
-	key = l_key_new(L_KEY_RSA, privkey, privkeylen);
-	assert(key);
-	success = l_key_get_info(key, rsa, hash, &keybits, &is_public);
+	privkey = l_pem_load_private_key(CERTDIR "cert-client-key-pkcs8.pem",
+						NULL, NULL);
+	assert(privkey);
+	success = l_key_get_info(privkey, rsa, hash, &keybits, &is_public);
 	assert(success);
 	assert(keybits == 2048);
 	assert(!is_public);
 
-	success = l_key_get_info(key, rsa, L_CHECKSUM_NONE, &keybits,
+	success = l_key_get_info(privkey, rsa, L_CHECKSUM_NONE, &keybits,
 					&is_public);
 	assert(success);
 	assert(keybits == 2048);
@@ -546,14 +542,14 @@ static void test_key_crypto(const void *data)
 				sizeof(ciphertext), sizeof(decrypted));
 	assert(len < 0);
 
-	len = l_key_decrypt(key, rsa, hash, ciphertext, decrypted,
+	len = l_key_decrypt(privkey, rsa, hash, ciphertext, decrypted,
 				sizeof(ciphertext), sizeof(decrypted));
 	assert(len == (ssize_t)strlen(plaintext));
 	assert(strcmp(plaintext, (char *)decrypted) == 0);
 
 	/* Decrypt reference ciphertext */
 	memset(decrypted, 0, sizeof(decrypted));
-	len = l_key_decrypt(key, rsa, hash, reference_ciphertext, decrypted,
+	len = l_key_decrypt(privkey, rsa, hash, reference_ciphertext, decrypted,
 				sizeof(reference_ciphertext),
 				sizeof(decrypted));
 	assert(len == (ssize_t)strlen(plaintext));
@@ -563,7 +559,7 @@ static void test_key_crypto(const void *data)
 	memset(decrypted, 0, sizeof(decrypted));
 	memcpy(ciphertext, reference_ciphertext, sizeof(ciphertext));
 	ciphertext[0] = ciphertext[0] ^ (uint8_t)0xFF;
-	len = l_key_decrypt(key, rsa, hash, ciphertext, decrypted,
+	len = l_key_decrypt(privkey, rsa, hash, ciphertext, decrypted,
 				sizeof(ciphertext),
 				sizeof(decrypted));
 	assert(len < 0);
@@ -573,7 +569,7 @@ static void test_key_crypto(const void *data)
 				strlen(plaintext), sizeof(ciphertext));
 	assert(len < 0);
 
-	len = l_key_sign(key, rsa, hash, plaintext, ciphertext,
+	len = l_key_sign(privkey, rsa, hash, plaintext, ciphertext,
 				strlen(plaintext), sizeof(ciphertext));
 	assert(len == sizeof(ciphertext));
 
@@ -581,7 +577,7 @@ static void test_key_crypto(const void *data)
 				strlen(plaintext), sizeof(ciphertext));
 	assert(success);
 
-	success = l_key_verify(key, rsa, hash, plaintext, ciphertext,
+	success = l_key_verify(privkey, rsa, hash, plaintext, ciphertext,
 				strlen(plaintext), sizeof(ciphertext));
 	assert(success);
 
@@ -592,14 +588,12 @@ static void test_key_crypto(const void *data)
 
 	/* Corrupt signature */
 	ciphertext[42] = ciphertext[52] ^ (uint8_t)0xFF;
-	success = l_key_verify(key, rsa, hash, plaintext, ciphertext,
+	success = l_key_verify(privkey, rsa, hash, plaintext, ciphertext,
 				strlen(plaintext), sizeof(ciphertext));
 	assert(!success);
 
-	l_key_free(key);
+	l_key_free(privkey);
 	l_key_free(pubkey);
-	l_free(privkey);
-	l_cert_free(cert);
 }
 
 int main(int argc, char *argv[])

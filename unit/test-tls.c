@@ -213,19 +213,19 @@ static void test_tls12_prf(const void *data)
 static void test_certificates(const void *data)
 {
 	struct l_cert *cert;
-	struct l_cert *cacert;
-	struct l_cert *wrongca;
+	struct l_queue *cacert;
+	struct l_queue *wrongca;
 	struct l_certchain *chain;
 
 	cert = tls_cert_load_file(CERTDIR "cert-server.pem");
 	assert(cert);
 	chain = certchain_new_from_leaf(cert);
 
-	cacert = tls_cert_load_file(CERTDIR "cert-ca.pem");
-	assert(cacert);
+	cacert = l_pem_load_certificate_list(CERTDIR "cert-ca.pem");
+	assert(cacert && !l_queue_isempty(cacert));
 
-	wrongca = tls_cert_load_file(CERTDIR "cert-intca.pem");
-	assert(wrongca);
+	wrongca = l_pem_load_certificate_list(CERTDIR "cert-intca.pem");
+	assert(wrongca && !l_queue_isempty(wrongca));
 
 	assert(!l_certchain_verify(chain, wrongca));
 
@@ -234,8 +234,8 @@ static void test_certificates(const void *data)
 	assert(l_certchain_verify(chain, NULL));
 
 	l_certchain_free(chain);
-	l_cert_free(cacert);
-	l_cert_free(wrongca);
+	l_queue_destroy(cacert, (l_queue_destroy_func_t) l_cert_free);
+	l_queue_destroy(wrongca, (l_queue_destroy_func_t) l_cert_free);
 }
 
 struct tls_conn_test {
