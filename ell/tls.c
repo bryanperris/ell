@@ -519,6 +519,7 @@ static bool tls_cipher_suite_is_compatible(struct l_tls *tls,
 					const char **error)
 {
 	static char error_buf[200];
+	struct l_cert *leaf;
 
 	if (suite->encryption &&
 			suite->encryption->cipher_type == TLS_CIPHER_AEAD) {
@@ -591,7 +592,18 @@ static bool tls_cipher_suite_is_compatible(struct l_tls *tls,
 		return false;
 	}
 
-	/* TODO: Check suite->key_xchg->validate_cert_key_type(tls->cert) */
+	leaf = l_certchain_get_leaf(tls->cert);
+	if (leaf && !suite->key_xchg->validate_cert_key_type(leaf)) {
+		if (error) {
+			*error = error_buf;
+			snprintf(error_buf, sizeof(error_buf),
+					"Local certificate has key type "
+					"incompatible with cipher suite %s's "
+					"key xchg mechanism", suite->name);
+		}
+
+		return false;
+	}
 
 	return true;
 }
