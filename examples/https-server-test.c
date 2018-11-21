@@ -52,9 +52,11 @@ static bool https_io_read(struct l_io *io, void *user_data)
 	int l;
 
 	l = read(l_io_get_fd(io), buf, sizeof(buf));
-	if (l == 0)
+	if (l == 0) {
+		if (!served)
+			printf("EOF before serving a page\n");
 		l_main_quit();
-	else if (l > 0)
+	} else if (l > 0)
 		l_tls_handle_rx(tls, buf, l);
 
 	return true;
@@ -78,9 +80,9 @@ static void https_new_data(const uint8_t *data, size_t len, void *user_data)
 
 	if (len >= 4 && !memcmp(data + len - 4, "\r\n\r\n", 4)) {
 		l_tls_write(tls, (void *) reply, strlen(reply));
-		l_tls_close(tls);
 		served = true;
 		printf("Hello world page served\n");
+		l_tls_close(tls);
 	}
 }
 
@@ -91,6 +93,7 @@ static void https_tls_write(const uint8_t *data, size_t len, void *user_data)
 	while (len) {
 		r = send(l_io_get_fd(io), data, len, MSG_NOSIGNAL);
 		if (r < 0) {
+			printf("send error\n");
 			l_main_quit();
 			break;
 		}
@@ -109,7 +112,7 @@ static void https_tls_ready(const char *peer_identity, void *user_data)
 
 static void https_tls_debug_cb(const char *str, void *user_data)
 {
-	l_info("%s", str);
+	printf("%s\n", str);
 }
 
 int main(int argc, char *argv[])
@@ -176,6 +179,8 @@ int main(int argc, char *argv[])
 
 	if (tls && auth_ok)
 		l_main_run();
+	else
+		printf("TLS setup failed\n");
 
 	l_io_destroy(io);
 	l_tls_free(tls);

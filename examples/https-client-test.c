@@ -115,7 +115,7 @@ static void https_tls_ready(const char *peer_identity, void *user_data)
 
 static void https_tls_debug_cb(const char *str, void *user_data)
 {
-	l_info("%s", str);
+	printf("%s\n", str);
 }
 
 int main(int argc, char *argv[])
@@ -186,6 +186,8 @@ int main(int argc, char *argv[])
 
 	if (tls && auth_ok)
 		l_main_run();
+	else
+		printf("TLS setup failed\n");
 
 	l_io_destroy(io);
 	l_tls_free(tls);
