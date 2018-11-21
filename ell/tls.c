@@ -2648,23 +2648,15 @@ LIB_EXPORT bool l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
 	}
 
 	if (priv_key_path) {
-		uint8_t *priv_key;
 		bool is_public = true;
 
-		priv_key = l_pem_load_private_key(priv_key_path,
+		tls->priv_key = l_pem_load_private_key(priv_key_path,
 							priv_key_passphrase,
-							NULL,
-							&tls->priv_key_size);
-		TLS_DEBUG("l_pem_load_private_key returned %p, size %zi",
-				priv_key, tls->priv_key_size);
-
-		if (!priv_key)
+							NULL);
+		if (!tls->priv_key) {
+			TLS_DEBUG("Error loading %s", priv_key_path);
 			return false;
-
-		tls->priv_key = l_key_new(L_KEY_RSA, priv_key,
-						tls->priv_key_size);
-		memset(priv_key, 0, tls->priv_key_size);
-		l_free(priv_key);
+		}
 
 		if (!l_key_get_info(tls->priv_key, L_KEY_RSA_PKCS1_V1_5,
 					L_CHECKSUM_NONE, &tls->priv_key_size,

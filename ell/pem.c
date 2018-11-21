@@ -337,7 +337,6 @@ error:
  * @filename: path string to the PEM file to load
  * @passphrase: private key encryption passphrase or NULL for unencrypted
  * @encrypted: receives indication whether the file was encrypted if non-NULL
- * @len: receives the length of the returned buffer
  *
  * Load the PEM encoded RSA Private Key file at @filename.  If it is an
  * encrypted private key and @passphrase was non-NULL, the file is
@@ -346,20 +345,22 @@ error:
  * success case and on error when NULL is returned.  This can be used to
  * check if a passphrase is required without prior information.
  *
- * Returns: Buffer containing raw DER data for the private key or NULL, to
- * be freed with l_free.
+ * Returns: An l_key object to be freed with an l_key_free* function,
+ * or NULL.
  **/
-LIB_EXPORT uint8_t *l_pem_load_private_key(const char *filename,
+LIB_EXPORT struct l_key *l_pem_load_private_key(const char *filename,
 						const char *passphrase,
-						bool *encrypted, size_t *len)
+						bool *encrypted)
 {
 	uint8_t *content;
 	char *label;
+	size_t len;
+	struct l_key *pkey = NULL;
 
 	if (encrypted)
 		*encrypted = false;
 
-	content = l_pem_load_file(filename, 0, &label, len);
+	content = l_pem_load_file(filename, 0, &label, &len);
 
 	if (!content)
 		return NULL;
@@ -388,7 +389,7 @@ LIB_EXPORT uint8_t *l_pem_load_private_key(const char *filename,
 			goto err;
 
 		/* Technically this is BER, not limited to DER */
-		key_info = asn1_der_find_elem(content, *len, 0, &tag,
+		key_info = asn1_der_find_elem(content, len, 0, &tag,
 						&key_info_len);
 		if (!key_info || tag != ASN1_ID_SEQUENCE)
 			goto err;
@@ -404,7 +405,7 @@ LIB_EXPORT uint8_t *l_pem_load_private_key(const char *filename,
 				(data_len & 7) != 0)
 			goto err;
 
-		if (asn1_der_find_elem(content, *len, 2, &tag, &tmp_len))
+		if (asn1_der_find_elem(content, len, 2, &tag, &tmp_len))
 			goto err;
 
 		alg = pkcs5_cipher_from_alg_id(alg_id, alg_id_len, passphrase);
@@ -420,8 +421,10 @@ LIB_EXPORT uint8_t *l_pem_load_private_key(const char *filename,
 		}
 
 		l_cipher_free(alg);
+		memset(content, 0, len);
 		l_free(content);
 		content = decrypted;
+		len = data_len;
 
 		/*
 		 * Strip padding as defined in RFC8018 (for PKCS#5 v1) or
@@ -436,7 +439,7 @@ LIB_EXPORT uint8_t *l_pem_load_private_key(const char *filename,
 			if (content[data_len - 1 - i] != content[data_len - 1])
 				goto err;
 
-		*len = data_len - content[data_len - 1];
+		len = data_len - content[data_len - 1];
 
 		goto done;
 	}
@@ -449,12 +452,17 @@ LIB_EXPORT uint8_t *l_pem_load_private_key(const char *filename,
 	 */
 
 	/* Label not known */
-err:
-	l_free(content);
-	content = NULL;
+	goto err;
 
 done:
-	l_free(label);
+	pkey = l_key_new(L_KEY_RSA, content, len);
 
-	return content;
+err:
+	if (content) {
+		memset(content, 0, len);
+		l_free(content);
+	}
+
+	l_free(label);
+	return pkey;
 }
