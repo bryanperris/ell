@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 {
 	int status = EXIT_FAILURE;
 	struct l_certchain *certchain;
-	struct l_cert *ca_cert;
+	struct l_queue *ca_certs;
 	int err;
 
 	if (argc != 3) {
@@ -116,13 +116,13 @@ int main(int argc, char *argv[])
 		goto done;
 	}
 
-	ca_cert = tls_cert_load_file(argv[1]);
-	if (!ca_cert) {
-		fprintf(stderr, "Unable to load CA certifiate\n");
+	ca_certs = l_pem_load_certificate_list(argv[1]);
+	if (!ca_certs) {
+		fprintf(stderr, "Unable to load CA certifiates\n");
 		goto free_certchain;
 	}
 
-	if (!l_certchain_verify(certchain, ca_cert)) {
+	if (!l_certchain_verify(certchain, ca_certs)) {
 		fprintf(stderr, "Verification failed\n");
 		goto free_cacert;
 	}
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 	status = EXIT_SUCCESS;
 
 free_cacert:
-	l_cert_free(ca_cert);
+	l_queue_destroy(ca_certs, (l_queue_destroy_func_t) l_cert_free);
 free_certchain:
 	l_certchain_free(certchain);
 done:
