@@ -68,6 +68,22 @@ static inline int asn1_parse_definite_length(const uint8_t **buf,
 	return result;
 }
 
+static inline void asn1_write_definite_length(uint8_t **buf, size_t len)
+{
+	int n;
+
+	if (len < 0x80) {
+		*(*buf)++ = len;
+		return;
+	}
+
+	for (n = 1; len >> (n * 8); n++);
+	*(*buf)++ = 0x80 | n;
+
+	while (n--)
+		*(*buf)++ = len >> (n * 8);
+}
+
 /* Return index'th element in a DER SEQUENCE */
 static inline const uint8_t *asn1_der_find_elem(const uint8_t *buf,
 						size_t len_in, int index,
