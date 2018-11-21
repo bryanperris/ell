@@ -334,6 +334,9 @@ static bool tls_handle_plaintext(struct l_tls *tls, const uint8_t *plaintext,
 
 				tls->message_buf_len = 0;
 
+				if (tls->record_flush)
+					break;
+
 				continue;
 			}
 
@@ -609,10 +612,8 @@ LIB_EXPORT void l_tls_handle_rx(struct l_tls *tls, const uint8_t *data,
 				tls->record_buf_len = 0;
 				need_len = 5;
 
-				if (tls->record_flush) {
-					tls->record_flush = false;
+				if (tls->record_flush)
 					break;
-				}
 			}
 
 			if (!len)
