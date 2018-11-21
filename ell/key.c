@@ -423,16 +423,14 @@ LIB_EXPORT bool l_key_get_info(struct l_key *key, enum l_key_cipher_type cipher,
 					public);
 }
 
-static bool compute_common(struct l_key *base,
-			   struct l_key *private,
-			   struct l_key *prime,
-			   void *payload, size_t *len)
+static bool compute_common(struct l_key *base, struct l_key *private,
+				struct l_key *prime, void *payload, size_t *len)
 {
 	long result_len;
 	bool usable_payload = *len != 0;
 
 	result_len = kernel_dh_compute(private->serial, prime->serial,
-				       base->serial, payload, *len);
+					base->serial, payload, *len);
 
 	if (result_len > 0) {
 		*len = result_len;

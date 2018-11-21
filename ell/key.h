@@ -73,10 +73,12 @@ bool l_key_get_info(struct l_key *key, enum l_key_cipher_type cipher,
 			bool *public);
 
 bool l_key_compute_dh_public(struct l_key *generator, struct l_key *private,
-			     struct l_key *prime, void *payload, size_t *len);
+				struct l_key *prime,
+				void *payload, size_t *len);
 
 bool l_key_compute_dh_secret(struct l_key *other_public, struct l_key *private,
-			     struct l_key *prime, void *payload, size_t *len);
+				struct l_key *prime,
+				void *payload, size_t *len);
 
 ssize_t l_key_encrypt(struct l_key *key, enum l_key_cipher_type cipher,
 			enum l_checksum_type checksum, const void *in,
