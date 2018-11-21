@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
 	auth_ok = l_tls_set_auth_data(tls, argv[1], argv[2], argv[3]);
 	l_tls_set_cacert(tls, argc > 4 ? argv[4] : NULL);
 
-	if (tls && !auth_ok)
+	if (tls && auth_ok)
 		l_main_run();
 
 	l_io_destroy(io);
