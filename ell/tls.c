@@ -959,7 +959,7 @@ static bool tls_send_certificate(struct l_tls *tls)
 		return false;
 	}
 
-	if (tls->cert && !l_certchain_find(tls->cert, tls->ca_cert)) {
+	if (tls->cert && !l_certchain_find(tls->cert, tls->ca_certs)) {
 		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, TLS_ALERT_UNKNOWN_CA,
 				"Can't find certificate chain to local "
 				"CA cert");
@@ -1657,14 +1657,14 @@ static void tls_handle_client_hello(struct l_tls *tls,
 
 	/* TODO: don't bother if configured to not authenticate client */
 	if (tls->pending.cipher_suite->key_xchg->certificate_check &&
-			tls->ca_cert)
+			tls->ca_certs)
 		if (!tls_send_certificate_request(tls))
 			return;
 
 	tls_send_server_hello_done(tls);
 
 	if (tls->pending.cipher_suite->key_xchg->certificate_check &&
-			tls->ca_cert)
+			tls->ca_certs)
 		TLS_SET_STATE(TLS_HANDSHAKE_WAIT_CERTIFICATE);
 	else
 		TLS_SET_STATE(TLS_HANDSHAKE_WAIT_KEY_EXCHANGE);
@@ -1824,13 +1824,13 @@ static void tls_handle_certificate(struct l_tls *tls,
 
 	/*
 	 * Validate the certificate chain's consistency and validate it
-	 * against our CA if we have any.
+	 * against our CAs if we have any.
 	 */
-	if (!l_certchain_verify(certchain, tls->ca_cert)) {
+	if (!l_certchain_verify(certchain, tls->ca_certs)) {
 		TLS_DISCONNECT(TLS_ALERT_BAD_CERT, 0,
 				"Peer certchain verification failed "
-				"consistency check%s",
-				tls->ca_cert ? " or against local CA cert" : "");
+				"consistency check%s", tls->ca_certs ?
+				" or against local CA certs" : "");
 
 		goto done;
 	}
@@ -2139,10 +2139,10 @@ static void tls_handle_certificate_verify(struct l_tls *tls,
 	 *   - If we received an (expected) Certificate Verify, we must have
 	 *     sent a Certificate Request.
 	 *   - If we sent a Certificate Request that's because
-	 *     tls->ca_cert is non-NULL.
-	 *   - If tls->ca_cert is non-NULL then tls_handle_certificate
+	 *     tls->ca_certs is non-NULL.
+	 *   - If tls->ca_certs is non-NULL then tls_handle_certificate
 	 *     will have checked the whole certificate chain to be valid and
-	 *     additionally trusted by our CA if known.
+	 *     additionally trusted by our CAs if known.
 	 *   - Additionally cipher_suite->key_xchg->verify has just confirmed
 	 *     that the peer owns the end-entity certificate because it was
 	 *     able to sign the contents of the handshake messages and that
@@ -2352,7 +2352,7 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 		/*
 		 * On the client, the server's certificate is only now
 		 * verified, based on the following logic:
-		 *  - tls->ca_cert is non-NULL so tls_handle_certificate
+		 *  - tls->ca_certs is non-NULL so tls_handle_certificate
 		 *    (always called on the client) must have veritifed the
 		 *    server's certificate chain to be valid and additionally
 		 *    trusted by our CA.
@@ -2365,7 +2365,7 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 		 *    message (either should be enough).
 		 */
 		if (!tls->server && tls->cipher_suite[0]->key_xchg->
-				certificate_check && tls->ca_cert)
+				certificate_check && tls->ca_certs)
 			tls->peer_authenticated = true;
 
 		tls_finished(tls);
@@ -2598,9 +2598,10 @@ LIB_EXPORT bool l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path)
 {
 	TLS_DEBUG("ca-cert-path=%s", ca_cert_path);
 
-	if (tls->ca_cert) {
-		l_cert_free(tls->ca_cert);
-		tls->ca_cert = NULL;
+	if (tls->ca_certs) {
+		l_queue_destroy(tls->ca_certs,
+				(l_queue_destroy_func_t) l_cert_free);
+		tls->ca_certs = NULL;
 	}
 
 	if (ca_cert_path) {
@@ -2610,8 +2611,8 @@ LIB_EXPORT bool l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path)
 			return false;
 		}
 
-		tls->ca_cert = tls_cert_load_file(ca_cert_path);
-		if (!tls->ca_cert) {
+		tls->ca_certs = l_pem_load_certificate_list(ca_cert_path);
+		if (!tls->ca_certs) {
 			TLS_DEBUG("Error loading %s", ca_cert_path);
 			return false;
 		}

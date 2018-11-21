@@ -86,7 +86,7 @@ void l_tls_write(struct l_tls *tls, const uint8_t *data, size_t len);
 /* Submit TLS payload from underlying transport to be decrypted */
 void l_tls_handle_rx(struct l_tls *tls, const uint8_t *data, size_t len);
 
-/* If peer is to be authenticated, supply the CA certificate */
+/* If peer is to be authenticated, supply the CA certificates */
 bool l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path);
 
 /*

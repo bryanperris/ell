@@ -145,7 +145,7 @@ struct l_tls {
 	l_tls_destroy_cb_t debug_destroy;
 	void *debug_data;
 
-	struct l_cert *ca_cert;
+	struct l_queue *ca_certs;
 	struct l_certchain *cert;
 	struct l_key *priv_key;
 	size_t priv_key_size;
