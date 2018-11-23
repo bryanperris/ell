@@ -306,82 +306,69 @@ LIB_EXPORT bool l_certchain_find(struct l_certchain *chain,
 	return false;
 }
 
-static void cert_key_cleanup(struct l_key **p)
+static struct l_keyring *cert_set_to_keyring(struct l_queue *certs)
 {
-	l_key_free_norevoke(*p);
-}
+	struct l_keyring *ring;
+	const struct l_queue_entry *entry;
 
-static bool certchain_verify_with_keyring(struct l_cert *cert,
-						struct l_keyring *ring,
-						struct l_queue *roots,
-						struct l_keyring *trusted)
-{
-	if (!cert)
-		return true;
+	ring = l_keyring_new();
+	if (!ring)
+		return NULL;
 
-	if (cert->pubkey_type != L_CERT_KEY_RSA)
-		return false;
+	for (entry = l_queue_get_entries(certs); entry; entry = entry->next) {
+		struct l_cert *cert = entry->data;
+		struct l_key *key = l_cert_get_pubkey(cert);
 
-	/*
-	 * RFC5246 7.4.2:
-	 * "Because certificate validation requires that root keys be
-	 * distributed independently, the self-signed certificate that
-	 * specifies the root certificate authority MAY be omitted from
-	 * the chain, under the assumption that the remote end must
-	 * already possess it in order to validate it in any case."
-	 *
-	 * This is an optimization to skip adding the root cert if
-	 * it's already in the trusted keyring.  It also happens to
-	 * work around a kernel issue preventing self-signed certificates
-	 * missing the AKID extension from being linked.
-	 *
-	 * If 'roots' were supplied we assume the keyring is already
-	 * restricted.
-	 */
-	if (!cert->issuer && roots) {
-		const struct l_queue_entry *entry;
+		if (!key)
+			goto cleanup;
 
-		for (entry = l_queue_get_entries(roots); entry;
-				entry = entry->next) {
-			struct l_cert *root = entry->data;
-
-			if (cert->asn1_len == root->asn1_len &&
-					!memcmp(cert->asn1, root->asn1,
-						root->asn1_len))
-				return true;
+		if (!l_keyring_link(ring, key)) {
+			l_key_free(key);
+			goto cleanup;
 		}
+
+		l_key_free_norevoke(key);
 	}
 
-	if (certchain_verify_with_keyring(cert->issuer, ring, roots, trusted)) {
-		L_AUTO_CLEANUP_VAR(struct l_key *, key, cert_key_cleanup);
+	return ring;
 
-		key = l_key_new(L_KEY_RSA, cert->asn1, cert->asn1_len);
-		if (!key)
-			return false;
+cleanup:
+	l_keyring_free(ring);
+	return NULL;
+}
 
-		if (!l_keyring_link(ring, key))
-			return false;
+static bool cert_is_in_set(struct l_cert *cert, struct l_queue *set)
+{
+	const struct l_queue_entry *entry;
 
-		if (trusted || cert->issuer)
+	for (entry = l_queue_get_entries(set); entry; entry = entry->next) {
+		struct l_cert *cert2 = entry->data;
+
+		if (cert == cert2)
 			return true;
 
-		/*
-		 * If execution reaches this point, it's known that:
-		 *  * No trusted root key was supplied, so the chain is only
-		 *    being checked against its own root
-		 *  * The keyring 'ring' is not restricted yet
-		 *  * The chain's root cert was just linked in to the
-		 *    previously empty keyring 'ring'.
-		 *
-		 * By restricting 'ring' now, the rest of the certs in
-		 * the chain will have their signature validated using 'key'
-		 * as the root.
-		 */
-		return l_keyring_restrict(ring,	L_KEYRING_RESTRICT_ASYM_CHAIN,
-						trusted);
+		if (cert->asn1_len == cert2->asn1_len &&
+				!memcmp(cert->asn1, cert2->asn1,
+					cert->asn1_len))
+			return true;
 	}
 
 	return false;
+}
+
+static struct l_key *cert_try_link(struct l_cert *cert, struct l_keyring *ring)
+{
+	struct l_key *key;
+
+	key = l_key_new(L_KEY_RSA, cert->asn1, cert->asn1_len);
+	if (!key)
+		return NULL;
+
+	if (l_keyring_link(ring, key))
+		return key;
+
+	l_key_free(key);
+	return NULL;
 }
 
 static void cert_keyring_cleanup(struct l_keyring **p)
@@ -392,10 +379,11 @@ static void cert_keyring_cleanup(struct l_keyring **p)
 LIB_EXPORT bool l_certchain_verify(struct l_certchain *chain,
 					struct l_queue *ca_certs)
 {
-	L_AUTO_CLEANUP_VAR(struct l_keyring *, ca_ring,
-				cert_keyring_cleanup) = NULL;
+	struct l_keyring *ca_ring = NULL;
 	L_AUTO_CLEANUP_VAR(struct l_keyring *, verify_ring,
 				cert_keyring_cleanup) = NULL;
+	struct l_cert *cert;
+	struct l_key *prev_key = NULL;
 
 	if (unlikely(!chain || !chain->leaf))
 		return false;
@@ -404,44 +392,83 @@ LIB_EXPORT bool l_certchain_verify(struct l_certchain *chain,
 	if (!verify_ring)
 		return false;
 
-	/*
-	 * If CA cert(s) were supplied, restrict verify_ring now so
-	 * everything else in certchain is validated against the CA(s).
-	 * Otherwise, verify_ring will be restricted after the root of
-	 * certchain is added to verify_ring by
-	 * certchain_verify_with_keyring().
-	 */
-	if (ca_certs) {
-		const struct l_queue_entry *entry;
+	cert = chain->ca;
 
-		ca_ring = l_keyring_new();
+	/*
+	 * For TLS compatibility the trusted root CA certificate is
+	 * optionally present in the chain.
+	 *
+	 * RFC5246 7.4.2:
+	 * "Because certificate validation requires that root keys be
+	 * distributed independently, the self-signed certificate that
+	 * specifies the root certificate authority MAY be omitted from
+	 * the chain, under the assumption that the remote end must
+	 * already possess it in order to validate it in any case."
+	 *
+	 * The following is an optimization to skip verifying the root
+	 * cert in the chain if it is identical to one of the trusted CA
+	 * certificates.  It also happens to work around a kernel issue
+	 * preventing self-signed certificates missing the AKID
+	 * extension from being linked to a keyring.
+	 */
+	if (cert_is_in_set(cert, ca_certs)) {
+		cert = cert->issued;
+		if (!cert)
+			return true;
+
+		prev_key = cert_try_link(cert, verify_ring);
+	} else if (ca_certs) {
+		ca_ring = cert_set_to_keyring(ca_certs);
 		if (!ca_ring)
 			return false;
 
-		for (entry = l_queue_get_entries(ca_certs); entry;
-				entry = entry->next) {
-			struct l_cert *ca = entry->data;
-			struct l_key *ca_key;
-
-			if (ca->pubkey_type != L_CERT_KEY_RSA)
-				return false;
-
-			ca_key = l_cert_get_pubkey(ca);
-			if (!ca_key)
-				return false;
-
-			if (!l_keyring_link(ca_ring, ca_key)) {
-				l_key_free(ca_key);
-				return false;
-			}
-		}
-
-		if (!l_keyring_restrict(verify_ring,
-					L_KEYRING_RESTRICT_ASYM_CHAIN,
-					ca_ring))
+		if (!l_keyring_link_nested(verify_ring, ca_ring)) {
+			l_keyring_free(ca_ring);
 			return false;
+		}
+	} else
+		prev_key = cert_try_link(cert, verify_ring);
+
+	/*
+	 * The top, unverified certificate(s) are linked to the keyring and
+	 * we can now force verification of any new certificates linked.
+	 */
+	if (!l_keyring_restrict(verify_ring, L_KEYRING_RESTRICT_ASYM_CHAIN,
+				NULL)) {
+		l_key_free(prev_key);
+		l_keyring_free(ca_ring);
+		return false;
 	}
 
-	return certchain_verify_with_keyring(chain->leaf, verify_ring, ca_certs,
-						ca_ring);
+	if (ca_ring) {
+		/*
+		 * Verify the first certificate outside of the loop, then
+		 * revoke the trusted CAs' keys so that only the newly
+		 * verified cert's public key remains in the ring.
+		 */
+		prev_key = cert_try_link(cert, verify_ring);
+		l_keyring_free(ca_ring);
+	}
+
+	cert = cert->issued;
+
+	/* Verify the rest of the chain */
+	while (prev_key && cert) {
+		struct l_key *new_key = cert_try_link(cert, verify_ring);
+
+		/*
+		 * Free and revoke the issuer's public key again leaving only
+		 * new_key in verify_ring to ensure the next certificate linked
+		 * is signed by the owner of this key.
+		 */
+		l_key_free(prev_key);
+		prev_key = new_key;
+		cert = cert->issued;
+	}
+
+	if (!prev_key)
+		return false;
+
+	l_key_free(prev_key);
+	return true;
 }
