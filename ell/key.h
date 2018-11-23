@@ -108,6 +108,11 @@ bool l_keyring_link(struct l_keyring *keyring, const struct l_key *key);
 
 bool l_keyring_unlink(struct l_keyring *keyring, const struct l_key *key);
 
+bool l_keyring_link_nested(struct l_keyring *keyring,
+				const struct l_keyring *nested);
+bool l_keyring_unlink_nested(struct l_keyring *keyring,
+				const struct l_keyring *nested);
+
 bool l_key_is_supported(uint32_t features);
 
 #ifdef __cplusplus

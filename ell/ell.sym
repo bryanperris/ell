@@ -310,6 +310,8 @@ global:
 	l_keyring_free_norevoke;
 	l_keyring_link;
 	l_keyring_unlink;
+	l_keyring_link_nested;
+	l_keyring_unlink_nested;
 	l_key_is_supported;
 	/* log */
 	l_log_set_ident;

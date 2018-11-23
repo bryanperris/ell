@@ -640,6 +640,32 @@ LIB_EXPORT bool l_keyring_unlink(struct l_keyring *keyring,
 	return error == 0;
 }
 
+LIB_EXPORT bool l_keyring_link_nested(struct l_keyring *keyring,
+						const struct l_keyring *nested)
+{
+	long error;
+
+	if (unlikely(!keyring) || unlikely(!nested))
+		return false;
+
+	error = kernel_link_key(nested->serial, keyring->serial);
+
+	return error == 0;
+}
+
+LIB_EXPORT bool l_keyring_unlink_nested(struct l_keyring *keyring,
+						const struct l_keyring *nested)
+{
+	long error;
+
+	if (unlikely(!keyring) || unlikely(!nested))
+		return false;
+
+	error = kernel_unlink_key(nested->serial, keyring->serial);
+
+	return error == 0;
+}
+
 LIB_EXPORT bool l_key_is_supported(uint32_t features)
 {
 	long result;
