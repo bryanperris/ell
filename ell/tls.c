@@ -2209,9 +2209,75 @@ static void tls_handle_certificate_verify(struct l_tls *tls,
 	TLS_SET_STATE(TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC);
 }
 
+static const struct asn1_oid dn_organization_name_oid =
+	{ 3, { 0x55, 0x04, 0x0a } };
+static const struct asn1_oid dn_common_name_oid =
+	{ 3, { 0x55, 0x04, 0x03 } };
+
+static char *tls_get_peer_identity_str(struct l_cert *cert)
+{
+	const uint8_t *dn, *end;
+	size_t dn_size;
+	const uint8_t *printable_str = NULL;
+	size_t printable_str_len;
+
+	if (!cert)
+		return NULL;
+
+	dn = l_cert_get_dn(cert, &dn_size);
+	if (!dn)
+		return NULL;
+
+	end = dn + dn_size;
+	while (dn < end) {
+		const uint8_t *set, *seq, *oid, *name;
+		uint8_t tag;
+		size_t len, oid_len, name_len;
+
+		set = asn1_der_find_elem(dn, end - dn, 0, &tag, &len);
+		if (!set || tag != ASN1_ID_SET)
+			return NULL;
+
+		dn = set + len;
+
+		seq = asn1_der_find_elem(set, len, 0, &tag, &len);
+		if (!seq || tag != ASN1_ID_SEQUENCE)
+			return NULL;
+
+		oid = asn1_der_find_elem(seq, len, 0, &tag, &oid_len);
+		if (!oid || tag != ASN1_ID_OID)
+			return NULL;
+
+		name = asn1_der_find_elem(seq, len, 1, &tag, &name_len);
+		if (!oid || (tag != ASN1_ID_PRINTABLESTRING &&
+					tag != ASN1_ID_UTF8STRING))
+			continue;
+
+		/* organizationName takes priority, commonName is second */
+		if (asn1_oid_eq(&dn_organization_name_oid, oid_len, oid) ||
+				(!printable_str &&
+				 asn1_oid_eq(&dn_common_name_oid,
+						oid_len, oid))) {
+			printable_str = name;
+			printable_str_len = name_len;
+		}
+	}
+
+	if (printable_str)
+		return l_strndup((char *) printable_str, printable_str_len);
+	else
+		return NULL;
+}
+
 static void tls_finished(struct l_tls *tls)
 {
 	char *peer_identity = NULL;
+
+	if (tls->peer_authenticated) {
+		peer_identity = tls_get_peer_identity_str(tls->peer_cert);
+		if (!peer_identity)
+			TLS_DEBUG("tls_get_peer_identity_str failed");
+	}
 
 	/* Free up the resources used in the handshake */
 	tls_reset_handshake(tls);
@@ -2220,11 +2286,9 @@ static void tls_finished(struct l_tls *tls)
 	tls->ready = true;
 
 	tls->ready_handle(peer_identity, tls->user_data);
+	l_free(peer_identity);
 
 	tls_cleanup_handshake(tls);
-
-	if (peer_identity)
-		l_free(peer_identity);
 }
 
 static void tls_handle_handshake(struct l_tls *tls, int type,
