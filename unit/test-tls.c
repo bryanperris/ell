@@ -397,6 +397,9 @@ static void tls_test_ready(const char *peer_identity, void *user_data)
 	struct tls_test_state *s = user_data;
 
 	assert(!s->ready);
+	assert((!s->expect_peer && !peer_identity) ||
+			(s->expect_peer && peer_identity &&
+			 !strcmp(s->expect_peer, peer_identity)));
 	s->ready = true;
 
 	l_tls_write(s->tls, (const uint8_t *) s->send_data,
