@@ -217,12 +217,12 @@ struct l_tls {
 	bool ready;
 };
 
-void tls10_prf(const void *secret, size_t secret_len,
+bool tls10_prf(const void *secret, size_t secret_len,
 		const char *label,
 		const void *seed, size_t seed_len,
 		uint8_t *out, size_t out_len);
 
-void tls12_prf(enum l_checksum_type type, size_t hash_len,
+bool tls12_prf(enum l_checksum_type type, size_t hash_len,
 		const void *secret, size_t secret_len,
 		const char *label,
 		const void *seed, size_t seed_len,
