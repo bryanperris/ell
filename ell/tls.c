@@ -1330,7 +1330,7 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t len,
 	}
 
 	success = l_key_verify(tls->peer_pubkey, L_KEY_RSA_PKCS1_V1_5,
-				hash_type, expected, in + 4,
+				hash_type, expected, in + offset + 2,
 				expected_len, tls->peer_pubkey_size);
 
 	if (!success)
