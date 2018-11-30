@@ -445,8 +445,8 @@ global:
 	l_cert_get_pubkey;
 	l_certchain_free;
 	l_certchain_get_leaf;
-	l_certchain_foreach_from_leaf;
-	l_certchain_foreach_from_ca;
+	l_certchain_walk_from_leaf;
+	l_certchain_walk_from_ca;
 	l_certchain_find;
 	l_certchain_verify;
 local:

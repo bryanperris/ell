@@ -253,36 +253,40 @@ LIB_EXPORT struct l_cert *l_certchain_get_leaf(struct l_certchain *chain)
 	return chain->leaf;
 }
 
-LIB_EXPORT bool l_certchain_foreach_from_leaf(struct l_certchain *chain,
-						l_cert_foreach_cb_t cb,
+/*
+ * Call @cb for each certificate in the chain starting from the leaf
+ * certificate.  Stop if a call returns @true.
+ */
+LIB_EXPORT void l_certchain_walk_from_leaf(struct l_certchain *chain,
+						l_cert_walk_cb_t cb,
 						void *user_data)
 {
 	struct l_cert *cert;
 
 	if (unlikely(!chain))
-		return false;
+		return;
 
 	for (cert = chain->leaf; cert; cert = cert->issuer)
 		if (cb(cert, user_data))
-			return true;
-
-	return false;
+			break;
 }
 
-LIB_EXPORT bool l_certchain_foreach_from_ca(struct l_certchain *chain,
-						l_cert_foreach_cb_t cb,
+/*
+ * Call @cb for each certificate in the chain starting from the root
+ * certificate.  Stop if a call returns @true.
+ */
+LIB_EXPORT void l_certchain_walk_from_ca(struct l_certchain *chain,
+						l_cert_walk_cb_t cb,
 						void *user_data)
 {
 	struct l_cert *cert;
 
 	if (unlikely(!chain))
-		return false;
+		return;
 
 	for (cert = chain->ca; cert; cert = cert->issued)
 		if (cb(cert, user_data))
-			return true;
-
-	return false;
+			break;
 }
 
 LIB_EXPORT bool l_certchain_find(struct l_certchain *chain,

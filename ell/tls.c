@@ -961,7 +961,7 @@ static bool tls_send_certificate(struct l_tls *tls)
 	 */
 
 	total = 0;
-	l_certchain_foreach_from_leaf(tls->cert, tls_cert_list_add_size, &total);
+	l_certchain_walk_from_leaf(tls->cert, tls_cert_list_add_size, &total);
 
 	buf = l_malloc(128 + total);
 	ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
@@ -971,7 +971,7 @@ static bool tls_send_certificate(struct l_tls *tls)
 	*ptr++ = total >> 16;
 	*ptr++ = total >>  8;
 	*ptr++ = total >>  0;
-	l_certchain_foreach_from_leaf(tls->cert, tls_cert_list_append, &ptr);
+	l_certchain_walk_from_leaf(tls->cert, tls_cert_list_append, &ptr);
 
 	tls_tx_handshake(tls, TLS_CERTIFICATE, buf, ptr - buf);
 
