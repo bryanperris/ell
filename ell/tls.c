@@ -1781,6 +1781,7 @@ static void tls_handle_certificate(struct l_tls *tls,
 	size_t der_len;
 	const uint8_t *der;
 	bool dummy;
+	const char *error_str;
 
 	if (len < 3)
 		goto decode_error;
@@ -1824,11 +1825,11 @@ static void tls_handle_certificate(struct l_tls *tls,
 	 * Validate the certificate chain's consistency and validate it
 	 * against our CAs if we have any.
 	 */
-	if (!l_certchain_verify(certchain, tls->ca_certs)) {
+	if (!l_certchain_verify(certchain, tls->ca_certs, &error_str)) {
 		TLS_DISCONNECT(TLS_ALERT_BAD_CERT, 0,
 				"Peer certchain verification failed "
-				"consistency check%s", tls->ca_certs ?
-				" or against local CA certs" : "");
+				"consistency check%s: %s", tls->ca_certs ?
+				" or against local CA certs" : "", error_str);
 
 		goto done;
 	}

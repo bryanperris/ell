@@ -23,6 +23,7 @@
 #endif
 
 #include <string.h>
+#include <stdio.h>
 
 #include "private.h"
 #include "key.h"
@@ -303,17 +304,18 @@ LIB_EXPORT bool l_certchain_find(struct l_certchain *chain,
 	 * Also nothing to do if the user already supplied a working
 	 * certificate chain.
 	 */
-	if (l_certchain_verify(chain, ca_certs))
+	if (l_certchain_verify(chain, ca_certs, NULL))
 		return true;
 
 	/* Actual search for a chain to the CA cert is unimplemented, fail */
 	return false;
 }
 
-static struct l_keyring *cert_set_to_keyring(struct l_queue *certs)
+static struct l_keyring *cert_set_to_keyring(struct l_queue *certs, char *error)
 {
 	struct l_keyring *ring;
 	const struct l_queue_entry *entry;
+	int i = 1;
 
 	ring = l_keyring_new();
 	if (!ring)
@@ -323,15 +325,23 @@ static struct l_keyring *cert_set_to_keyring(struct l_queue *certs)
 		struct l_cert *cert = entry->data;
 		struct l_key *key = l_cert_get_pubkey(cert);
 
-		if (!key)
+		if (!key) {
+			sprintf(error, "Can't get public key from certificate "
+				"%i / %i in certificate set", i,
+				l_queue_length(certs));
 			goto cleanup;
+		}
 
 		if (!l_keyring_link(ring, key)) {
 			l_key_free(key);
+			sprintf(error, "Can't link the public key from "
+				"certificate %i / %i to target keyring",
+				i, l_queue_length(certs));
 			goto cleanup;
 		}
 
 		l_key_free_norevoke(key);
+		i++;
 	}
 
 	return ring;
@@ -380,21 +390,33 @@ static void cert_keyring_cleanup(struct l_keyring **p)
 	l_keyring_free(*p);
 }
 
+#define RETURN_ERROR(msg, args...)	\
+	do {	\
+		if (error) {	\
+			*error = error_buf;	\
+			snprintf(error_buf, sizeof(error_buf), msg, ## args); \
+		}	\
+		return false;	\
+	} while (0)
+
 LIB_EXPORT bool l_certchain_verify(struct l_certchain *chain,
-					struct l_queue *ca_certs)
+					struct l_queue *ca_certs,
+					const char **error)
 {
 	struct l_keyring *ca_ring = NULL;
 	L_AUTO_CLEANUP_VAR(struct l_keyring *, verify_ring,
 				cert_keyring_cleanup) = NULL;
 	struct l_cert *cert;
 	struct l_key *prev_key = NULL;
+	int verified = 0;
+	static char error_buf[200];
 
 	if (unlikely(!chain || !chain->leaf))
-		return false;
+		RETURN_ERROR("Chain empty");
 
 	verify_ring = l_keyring_new();
 	if (!verify_ring)
-		return false;
+		RETURN_ERROR("Can't create verify keyring");
 
 	cert = chain->ca;
 
@@ -416,19 +438,23 @@ LIB_EXPORT bool l_certchain_verify(struct l_certchain *chain,
 	 * extension from being linked to a keyring.
 	 */
 	if (cert_is_in_set(cert, ca_certs)) {
+		verified++;
 		cert = cert->issued;
 		if (!cert)
 			return true;
 
 		prev_key = cert_try_link(cert, verify_ring);
 	} else if (ca_certs) {
-		ca_ring = cert_set_to_keyring(ca_certs);
-		if (!ca_ring)
+		ca_ring = cert_set_to_keyring(ca_certs, error_buf);
+		if (!ca_ring) {
+			if (error)
+				*error = error_buf;
 			return false;
+		}
 
 		if (!l_keyring_link_nested(verify_ring, ca_ring)) {
 			l_keyring_free(ca_ring);
-			return false;
+			RETURN_ERROR("Can't link CA ring to verify ring");
 		}
 	} else
 		prev_key = cert_try_link(cert, verify_ring);
@@ -441,7 +467,7 @@ LIB_EXPORT bool l_certchain_verify(struct l_certchain *chain,
 				NULL)) {
 		l_key_free(prev_key);
 		l_keyring_free(ca_ring);
-		return false;
+		RETURN_ERROR("Can't restrict verify keyring");
 	}
 
 	if (ca_ring) {
@@ -468,10 +494,20 @@ LIB_EXPORT bool l_certchain_verify(struct l_certchain *chain,
 		l_key_free(prev_key);
 		prev_key = new_key;
 		cert = cert->issued;
+		verified++;
 	}
 
-	if (!prev_key)
-		return false;
+	if (!prev_key) {
+		int total = 0;
+
+		for (cert = chain->ca; cert; cert = cert->issued, total++);
+		RETURN_ERROR("Linking certificate %i / %i failed, root %s"
+				"verified against trusted CA(s) and the "
+				"following %i top certificates verified ok",
+				verified + 1, total,
+				ca_certs && verified ? "" : "not ",
+				verified ? verified - 1 : 0);
+	}
 
 	l_key_free(prev_key);
 	return true;
