@@ -98,6 +98,7 @@ int main(int argc, char *argv[])
 	struct l_certchain *certchain;
 	struct l_queue *ca_certs;
 	int err;
+	const char *error_str;
 
 	if (argc != 3) {
 		usage(argv[0]);
@@ -122,8 +123,8 @@ int main(int argc, char *argv[])
 		goto free_certchain;
 	}
 
-	if (!l_certchain_verify(certchain, ca_certs)) {
-		fprintf(stderr, "Verification failed\n");
+	if (!l_certchain_verify(certchain, ca_certs, &error_str)) {
+		fprintf(stderr, "Verification failed: %s\n", error_str);
 		goto free_cacert;
 	}
 
