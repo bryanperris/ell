@@ -232,18 +232,18 @@ static void test_certificates(const void *data)
 	chain = l_pem_load_certificate_chain(CERTDIR "cert-server.pem");
 	assert(chain);
 
-	assert(!l_certchain_verify(chain, wrongca));
-	assert(l_certchain_verify(chain, cacert));
-	assert(l_certchain_verify(chain, NULL));
-	assert(l_certchain_verify(chain, twocas));
+	assert(!l_certchain_verify(chain, wrongca, NULL));
+	assert(l_certchain_verify(chain, cacert, NULL));
+	assert(l_certchain_verify(chain, NULL, NULL));
+	assert(l_certchain_verify(chain, twocas, NULL));
 
 	chain2 = l_pem_load_certificate_chain(CERTDIR "cert-chain.pem");
 	assert(chain2);
 
-	assert(!l_certchain_verify(chain2, wrongca));
-	assert(l_certchain_verify(chain2, cacert));
-	assert(l_certchain_verify(chain2, NULL));
-	assert(l_certchain_verify(chain2, twocas));
+	assert(!l_certchain_verify(chain2, wrongca, NULL));
+	assert(l_certchain_verify(chain2, cacert, NULL));
+	assert(l_certchain_verify(chain2, NULL, NULL));
+	assert(l_certchain_verify(chain2, twocas, NULL));
 
 	chain3 = certchain_new_from_leaf(
 			tls_cert_load_file(CERTDIR "cert-server.pem"));
@@ -255,10 +255,10 @@ static void test_certificates(const void *data)
 			tls_cert_load_file(CERTDIR "cert-ca.pem"));
 	assert(chain3);
 
-	assert(!l_certchain_verify(chain3, wrongca));
-	assert(!l_certchain_verify(chain3, cacert));
-	assert(!l_certchain_verify(chain3, NULL));
-	assert(!l_certchain_verify(chain3, twocas));
+	assert(!l_certchain_verify(chain3, wrongca, NULL));
+	assert(!l_certchain_verify(chain3, cacert, NULL));
+	assert(!l_certchain_verify(chain3, NULL, NULL));
+	assert(!l_certchain_verify(chain3, twocas, NULL));
 
 	chain4 = certchain_new_from_leaf(
 			tls_cert_load_file(CERTDIR "cert-entity-int.pem"));
@@ -268,10 +268,10 @@ static void test_certificates(const void *data)
 			tls_cert_load_file(CERTDIR "cert-ca.pem"));
 	assert(chain4);
 
-	assert(!l_certchain_verify(chain4, wrongca));
-	assert(l_certchain_verify(chain4, cacert));
-	assert(l_certchain_verify(chain4, NULL));
-	assert(l_certchain_verify(chain4, twocas));
+	assert(!l_certchain_verify(chain4, wrongca, NULL));
+	assert(l_certchain_verify(chain4, cacert, NULL));
+	assert(l_certchain_verify(chain4, NULL, NULL));
+	assert(l_certchain_verify(chain4, twocas, NULL));
 
 	l_certchain_free(chain);
 	l_certchain_free(chain2);
