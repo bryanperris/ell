@@ -598,7 +598,7 @@ static bool classic_send_message(struct l_dbus *dbus,
 	struct msghdr msg;
 	struct iovec iov[2], *iovpos;
 	ssize_t r;
-	int *fds;
+	int *fds = NULL;
 	uint32_t num_fds = 0;
 	struct cmsghdr *cmsg;
 	int iovlen;
