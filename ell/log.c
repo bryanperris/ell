@@ -86,7 +86,7 @@ static int open_log(const char *path)
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, path, sizeof(addr.sun_path));
+	strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
 
 	if (connect(log_fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
 		close_log();
