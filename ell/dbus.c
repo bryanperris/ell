@@ -1128,7 +1128,7 @@ static struct l_dbus *setup_unix(char *params)
 		}
 
 		addr.sun_path[0] = '\0';
-		strncpy(addr.sun_path + 1, path, len);
+		strncpy(addr.sun_path + 1, path, sizeof(addr.sun_path) - 2);
 		len++;
 	} else {
 		if (len > sizeof(addr.sun_path)) {
@@ -1136,7 +1136,7 @@ static struct l_dbus *setup_unix(char *params)
 			return NULL;
 		}
 
-		strncpy(addr.sun_path, path, len);
+		strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
 	}
 
 	if (connect(fd, (struct sockaddr *) &addr,
