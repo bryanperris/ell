@@ -602,7 +602,13 @@ static int dhcp_client_send_request(struct l_dhcp_client *client)
 		if (err < 0)
 			return err;
 		break;
-	default:
+	case DHCP_STATE_INIT:
+	case DHCP_STATE_SELECTING:
+	case DHCP_STATE_INIT_REBOOT:
+	case DHCP_STATE_REBOOTING:
+	case DHCP_STATE_BOUND:
+	case DHCP_STATE_RENEWING:
+	case DHCP_STATE_REBINDING:
 		return -EINVAL;
 	}
 
