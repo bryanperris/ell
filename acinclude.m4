@@ -54,9 +54,12 @@ AC_DEFUN([COMPILER_FLAGS], [
 	if (test "$USE_MAINTAINER_MODE" = "yes"); then
 		CFLAGS+=" -Werror -Wextra"
 		CFLAGS+=" -Wno-unused-parameter"
+		CFLAGS+=" -Wno-missing-field-initializers"
 		CFLAGS+=" -Wdeclaration-after-statement"
 		CFLAGS+=" -Wmissing-declarations"
 		CFLAGS+=" -Wredundant-decls"
+		CFLAGS+=" -Wswitch-enum"
+		CFLAGS+=" -Wformat -Wformat-security"
 		if ( $CC -v 2>/dev/null | grep "gcc version" ); then
 			CFLAGS+=" -Wcast-align"
 		fi
