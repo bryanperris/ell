@@ -51,6 +51,13 @@ LIB_EXPORT bool l_pkcs5_pbkdf1(enum l_checksum_type type, const char *password,
 	case L_CHECKSUM_SHA1:
 		hash_len = 20;
 		break;
+	case L_CHECKSUM_NONE:
+	case L_CHECKSUM_MD4:
+	case L_CHECKSUM_SHA224:
+	case L_CHECKSUM_SHA256:
+	case L_CHECKSUM_SHA384:
+	case L_CHECKSUM_SHA512:
+		return false;
 	default:
 		return false;
 	}
@@ -115,6 +122,10 @@ LIB_EXPORT bool l_pkcs5_pbkdf2(enum l_checksum_type type, const char *password,
 	case L_CHECKSUM_SHA512:
 		h_len = 64;
 		break;
+	case L_CHECKSUM_NONE:
+	case L_CHECKSUM_MD4:
+	case L_CHECKSUM_MD5:
+		return false;
 	default:
 		return false;
 	}
