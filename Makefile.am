@@ -50,7 +50,8 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/net.h \
 			ell/dhcp.h \
 			ell/cert.h \
-			ell/ecc.h
+			ell/ecc.h \
+			ell/ecdh.h
 
 lib_LTLIBRARIES = ell/libell.la
 
@@ -117,7 +118,8 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/ecc-private.h \
 			ell/ecc.h \
 			ell/ecc-external.c \
-			ell/ecc.c
+			ell/ecc.c \
+			ell/ecdh.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-Wl,--version-script=$(top_srcdir)/ell/ell.sym \
