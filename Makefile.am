@@ -165,7 +165,8 @@ unit_tests = unit/test-unit \
 			unit/test-pbkdf2 \
 			unit/test-dhcp \
 			unit/test-dir-watch \
-			unit/test-ecc
+			unit/test-ecc \
+			unit/test-ecdh
 
 dbus_tests = unit/test-hwdb \
 			unit/test-dbus \
@@ -285,6 +286,9 @@ unit_test_dhcp_LDADD = ell/libell-private.la
 unit_test_dir_watch_LDADD = ell/libell-private.la
 
 unit_test_ecc_LDADD = ell/libell-private.la
+
+unit_test_ecdh_LDADD = ell/libell-private.la
+unit_test_ecdh_LDFLAGS = -Wl,-wrap,l_getrandom
 
 if MAINTAINER_MODE
 noinst_LTLIBRARIES += unit/example-plugin.la
