@@ -334,11 +334,25 @@ static void idle_dispatch(void *data, void *user_data)
 	idle->flags &= ~IDLE_FLAG_DISPATCHING;
 }
 
+static int sd_notify(const char *state)
+{
+	int err;
+
+	if (notify_fd <= 0)
+		return -ENOTCONN;
+
+	err = send(notify_fd, state, strlen(state), MSG_NOSIGNAL);
+	if (err < 0)
+		return -errno;
+
+	return 0;
+}
+
 static void watchdog_callback(struct l_timeout *timeout, void *user_data)
 {
 	int msec = L_PTR_TO_INT(user_data);
 
-	l_main_sd_notify("WATCHDOG=1");
+	sd_notify("WATCHDOG=1");
 
 	l_timeout_modify_ms(timeout, msec);
 }
@@ -646,29 +660,4 @@ LIB_EXPORT int l_main_run_with_signal(l_main_signal_cb_t callback,
 LIB_EXPORT int l_main_get_epoll_fd(void)
 {
 	return epoll_fd;
-}
-
-/**
- * l_main_sd_notify:
- *
- * Notify service manager about start-up completion and other service status
- * changes:
- * https://www.freedesktop.org/software/systemd/man/sd_notify.html
- *
- * Returns: On failure, these calls return a negative errno-style error code.
- * If $NOTIFY_SOCKET was not set and hence no status message could be sent,
- * -ENOCONN is returned.
- **/
-LIB_EXPORT int l_main_sd_notify(const char *state)
-{
-	int err;
-
-	if (notify_fd <= 0)
-		return -ENOTCONN;
-
-	err = send(notify_fd, state, strlen(state), MSG_NOSIGNAL);
-	if (err < 0)
-		return -errno;
-
-	return err;
 }

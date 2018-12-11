@@ -44,8 +44,6 @@ int l_main_run_with_signal(l_main_signal_cb_t callback, void *user_data);
 
 int l_main_get_epoll_fd();
 
-int l_main_sd_notify(const char *state);
-
 #ifdef __cplusplus
 }
 #endif
