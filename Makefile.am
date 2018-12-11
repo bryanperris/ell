@@ -49,7 +49,8 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/dir.h \
 			ell/net.h \
 			ell/dhcp.h \
-			ell/cert.h
+			ell/cert.h \
+			ell/ecc.h
 
 lib_LTLIBRARIES = ell/libell.la
 
@@ -112,7 +113,11 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/dhcp-transport.c \
 			ell/dhcp-lease.c \
 			ell/cert.c \
-			ell/cert-private.h
+			ell/cert-private.h \
+			ell/ecc-private.h \
+			ell/ecc.h \
+			ell/ecc-external.c \
+			ell/ecc.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-Wl,--version-script=$(top_srcdir)/ell/ell.sym \

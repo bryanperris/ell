@@ -449,6 +449,16 @@ global:
 	l_certchain_walk_from_ca;
 	l_certchain_find;
 	l_certchain_verify;
+	l_ecc_curve_get;
+	l_ecc_point_new;
+	l_ecc_point_from_data;
+	l_ecc_point_get_x;
+	l_ecc_point_get_data;
+	l_ecc_point_free;
+	l_ecc_scalar_new;
+	l_ecc_scalar_new_random;
+	l_ecc_scalar_get_data;
+	l_ecc_scalar_free;
 local:
 	*;
 };
