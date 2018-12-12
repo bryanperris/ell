@@ -28,7 +28,6 @@
 #include <config.h>
 #endif
 
-#include <linux/types.h>
 #include <stdint.h>
 #include <stdbool.h>
 
