@@ -56,8 +56,38 @@ static const struct l_ecc_curve p256 = {
 	.b = P256_CURVE_B,
 };
 
+#define P384_CURVE_P {	0x00000000FFFFFFFFull, 0xFFFFFFFF00000000ull, \
+			0xFFFFFFFFFFFFFFFEull, 0xFFFFFFFFFFFFFFFFull, \
+			0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull }
+#define P384_CURVE_GX {	0x3A545E3872760AB7ull, 0x5502F25DBF55296Cull, \
+			0x59F741E082542A38ull, 0x6E1D3B628BA79B98ull, \
+			0x8EB1C71EF320AD74ull, 0xAA87CA22BE8B0537ull }
+#define P384_CURVE_GY {	0x7A431D7C90EA0E5Full, 0x0A60B1CE1D7E819Dull, \
+			0xE9DA3113B5F0B8C0ull, 0xF8F41DBD289A147Cull, \
+			0x5D9E98BF9292DC29ull, 0x3617DE4A96262C6Full }
+#define P384_CURVE_N {	0xECEC196ACCC52973ull, 0x581A0DB248B0A77Aull, \
+			0xC7634D81F4372DDFull, 0xFFFFFFFFFFFFFFFFull, \
+			0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull }
+#define P384_CURVE_B {	0x2A85C8EDD3EC2AEFull, 0xC656398D8A2ED19Dull, \
+			0x0314088F5013875Aull, 0x181D9C6EFE814112ull, \
+			0x988E056BE3F82D19ull, 0xB3312FA7E23EE7E4ull }
+
+static const struct l_ecc_curve p384 = {
+	.group = 20,
+	.ndigits = 6,
+	.g = {
+		.x = P384_CURVE_GX,
+		.y = P384_CURVE_GY,
+		.curve = &p384
+	},
+	.p = P384_CURVE_P,
+	.n = P384_CURVE_N,
+	.b = P384_CURVE_B
+};
+
 static const struct l_ecc_curve *curves[] = {
 	&p256,
+	&p384,
 };
 
 LIB_EXPORT const struct l_ecc_curve *l_ecc_curve_get(unsigned int group)
