@@ -454,6 +454,132 @@ static void vli_mmod_fast_256(uint64_t *result, const uint64_t *product,
 	}
 }
 
+/*
+ * The NIST algorithms define S values, which are comprised of 32 bit C values
+ * of the original product we are trying to reduce. Since we are working with
+ * 64 bit 'digits', we need to convert these C values into 64 bit chunks. This
+ * macro mainly makes code readability easier since we can directly pass the
+ * two C indexes (h and l). Some of these C values are zero, which is also a
+ * value C index. In this case -1 should be passed to indicate zero.
+ */
+#define ECC_SET_S(prod, h, l) ({ 				\
+	uint64_t r = 0;						\
+	if (h == -1) {						\
+		/* zero, don't do anything */			\
+	} else if (h & 1)					\
+		r |= (prod[h / 2] & 0xffffffff00000000ull);	\
+	else							\
+		r |= (prod[h / 2] << 32);			\
+	if (l == -1) {						\
+		/* zero, don't do anything */			\
+	} else if (l & 1)					\
+		r |= (prod[l / 2] >> 32);			\
+	else							\
+		r |= (prod[l / 2] & 0xffffffff);		\
+	r;							\
+})
+
+static void vli_mmod_fast_384(uint64_t *result, const uint64_t *product,
+				const uint64_t *curve_prime, uint64_t *tmp)
+{
+	int carry;
+	const unsigned int ndigits = 6;
+
+	/* t */
+	vli_set(result, product, ndigits);
+
+	/* s1 */
+	tmp[0] = 0;
+	tmp[1] = 0;
+	tmp[2] = ECC_SET_S(product, 22, 21);
+	tmp[3] = ECC_SET_S(product, -1, 23);
+	tmp[4] = 0;
+	tmp[5] = 0;
+	carry = vli_lshift(tmp, tmp, 1, ndigits);
+	carry += vli_add(result, result, tmp, ndigits);
+
+	/* s2 */
+	tmp[0] = product[6];
+	tmp[1] = product[7];
+	tmp[2] = product[8];
+	tmp[3] = product[9];
+	tmp[4] = product[10];
+	tmp[5] = product[11];
+	carry += vli_add(result, result, tmp, ndigits);
+
+	/* s3 */
+	tmp[0] = ECC_SET_S(product, 22, 21);
+	tmp[1] = ECC_SET_S(product, 12, 23);
+	tmp[2] = ECC_SET_S(product, 14, 13);
+	tmp[3] = ECC_SET_S(product, 16, 15);
+	tmp[4] = ECC_SET_S(product, 18, 17);
+	tmp[5] = ECC_SET_S(product, 20, 19);
+	carry += vli_add(result, result, tmp, ndigits);
+
+	/* s4 */
+	tmp[0] = ECC_SET_S(product, 23, -1);
+	tmp[1] = ECC_SET_S(product, 20, -1);
+	tmp[2] = ECC_SET_S(product, 13, 12);
+	tmp[3] = ECC_SET_S(product, 15, 14);
+	tmp[4] = ECC_SET_S(product, 17, 16);
+	tmp[5] = ECC_SET_S(product, 19, 18);
+	carry += vli_add(result, result, tmp, ndigits);
+
+	/* s5 */
+	tmp[0] = 0;
+	tmp[1] = 0;
+	tmp[2] = ECC_SET_S(product, 21, 20);
+	tmp[3] = ECC_SET_S(product, 23, 22);
+	tmp[4] = 0;
+	tmp[5] = 0;
+	carry += vli_add(result, result, tmp, ndigits);
+
+	/* s6 */
+	tmp[0] = ECC_SET_S(product, -1, 20);
+	tmp[1] = ECC_SET_S(product, 21, -1);
+	tmp[2] = ECC_SET_S(product, 23, 22);
+	tmp[3] = 0;
+	tmp[4] = 0;
+	tmp[5] = 0;
+	carry += vli_add(result, result, tmp, ndigits);
+
+	/* s7 */
+	tmp[0] = ECC_SET_S(product, 12, 23);
+	tmp[1] = ECC_SET_S(product, 14, 13);
+	tmp[2] = ECC_SET_S(product, 16, 15);
+	tmp[3] = ECC_SET_S(product, 18, 17);
+	tmp[4] = ECC_SET_S(product, 20, 19);
+	tmp[5] = ECC_SET_S(product, 22, 21);
+	carry -= vli_sub(result, result, tmp, ndigits);
+
+	/* s8 */
+	tmp[0] = ECC_SET_S(product, 20, -1);
+	tmp[1] = ECC_SET_S(product, 22, 21);
+	tmp[2] = ECC_SET_S(product, -1, 23);
+	tmp[3] = 0;
+	tmp[4] = 0;
+	tmp[5] = 0;
+	carry -= vli_sub(result, result, tmp, ndigits);
+
+	/* s9 */
+	tmp[0] = 0;
+	tmp[1] = ECC_SET_S(product, 23, -1);
+	tmp[2] = ECC_SET_S(product, -1, 23);
+	tmp[3] = 0;
+	tmp[4] = 0;
+	tmp[5] = 0;
+	carry -= vli_sub(result, result, tmp, ndigits);
+
+	if (carry < 0) {
+		do {
+			carry += vli_add(result, result, curve_prime, ndigits);
+		} while (carry < 0);
+	} else {
+		while (carry || _vli_cmp(curve_prime, result, ndigits) != 1)
+			carry -= vli_sub(result, result, curve_prime, ndigits);
+	}
+}
+
 /* Computes result = product % curve_prime
  *  from http://www.nsa.gov/ia/_files/nist-routines.pdf
 */
@@ -469,6 +595,9 @@ static bool vli_mmod_fast(uint64_t *result, uint64_t *product,
 		break;
 	case 4:
 		vli_mmod_fast_256(result, product, curve_prime, tmp);
+		break;
+	case 6:
+		vli_mmod_fast_384(result, product, curve_prime, tmp);
 		break;
 	default:
 		return false;
