@@ -43,7 +43,7 @@
 #define P256_CURVE_B { 0x3BCE3C3E27D2604Bull, 0x651D06B0CC53B0F6ull,   \
 			0xB3EBBD55769886BCull, 0x5AC635D8AA3A93E7ull }
 
-static struct l_ecc_curve p256 = {
+static const struct l_ecc_curve p256 = {
 	.group = 19,
 	.ndigits = 4,
 	.g = {
@@ -56,7 +56,7 @@ static struct l_ecc_curve p256 = {
 	.b = P256_CURVE_B,
 };
 
-static struct l_ecc_curve *curves[] = {
+static const struct l_ecc_curve *curves[] = {
 	&p256,
 };
 
