@@ -392,6 +392,20 @@ static void test_simple_keyring(const void *data)
 	l_key_free(key2);
 }
 
+static struct l_cert *load_cert_file(const char *filename)
+{
+	const uint8_t *der;
+	size_t len;
+	char *label;
+
+	der = l_pem_load_file(filename, 0, &label, &len);
+	if (!der)
+		return NULL;
+
+	l_free(label);
+	return l_cert_new_from_der(der, len);
+}
+
 static void test_trusted_keyring(const void *data)
 {
 	struct l_keyring *ring;
@@ -402,9 +416,9 @@ static void test_trusted_keyring(const void *data)
 	struct l_key *key;
 	bool success;
 
-	cacert = tls_cert_load_file(CERTDIR "cert-ca.pem");
+	cacert = load_cert_file(CERTDIR "cert-ca.pem");
 	assert(cacert);
-	cert = tls_cert_load_file(CERTDIR "cert-server.pem");
+	cert = load_cert_file(CERTDIR "cert-server.pem");
 	assert(cert);
 
 	cakey = l_cert_get_pubkey(cacert);
@@ -447,11 +461,11 @@ static void test_trust_chain(const void *data)
 	struct l_key *key;
 	bool success;
 
-	cacert = tls_cert_load_file(CERTDIR "cert-ca.pem");
+	cacert = load_cert_file(CERTDIR "cert-ca.pem");
 	assert(cacert);
-	intcert = tls_cert_load_file(CERTDIR "cert-intca.pem");
+	intcert = load_cert_file(CERTDIR "cert-intca.pem");
 	assert(intcert);
-	cert = tls_cert_load_file(CERTDIR "cert-entity-int.pem");
+	cert = load_cert_file(CERTDIR "cert-entity-int.pem");
 	assert(cert);
 
 	cakey = l_cert_get_pubkey(cacert);
@@ -543,7 +557,7 @@ static void test_key_crypto(const void *data)
 	int hash = L_CHECKSUM_NONE;
 	int rsa = L_KEY_RSA_PKCS1_V1_5;
 
-	cert = tls_cert_load_file(CERTDIR "cert-client.pem");
+	cert = load_cert_file(CERTDIR "cert-client.pem");
 	assert(cert);
 	pubkey = l_cert_get_pubkey(cert);
 	assert(pubkey);

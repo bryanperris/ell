@@ -210,6 +210,20 @@ static void test_tls12_prf(const void *data)
 	assert(!memcmp(out_buf, test->expected, test->out_len));
 }
 
+static struct l_cert *load_cert_file(const char *filename)
+{
+	const uint8_t *der;
+	size_t len;
+	char *label;
+
+	der = l_pem_load_file(filename, 0, &label, &len);
+	if (!der)
+		return NULL;
+
+	l_free(label);
+	return l_cert_new_from_der(der, len);
+}
+
 static void test_certificates(const void *data)
 {
 	struct l_queue *cacert;
@@ -246,13 +260,13 @@ static void test_certificates(const void *data)
 	assert(l_certchain_verify(chain2, twocas, NULL));
 
 	chain3 = certchain_new_from_leaf(
-			tls_cert_load_file(CERTDIR "cert-server.pem"));
+			load_cert_file(CERTDIR "cert-server.pem"));
 	certchain_link_issuer(chain3,
-			tls_cert_load_file(CERTDIR "cert-entity-int.pem"));
+			load_cert_file(CERTDIR "cert-entity-int.pem"));
 	certchain_link_issuer(chain3,
-			tls_cert_load_file(CERTDIR "cert-intca.pem"));
+			load_cert_file(CERTDIR "cert-intca.pem"));
 	certchain_link_issuer(chain3,
-			tls_cert_load_file(CERTDIR "cert-ca.pem"));
+			load_cert_file(CERTDIR "cert-ca.pem"));
 	assert(chain3);
 
 	assert(!l_certchain_verify(chain3, wrongca, NULL));
@@ -261,11 +275,11 @@ static void test_certificates(const void *data)
 	assert(!l_certchain_verify(chain3, twocas, NULL));
 
 	chain4 = certchain_new_from_leaf(
-			tls_cert_load_file(CERTDIR "cert-entity-int.pem"));
+			load_cert_file(CERTDIR "cert-entity-int.pem"));
 	certchain_link_issuer(chain4,
-			tls_cert_load_file(CERTDIR "cert-intca.pem"));
+			load_cert_file(CERTDIR "cert-intca.pem"));
 	certchain_link_issuer(chain4,
-			tls_cert_load_file(CERTDIR "cert-ca.pem"));
+			load_cert_file(CERTDIR "cert-ca.pem"));
 	assert(chain4);
 
 	assert(!l_certchain_verify(chain4, wrongca, NULL));
