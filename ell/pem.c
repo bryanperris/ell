@@ -245,26 +245,6 @@ LIB_EXPORT uint8_t *l_pem_load_file(const char *filename, int index,
 	return result;
 }
 
-LIB_EXPORT uint8_t *l_pem_load_certificate(const char *filename, size_t *len)
-{
-	uint8_t *content;
-	char *label;
-
-	content = l_pem_load_file(filename, 0, &label, len);
-
-	if (!content)
-		return NULL;
-
-	if (strcmp(label, "CERTIFICATE")) {
-		l_free(content);
-		content = NULL;
-	}
-
-	l_free(label);
-
-	return content;
-}
-
 LIB_EXPORT struct l_certchain *l_pem_load_certificate_chain(
 							const char *filename)
 {

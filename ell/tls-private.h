@@ -236,7 +236,6 @@ void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
 bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 			int len, enum tls_content_type type, uint16_t version);
 
-struct l_cert *tls_cert_load_file(const char *filename);
 int tls_parse_certificate_list(const void *data, size_t len,
 				struct l_certchain **out_certchain);
 

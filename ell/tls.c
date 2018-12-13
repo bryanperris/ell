@@ -2814,21 +2814,6 @@ const char *tls_handshake_state_to_str(enum tls_handshake_state state)
 	return buf;
 }
 
-struct l_cert *tls_cert_load_file(const char *filename)
-{
-	uint8_t *der;
-	size_t len;
-	struct l_cert *cert;
-
-	der = l_pem_load_certificate(filename, &len);
-	if (!der)
-		return NULL;
-
-	cert = l_cert_new_from_der(der, len);
-	l_free(der);
-	return cert;
-}
-
 int tls_parse_certificate_list(const void *data, size_t len,
 				struct l_certchain **out_certchain)
 {
