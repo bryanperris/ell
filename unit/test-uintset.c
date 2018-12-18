@@ -120,6 +120,46 @@ static void test_uintset_3(const void *data)
 	l_uintset_free(set);
 }
 
+static void test_uintset_find_unused(const void *data)
+{
+	struct l_uintset *set;
+	int i;
+
+	set = l_uintset_new_from_range(0, 63);
+	assert(set);
+
+	assert(l_uintset_put(set, 0));
+	assert(l_uintset_find_unused_min(set) == 1);
+	assert(l_uintset_put(set, 1));
+	assert(l_uintset_find_unused_min(set) == 2);
+
+	for (i = 0; i < 64; i++)
+		assert(l_uintset_put(set, i));
+
+	assert(l_uintset_find_unused_min(set) == 64);
+
+	assert(l_uintset_take(set, 60));
+	assert(l_uintset_find_unused_min(set) == 60);
+	assert(l_uintset_find_unused(set, 55) == 60);
+	assert(l_uintset_find_unused(set, 60) == 60);
+	assert(l_uintset_find_unused(set, 61) == 60);
+	l_uintset_free(set);
+
+	set = l_uintset_new_from_range(15, 72);
+	assert(set);
+
+	for (i = 15; i < 64; i++)
+		assert(l_uintset_put(set, i));
+
+	assert(l_uintset_find_unused_min(set) == 64);
+	assert(l_uintset_find_unused(set, 55) == 64);
+	assert(l_uintset_find_unused(set, 70) == 70);
+	assert(l_uintset_put(set, 70));
+	assert(l_uintset_find_unused(set, 70) == 71);
+
+	l_uintset_free(set);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -127,6 +167,8 @@ int main(int argc, char *argv[])
 	l_test_add("l_uintset sanity check", test_uintset, NULL);
 	l_test_add("l_uintset sanity check #2", test_uintset_2, NULL);
 	l_test_add("l_uintset sanity check #3", test_uintset_3, NULL);
+	l_test_add("l_uintset find unused tests", test_uintset_find_unused,
+							NULL);
 
 	return l_test_run();
 }
