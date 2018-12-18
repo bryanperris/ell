@@ -44,9 +44,11 @@ bool l_uintset_put(struct l_uintset *set, uint32_t number);
 uint32_t l_uintset_get_min(struct l_uintset *set);
 uint32_t l_uintset_get_max(struct l_uintset *set);
 
-uint32_t l_uintset_find_unused_min(struct l_uintset *set);
 uint32_t l_uintset_find_max(struct l_uintset *set);
 uint32_t l_uintset_find_min(struct l_uintset *set);
+
+uint32_t l_uintset_find_unused_min(struct l_uintset *set);
+uint32_t l_uintset_find_unused(struct l_uintset *set, uint32_t start);
 
 #ifdef __cplusplus
 }

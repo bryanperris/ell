@@ -48,34 +48,28 @@ static inline int __ffs(unsigned long word)
 }
 
 static unsigned long find_first_zero_bit(const unsigned long *addr,
-							unsigned long size)
+							unsigned long size,
+							unsigned long start)
 {
-	unsigned long result = 0;
-	unsigned long tmp;
+	unsigned long i;
+	unsigned long mask = ~0UL << (start & (BITS_PER_LONG - 1));
+	unsigned long p;
 
-	while (size >= BITS_PER_LONG) {
-		tmp = *addr;
-		addr += 1;
+	for (i = start / BITS_PER_LONG; i * BITS_PER_LONG < size; i++) {
+		p = addr[i];
 
-		/* Any zero bits? */
-		if (~tmp)
-			goto found;
+		if (mask) {
+			p |= ~mask;
+			mask = 0;
+		}
 
-		result += BITS_PER_LONG;
-		size -= BITS_PER_LONG;
+		if (p == ~0UL)
+			continue;
+
+		return i * BITS_PER_LONG + __ffz(p);
 	}
 
-	if (!size)
-		return result;
-
-	/*
-	 * If we are here, then we have a partial last word.  Unused bits
-	 * are always zero, so no ffz sanity checking is needed
-	 */
-	tmp = *addr;
-
-found:
-	return result + __ffz(tmp);
+	return size;
 }
 
 static unsigned long find_first_bit(const unsigned long *addr,
@@ -324,7 +318,38 @@ LIB_EXPORT uint32_t l_uintset_find_unused_min(struct l_uintset *set)
 	if (unlikely(!set))
 		return UINT_MAX;
 
-	bit = find_first_zero_bit(set->bits, set->size);
+	bit = find_first_zero_bit(set->bits, set->size, 0);
+
+	if (bit >= set->size)
+		return set->max + 1;
+
+	return bit + set->min;
+}
+
+/**
+ * l_uintset_find_unused:
+ * @set: The set of numbers
+ * @start: The starting point
+ *
+ * Returns: First number not in the set starting at position @start (inclusive).
+ * If all numbers in the set starting at @start until l_uintset_get_max(set)
+ * are taken, the starting position is set to the minimum and the search starts
+ * again.  If the set of numbers is fully populated, this function returns
+ * l_uintset_get_max(set) + 1. If @set is NULL returns UINT_MAX.
+ **/
+LIB_EXPORT uint32_t l_uintset_find_unused(struct l_uintset *set, uint32_t start)
+{
+	unsigned int bit;
+
+	if (unlikely(!set))
+		return UINT_MAX;
+
+	if (start < set->min || start > set->max)
+		return set->max + 1;
+
+	bit = find_first_zero_bit(set->bits, set->size, start - set->min);
+	if (bit >= set->size)
+		bit = find_first_zero_bit(set->bits, set->size, 0);
 
 	if (bit >= set->size)
 		return set->max + 1;

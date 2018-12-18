@@ -427,6 +427,7 @@ global:
 	l_uintset_get_min;
 	l_uintset_get_max;
 	l_uintset_find_unused_min;
+	l_uintset_find_unused;
 	l_uintset_find_max;
 	l_uintset_find_min;
 	/* uuid */
