@@ -39,6 +39,7 @@ global:
 	l_utf8_strlen;
 	l_utf8_from_utf16;
 	l_utf8_to_utf16;
+	l_utf8_from_wchar;
 	/* queue */
 	l_queue_new;
 	l_queue_destroy;

@@ -211,10 +211,15 @@ static inline uint16_t __attribute__ ((always_inline))
 }
 
 /*
- * Assumes c is valid unicode and out_buf contains enough space
+ * l_utf8_from_wchar:
+ * @c: a wide-character to convert
+ * @out_buf: Buffer to write out to
+ *
+ * Assumes c is valid unicode and out_buf contains enough space for a single
+ * utf8 character (maximum 4 bytes)
  * Returns: number of characters written
  */
-static int wchar_to_utf8(wchar_t c, char *out_buf)
+LIB_EXPORT size_t l_utf8_from_wchar(wchar_t c, char *out_buf)
 {
 	int len = utf8_length(c);
 	int i;
@@ -308,7 +313,7 @@ next:
 		} else
 			c = in;
 
-		utf8_len += wchar_to_utf8(c, utf8 + utf8_len);
+		utf8_len += l_utf8_from_wchar(c, utf8 + utf8_len);
 		i += 2;
 	}
 
