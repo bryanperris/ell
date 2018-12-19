@@ -20,13 +20,15 @@
  *
  */
 
-/* Only TLS 1.2 supported */
-#define TLS_V12		((3 << 8) | 3)
-#define TLS_V11		((3 << 8) | 2)
-#define TLS_V10		((3 << 8) | 1)
+enum l_tls_version {
+	L_TLS_V10 = ((3 << 8) | 1),
+	L_TLS_V11 = ((3 << 8) | 2),
+	L_TLS_V12 = ((3 << 8) | 3),
+	L_TLS_V13 = ((3 << 8) | 4),	/* Not supported */
+};
 
-#define TLS_VERSION	TLS_V12
-#define TLS_MIN_VERSION	TLS_V10
+#define TLS_VERSION	L_TLS_V12
+#define TLS_MIN_VERSION	L_TLS_V10
 
 enum tls_cipher_type {
 	TLS_CIPHER_STREAM,
@@ -169,8 +171,8 @@ struct l_tls {
 	struct l_checksum *handshake_hash[__HANDSHAKE_HASH_COUNT];
 	uint8_t prev_digest[__HANDSHAKE_HASH_COUNT][HANDSHAKE_HASH_MAX_SIZE];
 
-	uint16_t client_version;
-	uint16_t negotiated_version;
+	enum l_tls_version client_version;
+	enum l_tls_version negotiated_version;
 	bool cert_requested, cert_sent;
 	bool peer_authenticated;
 	struct l_cert *peer_cert;

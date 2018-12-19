@@ -135,14 +135,14 @@ static void tls_tx_record_plaintext(struct l_tls *tls,
 
 		offset = 0;
 
-		if (tls->negotiated_version >= TLS_V12) {
+		if (tls->negotiated_version >= L_TLS_V12) {
 			l_getrandom(ciphertext, tls->record_iv_length[1]);
 
 			l_cipher_set_iv(tls->cipher[1], ciphertext,
 					tls->record_iv_length[1]);
 
 			offset = tls->record_iv_length[1];
-		} else if (tls->negotiated_version >= TLS_V11) {
+		} else if (tls->negotiated_version >= L_TLS_V11) {
 			l_getrandom(iv, tls->record_iv_length[1]);
 
 			l_cipher_encrypt(tls->cipher[1], iv, ciphertext,
@@ -444,7 +444,7 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 
 	case TLS_CIPHER_BLOCK:
 		i = 0;
-		if (tls->negotiated_version >= TLS_V11)
+		if (tls->negotiated_version >= L_TLS_V11)
 			i = tls->record_iv_length[0];
 
 		if (fragment_len <= tls->mac_length[0] + i) {
@@ -470,7 +470,7 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 			return false;
 		}
 
-		if (tls->negotiated_version >= TLS_V12) {
+		if (tls->negotiated_version >= L_TLS_V12) {
 			if (!l_cipher_set_iv(tls->cipher[0],
 						tls->record_buf + 5,
 						tls->record_iv_length[0])) {
@@ -478,7 +478,7 @@ static bool tls_handle_ciphertext(struct l_tls *tls)
 						"Setting fragment IV failed");
 				return false;
 			}
-		} else if (tls->negotiated_version >= TLS_V11)
+		} else if (tls->negotiated_version >= L_TLS_V11)
 			if (!l_cipher_decrypt(tls->cipher[0],
 						tls->record_buf + 5, iv,
 						tls->record_iv_length[0])) {
