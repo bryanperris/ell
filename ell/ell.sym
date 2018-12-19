@@ -412,6 +412,7 @@ global:
 	l_tls_new;
 	l_tls_free;
 	l_tls_write;
+	l_tls_start;
 	l_tls_close;
 	l_tls_set_cacert;
 	l_tls_set_auth_data;

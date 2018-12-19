@@ -195,7 +195,7 @@ static void tls_reset_handshake(struct l_tls *tls)
 	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
 		tls_drop_handshake_hash(tls, hash);
 
-	TLS_SET_STATE(TLS_HANDSHAKE_WAIT_HELLO);
+	TLS_SET_STATE(TLS_HANDSHAKE_WAIT_START);
 	tls->cert_requested = 0;
 	tls->cert_sent = 0;
 }
@@ -826,13 +826,6 @@ static bool tls_send_client_hello(struct l_tls *tls)
 
 	*ptr++ = 0; /* No SessionID */
 
-	/*
-	 * FIXME: We do need to filter the cipher suites by key exchange
-	 * mechanism compatibility with the certificate but we don't normally
-	 * have the certificate at this point because we're called from
-	 * l_tls_new.  We also don't know the TLS version that's going to
-	 * be negotiated yet.
-	 */
 	len_ptr = ptr;
 	ptr += 2;
 
@@ -2463,17 +2456,11 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 
 	tls->signature_hash = HANDSHAKE_HASH_SHA256;
 
-	/* If we're the client, start the handshake right away */
-	if (!tls->server) {
-		if (!tls_init_handshake_hash(tls) ||
-				!tls_send_client_hello(tls)) {
-			l_free(tls);
-
-			return NULL;
-		}
-	}
-
-	TLS_SET_STATE(TLS_HANDSHAKE_WAIT_HELLO);
+	/* If we're the server wait for the Client Hello already */
+	if (tls->server)
+		TLS_SET_STATE(TLS_HANDSHAKE_WAIT_HELLO);
+	else
+		TLS_SET_STATE(TLS_HANDSHAKE_WAIT_START);
 
 	return tls;
 }
@@ -2652,6 +2639,28 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 	return false;
 }
 
+LIB_EXPORT bool l_tls_start(struct l_tls *tls)
+{
+	/* This is a nop in server mode */
+	if (tls->server)
+		return true;
+
+	if (tls->state != TLS_HANDSHAKE_WAIT_START) {
+		TLS_DEBUG("Call invalid in state %s",
+				tls_handshake_state_to_str(tls->state));
+		return false;
+	}
+
+	if (!tls_init_handshake_hash(tls))
+		return false;
+
+	if (!tls_send_client_hello(tls))
+		return false;
+
+	TLS_SET_STATE(TLS_HANDSHAKE_WAIT_HELLO);
+	return true;
+}
+
 LIB_EXPORT void l_tls_close(struct l_tls *tls)
 {
 	TLS_DISCONNECT(TLS_ALERT_CLOSE_NOTIFY, 0, "Closing session");
@@ -2800,6 +2809,7 @@ const char *tls_handshake_state_to_str(enum tls_handshake_state state)
 	static char buf[100];
 
 	switch (state) {
+	SWITCH_ENUM_TO_STR(TLS_HANDSHAKE_WAIT_START)
 	SWITCH_ENUM_TO_STR(TLS_HANDSHAKE_WAIT_HELLO)
 	SWITCH_ENUM_TO_STR(TLS_HANDSHAKE_WAIT_CERTIFICATE)
 	SWITCH_ENUM_TO_STR(TLS_HANDSHAKE_WAIT_KEY_EXCHANGE)

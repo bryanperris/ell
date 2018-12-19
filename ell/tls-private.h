@@ -98,6 +98,7 @@ struct tls_compression_method {
 };
 
 enum tls_handshake_state {
+	TLS_HANDSHAKE_WAIT_START,
 	TLS_HANDSHAKE_WAIT_HELLO,
 	TLS_HANDSHAKE_WAIT_CERTIFICATE,
 	TLS_HANDSHAKE_WAIT_KEY_EXCHANGE,

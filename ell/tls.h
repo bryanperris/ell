@@ -77,6 +77,9 @@ struct l_tls *l_tls_new(bool server, l_tls_write_cb_t app_data_handler,
 
 void l_tls_free(struct l_tls *tls);
 
+/* Begin sending connection setup messages to the server */
+bool l_tls_start(struct l_tls *tls);
+
 /* Properly disconnect a connected session */
 void l_tls_close(struct l_tls *tls);
 
