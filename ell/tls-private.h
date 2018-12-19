@@ -257,4 +257,7 @@ int tls_parse_certificate_list(const void *data, size_t len,
 		tls_disconnect(tls, desc, local_desc);	\
 	} while (0)
 
+#define TLS_VER_FMT		"1.%i"
+#define TLS_VER_ARGS(version)	(((version) & 0xff) - 1)
+
 const char *tls_handshake_state_to_str(enum tls_handshake_state state);

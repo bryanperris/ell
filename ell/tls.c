@@ -535,14 +535,17 @@ static bool tls_cipher_suite_is_compatible(struct l_tls *tls,
 
 	if (suite->encryption &&
 			suite->encryption->cipher_type == TLS_CIPHER_AEAD) {
-		if (tls->negotiated_version &&
-				tls->negotiated_version < TLS_V12) {
+		uint16_t negotiated = tls->negotiated_version;
+
+		if (negotiated && negotiated < TLS_V12) {
 			if (error) {
 				*error = error_buf;
 				snprintf(error_buf, sizeof(error_buf),
 						"Cipher suite %s uses an AEAD "
-						"cipher but TLS < 1.2 was "
-						"negotiated", suite->name);
+						"cipher (TLS 1.2+) but "
+						TLS_VER_FMT " was negotiated",
+						suite->name,
+						TLS_VER_ARGS(negotiated));
 			}
 
 			return false;
@@ -1587,7 +1590,8 @@ static void tls_handle_client_hello(struct l_tls *tls,
 			if (i != HANDSHAKE_HASH_SHA1 && i != HANDSHAKE_HASH_MD5)
 				tls_drop_handshake_hash(tls, i);
 
-	TLS_DEBUG("Negotiated TLS 1.%i", (tls->negotiated_version & 0xff) - 1);
+	TLS_DEBUG("Negotiated TLS " TLS_VER_FMT,
+			TLS_VER_ARGS(tls->negotiated_version));
 
 	/* Select a cipher suite according to client's preference list */
 	while (cipher_suites_size) {
@@ -1715,7 +1719,8 @@ static void tls_handle_server_hello(struct l_tls *tls,
 			if (i != HANDSHAKE_HASH_SHA1 && i != HANDSHAKE_HASH_MD5)
 				tls_drop_handshake_hash(tls, i);
 
-	TLS_DEBUG("Negotiated TLS 1.%i", (tls->negotiated_version & 0xff) - 1);
+	TLS_DEBUG("Negotiated TLS " TLS_VER_FMT,
+			TLS_VER_ARGS(tls->negotiated_version));
 
 	/* Set the new cipher suite and compression method structs */
 	tls->pending.cipher_suite = tls_find_cipher_suite(cipher_suite_id);
