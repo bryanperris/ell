@@ -483,6 +483,9 @@ static void test_tls_test(const void *data)
 	assert(l_tls_set_cacert(s[0].tls, test->server_ca_cert_path));
 	assert(l_tls_set_cacert(s[1].tls, test->client_ca_cert_path));
 
+	assert(l_tls_start(s[0].tls));
+	assert(l_tls_start(s[1].tls));
+
 	while (1) {
 		if (s[0].raw_buf_len) {
 			l_tls_handle_rx(s[1].tls, s[0].raw_buf,
