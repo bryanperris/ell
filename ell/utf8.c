@@ -383,3 +383,57 @@ LIB_EXPORT void *l_utf8_to_utf16(const char *utf8, size_t *out_size)
 
 	return utf16;
 }
+
+/**
+ * l_utf8_from_ucs2be:
+ * @ucs2be: Array of UCS2 characters in big-endian format
+ * @ucs2be_size: The size of the @ucs2 array in bytes.  Must be a multiple of 2.
+ *
+ * Returns: A newly-allocated buffer containing UCS2BE encoded string converted
+ * to UTF8.  The UTF8 string will always be null terminated, even if the
+ * original UCS2BE string was not.
+ **/
+LIB_EXPORT char *l_utf8_from_ucs2be(const void *ucs2be, ssize_t ucs2be_size)
+{
+	char *utf8;
+	size_t utf8_len = 0;
+	ssize_t i = 0;
+	uint16_t in;
+
+	if (unlikely(ucs2be_size % 2))
+		return NULL;
+
+	while (ucs2be_size < 0 || i < ucs2be_size) {
+		in = l_get_be16(ucs2be + i);
+
+		if (!in)
+			break;
+
+		if (in >= 0xd800 && in < 0xe000)
+			return NULL;
+
+		if (!valid_unicode(in))
+			return NULL;
+
+		utf8_len += utf8_length(in);
+		i += 2;
+	}
+
+	utf8 = l_malloc(utf8_len + 1);
+	utf8_len = 0;
+	i = 0;
+
+	while (ucs2be_size < 0 || i < ucs2be_size) {
+		in = l_get_be16(ucs2be + i);
+
+		if (!in)
+			break;
+
+		utf8_len += l_utf8_from_wchar(in, utf8 + utf8_len);
+		i += 2;
+	}
+
+	utf8[utf8_len] = '\0';
+
+	return utf8;
+}

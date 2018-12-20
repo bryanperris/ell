@@ -98,11 +98,15 @@ static inline __attribute__ ((always_inline)) bool l_ascii_isascii(int c)
 }
 
 bool l_utf8_validate(const char *src, size_t len, const char **end);
-int l_utf8_get_codepoint(const char *str, size_t len, wchar_t *cp);
 size_t l_utf8_strlen(const char *src);
+
+int l_utf8_get_codepoint(const char *str, size_t len, wchar_t *cp);
+size_t l_utf8_from_wchar(wchar_t c, char *out_buf);
+
 char *l_utf8_from_utf16(const void *utf16, ssize_t utf16_size);
 void *l_utf8_to_utf16(const char *utf8, size_t *out_size);
-size_t l_utf8_from_wchar(wchar_t c, char *out_buf);
+
+char *l_utf8_from_ucs2be(const void *ucs2be, ssize_t ucs2be_size);
 
 #ifdef __cplusplus
 }
