@@ -102,6 +102,8 @@ LIB_EXPORT bool l_ecdh_generate_shared_secret(const struct l_ecc_curve *curve,
 
 	*secret = _ecc_constant_new(curve, product->x, curve->ndigits * 8);
 
+	memset(product->x, 0, curve->ndigits * 8);
+	memset(product->y, 0, curve->ndigits * 8);
 	l_ecc_point_free(product);
 	l_ecc_scalar_free(z);
 
