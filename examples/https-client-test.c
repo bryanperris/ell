@@ -38,9 +38,12 @@
 static struct l_io *io;
 static struct l_tls *tls;
 static const char *hostname;
+static bool ready;
 
 static void https_io_disconnect(struct l_io *io, void *user_data)
 {
+	if (!ready)
+		printf("socket disconnected\n");
 	l_main_quit();
 }
 
@@ -50,9 +53,11 @@ static bool https_io_read(struct l_io *io, void *user_data)
 	int l;
 
 	l = read(l_io_get_fd(io), buf, sizeof(buf));
-	if (l == 0)
+	if (l == 0) {
+		if (!ready)
+			printf("socket EOF\n");
 		l_main_quit();
-	else if (l > 0)
+	} else if (l > 0)
 		l_tls_handle_rx(tls, buf, l);
 
 	return true;
@@ -73,6 +78,7 @@ static void https_new_data(const uint8_t *data, size_t len, void *user_data)
 	while (len) {
 		r = write(1, data, len);
 		if (r < 0) {
+			printf("socket EOF\n");
 			l_main_quit();
 			break;
 		}
@@ -88,6 +94,7 @@ static void https_tls_write(const uint8_t *data, size_t len, void *user_data)
 	while (len) {
 		r = send(l_io_get_fd(io), data, len, MSG_NOSIGNAL);
 		if (r < 0) {
+			printf("socket send: %s\n", strerror(errno));
 			l_main_quit();
 			break;
 		}
@@ -100,6 +107,8 @@ static void https_tls_ready(const char *peer_identity, void *user_data)
 {
 	uint8_t buf[2048];
 	int l;
+
+	ready = true;
 
 	if (peer_identity)
 		printf("Server authenticated as %s\n", peer_identity);

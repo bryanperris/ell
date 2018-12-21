@@ -93,7 +93,7 @@ static void https_tls_write(const uint8_t *data, size_t len, void *user_data)
 	while (len) {
 		r = send(l_io_get_fd(io), data, len, MSG_NOSIGNAL);
 		if (r < 0) {
-			printf("send error\n");
+			printf("send: %s\n", strerror(errno));
 			l_main_quit();
 			break;
 		}
