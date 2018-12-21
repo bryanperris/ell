@@ -107,6 +107,7 @@ char *l_utf8_from_utf16(const void *utf16, ssize_t utf16_size);
 void *l_utf8_to_utf16(const char *utf8, size_t *out_size);
 
 char *l_utf8_from_ucs2be(const void *ucs2be, ssize_t ucs2be_size);
+void *l_utf8_to_ucs2be(const char *utf8, size_t *out_size);
 
 #ifdef __cplusplus
 }

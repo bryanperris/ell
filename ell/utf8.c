@@ -440,3 +440,58 @@ LIB_EXPORT char *l_utf8_from_ucs2be(const void *ucs2be, ssize_t ucs2be_size)
 
 	return utf8;
 }
+
+/**
+ * l_utf8_to_ucs2be:
+ * @utf8: UTF8 formatted string
+ * @out_size: The size in bytes of the converted ucs2be string
+ *
+ * Converts a UTF8 formatted string to UCS2BE.  It is assumed that the string
+ * is valid UTF8 and no sanity checking is performed.
+ *
+ * Returns: A newly-allocated buffer containing UTF8 encoded string converted
+ * to UCS2BE.  The UCS2BE string will always be null terminated.
+ **/
+LIB_EXPORT void *l_utf8_to_ucs2be(const char *utf8, size_t *out_size)
+{
+	const char *c;
+	wchar_t wc;
+	int len;
+	uint16_t *ucs2be;
+	size_t n_ucs2be;
+
+	if (unlikely(!utf8))
+		return NULL;
+
+	c = utf8;
+	n_ucs2be = 0;
+
+	while (*c) {
+		len = l_utf8_get_codepoint(c, 4, &wc);
+		if (len < 0)
+			return NULL;
+
+		if (wc >= 0x10000)
+			return NULL;
+
+		n_ucs2be += 1;
+		c += len;
+	}
+
+	ucs2be = l_malloc((n_ucs2be + 1) * 2);
+	c = utf8;
+	n_ucs2be = 0;
+
+	while (*c) {
+		len = l_utf8_get_codepoint(c, 4, &wc);
+		ucs2be[n_ucs2be++] = L_CPU_TO_BE16(wc);
+		c += len;
+	}
+
+	ucs2be[n_ucs2be] = 0;
+
+	if (out_size)
+		*out_size = (n_ucs2be + 1) * 2;
+
+	return ucs2be;
+}
