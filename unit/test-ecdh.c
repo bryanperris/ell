@@ -73,8 +73,8 @@ static void test_basic(const void *data)
 	assert(l_ecdh_generate_key_pair(curve, &private1, &public1));
 	assert(l_ecdh_generate_key_pair(curve, &private2, &public2));
 
-	assert(l_ecdh_generate_shared_secret(curve, private1, public2, &secret1));
-	assert(l_ecdh_generate_shared_secret(curve, private2, public1, &secret2));
+	assert(l_ecdh_generate_shared_secret(private1, public2, &secret1));
+	assert(l_ecdh_generate_shared_secret(private2, public1, &secret2));
 
 	assert(!memcmp(secret1->c, secret2->c, 32));
 
@@ -130,10 +130,8 @@ static void test_vector_p256(const void *data)
 
 	use_real_getrandom = false;
 
-	assert(l_ecdh_generate_shared_secret(curve, a_secret, b_public,
-						&a_shared));
-	assert(l_ecdh_generate_shared_secret(curve, b_secret, a_public,
-						&b_shared));
+	assert(l_ecdh_generate_shared_secret(a_secret, b_public, &a_shared));
+	assert(l_ecdh_generate_shared_secret(b_secret, a_public, &b_shared));
 
 	assert(!memcmp(a_shared->c, ss_buf, 32));
 	assert(!memcmp(b_shared->c, ss_buf, 32));
@@ -195,10 +193,8 @@ static void test_vector_p384(const void *data)
 
 	use_real_getrandom = false;
 
-	assert(l_ecdh_generate_shared_secret(curve, a_secret, b_public,
-						&a_shared));
-	assert(l_ecdh_generate_shared_secret(curve, b_secret, a_public,
-						&b_shared));
+	assert(l_ecdh_generate_shared_secret(a_secret, b_public, &a_shared));
+	assert(l_ecdh_generate_shared_secret(b_secret, a_public, &b_shared));
 
 	assert(!memcmp(a_shared->c, ss_buf, 48));
 	assert(!memcmp(b_shared->c, ss_buf, 48));
