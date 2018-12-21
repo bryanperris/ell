@@ -314,7 +314,7 @@ LIB_EXPORT struct l_ecc_point *l_ecc_point_from_data(
 
 		break;
 	case L_ECC_POINT_TYPE_FULL:
-		if (len != bytes * 2)
+		if (len < bytes * 2)
 			goto failed;
 
 		_ecc_be2native(p->y, (void *) data + bytes, curve->ndigits);
