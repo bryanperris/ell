@@ -182,7 +182,8 @@ int main(int argc, char *argv[])
 
 	auth_ok = (argc <= 2 || l_tls_set_cacert(tls, argv[2])) &&
 		(argc <= 5 ||
-		 l_tls_set_auth_data(tls, argv[3], argv[4], argv[5]));
+		 l_tls_set_auth_data(tls, argv[3], argv[4], argv[5])) &&
+		l_tls_start(tls);
 
 	if (tls && auth_ok)
 		l_main_run();

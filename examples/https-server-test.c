@@ -175,7 +175,8 @@ int main(int argc, char *argv[])
 		l_tls_set_debug(tls, https_tls_debug_cb, NULL, NULL);
 
 	auth_ok = l_tls_set_auth_data(tls, argv[1], argv[2], argv[3]) &&
-		(argc <= 4 || l_tls_set_cacert(tls, argv[4]));
+		(argc <= 4 || l_tls_set_cacert(tls, argv[4])) &&
+		l_tls_start(tls);
 
 	if (tls && auth_ok)
 		l_main_run();
