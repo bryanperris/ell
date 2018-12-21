@@ -83,16 +83,14 @@ LIB_EXPORT bool l_ecdh_generate_key_pair(const struct l_ecc_curve *curve,
 	return true;
 }
 
-LIB_EXPORT bool l_ecdh_generate_shared_secret(const struct l_ecc_curve *curve,
+LIB_EXPORT bool l_ecdh_generate_shared_secret(
 				const struct l_ecc_scalar *private_key,
 				const struct l_ecc_point *other_public,
 				struct l_ecc_scalar **secret)
 {
+	const struct l_ecc_curve *curve = private_key->curve;
 	struct l_ecc_scalar *z;
 	struct l_ecc_point *product;
-
-	if (unlikely(!curve))
-		return false;
 
 	z = l_ecc_scalar_new_random(curve);
 

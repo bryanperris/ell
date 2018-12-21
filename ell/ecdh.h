@@ -42,8 +42,7 @@ bool l_ecdh_generate_key_pair(const struct l_ecc_curve *curve,
  * Generate a shared secret from a private/public key. secret is an out
  * parameters and must be freed.
  */
-bool l_ecdh_generate_shared_secret(const struct l_ecc_curve *curve,
-				const struct l_ecc_scalar *private_key,
+bool l_ecdh_generate_shared_secret(const struct l_ecc_scalar *private_key,
 				const struct l_ecc_point *other_public,
 				struct l_ecc_scalar **secret);
 
