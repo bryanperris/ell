@@ -427,5 +427,9 @@ LIB_EXPORT ssize_t l_ecc_scalar_get_data(const struct l_ecc_scalar *c,
 
 LIB_EXPORT void l_ecc_scalar_free(struct l_ecc_scalar *c)
 {
+	if (unlikely(!c))
+		return;
+
+	memset(c->c, 0, c->curve->ndigits * 8);
 	l_free(c);
 }
