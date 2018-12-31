@@ -239,6 +239,14 @@ static inline void auto_free(void *a)
 	l_free(*p);
 }
 
+static inline size_t minsize(size_t a, size_t b)
+{
+	if (a <= b)
+		return a;
+
+	return b;
+}
+
 /**
  * l_new:
  * @type: type of structure

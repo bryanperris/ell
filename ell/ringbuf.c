@@ -34,10 +34,6 @@
 #include "private.h"
 #include "ringbuf.h"
 
-#ifndef MIN
-#define MIN(x,y) ((x)<(y)?(x):(y))
-#endif
-
 /**
  * SECTION:ringbuf
  * @short_description: Ring Buffer support
@@ -184,7 +180,7 @@ LIB_EXPORT size_t l_ringbuf_drain(struct l_ringbuf *ringbuf, size_t count)
 	if (!ringbuf)
 		return 0;
 
-	len = MIN(count, ringbuf->in - ringbuf->out);
+	len = minsize(count, ringbuf->in - ringbuf->out);
 	if (!len)
 		return 0;
 
@@ -222,7 +218,7 @@ LIB_EXPORT void *l_ringbuf_peek(struct l_ringbuf *ringbuf, size_t offset,
 
 	if (len_nowrap) {
 		size_t len = ringbuf->in - ringbuf->out;
-		*len_nowrap = MIN(len, ringbuf->size - offset);
+		*len_nowrap = minsize(len, ringbuf->size - offset);
 	}
 
 	return ringbuf->buffer + offset;
@@ -253,7 +249,7 @@ LIB_EXPORT ssize_t l_ringbuf_write(struct l_ringbuf *ringbuf, int fd)
 
 	/* Grab data from buffer starting at offset until the end */
 	offset = ringbuf->out & (ringbuf->size - 1);
-	end = MIN(len, ringbuf->size - offset);
+	end = minsize(len, ringbuf->size - offset);
 
 	iov[0].iov_base = ringbuf->buffer + offset;
 	iov[0].iov_len = end;
@@ -348,7 +344,7 @@ LIB_EXPORT int l_ringbuf_vprintf(struct l_ringbuf *ringbuf,
 
 	/* Determine possible length of string before wrapping */
 	offset = ringbuf->in & (ringbuf->size - 1);
-	end = MIN((size_t) len, ringbuf->size - offset);
+	end = minsize((size_t) len, ringbuf->size - offset);
 	memcpy(ringbuf->buffer + offset, str, end);
 
 	if (ringbuf->in_tracing)
@@ -396,7 +392,7 @@ LIB_EXPORT ssize_t l_ringbuf_read(struct l_ringbuf *ringbuf, int fd)
 
 	/* Determine how much to consume before wrapping */
 	offset = ringbuf->in & (ringbuf->size - 1);
-	end = MIN(avail, ringbuf->size - offset);
+	end = minsize(avail, ringbuf->size - offset);
 
 	iov[0].iov_base = ringbuf->buffer + offset;
 	iov[0].iov_len = end;
@@ -410,7 +406,7 @@ LIB_EXPORT ssize_t l_ringbuf_read(struct l_ringbuf *ringbuf, int fd)
 		return -1;
 
 	if (ringbuf->in_tracing) {
-		size_t len = MIN((size_t) consumed, end);
+		size_t len = minsize((size_t) consumed, end);
 
 		ringbuf->in_tracing(ringbuf->buffer + offset, len,
 							ringbuf->in_data);
