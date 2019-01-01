@@ -2312,6 +2312,12 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 		break;
 
 	case TLS_CERTIFICATE_REQUEST:
+		if (tls->server) {
+			TLS_DISCONNECT(TLS_ALERT_UNEXPECTED_MESSAGE, 0,
+					"Message invalid in server mode");
+			break;
+		}
+
 		/*
 		 * Server sends this optionally so in the WAIT_HELLO_DONE
 		 * state we accept either this or a Server Hello Done (below).
