@@ -476,6 +476,24 @@ static bool tls_cipher_suite_is_compatible(struct l_tls *tls,
 		return false;
 	}
 
+	/*
+	 * On the server we know what elliptic curve we'll be using as soon
+	 * as we've processed the ClientHello so for EC-based key exchange
+	 * methods require that a curve has been selected.
+	 */
+	if (suite->key_xchg->need_ecc && tls->server &&
+			!tls->negotiated_curve) {
+		if (error) {
+			*error = error_buf;
+			snprintf(error_buf, sizeof(error_buf),
+					"No common supported elliptic curves "
+					"with the client, can't use %s",
+					suite->name);
+		}
+
+		return false;
+	}
+
 	return true;
 }
 

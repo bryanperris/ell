@@ -66,6 +66,7 @@ struct tls_key_exchange_algorithm {
 	uint8_t id;
 
 	bool certificate_check;
+	bool need_ecc;
 
 	bool (*validate_cert_key_type)(struct l_cert *cert);
 

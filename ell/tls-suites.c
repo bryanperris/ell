@@ -412,6 +412,47 @@ static bool tls_get_server_ecdh_params_hash(struct l_tls *tls, uint8_t tls_id,
 	return true;
 }
 
+static bool tls_send_ecdhe_server_key_xchg(struct l_tls *tls)
+{
+	uint8_t buf[1024];
+	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
+	struct tls_ecdhe_params *params;
+	ssize_t sign_len;
+
+	/*
+	 * RFC 8422, Section 5.4
+	 *
+	 * If we're getting here we can assume that tls->pending.key_xchg_params
+	 * is NULL, tls->priv_key is our signing key and tls->negotiated_curve
+	 * is non-NULL.
+	 */
+
+	params = l_new(struct tls_ecdhe_params, 1);
+	params->curve = l_ecc_curve_get(tls->negotiated_curve->l_group);
+	tls->pending.key_xchg_params = params;
+
+	if (!l_ecdh_generate_key_pair(params->curve,
+					&params->private, &params->public)) {
+		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+				"Generating ECDH key pair failed");
+		return false;
+	}
+
+	ptr += tls_write_server_ecdh_params(tls, ptr);
+
+	sign_len = tls->pending.cipher_suite->key_xchg->sign(tls, ptr,
+					buf + sizeof(buf) - ptr,
+					tls_get_server_ecdh_params_hash);
+	if (sign_len < 0)
+		return false;
+
+	ptr += sign_len;
+
+	tls_tx_handshake(tls, TLS_SERVER_KEY_EXCHANGE, buf, ptr - buf);
+
+	return true;
+}
+
 static void tls_handle_ecdhe_server_key_xchg(struct l_tls *tls,
 						const uint8_t *buf, size_t len)
 {
@@ -555,12 +596,93 @@ static bool tls_send_ecdhe_client_key_xchg(struct l_tls *tls)
 	return true;
 }
 
+static void tls_handle_ecdhe_client_key_xchg(struct l_tls *tls,
+						const uint8_t *buf, size_t len)
+{
+	struct tls_ecdhe_params *params = tls->pending.key_xchg_params;
+	uint8_t pre_master_secret[128];
+	ssize_t pre_master_secret_len;
+	struct l_ecc_point *other_public;
+	struct l_ecc_scalar *secret;
+
+	/* RFC 8422, Section 5.7 */
+
+	if (len < 2)
+		goto decode_error;
+
+	if (*buf++ != 1 + tls->negotiated_curve->point_bytes)
+		goto decode_error;
+
+	if (*buf != 4) {	/* uncompressed */
+		TLS_DISCONNECT(TLS_ALERT_ILLEGAL_PARAM, 0,
+				"Unsupported (deprecated?) PointConversionForm "
+				"%u", *buf);
+		return;
+	}
+
+	buf++;
+	len -= 2;
+
+	if (len != tls->negotiated_curve->point_bytes)
+		goto decode_error;
+
+	/*
+	 * RFC 8422, Section 5.11: "A receiving party MUST check that the
+	 * x and y parameters from the peer's public value satisfy the
+	 * curve equation, y^2 = x^3 + ax + b mod p."
+	 * This happens in l_ecc_point_from_data when the L_ECC_POINT_TYPE_FULL
+	 * format is used.
+	 */
+	other_public = l_ecc_point_from_data(params->curve,
+						L_ECC_POINT_TYPE_FULL,
+						buf, len);
+	if (!other_public) {
+		TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
+				"ClientKeyExchange.exchange_keys.ecdh_Yc "
+				"decode error");
+		return;
+	}
+
+	if (!l_ecdh_generate_shared_secret(params->private, other_public,
+						&secret)) {
+		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+				"Generating ECDH shared-secret failed");
+		return;
+	}
+
+	tls_free_ecdhe_params(tls);
+	l_ecc_point_free(other_public);
+	pre_master_secret_len = l_ecc_scalar_get_data(secret,
+						pre_master_secret,
+						sizeof(pre_master_secret));
+	l_ecc_scalar_free(secret);
+
+	if (pre_master_secret_len < 0) {
+		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+				"l_ecc_scalar_get_data(secret) failed");
+		return;
+	}
+
+	tls_generate_master_secret(tls, pre_master_secret,
+					pre_master_secret_len);
+	memset(pre_master_secret, 0, pre_master_secret_len);
+
+	return;
+
+decode_error:
+	TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
+			"ClientKeyExchange decode error");
+}
+
 static struct tls_key_exchange_algorithm tls_ecdhe_rsa = {
 	.id = 1, /* RSA_sign */
 	.certificate_check = true,
+	.need_ecc = true,
 	.validate_cert_key_type = tls_rsa_validate_cert_key,
+	.send_server_key_exchange = tls_send_ecdhe_server_key_xchg,
 	.handle_server_key_exchange = tls_handle_ecdhe_server_key_xchg,
 	.send_client_key_exchange = tls_send_ecdhe_client_key_xchg,
+	.handle_client_key_exchange = tls_handle_ecdhe_client_key_xchg,
 	.free_params = tls_free_ecdhe_params,
 	.sign = tls_rsa_sign,
 	.verify = tls_rsa_verify,
