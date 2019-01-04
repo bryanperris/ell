@@ -96,6 +96,40 @@ static bool tls_elliptic_curves_client_absent(struct l_tls *tls)
 	return true;
 }
 
+static bool tls_ec_point_formats_client_handle(struct l_tls *tls,
+						const uint8_t *buf, size_t len)
+{
+	if (len < 2)
+		return false;
+
+	if (buf[0] != len - 1)
+		return false;
+
+	if (!memchr(buf + 1, 0, len - 1)) {
+		TLS_DEBUG("Uncompressed point format missing");
+		return false;
+	}
+
+	return true;
+}
+
+/*
+ * For compatibility with clients respond to a valid Client Hello Supported
+ * Point Formats extension with the hardcoded confirmation that we do
+ * support the single valid point format.  As a client we never send this
+ * extension so we never have to handle a server response to it either.
+ */
+static ssize_t tls_ec_point_formats_server_write(struct l_tls *tls,
+						uint8_t *buf, size_t len)
+{
+	if (len < 2)
+		return -ENOMEM;
+
+	buf[0] = 0x01;	/* ec_point_format_list length */
+	buf[1] = 0x00;	/* uncompressed */
+	return 2;
+}
+
 const struct tls_hello_extension tls_extensions[] = {
 	{
 		"Supported Elliptic Curves", "elliptic_curves", 10,
@@ -103,6 +137,14 @@ const struct tls_hello_extension tls_extensions[] = {
 		tls_elliptic_curves_client_handle,
 		tls_elliptic_curves_client_absent,
 		NULL, NULL, NULL,
+	},
+	{
+		"Supported Point Formats", "ec_point_formats", 11,
+		NULL,
+		tls_ec_point_formats_client_handle,
+		NULL,
+		tls_ec_point_formats_server_write,
+		NULL, NULL,
 	},
 	{}
 };
