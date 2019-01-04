@@ -709,6 +709,8 @@ static const struct tls_hash_algorithm *tls_set_prf_hmac(struct l_tls *tls)
 	return NULL;
 }
 
+static const struct tls_hello_extension tls_extensions[] = {{}};
+
 enum tls_handshake_type {
 	TLS_HELLO_REQUEST	= 0,
 	TLS_CLIENT_HELLO	= 1,
@@ -810,13 +812,101 @@ static void tls_tx_handshake(struct l_tls *tls, int type, uint8_t *buf,
 	tls_tx_record(tls, TLS_CT_HANDSHAKE, buf, length);
 }
 
+static ssize_t tls_append_hello_extensions(struct l_tls *tls,
+						struct l_queue *extensions,
+						uint8_t *buf, size_t len)
+{
+	uint8_t *ptr = buf;
+	uint8_t *extensions_len_ptr = ptr;
+	bool client_hello = !tls->server;
+	unsigned int i = 0;
+	const struct l_queue_entry *entry = l_queue_get_entries(extensions);
+
+	if (len < 2)
+		return -ENOSPC;
+
+	ptr += 2;
+	len -= 2;
+
+	while (1) {
+		const struct tls_hello_extension *extension;
+		ssize_t ext_len;
+		ssize_t (*ext_write)(struct l_tls *tls,
+					uint8_t *buf, size_t len);
+
+		if (client_hello) {
+			extension = &tls_extensions[i++];
+			if (!extension->name)
+				break;
+
+			ext_write = extension->client_write;
+		} else  {
+			uint16_t ext_id;
+
+			if (!entry)
+				break;
+
+			ext_id = L_PTR_TO_UINT(entry->data);
+			entry = entry->next;
+
+			for (i = 0; tls_extensions[i].name; i++)
+				if (tls_extensions[i].id == ext_id)
+					break;
+
+			extension = &tls_extensions[i];
+			if (!extension->name)
+				continue;
+
+			ext_write = extension->server_write;
+		}
+
+		/*
+		 * Note: could handle NULL client_write with non-NULL
+		 * server_handle or server_handle_absent as "server-oriented"
+		 * extension (7.4.1.4) and write empty extension_data and
+		 * simliarly require empty extension_data in
+		 * tls_handle_client_hello if client_handle NULL.
+		 */
+		if (!ext_write)
+			continue;
+
+		if (len < 4)
+			return -ENOSPC;
+
+		ext_len = ext_write(tls, ptr + 4, len - 4);
+		if (ext_len == -ENOMSG)
+			continue;
+
+		if (ext_len < 0) {
+			TLS_DEBUG("%s extension's %s_write: %s",
+					extension->name,
+					client_hello ? "client" : "server",
+					strerror(-ext_len));
+			return ext_len;
+		}
+
+		l_put_be16(extension->id, ptr + 0);
+		l_put_be16(ext_len, ptr + 2);
+		ptr += 4 + ext_len;
+		len -= 4 + ext_len;
+	}
+
+	if (ptr > extensions_len_ptr + 2)
+		l_put_be16(ptr - (extensions_len_ptr + 2), extensions_len_ptr);
+	else /* Skip the length if no extensions */
+		ptr = extensions_len_ptr;
+
+	return ptr - buf;
+}
+
 static bool tls_send_client_hello(struct l_tls *tls)
 {
-	uint8_t buf[128 + L_ARRAY_SIZE(tls_compression_pref) +
+	uint8_t buf[1024 + L_ARRAY_SIZE(tls_compression_pref) +
 			2 * L_ARRAY_SIZE(tls_cipher_suite_pref)];
 	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
 	uint8_t *len_ptr;
-	int i;
+	unsigned int i;
+	ssize_t r;
 
 	/* Fill in the Client Hello body */
 
@@ -832,7 +922,7 @@ static bool tls_send_client_hello(struct l_tls *tls)
 	len_ptr = ptr;
 	ptr += 2;
 
-	for (i = 0; i < (int) L_ARRAY_SIZE(tls_cipher_suite_pref); i++) {
+	for (i = 0; i < L_ARRAY_SIZE(tls_cipher_suite_pref); i++) {
 		if (!tls_cipher_suite_is_compatible(tls,
 						&tls_cipher_suite_pref[i],
 						NULL))
@@ -850,17 +940,25 @@ static bool tls_send_client_hello(struct l_tls *tls)
 	l_put_be16((ptr - len_ptr - 2), len_ptr);
 	*ptr++ = L_ARRAY_SIZE(tls_compression_pref);
 
-	for (i = 0; i < (int) L_ARRAY_SIZE(tls_compression_pref); i++)
+	for (i = 0; i < L_ARRAY_SIZE(tls_compression_pref); i++)
 		*ptr++ = tls_compression_pref[i].id;
+
+	r = tls_append_hello_extensions(tls, NULL,
+					ptr, buf + sizeof(buf) - ptr);
+	if (r < 0)
+		return false;
+
+	ptr += r;
 
 	tls_tx_handshake(tls, TLS_CLIENT_HELLO, buf, ptr - buf);
 	return true;
 }
 
-static void tls_send_server_hello(struct l_tls *tls)
+static bool tls_send_server_hello(struct l_tls *tls, struct l_queue *extensions)
 {
-	uint8_t buf[128];
+	uint8_t buf[1024];
 	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
+	ssize_t r;
 
 	/* Fill in the Server Hello body */
 
@@ -878,7 +976,19 @@ static void tls_send_server_hello(struct l_tls *tls)
 
 	*ptr++ = tls->pending.compression_method->id;
 
+	r = tls_append_hello_extensions(tls, extensions,
+					ptr, buf + sizeof(buf) - ptr);
+	if (r < 0) {
+		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+				"Error appending extensions: %s",
+				strerror(-r));
+		return false;
+	}
+
+	ptr += r;
+
 	tls_tx_handshake(tls, TLS_SERVER_HELLO, buf, ptr - buf);
+	return true;
 }
 
 static bool tls_cert_list_add_size(struct l_cert *cert, void *user_data)
@@ -1644,7 +1754,8 @@ static void tls_handle_client_hello(struct l_tls *tls,
 
 	TLS_DEBUG("Negotiated %s", tls->pending.compression_method->name);
 
-	tls_send_server_hello(tls);
+	if (!tls_send_server_hello(tls, NULL))
+		return;
 
 	if (tls->pending.cipher_suite->key_xchg->certificate_check && tls->cert)
 		if (!tls_send_certificate(tls))

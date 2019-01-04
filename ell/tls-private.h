@@ -99,6 +99,24 @@ struct tls_compression_method {
 	const char *name;
 };
 
+struct tls_hello_extension {
+	const char *name;
+	const char *short_name;
+	uint16_t id;
+	ssize_t (*client_write)(struct l_tls *tls, uint8_t *buf, size_t len);
+	/* Handle a Client Hello extension (on server), can't be NULL */
+	bool (*client_handle)(struct l_tls *tls,
+				const uint8_t *buf, size_t len);
+	/* Handle a Client Hello extension's absence (on server) */
+	bool (*client_handle_absent)(struct l_tls *tls);
+	ssize_t (*server_write)(struct l_tls *tls, uint8_t *buf, size_t len);
+	/* Handle a Server Hello extension (on client) */
+	bool (*server_handle)(struct l_tls *tls,
+				const uint8_t *buf, size_t len);
+	/* Handle a Server Hello extension's absence (on client) */
+	bool (*server_handle_absent)(struct l_tls *tls);
+};
+
 enum tls_handshake_state {
 	TLS_HANDSHAKE_WAIT_START,
 	TLS_HANDSHAKE_WAIT_HELLO,
