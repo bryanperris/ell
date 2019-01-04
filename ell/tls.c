@@ -191,6 +191,7 @@ static void tls_reset_handshake(struct l_tls *tls)
 	tls->peer_cert = NULL;
 	tls->peer_pubkey = NULL;
 	tls->peer_pubkey_size = 0;
+	tls->negotiated_curve = NULL;
 
 	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
 		tls_drop_handshake_hash(tls, hash);
@@ -708,8 +709,6 @@ static const struct tls_hash_algorithm *tls_set_prf_hmac(struct l_tls *tls)
 
 	return NULL;
 }
-
-static const struct tls_hello_extension tls_extensions[] = {{}};
 
 enum tls_handshake_type {
 	TLS_HELLO_REQUEST	= 0,

@@ -117,6 +117,15 @@ struct tls_hello_extension {
 	bool (*server_handle_absent)(struct l_tls *tls);
 };
 
+extern const struct tls_hello_extension tls_extensions[];
+
+struct tls_named_curve {
+	const char *name;
+	uint16_t id;
+	unsigned int l_group;
+	size_t point_bytes;
+};
+
 enum tls_handshake_state {
 	TLS_HANDSHAKE_WAIT_START,
 	TLS_HANDSHAKE_WAIT_HELLO,
@@ -198,6 +207,7 @@ struct l_tls {
 	size_t peer_pubkey_size;
 	enum handshake_hash_type signature_hash;
 	const struct tls_hash_algorithm *prf_hmac;
+	const struct tls_named_curve *negotiated_curve;
 
 	/* SecurityParameters current and pending */
 
