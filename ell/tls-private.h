@@ -69,6 +69,10 @@ struct tls_key_exchange_algorithm {
 
 	bool (*validate_cert_key_type)(struct l_cert *cert);
 
+	bool (*send_server_key_exchange)(struct l_tls *tls);
+	void (*handle_server_key_exchange)(struct l_tls *tls,
+						const uint8_t *buf, size_t len);
+
 	bool (*send_client_key_exchange)(struct l_tls *tls);
 	void (*handle_client_key_exchange)(struct l_tls *tls,
 						const uint8_t *buf, size_t len);
