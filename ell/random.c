@@ -37,7 +37,7 @@
 #define GRND_NONBLOCK	0x0001
 #endif
 
-#ifndef GRND_RANOM
+#ifndef GRND_RANDOM
 #define GRND_RANDOM	0x0002
 #endif
 
@@ -57,19 +57,18 @@ static inline int getrandom(void *buffer, size_t count, unsigned flags) {
  **/
 LIB_EXPORT bool l_getrandom(void *buf, size_t len)
 {
-	int ret;
+	while (len) {
+		int ret;
 
-	if (len > 256)
-		return false;
+		ret = TEMP_FAILURE_RETRY(getrandom(buf, len, 0));
+		if (ret < 0)
+			return false;
 
-	ret = getrandom(buf, len, 0);
-	if (ret < 0)
-		return false;
+		buf += ret;
+		len -= ret;
+	}
 
-	if ((size_t) ret == len)
-		return true;
-
-	return false;
+	return true;
 }
 
 LIB_EXPORT bool l_getrandom_is_supported()
