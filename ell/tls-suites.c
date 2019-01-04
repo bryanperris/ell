@@ -738,6 +738,10 @@ static struct tls_mac_algorithm tls_md5 = {
 	.id = 4,
 	.hmac_type = L_CHECKSUM_SHA256,
 	.mac_length = 32,
+}, tls_sha384 = {
+	.id = 5,
+	.hmac_type = L_CHECKSUM_SHA384,
+	.mac_length = 48,
 };
 
 static struct tls_cipher_suite tls_rsa_with_rc4_128_md5 = {
@@ -830,6 +834,34 @@ static struct tls_cipher_suite tls_rsa_with_rc4_128_md5 = {
 	.encryption = &tls_aes256,
 	.mac = &tls_sha,
 	.key_xchg = &tls_ecdhe_rsa,
+}, tls_ecdhe_rsa_with_aes_128_cbc_sha256 = {
+	.id = { 0xc0, 0x27 },
+	.name = "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+	.verify_data_length = 12,
+	.encryption = &tls_aes128,
+	.mac = &tls_sha256,
+	.key_xchg = &tls_ecdhe_rsa,
+}, tls_ecdhe_rsa_with_aes_256_cbc_sha384 = {
+	.id = { 0xc0, 0x28 },
+	.name = "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
+	.verify_data_length = 12,
+	.encryption = &tls_aes256,
+	.mac = &tls_sha384,
+	.prf_hmac = L_CHECKSUM_SHA384,
+	.key_xchg = &tls_ecdhe_rsa,
+}, tls_ecdhe_rsa_with_aes_128_gcm_sha256 = {
+	.id = { 0xc0, 0x2f },
+	.name = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+	.verify_data_length = 12,
+	.encryption = &tls_aes128_gcm,
+	.key_xchg = &tls_ecdhe_rsa,
+}, tls_ecdhe_rsa_with_aes_256_gcm_sha384 = {
+	.id = { 0xc0, 0x30 },
+	.name = "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+	.verify_data_length = 12,
+	.encryption = &tls_aes256_gcm,
+	.prf_hmac = L_CHECKSUM_SHA384,
+	.key_xchg = &tls_ecdhe_rsa,
 };
 
 struct tls_cipher_suite *tls_cipher_suite_pref[] = {
@@ -837,8 +869,12 @@ struct tls_cipher_suite *tls_cipher_suite_pref[] = {
 	&tls_ecdhe_rsa_with_aes_128_cbc_sha,
 	&tls_rsa_with_aes_256_cbc_sha,
 	&tls_rsa_with_aes_128_cbc_sha,
+	&tls_ecdhe_rsa_with_aes_256_cbc_sha384,
+	&tls_ecdhe_rsa_with_aes_128_cbc_sha256,
 	&tls_rsa_with_aes_256_cbc_sha256,
 	&tls_rsa_with_aes_128_cbc_sha256,
+	&tls_ecdhe_rsa_with_aes_256_gcm_sha384,
+	&tls_ecdhe_rsa_with_aes_128_gcm_sha256,
 	&tls_rsa_with_aes_256_gcm_sha384,
 	&tls_rsa_with_aes_128_gcm_sha256,
 	&tls_ecdhe_rsa_with_3des_ede_cbc_sha,
