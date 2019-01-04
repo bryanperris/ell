@@ -180,6 +180,8 @@ struct l_tls {
 	struct l_key *priv_key;
 	size_t priv_key_size;
 
+	struct tls_cipher_suite **cipher_suite_pref_list;
+
 	/* Record layer */
 
 	uint8_t *record_buf;
@@ -266,6 +268,9 @@ void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
 			const uint8_t *data, size_t len);
 bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 			int len, enum tls_content_type type, uint16_t version);
+
+/* Optionally limit allowed cipher suites to a custom set */
+bool tls_set_cipher_suites(struct l_tls *tls, const char **suite_list);
 
 int tls_parse_certificate_list(const void *data, size_t len,
 				struct l_certchain **out_certchain);

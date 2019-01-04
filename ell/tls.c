@@ -41,6 +41,7 @@
 #include "tls-private.h"
 #include "key.h"
 #include "asn1-private.h"
+#include "strv.h"
 
 bool tls10_prf(const void *secret, size_t secret_len,
 		const char *label,
@@ -453,78 +454,80 @@ static struct tls_mac_algorithm tls_md5 = {
 	.mac_length = 32,
 };
 
-static struct tls_cipher_suite tls_cipher_suite_pref[] = {
-	{
-		.id = { 0x00, 0x35 },
-		.name = "TLS_RSA_WITH_AES_256_CBC_SHA",
-		.verify_data_length = 12,
-		.encryption = &tls_aes256,
-		.mac = &tls_sha,
-		.key_xchg = &tls_rsa,
-	},
-	{
-		.id = { 0x00, 0x2f },
-		.name = "TLS_RSA_WITH_AES_128_CBC_SHA",
-		.verify_data_length = 12,
-		.encryption = &tls_aes128,
-		.mac = &tls_sha,
-		.key_xchg = &tls_rsa,
-	},
-	{
-		.id = { 0x00, 0x3d },
-		.name = "TLS_RSA_WITH_AES_256_CBC_SHA256",
-		.verify_data_length = 12,
-		.encryption = &tls_aes256,
-		.mac = &tls_sha256,
-		.key_xchg = &tls_rsa,
-	},
-	{
-		.id = { 0x00, 0x3c },
-		.name = "TLS_RSA_WITH_AES_128_CBC_SHA256",
-		.verify_data_length = 12,
-		.encryption = &tls_aes128,
-		.mac = &tls_sha256,
-		.key_xchg = &tls_rsa,
-	},
-	{
-		.id = { 0x00, 0x9d },
-		.name = "TLS_RSA_WITH_AES_256_GCM_SHA384",
-		.verify_data_length = 12,
-		.encryption = &tls_aes256_gcm,
-		.prf_hmac = L_CHECKSUM_SHA384,
-		.key_xchg = &tls_rsa,
-	},
-	{
-		.id = { 0x00, 0x9c },
-		.name = "TLS_RSA_WITH_AES_128_GCM_SHA256",
-		.verify_data_length = 12,
-		.encryption = &tls_aes128_gcm,
-		.key_xchg = &tls_rsa,
-	},
-	{
-		.id = { 0x00, 0x0a },
-		.name = "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
-		.verify_data_length = 12,
-		.encryption = &tls_3des_ede,
-		.mac = &tls_sha,
-		.key_xchg = &tls_rsa,
-	},
-	{
-		.id = { 0x00, 0x05 },
-		.name = "TLS_RSA_WITH_RC4_128_SHA",
-		.verify_data_length = 12,
-		.encryption = &tls_rc4,
-		.mac = &tls_sha,
-		.key_xchg = &tls_rsa,
-	},
-	{
-		.id = { 0x00, 0x04 },
-		.name = "TLS_RSA_WITH_RC4_128_MD5",
-		.verify_data_length = 12,
-		.encryption = &tls_rc4,
-		.mac = &tls_md5,
-		.key_xchg = &tls_rsa,
-	},
+static struct tls_cipher_suite tls_rsa_with_rc4_128_md5 = {
+	.id = { 0x00, 0x04 },
+	.name = "TLS_RSA_WITH_RC4_128_MD5",
+	.verify_data_length = 12,
+	.encryption = &tls_rc4,
+	.mac = &tls_md5,
+	.key_xchg = &tls_rsa,
+}, tls_rsa_with_rc4_128_sha = {
+	.id = { 0x00, 0x05 },
+	.name = "TLS_RSA_WITH_RC4_128_SHA",
+	.verify_data_length = 12,
+	.encryption = &tls_rc4,
+	.mac = &tls_sha,
+	.key_xchg = &tls_rsa,
+}, tls_rsa_with_3des_ede_cbc_sha = {
+	.id = { 0x00, 0x0a },
+	.name = "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+	.verify_data_length = 12,
+	.encryption = &tls_3des_ede,
+	.mac = &tls_sha,
+	.key_xchg = &tls_rsa,
+}, tls_rsa_with_aes_128_cbc_sha = {
+	.id = { 0x00, 0x2f },
+	.name = "TLS_RSA_WITH_AES_128_CBC_SHA",
+	.verify_data_length = 12,
+	.encryption = &tls_aes128,
+	.mac = &tls_sha,
+	.key_xchg = &tls_rsa,
+}, tls_rsa_with_aes_256_cbc_sha = {
+	.id = { 0x00, 0x35 },
+	.name = "TLS_RSA_WITH_AES_256_CBC_SHA",
+	.verify_data_length = 12,
+	.encryption = &tls_aes256,
+	.mac = &tls_sha,
+	.key_xchg = &tls_rsa,
+}, tls_rsa_with_aes_128_cbc_sha256 = {
+	.id = { 0x00, 0x3c },
+	.name = "TLS_RSA_WITH_AES_128_CBC_SHA256",
+	.verify_data_length = 12,
+	.encryption = &tls_aes128,
+	.mac = &tls_sha256,
+	.key_xchg = &tls_rsa,
+}, tls_rsa_with_aes_256_cbc_sha256 = {
+	.id = { 0x00, 0x3d },
+	.name = "TLS_RSA_WITH_AES_256_CBC_SHA256",
+	.verify_data_length = 12,
+	.encryption = &tls_aes256,
+	.mac = &tls_sha256,
+	.key_xchg = &tls_rsa,
+}, tls_rsa_with_aes_128_gcm_sha256 = {
+	.id = { 0x00, 0x9c },
+	.name = "TLS_RSA_WITH_AES_128_GCM_SHA256",
+	.verify_data_length = 12,
+	.encryption = &tls_aes128_gcm,
+	.key_xchg = &tls_rsa,
+}, tls_rsa_with_aes_256_gcm_sha384 = {
+	.id = { 0x00, 0x9d },
+	.name = "TLS_RSA_WITH_AES_256_GCM_SHA384",
+	.verify_data_length = 12,
+	.encryption = &tls_aes256_gcm,
+	.prf_hmac = L_CHECKSUM_SHA384,
+	.key_xchg = &tls_rsa,
+};
+
+static struct tls_cipher_suite *tls_cipher_suite_pref[] = {
+	&tls_rsa_with_aes_256_cbc_sha,
+	&tls_rsa_with_aes_128_cbc_sha,
+	&tls_rsa_with_aes_256_cbc_sha256,
+	&tls_rsa_with_aes_128_cbc_sha256,
+	&tls_rsa_with_aes_256_gcm_sha384,
+	&tls_rsa_with_aes_128_gcm_sha256,
+	&tls_rsa_with_3des_ede_cbc_sha,
+	&tls_rsa_with_rc4_128_sha,
+	&tls_rsa_with_rc4_128_md5,
 };
 
 static bool tls_cipher_suite_is_compatible(struct l_tls *tls,
@@ -629,9 +632,9 @@ static struct tls_cipher_suite *tls_find_cipher_suite(const uint8_t *id)
 	int i;
 
 	for (i = 0; i < (int) L_ARRAY_SIZE(tls_cipher_suite_pref); i++)
-		if (tls_cipher_suite_pref[i].id[0] == id[0] &&
-				tls_cipher_suite_pref[i].id[1] == id[1])
-			return &tls_cipher_suite_pref[i];
+		if (tls_cipher_suite_pref[i]->id[0] == id[0] &&
+				tls_cipher_suite_pref[i]->id[1] == id[1])
+			return tls_cipher_suite_pref[i];
 
 	return NULL;
 }
@@ -906,6 +909,7 @@ static bool tls_send_client_hello(struct l_tls *tls)
 	uint8_t *len_ptr;
 	unsigned int i;
 	ssize_t r;
+	struct tls_cipher_suite **suite;
 
 	/* Fill in the Client Hello body */
 
@@ -921,14 +925,16 @@ static bool tls_send_client_hello(struct l_tls *tls)
 	len_ptr = ptr;
 	ptr += 2;
 
-	for (i = 0; i < L_ARRAY_SIZE(tls_cipher_suite_pref); i++) {
-		if (!tls_cipher_suite_is_compatible(tls,
-						&tls_cipher_suite_pref[i],
-						NULL))
-			continue;
+	for (suite = tls->cipher_suite_pref_list; *suite; suite++) {
+		const char *error;
 
-		*ptr++ = tls_cipher_suite_pref[i].id[0];
-		*ptr++ = tls_cipher_suite_pref[i].id[1];
+		if (!tls_cipher_suite_is_compatible(tls, *suite, &error)) {
+			TLS_DEBUG("non-fatal: %s", error);
+			continue;
+		}
+
+		*ptr++ = (*suite)->id[0];
+		*ptr++ = (*suite)->id[1];
 	}
 
 	if (ptr == len_ptr + 2) {
@@ -1738,6 +1744,7 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	const uint8_t *compression_methods;
 	int i;
 	struct l_queue *extensions_offered = NULL;
+	enum l_tls_alert_desc alert_desc = TLS_ALERT_HANDSHAKE_FAIL;
 
 	/* Do we have enough for ProtocolVersion + Random + SessionID size? */
 	if (len < 2 + 32 + 1)
@@ -1822,12 +1829,39 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	TLS_DEBUG("Negotiated TLS " TLS_VER_FMT,
 			TLS_VER_ARGS(tls->negotiated_version));
 
+	if (!tls->cipher_suite_pref_list) {
+		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+				"No usable cipher suites");
+		return;
+	}
+
 	/* Select a cipher suite according to client's preference list */
 	while (cipher_suites_size) {
 		struct tls_cipher_suite *suite =
 			tls_find_cipher_suite(cipher_suites);
+		struct tls_cipher_suite **iter;
+		const char *error;
 
-		if (suite && tls_cipher_suite_is_compatible(tls, suite, NULL)) {
+		for (iter = tls->cipher_suite_pref_list; *iter; iter++)
+			if (*iter == suite)
+				break;
+
+		if (!suite)
+			TLS_DEBUG("non-fatal: Cipher suite %04x unknown",
+					l_get_be16(cipher_suites));
+		else if (!tls_cipher_suite_is_compatible(tls, suite, &error))
+			TLS_DEBUG("non-fatal: %s", error);
+		else if (!*iter) {
+			/*
+			 * We have at least one matching compatible suite but
+			 * it is not allowed in this security profile.  If the
+			 * handshake ends up failing then we blame the security
+			 * profile.
+			 */
+			alert_desc = TLS_ALERT_INSUFFICIENT_SECURITY;
+			TLS_DEBUG("non-fatal: Cipher suite %s disallowed "
+					"by config", suite->name);
+		} else {
 			tls->pending.cipher_suite = suite;
 			break;
 		}
@@ -1837,7 +1871,7 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	}
 
 	if (!cipher_suites_size) {
-		TLS_DISCONNECT(TLS_ALERT_HANDSHAKE_FAIL, 0,
+		TLS_DISCONNECT(alert_desc, 0,
 				"No common cipher suites matching negotiated "
 				"TLS version and our certificate's key type");
 		goto cleanup;
@@ -1911,6 +1945,7 @@ static void tls_handle_server_hello(struct l_tls *tls,
 {
 	uint8_t session_id_size, cipher_suite_id[2], compression_method_id;
 	const char *error;
+	struct tls_cipher_suite **iter;
 	int i;
 	struct l_queue *extensions_seen;
 	bool result;
@@ -1967,6 +2002,16 @@ static void tls_handle_server_hello(struct l_tls *tls,
 		TLS_DISCONNECT(TLS_ALERT_HANDSHAKE_FAIL, 0,
 				"Unknown cipher suite %04x",
 				l_get_be16(cipher_suite_id));
+		return;
+	}
+
+	for (iter = tls->cipher_suite_pref_list; *iter; iter++)
+		if (*iter == tls->pending.cipher_suite)
+			break;
+	if (!*iter) {
+		TLS_DISCONNECT(TLS_ALERT_INSUFFICIENT_SECURITY, 0,
+				"Selected cipher suite %s disallowed by config",
+				tls->pending.cipher_suite->name);
 		return;
 	}
 
@@ -2703,7 +2748,7 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 	tls->ready_handle = ready_handler;
 	tls->disconnected = disconnect_handler;
 	tls->user_data = user_data;
-
+	tls->cipher_suite_pref_list = tls_cipher_suite_pref;
 	tls->signature_hash = HANDSHAKE_HASH_SHA256;
 
 	/* If we're the server wait for the Client Hello already */
@@ -2742,6 +2787,9 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 
 	if (tls->debug_destroy)
 		tls->debug_destroy(tls->debug_data);
+
+	if (tls->cipher_suite_pref_list != tls_cipher_suite_pref)
+		l_free(tls->cipher_suite_pref_list);
 
 	l_free(tls);
 }
@@ -2891,6 +2939,9 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 
 LIB_EXPORT bool l_tls_start(struct l_tls *tls)
 {
+	if (!tls->cipher_suite_pref_list)
+		return false;
+
 	/* This is a nop in server mode */
 	if (tls->server)
 		return true;
@@ -2994,6 +3045,47 @@ LIB_EXPORT bool l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
 	}
 
 	return true;
+}
+
+bool tls_set_cipher_suites(struct l_tls *tls, const char **suite_list)
+{
+	struct tls_cipher_suite **suite;
+
+	if (tls->cipher_suite_pref_list != tls_cipher_suite_pref)
+		l_free(tls->cipher_suite_pref_list);
+
+	if (!suite_list) {
+		/* Use our default cipher suite preference list */
+		tls->cipher_suite_pref_list = tls_cipher_suite_pref;
+		return true;
+	}
+
+	tls->cipher_suite_pref_list = l_new(struct tls_cipher_suite *,
+				l_strv_length((char **) suite_list) + 1);
+	suite = tls->cipher_suite_pref_list;
+
+	for (; *suite_list; suite_list++) {
+		unsigned int i;
+
+		for (i = 0; i < L_ARRAY_SIZE(tls_cipher_suite_pref); i++)
+			if (!strcmp(tls_cipher_suite_pref[i]->name,
+						*suite_list))
+				break;
+
+		if (i < L_ARRAY_SIZE(tls_cipher_suite_pref))
+			*suite++ = tls_cipher_suite_pref[i];
+		else
+			TLS_DEBUG("Cipher suite %s is not supported",
+					*suite_list);
+	}
+
+	if (suite > tls->cipher_suite_pref_list)
+		return true;
+
+	TLS_DEBUG("None of the supplied suite names is supported");
+	l_free(suite);
+	tls->cipher_suite_pref_list = NULL;
+	return false;
 }
 
 LIB_EXPORT const char *l_tls_alert_to_str(enum l_tls_alert_desc desc)
