@@ -81,6 +81,8 @@ struct tls_key_exchange_algorithm {
 			tls_get_hash_t get_hash);
 	bool (*verify)(struct l_tls *tls, const uint8_t *in, size_t len,
 			tls_get_hash_t get_hash);
+
+	void (*free_params)(struct l_tls *tls);
 };
 
 struct tls_mac_algorithm {
@@ -246,6 +248,7 @@ struct l_tls {
 		 * 6.3 v1.2 + two IVs of 32 bytes.
 		 */
 		uint8_t key_block[192];
+		void *key_xchg_params;
 	} pending;
 
 	enum tls_cipher_type cipher_type[2];
@@ -300,6 +303,8 @@ bool tls_set_cipher_suites(struct l_tls *tls, const char **suite_list);
 void tls_generate_master_secret(struct l_tls *tls,
 				const uint8_t *pre_master_secret,
 				int pre_master_secret_len);
+
+const struct tls_named_curve *tls_find_curve(uint16_t id);
 
 int tls_parse_certificate_list(const void *data, size_t len,
 				struct l_certchain **out_certchain);

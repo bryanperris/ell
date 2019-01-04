@@ -148,3 +148,14 @@ const struct tls_hello_extension tls_extensions[] = {
 	},
 	{}
 };
+
+const struct tls_named_curve *tls_find_curve(uint16_t id)
+{
+	unsigned int i;
+
+	for (i = 0; i < L_ARRAY_SIZE(tls_curve_pref); i++)
+		if (tls_curve_pref[i].id == id)
+			return &tls_curve_pref[i];
+
+	return NULL;
+}

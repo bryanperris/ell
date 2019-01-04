@@ -186,6 +186,10 @@ static void tls_reset_handshake(struct l_tls *tls)
 
 	memset(tls->pending.key_block, 0, sizeof(tls->pending.key_block));
 
+	if (tls->pending.cipher_suite &&
+			tls->pending.cipher_suite->key_xchg->free_params)
+		tls->pending.cipher_suite->key_xchg->free_params(tls);
+
 	l_cert_free(tls->peer_cert);
 	l_key_free(tls->peer_pubkey);
 
