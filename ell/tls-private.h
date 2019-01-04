@@ -56,6 +56,8 @@ struct tls_hash_algorithm {
 	const char *name;
 };
 
+extern const struct tls_hash_algorithm tls_handshake_hash_data[];
+
 typedef bool (*tls_get_hash_t)(struct l_tls *tls, uint8_t tls_id,
 				uint8_t *out, size_t *len,
 				enum l_checksum_type *type);
@@ -93,6 +95,8 @@ struct tls_cipher_suite {
 	struct tls_mac_algorithm *mac;
 	enum l_checksum_type prf_hmac;
 };
+
+extern struct tls_cipher_suite *tls_cipher_suite_pref[];
 
 struct tls_compression_method {
 	int id;
@@ -143,6 +147,19 @@ enum tls_content_type {
 	TLS_CT_ALERT			= 21,
 	TLS_CT_HANDSHAKE		= 22,
 	TLS_CT_APPLICATION_DATA		= 23,
+};
+
+enum tls_handshake_type {
+	TLS_HELLO_REQUEST	= 0,
+	TLS_CLIENT_HELLO	= 1,
+	TLS_SERVER_HELLO	= 2,
+	TLS_CERTIFICATE		= 11,
+	TLS_SERVER_KEY_EXCHANGE	= 12,
+	TLS_CERTIFICATE_REQUEST	= 13,
+	TLS_SERVER_HELLO_DONE	= 14,
+	TLS_CERTIFICATE_VERIFY	= 15,
+	TLS_CLIENT_KEY_EXCHANGE	= 16,
+	TLS_FINISHED		= 20,
 };
 
 /*
@@ -269,8 +286,16 @@ void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
 bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 			int len, enum tls_content_type type, uint16_t version);
 
+#define TLS_HANDSHAKE_HEADER_SIZE	4
+
+void tls_tx_handshake(struct l_tls *tls, int type, uint8_t *buf, size_t length);
+
 /* Optionally limit allowed cipher suites to a custom set */
 bool tls_set_cipher_suites(struct l_tls *tls, const char **suite_list);
+
+void tls_generate_master_secret(struct l_tls *tls,
+				const uint8_t *pre_master_secret,
+				int pre_master_secret_len);
 
 int tls_parse_certificate_list(const void *data, size_t len,
 				struct l_certchain **out_certchain);
