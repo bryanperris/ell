@@ -212,16 +212,19 @@ static void test_tls12_prf(const void *data)
 
 static struct l_cert *load_cert_file(const char *filename)
 {
-	const uint8_t *der;
+	uint8_t *der;
 	size_t len;
 	char *label;
+	struct l_cert *cert;
 
 	der = l_pem_load_file(filename, 0, &label, &len);
 	if (!der)
 		return NULL;
 
 	l_free(label);
-	return l_cert_new_from_der(der, len);
+	cert = l_cert_new_from_der(der, len);
+	l_free(der);
+	return cert;
 }
 
 static void test_certificates(const void *data)
