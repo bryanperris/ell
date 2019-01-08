@@ -67,6 +67,7 @@ struct tls_key_exchange_algorithm {
 
 	bool certificate_check;
 	bool need_ecc;
+	bool need_ffdh;
 
 	bool (*validate_cert_key_type)(struct l_cert *cert);
 
@@ -130,11 +131,24 @@ struct tls_hello_extension {
 
 extern const struct tls_hello_extension tls_extensions[];
 
-struct tls_named_curve {
+struct tls_named_group {
 	const char *name;
 	uint16_t id;
-	unsigned int l_group;
-	size_t point_bytes;
+	enum {
+		TLS_GROUP_TYPE_EC,
+		TLS_GROUP_TYPE_FF,
+	} type;
+	union {
+		struct {
+			unsigned int l_group;
+			size_t point_bytes;
+		} ec;
+		struct {
+			const uint8_t *prime;
+			size_t prime_len;
+			unsigned int generator;
+		} ff;
+	};
 };
 
 enum tls_handshake_state {
@@ -233,7 +247,8 @@ struct l_tls {
 	size_t peer_pubkey_size;
 	enum handshake_hash_type signature_hash;
 	const struct tls_hash_algorithm *prf_hmac;
-	const struct tls_named_curve *negotiated_curve;
+	const struct tls_named_group *negotiated_curve;
+	const struct tls_named_group *negotiated_ff_group;
 
 	/* SecurityParameters current and pending */
 
@@ -305,7 +320,11 @@ void tls_generate_master_secret(struct l_tls *tls,
 				const uint8_t *pre_master_secret,
 				int pre_master_secret_len);
 
-const struct tls_named_curve *tls_find_curve(uint16_t id);
+const struct tls_named_group *tls_find_group(uint16_t id);
+const struct tls_named_group *tls_find_ff_group(const uint8_t *prime,
+						size_t prime_len,
+						const uint8_t *generator,
+						size_t generator_len);
 
 int tls_parse_certificate_list(const void *data, size_t len,
 				struct l_certchain **out_certchain);

@@ -494,6 +494,20 @@ static bool tls_cipher_suite_is_compatible(struct l_tls *tls,
 		return false;
 	}
 
+	/* Similarly for FF DH groups */
+	if (suite->key_xchg->need_ffdh && tls->server &&
+			!tls->negotiated_ff_group) {
+		if (error) {
+			*error = error_buf;
+			snprintf(error_buf, sizeof(error_buf),
+					"No common supported finite-field "
+					"groups with the client, can't use %s",
+					suite->name);
+		}
+
+		return false;
+	}
+
 	return true;
 }
 
