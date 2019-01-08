@@ -1327,12 +1327,15 @@ static bool tls_handle_hello_extensions(struct l_tls *tls,
 		 * extension type in ServerHello that it did not request in
 		 * the associated ClientHello, it MUST abort the handshake
 		 * with an unsupported_extension fatal alert."
+		 * There are however servers that include an unsolicited
+		 * Supported Point Format extension where the handshake
+		 * still completes fine if the extension is ignored so we
+		 * do this instead.
 		 */
 		if (!client_hello && !handler) {
-			TLS_DISCONNECT(TLS_ALERT_UNSUPPORTED_EXTENSION, 0,
-					"%s extension not expected in "
+			TLS_DEBUG("non-fatal: %s extension not expected in "
 					"a ServerHello", extension->name);
-			return false;
+			goto next;
 		}
 
 		if (!handler(tls, buf, ext_len)) {
