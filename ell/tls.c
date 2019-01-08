@@ -2203,10 +2203,10 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 			break;
 		}
 
+		TLS_SET_STATE(TLS_HANDSHAKE_WAIT_HELLO_DONE);
+
 		tls->pending.cipher_suite->key_xchg->handle_server_key_exchange(
 								tls, buf, len);
-
-		TLS_SET_STATE(TLS_HANDSHAKE_WAIT_HELLO_DONE);
 
 		break;
 
@@ -2274,9 +2274,6 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 			break;
 		}
 
-		tls->pending.cipher_suite->key_xchg->handle_client_key_exchange(
-								tls, buf, len);
-
 		/*
 		 * If we accepted a client Certificate message with a
 		 * certificate that has signing capability (TODO: check
@@ -2288,6 +2285,9 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 			TLS_SET_STATE(TLS_HANDSHAKE_WAIT_CERTIFICATE_VERIFY);
 		else
 			TLS_SET_STATE(TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC);
+
+		tls->pending.cipher_suite->key_xchg->handle_client_key_exchange(
+								tls, buf, len);
 
 		break;
 
