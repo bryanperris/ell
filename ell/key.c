@@ -35,6 +35,7 @@
 #include "util.h"
 #include "key.h"
 #include "string.h"
+#include "random.h"
 
 #ifndef KEYCTL_DH_COMPUTE
 #define KEYCTL_DH_COMPUTE 23
@@ -421,6 +422,53 @@ LIB_EXPORT bool l_key_get_info(struct l_key *key, enum l_key_cipher_type cipher,
 	return !kernel_query_key(key->serial, lookup_cipher(cipher),
 					lookup_checksum(checksum), bits,
 					public);
+}
+
+LIB_EXPORT struct l_key *l_key_generate_dh_private(const void *prime_buf,
+							size_t prime_len)
+{
+	uint8_t *buf;
+	const uint8_t *prime = prime_buf;
+	size_t prime_bits;
+	unsigned int i;
+	size_t private_bytes;
+	size_t random_bytes;
+	struct l_key *private;
+
+	/* Find the prime's bit length excluding leading 0s */
+
+	for (i = 0; i < prime_len && !prime[i]; i++);
+
+	if (i == prime_len || (i == prime_len - 1 && prime[i] < 5))
+		return NULL;
+
+	prime_bits = (prime_len - i) * 8 - __builtin_clz(prime[i]);
+
+	/*
+	 * Generate a random DH private value conforming to 1 < x < p - 1.
+	 * To do this covering all possible values in this range with the
+	 * same probability of generating each value generally requires
+	 * looping.  Instead we generate a value in the range
+	 * [2 ^ (prime_bits - 2), 2 ^ (prime_bits - 1) - 1] by forcing bit
+	 * prime_bits - 2 to 1, i.e. the range in PKCS #3 Section 7.1 for
+	 * l equal to prime_bits - 1.  This means we're using between
+	 * one half and one quarter of the full [2, p - 2] range, i.e.
+	 * between 1 and 2 bits fewer.  Note that since p is odd
+	 * p - 1 has the same bit length as p and so our maximum value
+	 * 2 ^ (prime_bits - 1) - 1 is still less than p - 1.
+	 */
+	private_bytes = ((prime_bits - 1) + 7) / 8;
+	random_bytes = ((prime_bits - 2) + 7) / 8;
+	buf = l_malloc(private_bytes);
+	l_getrandom(buf + private_bytes - random_bytes, random_bytes);
+
+	buf[0] &= (1 << ((prime_bits - 2) % 8)) - 1;
+	buf[0] |= 1 << ((prime_bits - 2) % 8);
+
+	private = l_key_new(L_KEY_RAW, buf, private_bytes);
+	memset(buf, 0, private_bytes);
+	l_free(buf);
+	return private;
 }
 
 static bool compute_common(struct l_key *base, struct l_key *private,

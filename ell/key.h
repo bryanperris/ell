@@ -72,6 +72,9 @@ bool l_key_get_info(struct l_key *key, enum l_key_cipher_type cipher,
 			enum l_checksum_type checksum, size_t *bits,
 			bool *public);
 
+struct l_key *l_key_generate_dh_private(const void *prime_buf,
+					size_t prime_len);
+
 bool l_key_compute_dh_public(struct l_key *generator, struct l_key *private,
 				struct l_key *prime,
 				void *payload, size_t *len);
