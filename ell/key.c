@@ -504,6 +504,59 @@ LIB_EXPORT bool l_key_compute_dh_secret(struct l_key *other_public,
 	return compute_common(other_public, private, prime, payload, len);
 }
 
+static int be_bignum_compare(const uint8_t *a, size_t a_len,
+				const uint8_t *b, size_t b_len)
+{
+	unsigned int i;
+
+	if (a_len >= b_len) {
+		for (i = 0; i < a_len - b_len; i++)
+			if (a[i])
+				return 1;
+
+		return memcmp(a + i, b, b_len);
+	} else {
+		for (i = 0; i < b_len - a_len; i++)
+			if (b[i])
+				return -1;
+
+		return memcmp(a, b + i, a_len);
+	}
+}
+
+/*
+ * Validate that @payload is within range for a private and public key for
+ * a DH computation in the finite field group defined by modulus @prime_buf,
+ * both numbers stored as big-endian integers.  We require a key in the
+ * [2, prime - 2] (inclusive) interval.  PKCS #3 does not exclude 1 as a
+ * private key but other specs do.
+ */
+LIB_EXPORT bool l_key_validate_dh_payload(const void *payload, size_t len,
+				const void *prime_buf, size_t prime_len)
+{
+	static const uint8_t one[] = { 1 };
+	uint8_t prime_1[prime_len];
+
+	/*
+	 * Produce prime - 1 for the payload < prime - 1 check.
+	 * prime is odd so just zero the LSB.
+	 */
+	memcpy(prime_1, prime_buf, prime_len);
+
+	if (prime_len < 1 || !(prime_1[prime_len - 1] & 1))
+		return false;
+
+	prime_1[prime_len - 1] &= ~1;
+
+	if (be_bignum_compare(payload, len, one, 1) <= 0)
+		return false;
+
+	if (be_bignum_compare(payload, len, prime_1, prime_len) >= 0)
+		return false;
+
+	return true;
+}
+
 /* Common code for encrypt/decrypt/sign */
 static ssize_t eds_common(struct l_key *key,
 				enum l_key_cipher_type cipher,

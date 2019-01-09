@@ -304,6 +304,7 @@ global:
 	l_key_generate_dh_private;
 	l_key_compute_dh_public;
 	l_key_compute_dh_secret;
+	l_key_validate_dh_payload;
 	l_key_encrypt;
 	l_key_decrypt;
 	l_key_sign;

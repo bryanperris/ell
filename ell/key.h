@@ -83,6 +83,9 @@ bool l_key_compute_dh_secret(struct l_key *other_public, struct l_key *private,
 				struct l_key *prime,
 				void *payload, size_t *len);
 
+bool l_key_validate_dh_payload(const void *payload, size_t len,
+				const void *prime_buf, size_t prime_len);
+
 ssize_t l_key_encrypt(struct l_key *key, enum l_key_cipher_type cipher,
 			enum l_checksum_type checksum, const void *in,
 			void *out, size_t len_in, size_t len_out);
