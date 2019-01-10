@@ -68,37 +68,6 @@ static uint64_t vli_test_bit(const uint64_t *vli, unsigned int bit)
 	return (vli[bit / 64] & ((uint64_t) 1 << (bit % 64)));
 }
 
-/* Counts the number of 64-bit "digits" in vli. */
-static unsigned int vli_num_digits(const uint64_t *vli, unsigned int ndigits)
-{
-	int i;
-
-	/* Search from the end until we find a non-zero digit.
-	 * We do it in reverse because we expect that most digits will
-	 * be nonzero.
-	 */
-	for (i = ndigits - 1; i >= 0 && vli[i] == 0; i--);
-
-	return (i + 1);
-}
-
-/* Counts the number of bits required for vli. */
-static unsigned int vli_num_bits(const uint64_t *vli, unsigned int ndigits)
-{
-	unsigned int i, num_digits;
-	uint64_t digit;
-
-	num_digits = vli_num_digits(vli, ndigits);
-	if (num_digits == 0)
-		return 0;
-
-	digit = vli[num_digits - 1];
-	for (i = 0; digit; i++)
-		digit >>= 1;
-
-	return ((num_digits - 1) * 64 + i);
-}
-
 /* Sets dest = src. */
 static void vli_set(uint64_t *dest, const uint64_t *src, unsigned int ndigits)
 {
@@ -916,12 +885,20 @@ void _ecc_point_mult(struct l_ecc_point *result,
 			uint64_t *initial_z, const uint64_t *curve_prime)
 {
 	/* R0 and R1 */
+	const struct l_ecc_curve *curve = point->curve;
 	uint64_t rx[2][L_ECC_MAX_DIGITS];
 	uint64_t ry[2][L_ECC_MAX_DIGITS];
 	uint64_t z[L_ECC_MAX_DIGITS];
+	uint64_t sk[2][L_ECC_MAX_DIGITS];
 	int i, nb;
-	unsigned int ndigits = point->curve->ndigits;
-	int num_bits = vli_num_bits(scalar, ndigits);
+	unsigned int ndigits = curve->ndigits;
+	int num_bits;
+	int carry;
+
+	carry = vli_add(sk[0], scalar, curve->n, ndigits);
+	vli_add(sk[1], sk[0], curve->n, ndigits);
+	scalar = sk[!carry];
+	num_bits = sizeof(uint64_t) * ndigits * 8 + 1;
 
 	vli_set(rx[1], point->x, ndigits);
 	vli_set(ry[1], point->y, ndigits);
