@@ -974,8 +974,9 @@ bool _ecc_point_is_zero(const struct l_ecc_point *point)
 }
 
 /* (rx, ry) = (px, py) + (qx, qy) */
-void _ecc_point_add(struct l_ecc_point *ret, struct l_ecc_point *p,
-			struct l_ecc_point *q, const uint64_t *curve_prime)
+void _ecc_point_add(struct l_ecc_point *ret, const struct l_ecc_point *p,
+			const struct l_ecc_point *q,
+			const uint64_t *curve_prime)
 {
 	/*
 	* s = (py - qy)/(px - qx)

@@ -47,9 +47,11 @@ struct l_ecc_scalar {
 	const struct l_ecc_curve *curve;
 };
 
-void _ecc_be2native(uint64_t *dest, uint64_t *bytes, unsigned int ndigits);
+void _ecc_be2native(uint64_t *dest, const uint64_t *bytes,
+							unsigned int ndigits);
 
-void _ecc_native2be(uint64_t *dest, uint64_t *native, unsigned int ndigits);
+void _ecc_native2be(uint64_t *dest, const uint64_t *native,
+							unsigned int ndigits);
 
 void _vli_mod_inv(uint64_t *result, const uint64_t *input, const uint64_t *mod,
 			unsigned int ndigits);
@@ -84,7 +86,8 @@ bool _ecc_compute_y(const struct l_ecc_curve *curve, uint64_t *y, uint64_t *x);
 void _ecc_point_mult(struct l_ecc_point *result,
 			const struct l_ecc_point *point, const uint64_t *scalar,
 			uint64_t *initial_z, const uint64_t *curve_prime);
-void _ecc_point_add(struct l_ecc_point *ret, struct l_ecc_point *p,
-		struct l_ecc_point *q, const uint64_t *curve_prime);
+void _ecc_point_add(struct l_ecc_point *ret, const struct l_ecc_point *p,
+			const struct l_ecc_point *q,
+			const uint64_t *curve_prime);
 struct l_ecc_scalar *_ecc_constant_new(const struct l_ecc_curve *curve,
-						void *buf, size_t len);
+						const void *buf, size_t len);

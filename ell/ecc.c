@@ -135,7 +135,8 @@ static bool ecc_valid_point(struct l_ecc_point *point)
 	return (_vli_cmp(tmp1, tmp2, ndigits) == 0);
 }
 
-void _ecc_be2native(uint64_t *dest, uint64_t *bytes, unsigned int ndigits)
+void _ecc_be2native(uint64_t *dest, const uint64_t *bytes,
+							unsigned int ndigits)
 {
 	unsigned int i;
 	uint64_t tmp[L_ECC_MAX_DIGITS];
@@ -146,7 +147,8 @@ void _ecc_be2native(uint64_t *dest, uint64_t *bytes, unsigned int ndigits)
 	memcpy(dest, tmp, ndigits * 8);
 }
 
-void _ecc_native2be(uint64_t *dest, uint64_t *native, unsigned int ndigits)
+void _ecc_native2be(uint64_t *dest, const uint64_t *native,
+							unsigned int ndigits)
 {
 	unsigned int i;
 	uint64_t tmp[L_ECC_MAX_DIGITS];
@@ -362,7 +364,7 @@ LIB_EXPORT void l_ecc_point_free(struct l_ecc_point *p)
 }
 
 struct l_ecc_scalar *_ecc_constant_new(const struct l_ecc_curve *curve,
-						void *buf, size_t len)
+						const void *buf, size_t len)
 {
 	struct l_ecc_scalar *c;
 
@@ -384,7 +386,7 @@ struct l_ecc_scalar *_ecc_constant_new(const struct l_ecc_curve *curve,
 
 LIB_EXPORT struct l_ecc_scalar *l_ecc_scalar_new(
 					const struct l_ecc_curve *curve,
-					void *buf, size_t len)
+					const void *buf, size_t len)
 {
 	struct l_ecc_scalar *c;
 

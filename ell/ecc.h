@@ -54,7 +54,7 @@ ssize_t l_ecc_point_get_data(const struct l_ecc_point *p, void *buf, size_t len)
 void l_ecc_point_free(struct l_ecc_point *p);
 
 struct l_ecc_scalar *l_ecc_scalar_new(const struct l_ecc_curve *curve,
-						void *buf, size_t len);
+						const void *buf, size_t len);
 struct l_ecc_scalar *l_ecc_scalar_new_random(
 					const struct l_ecc_curve *curve);
 ssize_t l_ecc_scalar_get_data(const struct l_ecc_scalar *c, void *buf,
