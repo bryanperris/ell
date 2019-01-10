@@ -160,7 +160,7 @@ void _ecc_native2be(uint64_t *dest, const uint64_t *native,
 }
 
 static void ecc_compute_y_sqr(const struct l_ecc_curve *curve,
-					uint64_t *y_sqr, uint64_t *x)
+					uint64_t *y_sqr, const uint64_t *x)
 {
 	uint64_t sum[L_ECC_MAX_DIGITS] = { 0 };
 	uint64_t tmp[L_ECC_MAX_DIGITS] = { 0 };
@@ -487,4 +487,63 @@ LIB_EXPORT bool l_ecc_point_inverse(struct l_ecc_point *p)
 	_vli_mod_sub(p->y, p->curve->p, p->y, p->curve->p, p->curve->ndigits);
 
 	return true;
+}
+
+LIB_EXPORT bool l_ecc_scalar_multiply(struct l_ecc_scalar *ret,
+					const struct l_ecc_scalar *a,
+					const struct l_ecc_scalar *b)
+{
+	if (unlikely(!ret || !a || !b))
+		return false;
+
+	_vli_mod_mult_fast(ret->c, a->c, b->c, a->curve->p, a->curve->ndigits);
+
+	return true;
+}
+
+LIB_EXPORT int l_ecc_scalar_legendre(struct l_ecc_scalar *value)
+{
+	if (unlikely(!value))
+		return -1;
+
+	return _vli_legendre(value->c, value->curve->p, value->curve->ndigits);
+}
+
+LIB_EXPORT bool l_ecc_scalar_sum_x(struct l_ecc_scalar *ret,
+					const struct l_ecc_scalar *x)
+{
+	if (unlikely(!ret || !x))
+		return false;
+
+	ecc_compute_y_sqr(x->curve, ret->c, x->c);
+
+	return true;
+}
+
+LIB_EXPORT struct l_ecc_scalar *l_ecc_curve_get_prime(
+						const struct l_ecc_curve *curve)
+{
+	if (unlikely(!curve))
+		return NULL;
+
+	return _ecc_constant_new(curve, curve->p, curve->ndigits * 8);
+}
+
+LIB_EXPORT bool l_ecc_scalars_are_equal(const struct l_ecc_scalar *a,
+						const struct l_ecc_scalar *b)
+{
+	if (unlikely(!a || !b))
+		return false;
+
+	return (memcmp(a->c, b->c, a->curve->ndigits * 8) == 0);
+}
+
+LIB_EXPORT bool l_ecc_points_are_equal(const struct l_ecc_point *a,
+						const struct l_ecc_point *b)
+{
+	if (unlikely(!a || !b))
+		return false;
+
+	return ((memcmp(a->x, b->x, a->curve->ndigits * 8) == 0) &&
+			(memcmp(a->y, b->y, a->curve->ndigits * 8) == 0));
 }

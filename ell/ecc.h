@@ -75,6 +75,21 @@ bool l_ecc_point_add(struct l_ecc_point *ret, const struct l_ecc_point *a,
 				const struct l_ecc_point *b);
 bool l_ecc_point_inverse(struct l_ecc_point *p);
 
+/* extra operations needed for SAE */
+bool l_ecc_scalar_multiply(struct l_ecc_scalar *ret,
+				const struct l_ecc_scalar *a,
+				const struct l_ecc_scalar *b);
+int l_ecc_scalar_legendre(struct l_ecc_scalar *value);
+bool l_ecc_scalar_sum_x(struct l_ecc_scalar *ret, const struct l_ecc_scalar *x);
+
+struct l_ecc_scalar *l_ecc_curve_get_prime(const struct l_ecc_curve *curve);
+
+bool l_ecc_scalars_are_equal(const struct l_ecc_scalar *a,
+				const struct l_ecc_scalar *b);
+
+bool l_ecc_points_are_equal(const struct l_ecc_point *a,
+				const struct l_ecc_point *b);
+
 #ifdef __cplusplus
 }
 #endif
