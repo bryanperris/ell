@@ -39,6 +39,17 @@ static void test_hexstring(const void *test_data)
 	l_free(hex);
 }
 
+static void test_hexstring_upper(const void *test_data)
+{
+	unsigned char test[] = { 0x0a, 0x0b, 0x0c, 0xde, 0xf2 };
+	char *hex;
+
+	hex = l_util_hexstring_upper(test, sizeof(test));
+	assert(hex);
+	assert(!strcmp(hex, "0A0B0CDEF2"));
+	l_free(hex);
+}
+
 static void test_from_hexstring(const void *test_data)
 {
 	const char *test = "7465737400";
@@ -118,6 +129,7 @@ int main(int argc, char *argv[])
 	l_test_init(&argc, &argv);
 
 	l_test_add("l_util_hexstring", test_hexstring, NULL);
+	l_test_add("l_util_hexstring_upper", test_hexstring_upper, NULL);
 	l_test_add("l_util_from_hexstring", test_from_hexstring, NULL);
 
 	l_test_add("l_util_has_suffix", test_has_suffix, NULL);
