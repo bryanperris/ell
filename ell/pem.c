@@ -284,8 +284,9 @@ LIB_EXPORT struct l_queue *l_pem_load_certificate_list(const char *filename)
 		der = pem_load_buffer(ptr, end - ptr, 0, &label, &der_len, &ptr);
 
 		if (!der || strcmp(label, "CERTIFICATE")) {
+			if (der)
+				l_free(label);
 			l_free(der);
-			l_free(label);
 
 			if (!ptr)	/* EOF */
 				break;
