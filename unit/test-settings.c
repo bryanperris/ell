@@ -44,7 +44,8 @@ static const char *data1 = "[Foobar]\n#Comment\n#Comment2\nKey=Value\n"
 		"StringBad2=Foobar\\b123\n"
 		"StringList=Foo,Bar,Baz\n"
 		"StringListEmpty=\n"
-		"StringListOne=FooBarBaz\n";
+		"StringListOne=FooBarBaz\n"
+		"StringWithSpaces=Bar B Q\n";
 
 static const char *data2 = "[Group1]\nKey=Value\n"
 			"IntegerA=2147483647\nIntegerB=-2147483648\n"
@@ -131,6 +132,11 @@ static void test_settings(struct l_settings *settings)
 	assert(!strcmp(strv[0], "FooBarBaz"));
 	assert(strv[1] == NULL);
 	l_strfreev(strv);
+
+	str = l_settings_get_string(settings, "Foobar", "StringWithSpaces");
+	assert(str);
+	assert(!strcmp(str, "Bar B Q"));
+	l_free(str);
 
 	strv = l_settings_get_groups(settings);
 	assert(strv);

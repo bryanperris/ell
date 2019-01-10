@@ -19,3 +19,4 @@ StringBad2=Foobar\b123
 StringList=Foo,Bar,Baz
 StringListEmpty=
 StringListOne=FooBarBaz
+StringWithSpaces=Bar B Q
