@@ -276,6 +276,7 @@ bool l_str_has_prefix(const char *str, const char *prefix);
 bool l_str_has_suffix(const char *str, const char *suffix);
 
 char *l_util_hexstring(const unsigned char *buf, size_t len);
+char *l_util_hexstring_upper(const unsigned char *buf, size_t len);
 unsigned char *l_util_from_hexstring(const char *str, size_t *out_len);
 
 typedef void (*l_util_hexdump_func_t) (const char *str, void *user_data);

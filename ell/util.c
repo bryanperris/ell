@@ -336,16 +336,9 @@ LIB_EXPORT bool l_str_has_suffix(const char *str, const char *suffix)
 	return !strcmp(&str[len_diff], suffix);
 }
 
-/**
- * l_util_hexstring:
- * @buf: buffer pointer
- * @len: length of buffer
- *
- * Returns: a newly allocated hex string
- **/
-LIB_EXPORT char *l_util_hexstring(const unsigned char *buf, size_t len)
+static char *hexstring_common(const unsigned char *buf, size_t len,
+				const char hexdigits[static 16])
 {
-	static const char hexdigits[] = "0123456789abcdef";
 	char *str;
 	size_t i;
 
@@ -362,6 +355,36 @@ LIB_EXPORT char *l_util_hexstring(const unsigned char *buf, size_t len)
 	str[len * 2] = '\0';
 
 	return str;
+}
+
+/**
+ * l_util_hexstring:
+ * @buf: buffer pointer
+ * @len: length of buffer
+ *
+ * Returns: a newly allocated hex string.  Note that the string will contain
+ * lower case hex digits a-f.  If you require upper case hex digits, use
+ * @l_util_hexstring_upper
+ **/
+LIB_EXPORT char *l_util_hexstring(const unsigned char *buf, size_t len)
+{
+	static const char hexdigits[] = "0123456789abcdef";
+	return hexstring_common(buf, len, hexdigits);
+}
+
+/**
+ * l_util_hexstring_upper:
+ * @buf: buffer pointer
+ * @len: length of buffer
+ *
+ * Returns: a newly allocated hex string.  Note that the string will contain
+ * upper case hex digits a-f.  If you require lower case hex digits, use
+ * @l_util_hexstring
+ **/
+LIB_EXPORT char *l_util_hexstring_upper(const unsigned char *buf, size_t len)
+{
+	static const char hexdigits[] = "0123456789ABCDEF";
+	return hexstring_common(buf, len, hexdigits);
 }
 
 /**
