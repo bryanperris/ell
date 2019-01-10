@@ -197,6 +197,7 @@ static void tls_reset_handshake(struct l_tls *tls)
 	tls->peer_pubkey = NULL;
 	tls->peer_pubkey_size = 0;
 	tls->negotiated_curve = NULL;
+	tls->negotiated_ff_group = NULL;
 
 	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
 		tls_drop_handshake_hash(tls, hash);
