@@ -61,6 +61,20 @@ ssize_t l_ecc_scalar_get_data(const struct l_ecc_scalar *c, void *buf,
 					size_t len);
 void l_ecc_scalar_free(struct l_ecc_scalar *c);
 
+/* Constant operations */
+struct l_ecc_scalar *l_ecc_curve_get_order(const struct l_ecc_curve *curve);
+bool l_ecc_scalar_add(struct l_ecc_scalar *ret, const struct l_ecc_scalar *a,
+				const struct l_ecc_scalar *b,
+				const struct l_ecc_scalar *mod);
+
+/* Point operations */
+bool l_ecc_point_multiply(struct l_ecc_point *ret,
+				const struct l_ecc_scalar *scalar,
+				const struct l_ecc_point *point);
+bool l_ecc_point_add(struct l_ecc_point *ret, const struct l_ecc_point *a,
+				const struct l_ecc_point *b);
+bool l_ecc_point_inverse(struct l_ecc_point *p);
+
 #ifdef __cplusplus
 }
 #endif
