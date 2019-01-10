@@ -264,6 +264,96 @@ static bool decode_point(const struct l_ecc_curve *curve, uint64_t *x,
 	return true;
 }
 
+/* (rx, ry) = (px, py) + (qx, qy) */
+void _ecc_point_add(struct l_ecc_point *ret, const struct l_ecc_point *p,
+			const struct l_ecc_point *q,
+			const uint64_t *curve_prime)
+{
+	/*
+	* s = (py - qy)/(px - qx)
+	*
+	* rx = s^2 - px - qx
+	* ry = s(px - rx) - py
+	*/
+	uint64_t s[L_ECC_MAX_DIGITS];
+	uint64_t kp1[L_ECC_MAX_DIGITS];
+	uint64_t kp2[L_ECC_MAX_DIGITS];
+	uint64_t resx[L_ECC_MAX_DIGITS];
+	uint64_t resy[L_ECC_MAX_DIGITS];
+	unsigned int ndigits = p->curve->ndigits;
+
+	memset(s, 0, ndigits * 8);
+
+	/* kp1 = py - qy */
+	_vli_mod_sub(kp1, q->y, p->y, curve_prime, ndigits);
+	/* kp2 = px - qx */
+	_vli_mod_sub(kp2, q->x, p->x, curve_prime, ndigits);
+	/* s = kp1/kp2 */
+	_vli_mod_inv(kp2, kp2, curve_prime, ndigits);
+	_vli_mod_mult_fast(s, kp1, kp2, curve_prime, ndigits);
+	/* rx = s^2 - px - qx */
+	_vli_mod_mult_fast(kp1, s, s, curve_prime, ndigits);
+	_vli_mod_sub(kp1, kp1, p->x, curve_prime, ndigits);
+	_vli_mod_sub(resx, kp1, q->x, curve_prime, ndigits);
+	/* ry = s(px - rx) - py */
+	_vli_mod_sub(kp1, p->x, resx, curve_prime, ndigits);
+	_vli_mod_mult_fast(kp1, s, kp1, curve_prime, ndigits);
+	_vli_mod_sub(resy, kp1, p->y, curve_prime, ndigits);
+
+	memcpy(ret->x, resx, ndigits * 8);
+	memcpy(ret->y, resy, ndigits * 8);
+}
+
+/* result = (base ^ exp) % p */
+void _vli_mod_exp(uint64_t *result, uint64_t *base, uint64_t *exp,
+			const uint64_t *mod, unsigned int ndigits)
+{
+	unsigned int i;
+	int bit;
+	uint64_t n[L_ECC_MAX_DIGITS];
+	uint64_t r[L_ECC_MAX_DIGITS] = { 1 };
+
+	memcpy(n, base, ndigits * 8);
+
+	for (i = 0; i < ndigits; i++) {
+		for (bit = 0; bit < 64; bit++) {
+			uint64_t tmp[L_ECC_MAX_DIGITS];
+
+			if (exp[i] & (1ull << bit)) {
+				_vli_mod_mult_fast(tmp, r, n, mod, ndigits);
+				memcpy(r, tmp, ndigits * 8);
+			}
+
+			_vli_mod_mult_fast(tmp, n, n, mod, ndigits);
+			memcpy(n, tmp, ndigits * 8);
+		}
+	}
+
+	memcpy(result, r, ndigits * 8);
+}
+
+int _vli_legendre(uint64_t *val, const uint64_t *p, unsigned int ndigits)
+{
+	uint64_t tmp[L_ECC_MAX_DIGITS];
+	uint64_t exp[L_ECC_MAX_DIGITS];
+	uint64_t _1[L_ECC_MAX_DIGITS] = { 1ull };
+	uint64_t _0[L_ECC_MAX_DIGITS] = { 0 };
+
+	/* check that val ^ ((p - 1) / 2) == [1, 0 or -1] */
+
+	_vli_sub(exp, p, _1, ndigits);
+	_vli_rshift1(exp, ndigits);
+	_vli_mod_exp(tmp, val, exp, p, ndigits);
+
+	if (_vli_cmp(tmp, _1, ndigits) == 0)
+		return 1;
+	else if (_vli_cmp(tmp, _0, ndigits) == 0)
+		return 0;
+	else
+		return -1;
+}
+
+
 LIB_EXPORT struct l_ecc_point *l_ecc_point_new(const struct l_ecc_curve *curve)
 {
 	struct l_ecc_point *p = l_new(struct l_ecc_point, 1);

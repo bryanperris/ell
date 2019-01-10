@@ -75,6 +75,10 @@ void _vli_mod_exp(uint64_t *result, uint64_t *base, uint64_t *exp,
 
 int _vli_cmp(const uint64_t *left, const uint64_t *right, unsigned int ndigits);
 
+uint64_t _vli_sub(uint64_t *result, const uint64_t *left,
+							const uint64_t *right,
+							unsigned int ndigits);
+
 int _vli_legendre(uint64_t *val, const uint64_t *p, unsigned int ndigits);
 
 bool _ecc_point_is_zero(const struct l_ecc_point *point);
