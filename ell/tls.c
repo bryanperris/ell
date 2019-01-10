@@ -464,6 +464,19 @@ static bool tls_cipher_suite_is_compatible(struct l_tls *tls,
 		return false;
 	}
 
+	if (suite->key_xchg->need_ffdh &&
+			!l_key_is_supported(L_KEY_FEATURE_DH)) {
+		if (error) {
+			*error = error_buf;
+			snprintf(error_buf, sizeof(error_buf),
+					"Cipher suite %s's key exchange "
+					"mechanism needs kernel DH support",
+					suite->name);
+		}
+
+		return false;
+	}
+
 	leaf = l_certchain_get_leaf(tls->cert);
 	if (leaf && !suite->key_xchg->validate_cert_key_type(leaf)) {
 		if (error) {
