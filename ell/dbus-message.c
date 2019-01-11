@@ -857,10 +857,10 @@ struct l_dbus_message *dbus_message_build(void *header, size_t header_size,
 
 		for (i = num_fds; i < orig_fds; i++)
 			close(fds[i]);
-	}
 
-	message->num_fds = num_fds;
-	memcpy(message->fds, fds, num_fds * sizeof(int));
+		message->num_fds = num_fds;
+		memcpy(message->fds, fds, num_fds * sizeof(int));
+	}
 
 	/* If the field is absent message->signature will remain NULL */
 	get_header_field(message, DBUS_MESSAGE_FIELD_SIGNATURE, 'g',
