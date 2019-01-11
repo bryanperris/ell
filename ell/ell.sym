@@ -458,15 +458,27 @@ global:
 	l_certchain_verify;
 	/* ecc */
 	l_ecc_curve_get;
-	l_ecc_point_new;
+	l_ecc_curve_get_order;
+	l_ecc_curve_get_prime;
+	l_ecc_point_add;
+	l_ecc_point_free;
 	l_ecc_point_from_data;
 	l_ecc_point_get_x;
 	l_ecc_point_get_data;
-	l_ecc_point_free;
+	l_ecc_point_inverse;
+	l_ecc_point_multiply;
+	l_ecc_point_new;
+	l_ecc_points_are_equal;
+	l_ecc_scalar_add;
+	l_ecc_scalar_free;
+	l_ecc_scalar_get_data;
+	l_ecc_scalar_legendre;
+	l_ecc_scalar_multiply;
 	l_ecc_scalar_new;
 	l_ecc_scalar_new_random;
-	l_ecc_scalar_get_data;
-	l_ecc_scalar_free;
+	l_ecc_scalar_sum_x;
+	l_ecc_scalars_are_equal;
+
 	/* ecdh */
 	l_ecdh_generate_key_pair;
 	l_ecdh_generate_shared_secret;
