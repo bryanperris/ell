@@ -797,10 +797,10 @@ struct l_dbus_message *dbus_message_from_blob(const void *data, size_t size,
 
 		for (i = num_fds; i < orig_fds; i++)
 			close(fds[i]);
-	}
 
-	message->num_fds = num_fds;
-	memcpy(message->fds, fds, num_fds * sizeof(int));
+		message->num_fds = num_fds;
+		memcpy(message->fds, fds, num_fds * sizeof(int));
+	}
 
 	return message;
 
