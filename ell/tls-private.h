@@ -20,14 +20,7 @@
  *
  */
 
-enum l_tls_version {
-	L_TLS_V10 = ((3 << 8) | 1),
-	L_TLS_V11 = ((3 << 8) | 2),
-	L_TLS_V12 = ((3 << 8) | 3),
-	L_TLS_V13 = ((3 << 8) | 4),	/* Not supported */
-};
-
-#define TLS_VERSION	L_TLS_V12
+#define TLS_MAX_VERSION	L_TLS_V12
 #define TLS_MIN_VERSION	L_TLS_V10
 
 enum tls_cipher_type {
@@ -212,6 +205,8 @@ struct l_tls {
 	l_tls_debug_cb_t debug_handler;
 	l_tls_destroy_cb_t debug_destroy;
 	void *debug_data;
+	enum l_tls_version min_version;
+	enum l_tls_version max_version;
 
 	struct l_queue *ca_certs;
 	struct l_certchain *cert;

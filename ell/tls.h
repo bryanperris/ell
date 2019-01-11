@@ -25,6 +25,13 @@
 extern "C" {
 #endif
 
+enum l_tls_version {
+	L_TLS_V10 = ((3 << 8) | 1),
+	L_TLS_V11 = ((3 << 8) | 2),
+	L_TLS_V12 = ((3 << 8) | 3),
+	L_TLS_V13 = ((3 << 8) | 4),	/* Not supported */
+};
+
 struct l_tls;
 
 enum l_tls_alert_desc {
@@ -62,7 +69,6 @@ typedef void (*l_tls_disconnect_cb_t)(enum l_tls_alert_desc reason,
 					bool remote, void *user_data);
 typedef void (*l_tls_debug_cb_t)(const char *str, void *user_data);
 typedef void (*l_tls_destroy_cb_t)(void *user_data);
-
 
 /*
  * app_data_handler gets called with newly received decrypted data.
@@ -106,6 +112,10 @@ bool l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path);
 bool l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
 				const char *priv_key_path,
 				const char *priv_key_passphrase);
+
+void l_tls_set_version_range(struct l_tls *tls,
+				enum l_tls_version min_version,
+				enum l_tls_version max_version);
 
 const char *l_tls_alert_to_str(enum l_tls_alert_desc desc);
 

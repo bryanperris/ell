@@ -57,8 +57,8 @@ static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
 	}
 
 	/* Must match the version in tls_send_client_hello */
-	pre_master_secret[0] = (uint8_t) (TLS_VERSION >> 8);
-	pre_master_secret[1] = (uint8_t) (TLS_VERSION >> 0);
+	pre_master_secret[0] = (uint8_t) (tls->max_version >> 8);
+	pre_master_secret[1] = (uint8_t) (tls->max_version >> 0);
 
 	l_getrandom(pre_master_secret + 2, 46);
 

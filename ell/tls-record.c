@@ -223,7 +223,7 @@ void tls_tx_record(struct l_tls *tls, enum tls_content_type type,
 				TX_RECORD_TAILROOM];
 	uint8_t *fragment, *plaintext;
 	uint16_t fragment_len;
-	uint16_t version = tls->negotiated_version ?: TLS_MIN_VERSION;
+	uint16_t version = tls->negotiated_version ?: tls->min_version;
 
 	if (type == TLS_CT_ALERT)
 		tls->record_flush = true;

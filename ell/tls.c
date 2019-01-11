@@ -389,20 +389,23 @@ static bool tls_cipher_suite_is_compatible(struct l_tls *tls,
 {
 	static char error_buf[200];
 	struct l_cert *leaf;
+	enum l_tls_version min_version =
+		tls->negotiated_version ?: tls->min_version;
+	enum l_tls_version max_version =
+		tls->negotiated_version ?: tls->max_version;
 
 	if (suite->encryption &&
 			suite->encryption->cipher_type == TLS_CIPHER_AEAD) {
-		enum l_tls_version negotiated = tls->negotiated_version;
-
-		if (negotiated && negotiated < L_TLS_V12) {
+		if (max_version < L_TLS_V12) {
 			if (error) {
 				*error = error_buf;
 				snprintf(error_buf, sizeof(error_buf),
 						"Cipher suite %s uses an AEAD "
 						"cipher (TLS 1.2+) but "
-						TLS_VER_FMT " was negotiated",
-						suite->name,
-						TLS_VER_ARGS(negotiated));
+						TLS_VER_FMT
+						" was negotiated or is the max "
+						"version allowed", suite->name,
+						TLS_VER_ARGS(tls->max_version));
 			}
 
 			return false;
@@ -446,10 +449,11 @@ static bool tls_cipher_suite_is_compatible(struct l_tls *tls,
 		return false;
 	}
 
-	if ((tls->negotiated_version && tls->negotiated_version < L_TLS_V12 &&
-			(!l_checksum_is_supported(L_CHECKSUM_MD5, true) ||
-			 !l_checksum_is_supported(L_CHECKSUM_SHA1, true))) ||
-			(tls->negotiated_version >= L_TLS_V12 &&
+	if (
+			(max_version < L_TLS_V12 &&
+			 (!l_checksum_is_supported(L_CHECKSUM_MD5, true) ||
+			  !l_checksum_is_supported(L_CHECKSUM_SHA1, true))) ||
+			(min_version >= L_TLS_V12 &&
 			 !l_checksum_is_supported(
 					suite->prf_hmac != L_CHECKSUM_NONE ?
 					suite->prf_hmac : L_CHECKSUM_SHA256,
@@ -565,8 +569,14 @@ const struct tls_hash_algorithm tls_handshake_hash_data[] = {
 static bool tls_init_handshake_hash(struct l_tls *tls)
 {
 	enum handshake_hash_type hash;
+	bool tls10 = tls->max_version < L_TLS_V12;
 
 	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++) {
+		/* Skip hash types we already know we won't need */
+		if (tls10 && hash != HANDSHAKE_HASH_SHA1 &&
+				hash != HANDSHAKE_HASH_MD5)
+			continue;
+
 		if (tls->handshake_hash[hash]) {
 			TLS_DEBUG("Handshake hash %s already exists",
 					tls_handshake_hash_data[hash].name);
@@ -793,8 +803,8 @@ static bool tls_send_client_hello(struct l_tls *tls)
 
 	/* Fill in the Client Hello body */
 
-	*ptr++ = (uint8_t) (TLS_VERSION >> 8);
-	*ptr++ = (uint8_t) (TLS_VERSION >> 0);
+	*ptr++ = (uint8_t) (tls->max_version >> 8);
+	*ptr++ = (uint8_t) (tls->max_version >> 0);
 
 	tls_write_random(tls->pending.client_random);
 	memcpy(ptr, tls->pending.client_random, 32);
@@ -818,7 +828,8 @@ static bool tls_send_client_hello(struct l_tls *tls)
 	}
 
 	if (ptr == len_ptr + 2) {
-		TLS_DEBUG("No compatible cipher suites, check kernel config");
+		TLS_DEBUG("No compatible cipher suites, check kernel config, "
+				"certificate's key type and TLS version range");
 		return false;
 	}
 
@@ -1488,15 +1499,15 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	/* Save client_version for Premaster Secret verification */
 	tls->client_version = l_get_be16(buf);
 
-	if (tls->client_version < TLS_MIN_VERSION) {
+	if (tls->client_version < tls->min_version) {
 		TLS_DISCONNECT(TLS_ALERT_PROTOCOL_VERSION, 0,
 				"Client version too low: %02x",
 				tls->client_version);
 		goto cleanup;
 	}
 
-	tls->negotiated_version = TLS_VERSION < tls->client_version ?
-		TLS_VERSION : tls->client_version;
+	tls->negotiated_version = tls->client_version > tls->max_version ?
+		tls->max_version : tls->client_version;
 
 	/* Stop maintaining handshake message hashes other than MD1 and SHA. */
 	if (tls->negotiated_version < L_TLS_V12)
@@ -1660,9 +1671,9 @@ static void tls_handle_server_hello(struct l_tls *tls,
 
 	tls->negotiated_version = l_get_be16(buf);
 
-	if (tls->negotiated_version < TLS_MIN_VERSION ||
-			tls->negotiated_version > TLS_VERSION) {
-		TLS_DISCONNECT(tls->negotiated_version < TLS_MIN_VERSION ?
+	if (tls->negotiated_version < tls->min_version ||
+			tls->negotiated_version > tls->max_version) {
+		TLS_DISCONNECT(tls->negotiated_version < tls->min_version ?
 				TLS_ALERT_PROTOCOL_VERSION :
 				TLS_ALERT_ILLEGAL_PARAM, 0,
 				"Unsupported version %02x",
@@ -2407,6 +2418,8 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 	tls->user_data = user_data;
 	tls->cipher_suite_pref_list = tls_cipher_suite_pref;
 	tls->signature_hash = HANDSHAKE_HASH_SHA256;
+	tls->min_version = TLS_MIN_VERSION;
+	tls->max_version = TLS_MAX_VERSION;
 
 	/* If we're the server wait for the Client Hello already */
 	if (tls->server)
@@ -2596,6 +2609,9 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 
 LIB_EXPORT bool l_tls_start(struct l_tls *tls)
 {
+	if (tls->max_version < tls->min_version)
+		return false;
+
 	if (!tls->cipher_suite_pref_list)
 		return false;
 
@@ -2743,6 +2759,18 @@ bool tls_set_cipher_suites(struct l_tls *tls, const char **suite_list)
 	l_free(suite);
 	tls->cipher_suite_pref_list = NULL;
 	return false;
+}
+
+LIB_EXPORT void l_tls_set_version_range(struct l_tls *tls,
+					enum l_tls_version min_version,
+					enum l_tls_version max_version)
+{
+	tls->min_version =
+		(min_version && min_version > TLS_MIN_VERSION) ?
+		min_version : TLS_MIN_VERSION;
+	tls->max_version =
+		(max_version && max_version < TLS_MAX_VERSION) ?
+		max_version : TLS_MAX_VERSION;
 }
 
 LIB_EXPORT const char *l_tls_alert_to_str(enum l_tls_alert_desc desc)
