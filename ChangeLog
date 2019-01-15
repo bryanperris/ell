@@ -1,3 +1,8 @@
+ver 0.17:
+	Add support for TLS Supported Groups extension.
+	Add support for TLS Hello extension feature.
+	Add support for ECC and ECDH functionality.
+
 ver 0.16:
 	Add support for watchdog notification handling from systemd.
 	Add support for generic X.509 certificate utilities.
