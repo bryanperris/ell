@@ -32,6 +32,9 @@
 #include "ecc-private.h"
 #include "random.h"
 
+/*
+ * RFC 5114 - Section 2.6 256-bit Random ECP Group
+ */
 #define P256_CURVE_P { 0xFFFFFFFFFFFFFFFFull, 0x00000000FFFFFFFFull, \
 			0x0000000000000000ull, 0xFFFFFFFF00000001ull }
 #define P256_CURVE_GX { 0xF4A13945D898C296ull, 0x77037D812DEB33A0ull,   \
@@ -56,6 +59,9 @@ static const struct l_ecc_curve p256 = {
 	.b = P256_CURVE_B,
 };
 
+/*
+ * RFC 5114 - Section 2.7 384-bit Random ECP Group
+ */
 #define P384_CURVE_P {	0x00000000FFFFFFFFull, 0xFFFFFFFF00000000ull, \
 			0xFFFFFFFFFFFFFFFEull, 0xFFFFFFFFFFFFFFFFull, \
 			0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull }
