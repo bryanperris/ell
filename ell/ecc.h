@@ -43,6 +43,7 @@ enum l_ecc_point_type {
 };
 
 const struct l_ecc_curve *l_ecc_curve_get(unsigned int group);
+const unsigned int *l_ecc_curve_get_supported_groups(void);
 
 struct l_ecc_point *l_ecc_point_new(const struct l_ecc_curve *curve);
 struct l_ecc_point *l_ecc_point_from_data(const struct l_ecc_curve *curve,

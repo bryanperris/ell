@@ -102,6 +102,24 @@ LIB_EXPORT const struct l_ecc_curve *l_ecc_curve_get(unsigned int group)
 	return NULL;
 }
 
+LIB_EXPORT const unsigned int *l_ecc_curve_get_supported_groups(void)
+{
+	static unsigned int supported_groups[L_ARRAY_SIZE(curves) + 1];
+	static bool first = true;
+
+	if (first) {
+		unsigned int i;
+
+		for (i = 0; i < L_ARRAY_SIZE(curves); i++)
+			supported_groups[i] = curves[i]->group;
+
+		supported_groups[i] = 0;
+		first = false;
+	}
+
+	return supported_groups;
+}
+
 static bool ecc_valid_point(struct l_ecc_point *point)
 {
 	const struct l_ecc_curve *curve = point->curve;

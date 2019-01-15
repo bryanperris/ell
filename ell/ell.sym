@@ -460,6 +460,7 @@ global:
 	l_certchain_verify;
 	/* ecc */
 	l_ecc_curve_get;
+	l_ecc_curve_get_supported_groups;
 	l_ecc_curve_get_order;
 	l_ecc_curve_get_prime;
 	l_ecc_point_add;
