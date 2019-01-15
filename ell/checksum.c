@@ -510,3 +510,20 @@ LIB_EXPORT bool l_checksum_cmac_aes_supported()
 
 	return is_supported("cmac(aes)");
 }
+
+LIB_EXPORT ssize_t l_checksum_digest_length(enum l_checksum_type type)
+{
+	const char *name;
+	int i;
+
+	name = checksum_type_to_name(type);
+	if (!name)
+		return -EINVAL;
+
+	for (i = 0; checksum_info_table[i].name; i++) {
+		if (!strcmp(checksum_info_table[i].name, name))
+			return checksum_info_table[i].digest_len;
+	}
+
+	return 0;
+}

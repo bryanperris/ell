@@ -115,6 +115,7 @@ global:
 	l_checksum_get_string;
 	l_checksum_is_supported;
 	l_checksum_cmac_aes_supported;
+	l_checksum_digest_length;
 	/* cipher */
 	l_cipher_new;
 	l_aead_cipher_new;
