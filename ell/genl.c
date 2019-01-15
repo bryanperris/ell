@@ -790,7 +790,9 @@ LIB_EXPORT bool l_genl_msg_append_attr(struct l_genl_msg *msg, uint16_t type,
 	nla->nla_len = NLA_HDRLEN + len;
 	nla->nla_type = type;
 
-	memcpy(msg->data + msg->len + NLA_HDRLEN, data, len);
+	if (len)
+		memcpy(msg->data + msg->len + NLA_HDRLEN, data, len);
+
 	msg->len += NLA_HDRLEN + NLA_ALIGN(len);
 
 	return true;
