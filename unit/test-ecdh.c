@@ -65,7 +65,7 @@ bool __wrap_l_getrandom(void *buf, size_t len)
  */
 static void test_basic(const void *data)
 {
-	const struct l_ecc_curve *curve = l_ecc_curve_get(19);
+	const struct l_ecc_curve *curve = l_ecc_curve_get_ike_group(19);
 
 	struct l_ecc_scalar *private1;
 	struct l_ecc_scalar *private2;
@@ -97,7 +97,7 @@ static void test_basic(const void *data)
  */
 static void test_vector_p256(const void *data)
 {
-	const struct l_ecc_curve *curve = l_ecc_curve_get(19);
+	const struct l_ecc_curve *curve = l_ecc_curve_get_ike_group(19);
 
 	uint64_t a_sec_buf[4] = { 0x867B7291D507A3AFull, 0x3FAF432A5ABCE59Eull,
 				0xE96A8E337A128499ull, 0x814264145F2F56F2ull };
@@ -157,7 +157,7 @@ static void test_vector_p256(const void *data)
  */
 static void test_vector_p384(const void *data)
 {
-	const struct l_ecc_curve *curve = l_ecc_curve_get(20);
+	const struct l_ecc_curve *curve = l_ecc_curve_get_ike_group(20);
 
 	uint64_t a_sec_buf[6] = { 0x86F05FEADB9376F1ull, 0xD706A90CBCB5DF29ull,
 				0xD709EE7A7962A156ull, 0x5DFD8A7965571C48ull,

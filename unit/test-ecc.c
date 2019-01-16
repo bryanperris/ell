@@ -218,7 +218,7 @@ static void run_test_p256(const void *arg)
 			scalar[L_ECC_MAX_DIGITS], result[L_ECC_MAX_DIGITS],
 			check[L_ECC_MAX_DIGITS];
 	struct l_ecc_point point1, point2, point_ret;
-	const struct l_ecc_curve *curve = l_ecc_curve_get(19);
+	const struct l_ecc_curve *curve = l_ecc_curve_get_ike_group(19);
 
 	point_ret.curve = curve;
 
