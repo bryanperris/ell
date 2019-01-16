@@ -47,7 +47,9 @@
 			0xB3EBBD55769886BCull, 0x5AC635D8AA3A93E7ull }
 
 static const struct l_ecc_curve p256 = {
-	.group = 19,
+	.name = "secp256r1",
+	.ike_group = 19,
+	.tls_group = 23,
 	.ndigits = 4,
 	.g = {
 		.x = P256_CURVE_GX,
@@ -79,7 +81,9 @@ static const struct l_ecc_curve p256 = {
 			0x988E056BE3F82D19ull, 0xB3312FA7E23EE7E4ull }
 
 static const struct l_ecc_curve p384 = {
-	.group = 20,
+	.name = "secp384r1",
+	.ike_group = 20,
+	.tls_group = 24,
 	.ndigits = 6,
 	.g = {
 		.x = P384_CURVE_GX,
@@ -96,34 +100,89 @@ static const struct l_ecc_curve *curves[] = {
 	&p384,
 };
 
-LIB_EXPORT const struct l_ecc_curve *l_ecc_curve_get(unsigned int group)
+LIB_EXPORT const struct l_ecc_curve *l_ecc_curve_get(const char *name)
 {
 	int i;
 
+	if (unlikely(!name))
+		return NULL;
+
 	for (i = 0; curves[i]; i++) {
-		if (curves[i]->group == group)
+		if (!strcmp(curves[i]->name, name))
 			return curves[i];
 	}
 
 	return NULL;
 }
 
-LIB_EXPORT const unsigned int *l_ecc_curve_get_supported_groups(void)
+LIB_EXPORT const char *l_ecc_curve_get_name(const struct l_ecc_curve *curve)
 {
-	static unsigned int supported_groups[L_ARRAY_SIZE(curves) + 1];
-	static bool first = true;
+	if (unlikely(!curve))
+		return NULL;
 
-	if (first) {
+	return curve->name;
+}
+
+LIB_EXPORT const struct l_ecc_curve *l_ecc_curve_get_ike_group(
+							unsigned int group)
+{
+	int i;
+
+	for (i = 0; curves[i]; i++) {
+		if (curves[i]->ike_group == group)
+			return curves[i];
+	}
+
+	return NULL;
+}
+
+LIB_EXPORT const struct l_ecc_curve *l_ecc_curve_get_tls_group(
+							unsigned int group)
+{
+	int i;
+
+	for (i = 0; curves[i]; i++) {
+		if (curves[i]->tls_group == group)
+			return curves[i];
+	}
+
+	return NULL;
+}
+
+LIB_EXPORT const unsigned int *l_ecc_curve_get_supported_ike_groups(void)
+{
+	static unsigned int supported_ike_groups[L_ARRAY_SIZE(curves) + 1];
+	static bool ike_first = true;
+
+	if (ike_first) {
 		unsigned int i;
 
 		for (i = 0; i < L_ARRAY_SIZE(curves); i++)
-			supported_groups[i] = curves[i]->group;
+			supported_ike_groups[i] = curves[i]->ike_group;
 
-		supported_groups[i] = 0;
-		first = false;
+		supported_ike_groups[i] = 0;
+		ike_first = false;
 	}
 
-	return supported_groups;
+	return supported_ike_groups;
+}
+
+LIB_EXPORT const unsigned int *l_ecc_curve_get_supported_tls_groups(void)
+{
+	static unsigned int supported_tls_groups[L_ARRAY_SIZE(curves) + 1];
+	static bool tls_first = true;
+
+	if (tls_first) {
+		unsigned int i;
+
+		for (i = 0; i < L_ARRAY_SIZE(curves); i++)
+			supported_tls_groups[i] = curves[i]->tls_group;
+
+		supported_tls_groups[i] = 0;
+		tls_first = false;
+	}
+
+	return supported_tls_groups;
 }
 
 static bool ecc_valid_point(struct l_ecc_point *point)

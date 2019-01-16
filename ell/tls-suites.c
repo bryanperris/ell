@@ -428,7 +428,7 @@ static bool tls_send_ecdhe_server_key_xchg(struct l_tls *tls)
 	 */
 
 	params = l_new(struct tls_ecdhe_params, 1);
-	params->curve = l_ecc_curve_get(tls->negotiated_curve->ec.l_group);
+	params->curve = l_ecc_curve_get_tls_group(tls->negotiated_curve->id);
 	tls->pending.key_xchg_params = params;
 
 	if (!l_ecdh_generate_key_pair(params->curve,
@@ -510,7 +510,7 @@ static void tls_handle_ecdhe_server_key_xchg(struct l_tls *tls,
 	 * format is used.
 	 */
 	params = l_new(struct tls_ecdhe_params, 1);
-	params->curve = l_ecc_curve_get(tls->negotiated_curve->ec.l_group);
+	params->curve = l_ecc_curve_get_tls_group(tls->negotiated_curve->id);
 	params->public = l_ecc_point_from_data(params->curve,
 						L_ECC_POINT_TYPE_FULL,
 						buf, len);

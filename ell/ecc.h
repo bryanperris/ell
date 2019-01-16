@@ -42,8 +42,12 @@ enum l_ecc_point_type {
 	L_ECC_POINT_TYPE_FULL = 0x04,
 };
 
-const struct l_ecc_curve *l_ecc_curve_get(unsigned int group);
-const unsigned int *l_ecc_curve_get_supported_groups(void);
+const struct l_ecc_curve *l_ecc_curve_get(const char *name);
+const char *l_ecc_curve_get_name(const struct l_ecc_curve *curve);
+const unsigned int *l_ecc_curve_get_supported_ike_groups(void);
+const unsigned int *l_ecc_curve_get_supported_tls_groups(void);
+const struct l_ecc_curve *l_ecc_curve_get_ike_group(unsigned int group);
+const struct l_ecc_curve *l_ecc_curve_get_tls_group(unsigned int group);
 
 struct l_ecc_point *l_ecc_point_new(const struct l_ecc_curve *curve);
 struct l_ecc_point *l_ecc_point_from_data(const struct l_ecc_curve *curve,

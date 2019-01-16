@@ -35,7 +35,9 @@ struct l_ecc_point {
 
 struct l_ecc_curve {
 	unsigned int ndigits;
-	unsigned int group;
+	unsigned int ike_group;
+	unsigned int tls_group;
+	const char *name;
 	struct l_ecc_point g;
 	uint64_t p[L_ECC_MAX_DIGITS];
 	uint64_t n[L_ECC_MAX_DIGITS];
