@@ -1063,7 +1063,7 @@ static void tls_handle_dhe_client_key_xchg(struct l_tls *tls,
 	}
 
 	params->public = l_key_new(L_KEY_RAW, buf, public_len);
-	if (!params->prime) {
+	if (!params->public) {
 		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0, "l_key_new failed");
 		return;
 	}
