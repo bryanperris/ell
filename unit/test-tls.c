@@ -620,18 +620,7 @@ static void test_tls_suite_test(const void *data)
 
 int main(int argc, char *argv[])
 {
-	const char *suite_names[] = {
-		"TLS_RSA_WITH_RC4_128_MD5",
-		"TLS_RSA_WITH_RC4_128_SHA",
-		"TLS_RSA_WITH_3DES_EDE_CBC_SHA",
-		"TLS_RSA_WITH_AES_128_CBC_SHA",
-		"TLS_RSA_WITH_AES_256_CBC_SHA",
-		"TLS_RSA_WITH_AES_128_CBC_SHA256",
-		"TLS_RSA_WITH_AES_256_CBC_SHA256",
-		"TLS_RSA_WITH_AES_128_GCM_SHA256",
-		"TLS_RSA_WITH_AES_256_GCM_SHA384",
-		NULL
-	}, **name;
+	unsigned int i;
 
 	l_test_init(&argc, &argv);
 
@@ -699,8 +688,9 @@ int main(int argc, char *argv[])
 	l_test_add("TLS connection version mismatch",
 			test_tls_version_mismatch_test, NULL);
 
-	for (name = suite_names; *name; name++)
-		l_test_add(*name, test_tls_suite_test, *name);
+	for (i = 0; tls_cipher_suite_pref[i]; i++)
+		l_test_add(tls_cipher_suite_pref[i]->name, test_tls_suite_test,
+				tls_cipher_suite_pref[i]->name);
 
 done:
 	return l_test_run();
