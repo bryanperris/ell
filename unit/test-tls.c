@@ -26,6 +26,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <ell/ell.h>
 
@@ -618,9 +619,26 @@ static void test_tls_suite_test(const void *data)
 	test_tls_with_ver(&test, 0, 0);
 }
 
+static int read_int_from_file(const char *path)
+{
+	int ret;
+	FILE *file;
+
+	file = fopen(path, "r");
+	if (!file)
+		return 0;
+
+	if (fscanf(file, "%i", &ret) < 1)
+		ret = 0;
+
+	fclose(file);
+	return ret;
+}
+
 int main(int argc, char *argv[])
 {
 	unsigned int i;
+	int maxkeys;
 
 	l_test_init(&argc, &argv);
 
@@ -666,6 +684,13 @@ int main(int argc, char *argv[])
 			"skipping TLS connection tests...\n");
 		goto done;
 	}
+
+	maxkeys = read_int_from_file(getuid() > 0 ?
+					"/proc/sys/kernel/keys/maxkeys" :
+					"/proc/sys/kernel/keys/root_maxkeys");
+	if (maxkeys && maxkeys < 2000)
+		printf("Running sysctl kernel.keys.%s=2000 is recommended\n",
+			getuid() > 0 ? "maxkeys" : "root_maxkeys");
 
 	l_test_add("TLS connection no auth", test_tls_test,
 			&tls_conn_test_no_auth);
