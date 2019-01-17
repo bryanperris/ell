@@ -313,6 +313,20 @@ LIB_EXPORT void l_key_free(struct l_key *key)
 	if (unlikely(!key))
 		return;
 
+	/*
+	 * Unlinking the key from internal_keyring, while not necessary,
+	 * causes the kernel's key garbage collector to run much sooner
+	 * than if the key is only revoked, at least under some kernel
+	 * versions and when the key is not linked to any other ring.
+	 * In practice this helps the user processes stay under the
+	 * per-user key quota (kernel.keys.maxkeys) which is difficult
+	 * to control when there's no way to reclaim the spot occupied
+	 * by the freed key until the GC runs and not even a way to
+	 * wait for the GC.  That means that running many key
+	 * operations too fast may cause add_key to start failing
+	 * independent of how high the quota has been set.
+	 */
+	kernel_unlink_key(key->serial, internal_keyring);
 	kernel_revoke_key(key->serial);
 
 	l_free(key);
@@ -700,6 +714,7 @@ LIB_EXPORT void l_keyring_free(struct l_keyring *keyring)
 	if (unlikely(!keyring))
 		return;
 
+	kernel_unlink_key(keyring->serial, internal_keyring);
 	kernel_revoke_key(keyring->serial);
 
 	l_free(keyring);
