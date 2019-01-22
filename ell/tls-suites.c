@@ -347,19 +347,23 @@ static bool tls_get_dh_params_hash(struct l_tls *tls,
 	struct l_checksum *checksum;
 	ssize_t ret;
 
-	checksum = l_checksum_new(tls_handshake_hash_data[type].l_id);
-	if (!checksum)
-		return false;
-
 	/*
 	 * The ServerKeyExchange signature hash input format for RSA_sign is
 	 * not really specified in either RFC 8422 or RFC 5246 explicitly
 	 * but we use this format by analogy to DHE_RSA which uses RSA_sign
 	 * as well.  Also matches ecdsa, ed25519 and ed448 formats.
 	 */
-	l_checksum_update(checksum, tls->pending.client_random, 32);
-	l_checksum_update(checksum, tls->pending.server_random, 32);
-	l_checksum_update(checksum, data, data_len);
+	struct iovec iov[] = {
+		{ .iov_base = tls->pending.client_random, .iov_len = 32 },
+		{ .iov_base = tls->pending.server_random, .iov_len = 32 },
+		{ .iov_base = (void *) data, .iov_len = data_len },
+	};
+
+	checksum = l_checksum_new(tls_handshake_hash_data[type].l_id);
+	if (!checksum)
+		return false;
+
+	l_checksum_updatev(checksum, iov, L_ARRAY_SIZE(iov));
 	ret = l_checksum_get_digest(checksum, out, HANDSHAKE_HASH_MAX_SIZE);
 	l_checksum_free(checksum);
 
