@@ -74,14 +74,22 @@ typedef bool (*tls_get_hash_t)(struct l_tls *tls,
 				const uint8_t *data, size_t data_len,
 				uint8_t *out, size_t *out_len);
 
-struct tls_key_exchange_algorithm {
+struct tls_signature_algorithm {
 	uint8_t id;
 
-	bool certificate_check;
+	bool (*validate_cert_key_type)(struct l_cert *cert);
+
+	ssize_t (*sign)(struct l_tls *tls, uint8_t *out, size_t out_len,
+			tls_get_hash_t get_hash,
+			const uint8_t *data, size_t data_len);
+	bool (*verify)(struct l_tls *tls, const uint8_t *in, size_t in_len,
+			tls_get_hash_t get_hash,
+			const uint8_t *data, size_t data_len);
+};
+
+struct tls_key_exchange_algorithm {
 	bool need_ecc;
 	bool need_ffdh;
-
-	bool (*validate_cert_key_type)(struct l_cert *cert);
 
 	bool (*send_server_key_exchange)(struct l_tls *tls);
 	void (*handle_server_key_exchange)(struct l_tls *tls,
@@ -90,13 +98,6 @@ struct tls_key_exchange_algorithm {
 	bool (*send_client_key_exchange)(struct l_tls *tls);
 	void (*handle_client_key_exchange)(struct l_tls *tls,
 						const uint8_t *buf, size_t len);
-
-	ssize_t (*sign)(struct l_tls *tls, uint8_t *out, size_t out_len,
-			tls_get_hash_t get_hash,
-			const uint8_t *data, size_t data_len);
-	bool (*verify)(struct l_tls *tls, const uint8_t *in, size_t in_len,
-			tls_get_hash_t get_hash,
-			const uint8_t *data, size_t data_len);
 
 	void (*free_params)(struct l_tls *tls);
 };
@@ -113,6 +114,7 @@ struct tls_cipher_suite {
 	int verify_data_length;
 
 	struct tls_bulk_encryption_algorithm *encryption;
+	struct tls_signature_algorithm *signature;
 	struct tls_key_exchange_algorithm *key_xchg;
 	struct tls_mac_algorithm *mac;
 	enum l_checksum_type prf_hmac;

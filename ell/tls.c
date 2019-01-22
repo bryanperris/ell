@@ -477,14 +477,21 @@ static bool tls_cipher_suite_is_compatible(struct l_tls *tls,
 		return false;
 	}
 
+	/*
+	 * If the certificate is compatible with the signature algorithm it
+	 * also must be compatible with the key exchange mechanism because
+	 * the cipher suites are defined so that the same certificates can
+	 * be used by both.
+	 */
 	leaf = l_certchain_get_leaf(tls->cert);
-	if (leaf && !suite->key_xchg->validate_cert_key_type(leaf)) {
+	if (leaf && suite->signature &&
+			!suite->signature->validate_cert_key_type(leaf)) {
 		if (error) {
 			*error = error_buf;
 			snprintf(error_buf, sizeof(error_buf),
 					"Local certificate has key type "
 					"incompatible with cipher suite %s's "
-					"key xchg mechanism", suite->name);
+					"signature algorithm", suite->name);
 		}
 
 		return false;
@@ -931,7 +938,7 @@ static bool tls_send_certificate(struct l_tls *tls)
 
 	/* TODO: might want check this earlier and exclude the cipher suite */
 	leaf = l_certchain_get_leaf(tls->cert);
-	if (leaf && !tls->pending.cipher_suite->key_xchg->
+	if (leaf && !tls->pending.cipher_suite->signature->
 			validate_cert_key_type(leaf)) {
 		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, TLS_ALERT_CERT_UNKNOWN,
 				"Local certificate has key type incompatible "
@@ -1173,7 +1180,7 @@ static bool tls_send_certificate_verify(struct l_tls *tls)
 
 	/* Fill in the Certificate Verify body */
 
-	sign_len = tls->pending.cipher_suite->key_xchg->sign(tls,
+	sign_len = tls->pending.cipher_suite->signature->sign(tls,
 					buf + TLS_HANDSHAKE_HEADER_SIZE,
 					2048 - TLS_HANDSHAKE_HEADER_SIZE,
 					tls_get_handshake_hash_by_type,
@@ -1591,7 +1598,7 @@ static void tls_handle_client_hello(struct l_tls *tls,
 
 	l_queue_destroy(extensions_offered, NULL);
 
-	if (tls->pending.cipher_suite->key_xchg->certificate_check && tls->cert)
+	if (tls->pending.cipher_suite->signature && tls->cert)
 		if (!tls_send_certificate(tls))
 			return;
 
@@ -1601,15 +1608,13 @@ static void tls_handle_client_hello(struct l_tls *tls,
 			return;
 
 	/* TODO: don't bother if configured to not authenticate client */
-	if (tls->pending.cipher_suite->key_xchg->certificate_check &&
-			tls->ca_certs)
+	if (tls->pending.cipher_suite->signature && tls->ca_certs)
 		if (!tls_send_certificate_request(tls))
 			return;
 
 	tls_send_server_hello_done(tls);
 
-	if (tls->pending.cipher_suite->key_xchg->certificate_check &&
-			tls->ca_certs)
+	if (tls->pending.cipher_suite->signature && tls->ca_certs)
 		TLS_SET_STATE(TLS_HANDSHAKE_WAIT_CERTIFICATE);
 	else
 		TLS_SET_STATE(TLS_HANDSHAKE_WAIT_KEY_EXCHANGE);
@@ -1726,7 +1731,7 @@ static void tls_handle_server_hello(struct l_tls *tls,
 
 	TLS_DEBUG("Negotiated %s", tls->pending.compression_method->name);
 
-	if (tls->pending.cipher_suite->key_xchg->certificate_check)
+	if (tls->pending.cipher_suite->signature)
 		TLS_SET_STATE(TLS_HANDSHAKE_WAIT_CERTIFICATE);
 	else
 		TLS_SET_STATE(TLS_HANDSHAKE_WAIT_KEY_EXCHANGE);
@@ -1807,7 +1812,7 @@ static void tls_handle_certificate(struct l_tls *tls,
 	 * algorithm."
 	 */
 	leaf = l_certchain_get_leaf(certchain);
-	if (!tls->pending.cipher_suite->key_xchg->
+	if (!tls->pending.cipher_suite->signature->
 			validate_cert_key_type(leaf)) {
 		TLS_DISCONNECT(TLS_ALERT_UNSUPPORTED_CERT, 0,
 				"Peer certificate key type incompatible with "
@@ -1910,7 +1915,8 @@ static void tls_handle_certificate_request(struct l_tls *tls,
 
 			/* Ignore hash types for signatures other than ours */
 			if (signature_hash_data[i + 1] !=
-					tls->pending.cipher_suite->key_xchg->id)
+					tls->pending.cipher_suite->
+						signature->id)
 				continue;
 
 			if (hash_id == tls_handshake_hash_data[
@@ -2021,7 +2027,7 @@ static void tls_handle_certificate_verify(struct l_tls *tls,
 {
 	int i;
 
-	if (!tls->pending.cipher_suite->key_xchg->verify(tls, buf, len,
+	if (!tls->pending.cipher_suite->signature->verify(tls, buf, len,
 						tls_get_prev_digest_by_type,
 						NULL, 0))
 		return;
@@ -2042,7 +2048,7 @@ static void tls_handle_certificate_verify(struct l_tls *tls,
 	 *   - If tls->ca_certs is non-NULL then tls_handle_certificate
 	 *     will have checked the whole certificate chain to be valid and
 	 *     additionally trusted by our CAs if known.
-	 *   - Additionally cipher_suite->key_xchg->verify has just confirmed
+	 *   - Additionally cipher_suite->signature->verify has just confirmed
 	 *     that the peer owns the end-entity certificate because it was
 	 *     able to sign the contents of the handshake messages and that
 	 *     signature could be verified with the public key from that
@@ -2247,8 +2253,7 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 		 */
 		if (tls->state != TLS_HANDSHAKE_WAIT_HELLO_DONE ||
 				tls->cert_requested ||
-				!tls->pending.cipher_suite->key_xchg->
-				certificate_check) {
+				!tls->pending.cipher_suite->signature) {
 			TLS_DISCONNECT(TLS_ALERT_UNEXPECTED_MESSAGE, 0,
 					"Message invalid in current state "
 					"or certificate check not supported "
@@ -2301,7 +2306,7 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 		/*
 		 * If we accepted a client Certificate message with a
 		 * certificate that has signing capability (TODO: check
-		 * usage bitmask), Certiifcate Verify is received next.  It
+		 * usage bitmask), Certificate Verify is received next.  It
 		 * sounds as if this is mandatory for the client although
 		 * this isn't 100% clear.
 		 */
@@ -2368,8 +2373,8 @@ static void tls_handle_handshake(struct l_tls *tls, int type,
 		 *      ServerKeyExchange parameters using its certified key
 		 *      pair.
 		 */
-		if (!tls->server && tls->cipher_suite[0]->key_xchg->
-				certificate_check && tls->ca_certs)
+		if (!tls->server && tls->cipher_suite[0]->signature &&
+				tls->ca_certs)
 			tls->peer_authenticated = true;
 
 		tls_finished(tls);

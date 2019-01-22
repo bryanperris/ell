@@ -42,120 +42,6 @@ static bool tls_rsa_validate_cert_key(struct l_cert *cert)
 	return l_cert_get_pubkey_type(cert) == L_CERT_KEY_RSA;
 }
 
-static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
-{
-	uint8_t buf[1024 + 32];
-	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
-	uint8_t pre_master_secret[48];
-	ssize_t bytes_encrypted;
-
-	if (!tls->peer_pubkey) {
-		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
-				"Peer public key not received");
-
-		return false;
-	}
-
-	/* Must match the version in tls_send_client_hello */
-	pre_master_secret[0] = (uint8_t) (tls->max_version >> 8);
-	pre_master_secret[1] = (uint8_t) (tls->max_version >> 0);
-
-	l_getrandom(pre_master_secret + 2, 46);
-
-	if (tls->peer_pubkey_size + 32 > (int) sizeof(buf)) {
-		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
-				"Peer public key too big: %zi",
-				tls->peer_pubkey_size);
-
-		return false;
-	}
-
-	l_put_be16(tls->peer_pubkey_size, ptr);
-	bytes_encrypted = l_key_encrypt(tls->peer_pubkey,
-					L_KEY_RSA_PKCS1_V1_5, L_CHECKSUM_NONE,
-					pre_master_secret, ptr + 2, 48,
-					tls->peer_pubkey_size);
-	ptr += tls->peer_pubkey_size + 2;
-
-	if (bytes_encrypted != (ssize_t) tls->peer_pubkey_size) {
-		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
-				"Encrypting PreMasterSecret failed: %s",
-				strerror(-bytes_encrypted));
-
-		return false;
-	}
-
-	tls_tx_handshake(tls, TLS_CLIENT_KEY_EXCHANGE, buf, ptr - buf);
-
-	tls_generate_master_secret(tls, pre_master_secret, 48);
-	memset(pre_master_secret, 0, 48);
-
-	return true;
-}
-
-static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
-						const uint8_t *buf, size_t len)
-{
-	uint8_t pre_master_secret[48], random_secret[46];
-	ssize_t bytes_decrypted;
-
-	if (!tls->priv_key || !tls->priv_key_size) {
-		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, TLS_ALERT_BAD_CERT,
-				"No private key");
-
-		return;
-	}
-
-	if (len != tls->priv_key_size + 2) {
-		TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
-				"ClientKeyExchange len %zi not %zi", len,
-				tls->priv_key_size + 2);
-
-		return;
-	}
-
-	len = l_get_be16(buf);
-
-	if (len != tls->priv_key_size) {
-		TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
-				"EncryptedPreMasterSecret len %zi not %zi",
-				len, tls->priv_key_size);
-
-		return;
-	}
-
-	bytes_decrypted = l_key_decrypt(tls->priv_key, L_KEY_RSA_PKCS1_V1_5,
-					L_CHECKSUM_NONE, buf + 2,
-					pre_master_secret, tls->priv_key_size,
-					48);
-
-	/*
-	 * Assume correct premaster secret client version which according
-	 * to the TLS1.2 spec is unlikely in client implementations SSLv3
-	 * and prior.  Spec suggests either not supporting them or adding
-	 * a configurable override for <= SSLv3 clients.  For now we have
-	 * no need to support them.
-	 *
-	 * On any decode error randomise the Pre Master Secret as per the
-	 * countermeasures in 7.4.7.1 and don't generate any alerts.
-	 */
-	l_getrandom(random_secret, 46);
-
-	pre_master_secret[0] = tls->client_version >> 8;
-	pre_master_secret[1] = tls->client_version >> 0;
-
-	if (bytes_decrypted != 48) {
-		memcpy(pre_master_secret + 2, random_secret, 46);
-
-		TLS_DEBUG("Error decrypting PreMasterSecret: %s",
-				strerror(-bytes_decrypted));
-	}
-
-	tls_generate_master_secret(tls, pre_master_secret, 48);
-	memset(pre_master_secret, 0, 48);
-	memset(random_secret, 0, 46);
-}
-
 static ssize_t tls_rsa_sign(struct l_tls *tls, uint8_t *out, size_t out_len,
 				tls_get_hash_t get_hash,
 				const uint8_t *data, size_t data_len)
@@ -326,14 +212,130 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t in_len,
 	return success;
 }
 
-static struct tls_key_exchange_algorithm tls_rsa = {
+static struct tls_signature_algorithm tls_rsa_signature = {
 	.id = 1, /* RSA_sign */
-	.certificate_check = true,
 	.validate_cert_key_type = tls_rsa_validate_cert_key,
-	.send_client_key_exchange = tls_send_rsa_client_key_xchg,
-	.handle_client_key_exchange = tls_handle_rsa_client_key_xchg,
 	.sign = tls_rsa_sign,
 	.verify = tls_rsa_verify,
+};
+
+static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
+{
+	uint8_t buf[1024 + 32];
+	uint8_t *ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
+	uint8_t pre_master_secret[48];
+	ssize_t bytes_encrypted;
+
+	if (!tls->peer_pubkey) {
+		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+				"Peer public key not received");
+
+		return false;
+	}
+
+	/* Must match the version in tls_send_client_hello */
+	pre_master_secret[0] = (uint8_t) (tls->max_version >> 8);
+	pre_master_secret[1] = (uint8_t) (tls->max_version >> 0);
+
+	l_getrandom(pre_master_secret + 2, 46);
+
+	if (tls->peer_pubkey_size + 32 > (int) sizeof(buf)) {
+		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+				"Peer public key too big: %zi",
+				tls->peer_pubkey_size);
+
+		return false;
+	}
+
+	l_put_be16(tls->peer_pubkey_size, ptr);
+	bytes_encrypted = l_key_encrypt(tls->peer_pubkey,
+					L_KEY_RSA_PKCS1_V1_5, L_CHECKSUM_NONE,
+					pre_master_secret, ptr + 2, 48,
+					tls->peer_pubkey_size);
+	ptr += tls->peer_pubkey_size + 2;
+
+	if (bytes_encrypted != (ssize_t) tls->peer_pubkey_size) {
+		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+				"Encrypting PreMasterSecret failed: %s",
+				strerror(-bytes_encrypted));
+
+		return false;
+	}
+
+	tls_tx_handshake(tls, TLS_CLIENT_KEY_EXCHANGE, buf, ptr - buf);
+
+	tls_generate_master_secret(tls, pre_master_secret, 48);
+	memset(pre_master_secret, 0, 48);
+
+	return true;
+}
+
+static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
+						const uint8_t *buf, size_t len)
+{
+	uint8_t pre_master_secret[48], random_secret[46];
+	ssize_t bytes_decrypted;
+
+	if (!tls->priv_key || !tls->priv_key_size) {
+		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, TLS_ALERT_BAD_CERT,
+				"No private key");
+
+		return;
+	}
+
+	if (len != tls->priv_key_size + 2) {
+		TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
+				"ClientKeyExchange len %zi not %zi", len,
+				tls->priv_key_size + 2);
+
+		return;
+	}
+
+	len = l_get_be16(buf);
+
+	if (len != tls->priv_key_size) {
+		TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
+				"EncryptedPreMasterSecret len %zi not %zi",
+				len, tls->priv_key_size);
+
+		return;
+	}
+
+	bytes_decrypted = l_key_decrypt(tls->priv_key, L_KEY_RSA_PKCS1_V1_5,
+					L_CHECKSUM_NONE, buf + 2,
+					pre_master_secret, tls->priv_key_size,
+					48);
+
+	/*
+	 * Assume correct premaster secret client version which according
+	 * to the TLS1.2 spec is unlikely in client implementations SSLv3
+	 * and prior.  Spec suggests either not supporting them or adding
+	 * a configurable override for <= SSLv3 clients.  For now we have
+	 * no need to support them.
+	 *
+	 * On any decode error randomise the Pre Master Secret as per the
+	 * countermeasures in 7.4.7.1 and don't generate any alerts.
+	 */
+	l_getrandom(random_secret, 46);
+
+	pre_master_secret[0] = tls->client_version >> 8;
+	pre_master_secret[1] = tls->client_version >> 0;
+
+	if (bytes_decrypted != 48) {
+		memcpy(pre_master_secret + 2, random_secret, 46);
+
+		TLS_DEBUG("Error decrypting PreMasterSecret: %s",
+				strerror(-bytes_decrypted));
+	}
+
+	tls_generate_master_secret(tls, pre_master_secret, 48);
+	memset(pre_master_secret, 0, 48);
+	memset(random_secret, 0, 46);
+}
+
+static struct tls_key_exchange_algorithm tls_rsa_key_xchg = {
+	.send_client_key_exchange = tls_send_rsa_client_key_xchg,
+	.handle_client_key_exchange = tls_handle_rsa_client_key_xchg,
 };
 
 /* Used by both DHE and ECDHE */
@@ -441,15 +443,17 @@ static bool tls_send_ecdhe_server_key_xchg(struct l_tls *tls)
 	server_ecdh_params_ptr = ptr;
 	ptr += tls_write_server_ecdh_params(tls, ptr);
 
-	sign_len = tls->pending.cipher_suite->key_xchg->sign(tls, ptr,
+	if (tls->pending.cipher_suite->signature) {
+		sign_len = tls->pending.cipher_suite->signature->sign(tls, ptr,
 						buf + sizeof(buf) - ptr,
 						tls_get_dh_params_hash,
 						server_ecdh_params_ptr,
 						ptr - server_ecdh_params_ptr);
-	if (sign_len < 0)
-		return false;
+		if (sign_len < 0)
+			return false;
 
-	ptr += sign_len;
+		ptr += sign_len;
+	}
 
 	tls_tx_handshake(tls, TLS_SERVER_KEY_EXCHANGE, buf, ptr - buf);
 
@@ -528,11 +532,16 @@ static void tls_handle_ecdhe_server_key_xchg(struct l_tls *tls,
 		return;
 	}
 
-	if (!tls->pending.cipher_suite->key_xchg->verify(tls, buf, len,
+	if (tls->pending.cipher_suite->signature) {
+		if (!tls->pending.cipher_suite->signature->verify(tls, buf, len,
 						tls_get_dh_params_hash,
 						server_ecdh_params_ptr,
 						buf - server_ecdh_params_ptr))
-		return;
+			return;
+	} else {
+		if (len)
+			goto decode_error;
+	}
 
 	TLS_SET_STATE(TLS_HANDSHAKE_WAIT_HELLO_DONE);
 
@@ -681,18 +690,13 @@ decode_error:
 			"ClientKeyExchange decode error");
 }
 
-static struct tls_key_exchange_algorithm tls_ecdhe_rsa = {
-	.id = 1, /* RSA_sign */
-	.certificate_check = true,
+static struct tls_key_exchange_algorithm tls_ecdhe = {
 	.need_ecc = true,
-	.validate_cert_key_type = tls_rsa_validate_cert_key,
 	.send_server_key_exchange = tls_send_ecdhe_server_key_xchg,
 	.handle_server_key_exchange = tls_handle_ecdhe_server_key_xchg,
 	.send_client_key_exchange = tls_send_ecdhe_client_key_xchg,
 	.handle_client_key_exchange = tls_handle_ecdhe_client_key_xchg,
 	.free_params = tls_free_ecdhe_params,
-	.sign = tls_rsa_sign,
-	.verify = tls_rsa_verify,
 };
 
 /* Maximum FF DH prime modulus size in bytes */
@@ -783,15 +787,18 @@ static bool tls_send_dhe_server_key_xchg(struct l_tls *tls)
 	memcpy(ptr + 2, public_buf + zeros, public_len - zeros);
 	ptr += 2 + public_len - zeros;
 
-	sign_len = tls->pending.cipher_suite->key_xchg->sign(tls, ptr,
+	if (tls->pending.cipher_suite->signature) {
+		sign_len = tls->pending.cipher_suite->signature->sign(tls, ptr,
 						buf + sizeof(buf) - ptr,
 						tls_get_dh_params_hash,
 						server_dh_params_ptr,
 						ptr - server_dh_params_ptr);
-	if (sign_len < 0)
-		goto free_params;
+		if (sign_len < 0)
+			goto free_params;
 
-	ptr += sign_len;
+		ptr += sign_len;
+	}
+
 	tls->pending.key_xchg_params = params;
 
 	tls_tx_handshake(tls, TLS_SERVER_KEY_EXCHANGE, buf, ptr - buf);
@@ -919,11 +926,16 @@ static void tls_handle_dhe_server_key_xchg(struct l_tls *tls,
 
 	tls->pending.key_xchg_params = params;
 
-	if (!tls->pending.cipher_suite->key_xchg->verify(tls, buf, len,
+	if (tls->pending.cipher_suite->signature) {
+		if (!tls->pending.cipher_suite->signature->verify(tls, buf, len,
 						tls_get_dh_params_hash,
 						server_dh_params_ptr,
 						buf - server_dh_params_ptr))
-		return;
+			return;
+	} else {
+		if (len)
+			goto decode_error;
+	}
 
 	TLS_SET_STATE(TLS_HANDSHAKE_WAIT_HELLO_DONE);
 	return;
@@ -1057,18 +1069,13 @@ decode_error:
 			"ClientKeyExchange decode error");
 }
 
-static struct tls_key_exchange_algorithm tls_dhe_rsa = {
-	.id = 1, /* RSA_sign */
-	.certificate_check = true,
+static struct tls_key_exchange_algorithm tls_dhe = {
 	.need_ecc = true,
-	.validate_cert_key_type = tls_rsa_validate_cert_key,
 	.send_server_key_exchange = tls_send_dhe_server_key_xchg,
 	.handle_server_key_exchange = tls_handle_dhe_server_key_xchg,
 	.send_client_key_exchange = tls_send_dhe_client_key_xchg,
 	.handle_client_key_exchange = tls_handle_dhe_client_key_xchg,
 	.free_params = tls_free_dhe_params,
-	.sign = tls_rsa_sign,
-	.verify = tls_rsa_verify,
 };
 
 static struct tls_bulk_encryption_algorithm tls_rc4 = {
@@ -1133,145 +1140,166 @@ static struct tls_cipher_suite tls_rsa_with_rc4_128_md5 = {
 	.verify_data_length = 12,
 	.encryption = &tls_rc4,
 	.mac = &tls_md5,
-	.key_xchg = &tls_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_rsa_key_xchg,
 }, tls_rsa_with_rc4_128_sha = {
 	.id = { 0x00, 0x05 },
 	.name = "TLS_RSA_WITH_RC4_128_SHA",
 	.verify_data_length = 12,
 	.encryption = &tls_rc4,
 	.mac = &tls_sha,
-	.key_xchg = &tls_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_rsa_key_xchg,
 }, tls_rsa_with_3des_ede_cbc_sha = {
 	.id = { 0x00, 0x0a },
 	.name = "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
 	.verify_data_length = 12,
 	.encryption = &tls_3des_ede,
 	.mac = &tls_sha,
-	.key_xchg = &tls_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_rsa_key_xchg,
 }, tls_dhe_rsa_with_3des_ede_cbc_sha = {
 	.id = { 0x00, 0x16 },
 	.name = "TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA",
 	.verify_data_length = 12,
 	.encryption = &tls_3des_ede,
 	.mac = &tls_sha,
-	.key_xchg = &tls_dhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_dhe,
 }, tls_rsa_with_aes_128_cbc_sha = {
 	.id = { 0x00, 0x2f },
 	.name = "TLS_RSA_WITH_AES_128_CBC_SHA",
 	.verify_data_length = 12,
 	.encryption = &tls_aes128,
 	.mac = &tls_sha,
-	.key_xchg = &tls_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_rsa_key_xchg,
 }, tls_dhe_rsa_with_aes_128_cbc_sha = {
 	.id = { 0x00, 0x33 },
 	.name = "TLS_DHE_RSA_WITH_AES_128_CBC_SHA",
 	.verify_data_length = 12,
 	.encryption = &tls_aes128,
 	.mac = &tls_sha,
-	.key_xchg = &tls_dhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_dhe,
 }, tls_rsa_with_aes_256_cbc_sha = {
 	.id = { 0x00, 0x35 },
 	.name = "TLS_RSA_WITH_AES_256_CBC_SHA",
 	.verify_data_length = 12,
 	.encryption = &tls_aes256,
 	.mac = &tls_sha,
-	.key_xchg = &tls_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_rsa_key_xchg,
 }, tls_dhe_rsa_with_aes_256_cbc_sha = {
 	.id = { 0x00, 0x39 },
 	.name = "TLS_DHE_RSA_WITH_AES_256_CBC_SHA",
 	.verify_data_length = 12,
 	.encryption = &tls_aes256,
 	.mac = &tls_sha,
-	.key_xchg = &tls_dhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_dhe,
 }, tls_rsa_with_aes_128_cbc_sha256 = {
 	.id = { 0x00, 0x3c },
 	.name = "TLS_RSA_WITH_AES_128_CBC_SHA256",
 	.verify_data_length = 12,
 	.encryption = &tls_aes128,
 	.mac = &tls_sha256,
-	.key_xchg = &tls_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_rsa_key_xchg,
 }, tls_rsa_with_aes_256_cbc_sha256 = {
 	.id = { 0x00, 0x3d },
 	.name = "TLS_RSA_WITH_AES_256_CBC_SHA256",
 	.verify_data_length = 12,
 	.encryption = &tls_aes256,
 	.mac = &tls_sha256,
-	.key_xchg = &tls_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_rsa_key_xchg,
 }, tls_dhe_rsa_with_aes_128_cbc_sha256 = {
 	.id = { 0x00, 0x67 },
 	.name = "TLS_DHE_RSA_WITH_AES_128_CBC_SHA256",
 	.verify_data_length = 12,
 	.encryption = &tls_aes128,
 	.mac = &tls_sha256,
-	.key_xchg = &tls_dhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_dhe,
 }, tls_dhe_rsa_with_aes_256_cbc_sha256 = {
 	.id = { 0x00, 0x6b },
 	.name = "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256",
 	.verify_data_length = 12,
 	.encryption = &tls_aes256,
 	.mac = &tls_sha256,
-	.key_xchg = &tls_dhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_dhe,
 }, tls_rsa_with_aes_128_gcm_sha256 = {
 	.id = { 0x00, 0x9c },
 	.name = "TLS_RSA_WITH_AES_128_GCM_SHA256",
 	.verify_data_length = 12,
 	.encryption = &tls_aes128_gcm,
-	.key_xchg = &tls_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_rsa_key_xchg,
 }, tls_rsa_with_aes_256_gcm_sha384 = {
 	.id = { 0x00, 0x9d },
 	.name = "TLS_RSA_WITH_AES_256_GCM_SHA384",
 	.verify_data_length = 12,
 	.encryption = &tls_aes256_gcm,
 	.prf_hmac = L_CHECKSUM_SHA384,
-	.key_xchg = &tls_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_rsa_key_xchg,
 }, tls_dhe_rsa_with_aes_128_gcm_sha256 = {
 	.id = { 0x00, 0x9e },
 	.name = "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
 	.verify_data_length = 12,
 	.encryption = &tls_aes128_gcm,
-	.key_xchg = &tls_dhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_dhe,
 }, tls_dhe_rsa_with_aes_256_gcm_sha384 = {
 	.id = { 0x00, 0x9f },
 	.name = "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384",
 	.verify_data_length = 12,
 	.encryption = &tls_aes256_gcm,
 	.prf_hmac = L_CHECKSUM_SHA384,
-	.key_xchg = &tls_dhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_dhe,
 }, tls_ecdhe_rsa_with_rc4_128_sha = {
 	.id = { 0xc0, 0x11 },
 	.name = "TLS_ECDHE_RSA_WITH_RC4_128_SHA",
 	.verify_data_length = 12,
 	.encryption = &tls_rc4,
 	.mac = &tls_sha,
-	.key_xchg = &tls_ecdhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_ecdhe,
 }, tls_ecdhe_rsa_with_3des_ede_cbc_sha = {
 	.id = { 0xc0, 0x12 },
 	.name = "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA",
 	.verify_data_length = 12,
 	.encryption = &tls_3des_ede,
 	.mac = &tls_sha,
-	.key_xchg = &tls_ecdhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_ecdhe,
 }, tls_ecdhe_rsa_with_aes_128_cbc_sha = {
 	.id = { 0xc0, 0x13 },
 	.name = "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
 	.verify_data_length = 12,
 	.encryption = &tls_aes128,
 	.mac = &tls_sha,
-	.key_xchg = &tls_ecdhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_ecdhe,
 }, tls_ecdhe_rsa_with_aes_256_cbc_sha = {
 	.id = { 0xc0, 0x14 },
 	.name = "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
 	.verify_data_length = 12,
 	.encryption = &tls_aes256,
 	.mac = &tls_sha,
-	.key_xchg = &tls_ecdhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_ecdhe,
 }, tls_ecdhe_rsa_with_aes_128_cbc_sha256 = {
 	.id = { 0xc0, 0x27 },
 	.name = "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
 	.verify_data_length = 12,
 	.encryption = &tls_aes128,
 	.mac = &tls_sha256,
-	.key_xchg = &tls_ecdhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_ecdhe,
 }, tls_ecdhe_rsa_with_aes_256_cbc_sha384 = {
 	.id = { 0xc0, 0x28 },
 	.name = "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
@@ -1279,20 +1307,23 @@ static struct tls_cipher_suite tls_rsa_with_rc4_128_md5 = {
 	.encryption = &tls_aes256,
 	.mac = &tls_sha384,
 	.prf_hmac = L_CHECKSUM_SHA384,
-	.key_xchg = &tls_ecdhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_ecdhe,
 }, tls_ecdhe_rsa_with_aes_128_gcm_sha256 = {
 	.id = { 0xc0, 0x2f },
 	.name = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
 	.verify_data_length = 12,
 	.encryption = &tls_aes128_gcm,
-	.key_xchg = &tls_ecdhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_ecdhe,
 }, tls_ecdhe_rsa_with_aes_256_gcm_sha384 = {
 	.id = { 0xc0, 0x30 },
 	.name = "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
 	.verify_data_length = 12,
 	.encryption = &tls_aes256_gcm,
 	.prf_hmac = L_CHECKSUM_SHA384,
-	.key_xchg = &tls_ecdhe_rsa,
+	.signature = &tls_rsa_signature,
+	.key_xchg = &tls_ecdhe,
 };
 
 struct tls_cipher_suite *tls_cipher_suite_pref[] = {
