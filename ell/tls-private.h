@@ -52,7 +52,8 @@ struct tls_hash_algorithm {
 extern const struct tls_hash_algorithm tls_handshake_hash_data[];
 
 typedef bool (*tls_get_hash_t)(struct l_tls *tls, uint8_t tls_id,
-				uint8_t *out, size_t *len,
+				const uint8_t *data, size_t data_len,
+				uint8_t *out, size_t *out_len,
 				enum l_checksum_type *type);
 
 struct tls_key_exchange_algorithm {
@@ -72,10 +73,12 @@ struct tls_key_exchange_algorithm {
 	void (*handle_client_key_exchange)(struct l_tls *tls,
 						const uint8_t *buf, size_t len);
 
-	ssize_t (*sign)(struct l_tls *tls, uint8_t *out, size_t len,
-			tls_get_hash_t get_hash);
-	bool (*verify)(struct l_tls *tls, const uint8_t *in, size_t len,
-			tls_get_hash_t get_hash);
+	ssize_t (*sign)(struct l_tls *tls, uint8_t *out, size_t out_len,
+			tls_get_hash_t get_hash,
+			const uint8_t *data, size_t data_len);
+	bool (*verify)(struct l_tls *tls, const uint8_t *in, size_t in_len,
+			tls_get_hash_t get_hash,
+			const uint8_t *data, size_t data_len);
 
 	void (*free_params)(struct l_tls *tls);
 };

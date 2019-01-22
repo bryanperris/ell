@@ -1154,7 +1154,8 @@ static void tls_get_handshake_hash(struct l_tls *tls,
 }
 
 static bool tls_get_handshake_hash_by_id(struct l_tls *tls, uint8_t hash_id,
-					uint8_t *out, size_t *len,
+					const uint8_t *data, size_t data_len,
+					uint8_t *out, size_t *out_len,
 					enum l_checksum_type *type)
 {
 	enum handshake_hash_type hash;
@@ -1164,8 +1165,8 @@ static bool tls_get_handshake_hash_by_id(struct l_tls *tls, uint8_t hash_id,
 				tls->handshake_hash[hash]) {
 			tls_get_handshake_hash(tls, hash, out);
 
-			if (len)
-				*len = tls_handshake_hash_data[hash].length;
+			if (out_len)
+				*out_len = tls_handshake_hash_data[hash].length;
 
 			if (type)
 				*type = tls_handshake_hash_data[hash].l_id;
@@ -1187,7 +1188,7 @@ static bool tls_send_certificate_verify(struct l_tls *tls)
 	sign_len = tls->pending.cipher_suite->key_xchg->sign(tls,
 					buf + TLS_HANDSHAKE_HEADER_SIZE,
 					2048 - TLS_HANDSHAKE_HEADER_SIZE,
-					tls_get_handshake_hash_by_id);
+					tls_get_handshake_hash_by_id, NULL, 0);
 
 	if (sign_len < 0)
 		return false;
@@ -2008,6 +2009,7 @@ static void tls_handle_server_hello_done(struct l_tls *tls,
 }
 
 static bool tls_get_prev_digest_by_id(struct l_tls *tls, uint8_t hash_id,
+					const uint8_t *data, size_t data_len,
 					uint8_t *out, size_t *out_len,
 					enum l_checksum_type *type)
 {
@@ -2038,7 +2040,8 @@ static void tls_handle_certificate_verify(struct l_tls *tls,
 	int i;
 
 	if (!tls->pending.cipher_suite->key_xchg->verify(tls, buf, len,
-						tls_get_prev_digest_by_id))
+						tls_get_prev_digest_by_id,
+						NULL, 0))
 		return;
 
 	/* Stop maintaining handshake message hashes other than the PRF hash */
