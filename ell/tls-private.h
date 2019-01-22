@@ -45,7 +45,6 @@ struct tls_bulk_encryption_algorithm {
 struct tls_hash_algorithm {
 	uint8_t tls_id;
 	enum l_checksum_type l_id;
-	size_t length;
 	const char *name;
 };
 

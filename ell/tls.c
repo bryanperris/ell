@@ -556,10 +556,10 @@ static struct tls_compression_method *tls_find_compression_method(
 }
 
 const struct tls_hash_algorithm tls_handshake_hash_data[] = {
-	[HANDSHAKE_HASH_SHA384]	= { 5, L_CHECKSUM_SHA384, 48, "SHA384" },
-	[HANDSHAKE_HASH_SHA256]	= { 4, L_CHECKSUM_SHA256, 32, "SHA256" },
-	[HANDSHAKE_HASH_MD5]	= { 1, L_CHECKSUM_MD5, 16, "MD5" },
-	[HANDSHAKE_HASH_SHA1]	= { 2, L_CHECKSUM_SHA1, 20, "SHA1" },
+	[HANDSHAKE_HASH_SHA384]	= { 5, L_CHECKSUM_SHA384, "SHA384" },
+	[HANDSHAKE_HASH_SHA256]	= { 4, L_CHECKSUM_SHA256, "SHA256" },
+	[HANDSHAKE_HASH_MD5]	= { 1, L_CHECKSUM_MD5, "MD5" },
+	[HANDSHAKE_HASH_SHA1]	= { 2, L_CHECKSUM_SHA1, "SHA1" },
 };
 
 static bool tls_init_handshake_hash(struct l_tls *tls)
@@ -1144,8 +1144,8 @@ static void tls_get_handshake_hash(struct l_tls *tls,
 	if (!hash)
 		return;
 
-	l_checksum_get_digest(hash, out, tls_handshake_hash_data[type].length);
-
+	l_checksum_get_digest(hash, out, l_checksum_digest_length(
+					tls_handshake_hash_data[type].l_id));
 	l_checksum_free(hash);
 }
 
@@ -1217,7 +1217,7 @@ static void tls_send_finished(struct l_tls *tls)
 				break;
 
 		tls_get_handshake_hash(tls, hash, seed);
-		seed_len = tls_handshake_hash_data[hash].length;
+		seed_len = l_checksum_digest_length(tls->prf_hmac->l_id);
 	} else {
 		tls_get_handshake_hash(tls, HANDSHAKE_HASH_MD5, seed + 0);
 		tls_get_handshake_hash(tls, HANDSHAKE_HASH_SHA1, seed + 16);
@@ -1257,7 +1257,7 @@ static bool tls_verify_finished(struct l_tls *tls, const uint8_t *received,
 				break;
 
 		seed = tls->prev_digest[hash];
-		seed_len = tls_handshake_hash_data[hash].length;
+		seed_len = l_checksum_digest_length(tls->prf_hmac->l_id);
 	} else {
 		seed = alloca(36);
 		memcpy(seed + 0, tls->prev_digest[HANDSHAKE_HASH_MD5], 16);
