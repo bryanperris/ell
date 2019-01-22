@@ -123,6 +123,14 @@ LIB_EXPORT const char *l_ecc_curve_get_name(const struct l_ecc_curve *curve)
 	return curve->name;
 }
 
+LIB_EXPORT size_t l_ecc_curve_get_scalar_bytes(const struct l_ecc_curve *curve)
+{
+	if (unlikely(!curve))
+		return 0;
+
+	return curve->ndigits * 8;
+}
+
 LIB_EXPORT const struct l_ecc_curve *l_ecc_curve_get_ike_group(
 							unsigned int group)
 {
@@ -589,7 +597,6 @@ LIB_EXPORT struct l_ecc_scalar *l_ecc_scalar_new_random(
 }
 
 LIB_EXPORT ssize_t l_ecc_scalar_get_data(const struct l_ecc_scalar *c,
-
 						void *buf, size_t len)
 {
 	if (len < c->curve->ndigits * 8)
