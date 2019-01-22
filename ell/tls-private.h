@@ -49,12 +49,31 @@ struct tls_hash_algorithm {
 	const char *name;
 };
 
+/*
+ * Support the minimum required set of handshake hash types for the
+ * Certificate Verify digital signature and the Finished PRF seed so we
+ * don't have to accumulate all of messages full contents until the
+ * Finished message.  If we're sent a hash of a different type (in TLS 1.2+)
+ * and need to verify we'll give up.
+ * SHA1 and MD5 are explicitly required by versions < 1.2 and 1.2 requires
+ * that the Finished hash is the same as used for the PRF so we need to
+ * keep at least the hashes our supported cipher suites specify for the PRF.
+ */
+enum handshake_hash_type {
+	HANDSHAKE_HASH_SHA384,
+	HANDSHAKE_HASH_SHA256,
+	HANDSHAKE_HASH_MD5,
+	HANDSHAKE_HASH_SHA1,
+	__HANDSHAKE_HASH_COUNT,
+};
+#define HANDSHAKE_HASH_MAX_SIZE	48
+
 extern const struct tls_hash_algorithm tls_handshake_hash_data[];
 
-typedef bool (*tls_get_hash_t)(struct l_tls *tls, uint8_t tls_id,
+typedef bool (*tls_get_hash_t)(struct l_tls *tls,
+				enum handshake_hash_type type,
 				const uint8_t *data, size_t data_len,
-				uint8_t *out, size_t *out_len,
-				enum l_checksum_type *type);
+				uint8_t *out, size_t *out_len);
 
 struct tls_key_exchange_algorithm {
 	uint8_t id;
@@ -178,25 +197,6 @@ enum tls_handshake_type {
 	TLS_CLIENT_KEY_EXCHANGE	= 16,
 	TLS_FINISHED		= 20,
 };
-
-/*
- * Support the minimum required set of handshake hash types for the
- * Certificate Verify digital signature and the Finished PRF seed so we
- * don't have to accumulate all of messages full contents until the
- * Finished message.  If we're sent a hash of a different type (in TLS 1.2+)
- * and need to verify we'll give up.
- * SHA1 and MD5 are explicitly required by versions < 1.2 and 1.2 requires
- * that the Finished hash is the same as used for the PRF so we need to
- * keep at least the hashes our supported cipher suites specify for the PRF.
- */
-enum handshake_hash_type {
-	HANDSHAKE_HASH_SHA384,
-	HANDSHAKE_HASH_SHA256,
-	HANDSHAKE_HASH_MD5,
-	HANDSHAKE_HASH_SHA1,
-	__HANDSHAKE_HASH_COUNT,
-};
-#define HANDSHAKE_HASH_MAX_SIZE	48
 
 struct l_tls {
 	bool server;

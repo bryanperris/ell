@@ -1153,28 +1153,20 @@ static void tls_get_handshake_hash(struct l_tls *tls,
 	l_checksum_free(hash);
 }
 
-static bool tls_get_handshake_hash_by_id(struct l_tls *tls, uint8_t hash_id,
+static bool tls_get_handshake_hash_by_type(struct l_tls *tls,
+					enum handshake_hash_type type,
 					const uint8_t *data, size_t data_len,
-					uint8_t *out, size_t *out_len,
-					enum l_checksum_type *type)
+					uint8_t *out, size_t *out_len)
 {
-	enum handshake_hash_type hash;
+	if (!tls->handshake_hash[type])
+		return false;
 
-	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
-		if (tls_handshake_hash_data[hash].tls_id == hash_id &&
-				tls->handshake_hash[hash]) {
-			tls_get_handshake_hash(tls, hash, out);
+	if (out_len)
+		*out_len = l_checksum_digest_length(
+					tls_handshake_hash_data[type].l_id);
 
-			if (out_len)
-				*out_len = tls_handshake_hash_data[hash].length;
-
-			if (type)
-				*type = tls_handshake_hash_data[hash].l_id;
-
-			return true;
-		}
-
-	return false;
+	tls_get_handshake_hash(tls, type, out);
+	return true;
 }
 
 static bool tls_send_certificate_verify(struct l_tls *tls)
@@ -1188,7 +1180,8 @@ static bool tls_send_certificate_verify(struct l_tls *tls)
 	sign_len = tls->pending.cipher_suite->key_xchg->sign(tls,
 					buf + TLS_HANDSHAKE_HEADER_SIZE,
 					2048 - TLS_HANDSHAKE_HEADER_SIZE,
-					tls_get_handshake_hash_by_id, NULL, 0);
+					tls_get_handshake_hash_by_type,
+					NULL, 0);
 
 	if (sign_len < 0)
 		return false;
@@ -2008,28 +2001,21 @@ static void tls_handle_server_hello_done(struct l_tls *tls,
 	TLS_SET_STATE(TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC);
 }
 
-static bool tls_get_prev_digest_by_id(struct l_tls *tls, uint8_t hash_id,
+static bool tls_get_prev_digest_by_type(struct l_tls *tls,
+					enum handshake_hash_type type,
 					const uint8_t *data, size_t data_len,
-					uint8_t *out, size_t *out_len,
-					enum l_checksum_type *type)
+					uint8_t *out, size_t *out_len)
 {
-	enum handshake_hash_type hash;
 	size_t len;
 
-	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
-		if (tls_handshake_hash_data[hash].tls_id == hash_id &&
-				tls->handshake_hash[hash]) {
-			len = tls_handshake_hash_data[hash].length;
-			memcpy(out, tls->prev_digest[hash], len);
+	if (!tls->handshake_hash[type])
+		return false;
 
-			if (out_len)
-				*out_len = len;
+	len = l_checksum_digest_length(tls_handshake_hash_data[type].l_id);
+	memcpy(out, tls->prev_digest[type], len);
 
-			if (type)
-				*type = tls_handshake_hash_data[hash].l_id;
-
-			return len;
-		}
+	if (out_len)
+		*out_len = len;
 
 	return 0;
 }
@@ -2040,7 +2026,7 @@ static void tls_handle_certificate_verify(struct l_tls *tls,
 	int i;
 
 	if (!tls->pending.cipher_suite->key_xchg->verify(tls, buf, len,
-						tls_get_prev_digest_by_id,
+						tls_get_prev_digest_by_type,
 						NULL, 0))
 		return;
 

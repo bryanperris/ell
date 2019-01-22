@@ -181,19 +181,18 @@ static ssize_t tls_rsa_sign(struct l_tls *tls, uint8_t *out, size_t out_len,
 		if (out_len < 2) /* Is there space for the algorithm IDs */
 			goto error;
 
-		get_hash(tls, hash_type->tls_id, data, data_len,
-				sign_input, NULL, NULL);
+		get_hash(tls, tls->signature_hash, data, data_len,
+				sign_input, &sign_input_len);
 		sign_checksum_type = hash_type->l_id;
-		sign_input_len = hash_type->length;
 
 		*ptr++ = hash_type->tls_id;
 		*ptr++ = 1;	/* RSA_sign */
 		out_len -= 2;
 	} else {
-		/* MD5 */
-		get_hash(tls, 1, data, data_len, sign_input + 0, NULL, NULL);
-		/* SHA1 */
-		get_hash(tls, 2, data, data_len, sign_input + 16, NULL, NULL);
+		get_hash(tls, HANDSHAKE_HASH_MD5, data, data_len,
+				sign_input + 0, NULL);
+		get_hash(tls, HANDSHAKE_HASH_SHA1, data, data_len,
+				sign_input + 16, NULL);
 		sign_checksum_type = L_CHECKSUM_NONE;
 		sign_input_len = 36;
 	}
@@ -221,7 +220,7 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t in_len,
 				tls_get_hash_t get_hash,
 				const uint8_t *data, size_t data_len)
 {
-	enum l_checksum_type hash_type;
+	enum l_checksum_type sign_checksum_type;
 	uint8_t expected[HANDSHAKE_HASH_MAX_SIZE + 36];
 	size_t expected_len;
 	unsigned int offset;
@@ -252,6 +251,8 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t in_len,
 	}
 
 	if (tls->negotiated_version >= L_TLS_V12) {
+		enum handshake_hash_type hash;
+
 		/* Only RSA supported */
 		if (in[1] != 1 /* RSA_sign */) {
 			TLS_DISCONNECT(TLS_ALERT_DECRYPT_ERROR, 0,
@@ -261,13 +262,18 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t in_len,
 			return false;
 		}
 
-		if (!get_hash(tls, in[0], data, data_len,
-				expected, &expected_len, &hash_type)) {
+		for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+			if (tls_handshake_hash_data[hash].tls_id == in[0])
+				break;
+
+		if (hash == __HANDSHAKE_HASH_COUNT) {
 			TLS_DISCONNECT(TLS_ALERT_DECRYPT_ERROR, 0,
 					"Unknown hash type %i", in[0]);
-
 			return false;
 		}
+
+		get_hash(tls, hash, data, data_len, expected, &expected_len);
+		sign_checksum_type = tls_handshake_hash_data[hash].l_id;
 
 		/*
 		 * Note: Next we let the l_key_verify's underlying kernel
@@ -287,12 +293,12 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t in_len,
 		 * encoding.
 		 */
 	} else {
-		/* MD5 */
-		get_hash(tls, 1, data, data_len, expected + 0, NULL, NULL);
-		/* SHA1 */
-		get_hash(tls, 2, data, data_len, expected + 16, NULL, NULL);
+		get_hash(tls, HANDSHAKE_HASH_MD5, data, data_len,
+				expected + 0, NULL);
+		get_hash(tls, HANDSHAKE_HASH_SHA1, data, data_len,
+				expected + 16, NULL);
 		expected_len = 36;
-		hash_type = L_CHECKSUM_NONE;
+		sign_checksum_type = L_CHECKSUM_NONE;
 
 		/*
 		 * Note: Within the RSA padding for signatures PKCS#1 1.5
@@ -308,7 +314,7 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t in_len,
 	}
 
 	success = l_key_verify(tls->peer_pubkey, L_KEY_RSA_PKCS1_V1_5,
-				hash_type, expected, in + offset + 2,
+				sign_checksum_type, expected, in + offset + 2,
 				expected_len, tls->peer_pubkey_size);
 
 	if (!success)
@@ -331,25 +337,15 @@ static struct tls_key_exchange_algorithm tls_rsa = {
 };
 
 /* Used by both DHE and ECDHE */
-static bool tls_get_dh_params_hash(struct l_tls *tls, uint8_t tls_id,
+static bool tls_get_dh_params_hash(struct l_tls *tls,
+					enum handshake_hash_type type,
 					const uint8_t *data, size_t data_len,
-					uint8_t *out, size_t *out_len,
-					enum l_checksum_type *type)
+					uint8_t *out, size_t *out_len)
 {
-	unsigned int hash;
 	struct l_checksum *checksum;
-	ssize_t hash_len, ret;
+	ssize_t ret;
 
-	for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
-		if (tls_handshake_hash_data[hash].tls_id == tls_id)
-			break;
-
-	if (hash == __HANDSHAKE_HASH_COUNT)
-		return false;
-
-	hash_len = tls_handshake_hash_data[hash].length;
-
-	checksum = l_checksum_new(tls_handshake_hash_data[hash].l_id);
+	checksum = l_checksum_new(tls_handshake_hash_data[type].l_id);
 	if (!checksum)
 		return false;
 
@@ -362,17 +358,14 @@ static bool tls_get_dh_params_hash(struct l_tls *tls, uint8_t tls_id,
 	l_checksum_update(checksum, tls->pending.client_random, 32);
 	l_checksum_update(checksum, tls->pending.server_random, 32);
 	l_checksum_update(checksum, data, data_len);
-	ret = l_checksum_get_digest(checksum, out, hash_len);
+	ret = l_checksum_get_digest(checksum, out, HANDSHAKE_HASH_MAX_SIZE);
 	l_checksum_free(checksum);
 
-	if (ret != (ssize_t) hash_len)
+	if (ret < 0)
 		return false;
 
 	if (out_len)
-		*out_len = hash_len;
-
-	if (type)
-		*type = tls_handshake_hash_data[hash].l_id;
+		*out_len = ret;
 
 	return true;
 }
