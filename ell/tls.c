@@ -62,8 +62,7 @@ bool tls10_prf(const void *secret, size_t secret_len,
 	 * the first byte of S2.
 	 */
 
-	if (!tls12_prf(L_CHECKSUM_MD5, 16,
-			secret, l_s1,
+	if (!tls12_prf(L_CHECKSUM_MD5, secret, l_s1,
 			label, seed, seed_len,
 			out, out_len))
 		return false;
@@ -71,8 +70,7 @@ bool tls10_prf(const void *secret, size_t secret_len,
 	if (secret_len > 0)
 		secret += secret_len - l_s1;
 
-	if (!tls12_prf(L_CHECKSUM_SHA1, 20,
-			secret, l_s1,
+	if (!tls12_prf(L_CHECKSUM_SHA1, secret, l_s1,
 			label, seed, seed_len,
 			p_hash2, out_len))
 		return false;
@@ -83,7 +81,7 @@ bool tls10_prf(const void *secret, size_t secret_len,
 	return true;
 }
 
-bool tls12_prf(enum l_checksum_type type, size_t hash_len,
+bool tls12_prf(enum l_checksum_type type,
 		const void *secret, size_t secret_len,
 		const char *label,
 		const void *seed, size_t seed_len,
@@ -107,16 +105,14 @@ bool tls12_prf(enum l_checksum_type type, size_t hash_len,
 		/* Generate A(i) */
 		l_checksum_reset(hmac);
 		l_checksum_update(hmac, a, a_len);
-		l_checksum_get_digest(hmac, a, hash_len);
-		a_len = hash_len;
+		a_len = l_checksum_get_digest(hmac, a, sizeof(a));
 
 		/* Append seed & generate output */
 		memcpy(a + a_len, prfseed, prfseed_len);
 		l_checksum_reset(hmac);
 		l_checksum_update(hmac, a, a_len + prfseed_len);
 
-		chunk_len = out_len < hash_len ? out_len : hash_len;
-		l_checksum_get_digest(hmac, out, chunk_len);
+		chunk_len = l_checksum_get_digest(hmac, out, out_len);
 		out += chunk_len;
 		out_len -= chunk_len;
 	}
@@ -132,7 +128,7 @@ static bool tls_prf_get_bytes(struct l_tls *tls,
 				uint8_t *buf, size_t len)
 {
 	if (tls->negotiated_version >= L_TLS_V12)
-		return tls12_prf(tls->prf_hmac->l_id, tls->prf_hmac->length,
+		return tls12_prf(tls->prf_hmac->l_id,
 					secret, secret_len, label,
 					seed, seed_len, buf, len);
 	else
