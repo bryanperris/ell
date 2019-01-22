@@ -156,10 +156,6 @@ struct tls_named_group {
 	} type;
 	union {
 		struct {
-			unsigned int l_group;
-			size_t point_bytes;
-		} ec;
-		struct {
 			const uint8_t *prime;
 			size_t prime_len;
 			unsigned int generator;

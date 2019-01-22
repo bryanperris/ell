@@ -325,14 +325,8 @@ static const uint8_t tls_dh14_prime[] = {
 };
 
 static const struct tls_named_group tls_group_pref[] = {
-	{
-		"secp256r1", 23, TLS_GROUP_TYPE_EC,
-		.ec = { .l_group = 19, .point_bytes = 64 },
-	},
-	{
-		"secp384r1", 24, TLS_GROUP_TYPE_EC,
-		.ec = { .l_group = 20, .point_bytes = 96 },
-	},
+	{ "secp256r1", 23, TLS_GROUP_TYPE_EC },
+	{ "secp384r1", 24, TLS_GROUP_TYPE_EC },
 	{
 		"ffdhe2048", 256, TLS_GROUP_TYPE_FF,
 		.ff = {

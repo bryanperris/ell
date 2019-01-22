@@ -396,24 +396,27 @@ static void tls_free_ecdhe_params(struct l_tls *tls)
 	l_free(params);
 }
 
-static size_t tls_write_ecpoint(uint8_t *buf,
+static size_t tls_write_ecpoint(uint8_t *buf, size_t len,
 				const struct tls_named_group *curve,
 				const struct l_ecc_point *point)
 {
+	size_t point_bytes;
+
 	/* RFC 8422, Section 5.4.1 */
-	buf[0] = 1 + curve->ec.point_bytes;	/* length */
+	point_bytes = l_ecc_point_get_data(point, buf + 2, len - 2);
+	buf[0] = 1 + point_bytes;		/* length */
 	buf[1] = 4;				/* form: uncompressed */
-	return 2 + l_ecc_point_get_data(point, buf + 2, curve->ec.point_bytes);
+	return 2 + point_bytes;
 }
 
-static size_t tls_write_server_ecdh_params(struct l_tls *tls, uint8_t *buf)
+static size_t tls_write_server_ecdh_params(struct l_tls *tls, uint8_t *buf, size_t len)
 {
 	struct tls_ecdhe_params *params = tls->pending.key_xchg_params;
 
 	/* RFC 8422, Section 5.4 */
 	buf[0] = 3;				/* curve_type: named_curve */
 	l_put_be16(tls->negotiated_curve->id, buf + 1);
-	return 3 + tls_write_ecpoint(buf + 3, tls->negotiated_curve,
+	return 3 + tls_write_ecpoint(buf + 3, len - 3, tls->negotiated_curve,
 					params->public);
 }
 
@@ -445,7 +448,7 @@ static bool tls_send_ecdhe_server_key_xchg(struct l_tls *tls)
 	}
 
 	server_ecdh_params_ptr = ptr;
-	ptr += tls_write_server_ecdh_params(tls, ptr);
+	ptr += tls_write_server_ecdh_params(tls, ptr, buf + sizeof(buf) - ptr);
 
 	if (tls->pending.cipher_suite->signature) {
 		sign_len = tls->pending.cipher_suite->signature->sign(tls, ptr,
@@ -470,6 +473,7 @@ static void tls_handle_ecdhe_server_key_xchg(struct l_tls *tls,
 	struct tls_ecdhe_params *params;
 	uint16_t namedcurve;
 	const uint8_t *server_ecdh_params_ptr = buf;
+	size_t point_bytes;
 
 	/* RFC 8422, Section 5.4 */
 
@@ -498,8 +502,10 @@ static void tls_handle_ecdhe_server_key_xchg(struct l_tls *tls,
 
 	TLS_DEBUG("Negotiated %s", tls->negotiated_curve->name);
 
-	if (*buf++ != 1 + tls->negotiated_curve->ec.point_bytes)
+	if (*buf < 1)
 		goto decode_error;
+
+	point_bytes = *buf++ - 1;
 
 	if (*buf != 4) {	/* uncompressed */
 		TLS_DISCONNECT(TLS_ALERT_ILLEGAL_PARAM, 0,
@@ -511,7 +517,7 @@ static void tls_handle_ecdhe_server_key_xchg(struct l_tls *tls,
 	buf++;
 	len -= 2;
 
-	if (len < tls->negotiated_curve->ec.point_bytes)
+	if (len < point_bytes)
 		goto decode_error;
 
 	/*
@@ -527,10 +533,11 @@ static void tls_handle_ecdhe_server_key_xchg(struct l_tls *tls,
 						L_ECC_POINT_TYPE_FULL,
 						buf, len);
 	tls->pending.key_xchg_params = params;
-	buf += tls->negotiated_curve->ec.point_bytes;
-	len -= tls->negotiated_curve->ec.point_bytes;
+	buf += point_bytes;
+	len -= point_bytes;
 
-	if (!params->public) {
+	if (!params->public || point_bytes !=
+			2 * l_ecc_curve_get_scalar_bytes(params->curve)) {
 		TLS_DISCONNECT(TLS_ALERT_DECODE_ERROR, 0,
 				"ServerKeyExchange.params.public decode error");
 		return;
@@ -575,7 +582,8 @@ static bool tls_send_ecdhe_client_key_xchg(struct l_tls *tls)
 		return false;
 	}
 
-	ptr += tls_write_ecpoint(ptr, tls->negotiated_curve, our_public);
+	ptr += tls_write_ecpoint(ptr, buf + sizeof(buf) - ptr,
+					tls->negotiated_curve, our_public);
 	l_ecc_point_free(our_public);
 
 	/*
@@ -624,13 +632,14 @@ static void tls_handle_ecdhe_client_key_xchg(struct l_tls *tls,
 	ssize_t pre_master_secret_len;
 	struct l_ecc_point *other_public;
 	struct l_ecc_scalar *secret;
+	size_t point_bytes = 2 * l_ecc_curve_get_scalar_bytes(params->curve);
 
 	/* RFC 8422, Section 5.7 */
 
 	if (len < 2)
 		goto decode_error;
 
-	if (*buf++ != 1 + tls->negotiated_curve->ec.point_bytes)
+	if (*buf++ != 1 + point_bytes)
 		goto decode_error;
 
 	if (*buf != 4) {	/* uncompressed */
@@ -643,7 +652,7 @@ static void tls_handle_ecdhe_client_key_xchg(struct l_tls *tls,
 	buf++;
 	len -= 2;
 
-	if (len != tls->negotiated_curve->ec.point_bytes)
+	if (len != point_bytes)
 		goto decode_error;
 
 	/*
