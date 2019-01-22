@@ -361,12 +361,14 @@ LIB_EXPORT bool l_checksum_updatev(struct l_checksum *checksum,
 /**
  * l_checksum_get_digest:
  * @checksum: checksum object
- * @digest: digest data pointer
- * @len: length of digest data
+ * @digest: output data buffer
+ * @len: length of output buffer
  *
- * Gets the digest from @checksum as raw binary data.
+ * Writes the digest from @checksum as raw binary data into the provided
+ * buffer or, if the buffer is shorter, the initial @len bytes of the digest
+ * data.
  *
- * Returns: Number of bytes read, or negative value if an error occurred.
+ * Returns: Number of bytes written, or negative value if an error occurred.
  **/
 LIB_EXPORT ssize_t l_checksum_get_digest(struct l_checksum *checksum,
 						void *digest, size_t len)
@@ -385,6 +387,9 @@ LIB_EXPORT ssize_t l_checksum_get_digest(struct l_checksum *checksum,
 	result = recv(checksum->sk, digest, len, 0);
 	if (result < 0)
 		return -errno;
+
+	if ((size_t) result < len && result < checksum->alg_info->digest_len)
+		return -EIO;
 
 	return result;
 }
