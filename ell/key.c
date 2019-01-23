@@ -39,12 +39,6 @@
 
 #ifndef KEYCTL_DH_COMPUTE
 #define KEYCTL_DH_COMPUTE 23
-
-struct keyctl_dh_params {
-	int32_t private;
-	int32_t prime;
-	int32_t base;
-};
 #endif
 
 #ifndef KEYCTL_PKEY_QUERY
@@ -79,6 +73,20 @@ struct keyctl_pkey_params {
 	};
 	uint32_t __spare[7];
 };
+
+/* Work around the missing (pre-4.7) or broken (4.14.{70,71,72} and
+ * 4.18.{8,9,10}) kernel declaration of struct keyctl_dh_params
+ */
+struct dh_params {
+	int32_t private;
+	int32_t prime;
+	int32_t base;
+};
+#else
+/* When KEYCTL_PKEY_QUERY is defined by the kernel, the
+ * struct keyctl_dh_params declaration is valid.
+ */
+#define dh_params keyctl_dh_params
 #endif
 
 #ifndef KEYCTL_RESTRICT_KEYRING
@@ -201,9 +209,9 @@ static long kernel_dh_compute(int32_t private, int32_t prime, int32_t base,
 {
 	long result;
 
-	struct keyctl_dh_params params = { .private = private,
-					   .prime = prime,
-					   .base = base };
+	struct dh_params params = { .private = private,
+				    .prime = prime,
+				    .base = base };
 
 	result = syscall(__NR_keyctl, KEYCTL_DH_COMPUTE, &params, payload, len,
 			NULL);
