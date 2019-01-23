@@ -201,7 +201,9 @@ static long kernel_dh_compute(int32_t private, int32_t prime, int32_t base,
 {
 	long result;
 
-	struct keyctl_dh_params params = { private, prime, base };
+	struct keyctl_dh_params params = { .private = private,
+					   .prime = prime,
+					   .base = base };
 
 	result = syscall(__NR_keyctl, KEYCTL_DH_COMPUTE, &params, payload, len,
 			NULL);
