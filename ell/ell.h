@@ -59,3 +59,4 @@
 #include <ell/cert.h>
 #include <ell/ecc.h>
 #include <ell/ecdh.h>
+#include <ell/time.h>

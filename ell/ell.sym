@@ -491,6 +491,9 @@ global:
 	/* ecdh */
 	l_ecdh_generate_key_pair;
 	l_ecdh_generate_shared_secret;
+
+	/* time */
+	l_time_now;
 local:
 	*;
 };
