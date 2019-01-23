@@ -58,6 +58,7 @@ unit/test-dhcp
 unit/test-dir-watch
 unit/test-ecc
 unit/test-ecdh
+unit/test-time
 unit/cert-*.pem
 unit/cert-*.csr
 unit/cert-*.srl
