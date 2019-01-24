@@ -34,10 +34,7 @@ uint64_t l_time_now(void);
 
 static inline bool l_time_after(uint64_t a, uint64_t b)
 {
-	if ((int64_t)(b - a) < 0)
-		return true;
-
-	return false;
+	return a > b;
 }
 
 static inline bool l_time_before(uint64_t a, uint64_t b)
@@ -48,7 +45,7 @@ static inline bool l_time_before(uint64_t a, uint64_t b)
 static inline uint64_t l_time_offset(uint64_t time, uint64_t offset)
 {
 	/* check overflow */
-	if ((int64_t)(time + offset) <= 0)
+	if (offset > UINT64_MAX - time)
 		return UINT64_MAX;
 
 	return time + offset;
