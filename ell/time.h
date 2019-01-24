@@ -29,7 +29,6 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <limits.h>
 
 uint64_t l_time_now(void);
 
@@ -50,7 +49,7 @@ static inline uint64_t l_time_offset(uint64_t time, uint64_t offset)
 {
 	/* check overflow */
 	if ((int64_t)(time + offset) <= 0)
-		return ULONG_MAX;
+		return UINT64_MAX;
 
 	return time + offset;
 }

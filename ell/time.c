@@ -64,8 +64,8 @@ LIB_EXPORT uint64_t l_time_now(void)
  * @offset: Amount of time to add to 'time'
  *
  * Adds an offset to a time value. This checks for overflow, and if detected
- * returns ULONG_MAX.
+ * returns UINT64_MAX.
  *
- * Returns: A time value 'time' + 'offset'. Or ULONG_MAX if time + offset
- * exceeds ULONG_MAX.
+ * Returns: A time value 'time' + 'offset'. Or UINT64_MAX if time + offset
+ * exceeds UINT64_MAX.
  **/
