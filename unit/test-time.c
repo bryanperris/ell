@@ -40,13 +40,13 @@ static void test_before_after_diff(const void *data)
 
 static void test_offset(const void *data)
 {
-	uint64_t max = ULONG_MAX;
-	uint64_t max_minus = ULONG_MAX - 1000;
+	uint64_t max = UINT64_MAX;
+	uint64_t max_minus = UINT64_MAX - 1000;
 
-	assert(l_time_offset(max, 1) == ULONG_MAX);
-	assert(l_time_offset(max, max) == ULONG_MAX);
+	assert(l_time_offset(max, 1) == UINT64_MAX);
+	assert(l_time_offset(max, max) == UINT64_MAX);
 	assert(l_time_offset(max_minus, 1000) == max);
-	assert(l_time_offset(max_minus, 1001) == ULONG_MAX);
+	assert(l_time_offset(max_minus, 1001) == UINT64_MAX);
 }
 
 int main(int argc, char *argv[])
