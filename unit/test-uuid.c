@@ -158,6 +158,71 @@ static void test_to_string(const void *data)
 	assert(!strcmp(buf, expected_uuid));
 }
 
+static void test_from_string_too_short(const void *data)
+{
+	static const char *string_uuid = "65fcc697-0776-5bf9-8573-72a51080c7d";
+	uint8_t uuid[16];
+	bool r;
+
+	r = l_uuid_from_string(string_uuid, uuid);
+	assert(!r);
+}
+
+static void test_from_string_too_long(const void *data)
+{
+	static const char *string_uuid =
+			"65fcc697-0776-5bf9-8573-72a51080c7detoolong";
+	static uint8_t expected_uuid[] = {
+		0x65, 0xfc, 0xc6, 0x97, 0x07, 0x76, 0x5b, 0xf9,
+		0x85, 0x73, 0x72, 0xa5, 0x10, 0x80, 0xc7, 0xde
+	};
+
+	uint8_t uuid[16];
+	bool r;
+
+	r = l_uuid_from_string(string_uuid, uuid);
+	assert(r);
+
+	assert(!memcmp(uuid, expected_uuid, sizeof(uuid)));
+}
+
+static void test_from_string_invalid_variant(const void *data)
+{
+	static const char *string_uuid = "65fcc697-0776-5bf9-c573-72a51080c7de";
+	uint8_t uuid[16];
+	bool r;
+
+	r = l_uuid_from_string(string_uuid, uuid);
+	assert(!r);
+}
+
+static void test_from_string_invalid_hex(const void *data)
+{
+	static const char *string_uuid = "65fcc697-this-isno-tava-lidhexstring";
+	uint8_t uuid[16];
+	bool r;
+
+	r = l_uuid_from_string(string_uuid, uuid);
+	assert(!r);
+}
+
+static void test_from_string(const void *data)
+{
+	static const char *string_uuid = "65fcc697-0776-5bf9-8573-72a51080c7de";
+	static uint8_t expected_uuid[] = {
+		0x65, 0xfc, 0xc6, 0x97, 0x07, 0x76, 0x5b, 0xf9,
+		0x85, 0x73, 0x72, 0xa5, 0x10, 0x80, 0xc7, 0xde
+	};
+
+	uint8_t uuid[16];
+	bool r;
+
+	r = l_uuid_from_string(string_uuid, uuid);
+	assert(r);
+
+	assert(!memcmp(uuid, expected_uuid, sizeof(uuid)));
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -169,6 +234,11 @@ int main(int argc, char *argv[])
 
 	l_test_add("/uuid/v5", test_v5, NULL);
 	l_test_add("/uuid/to string", test_to_string, NULL);
+	l_test_add("/uuid/from string", test_from_string, NULL);
+	l_test_add("/uuid/from string/too short", test_from_string_too_short, NULL);
+	l_test_add("/uuid/from string/too long", test_from_string_too_long, NULL);
+	l_test_add("/uuid/from string/invalid variant", test_from_string_invalid_variant, NULL);
+	l_test_add("/uuid/from string/invalid hex", test_from_string_invalid_hex, NULL);
 
 	return l_test_run();
 
