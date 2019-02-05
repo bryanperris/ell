@@ -69,7 +69,6 @@ struct sockaddr_alg {
 #endif
 
 struct checksum_info {
-	enum l_checksum_type type;
 	const char *name;
 	uint8_t digest_len;
 	bool supported;
