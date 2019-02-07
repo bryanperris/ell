@@ -134,9 +134,9 @@ LIB_EXPORT size_t l_ecc_curve_get_scalar_bytes(const struct l_ecc_curve *curve)
 LIB_EXPORT const struct l_ecc_curve *l_ecc_curve_get_ike_group(
 							unsigned int group)
 {
-	int i;
+	unsigned int i;
 
-	for (i = 0; curves[i]; i++) {
+	for (i = 0; i < L_ARRAY_SIZE(curves); i++) {
 		if (curves[i]->ike_group == group)
 			return curves[i];
 	}
@@ -147,9 +147,9 @@ LIB_EXPORT const struct l_ecc_curve *l_ecc_curve_get_ike_group(
 LIB_EXPORT const struct l_ecc_curve *l_ecc_curve_get_tls_group(
 							unsigned int group)
 {
-	int i;
+	unsigned int i;
 
-	for (i = 0; curves[i]; i++) {
+	for (i = 0; i < L_ARRAY_SIZE(curves); i++) {
 		if (curves[i]->tls_group == group)
 			return curves[i];
 	}
