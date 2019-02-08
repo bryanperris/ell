@@ -286,6 +286,7 @@ LIB_EXPORT struct l_key *l_key_new(enum l_key_type type, const void *payload,
 {
 	struct l_key *key;
 	char *description;
+	static unsigned long key_idx;
 
 	if (unlikely(!payload))
 		return NULL;
@@ -298,7 +299,7 @@ LIB_EXPORT struct l_key *l_key_new(enum l_key_type type, const void *payload,
 
 	key = l_new(struct l_key, 1);
 	key->type = type;
-	description = l_strdup_printf("ell-key-%p", key);
+	description = l_strdup_printf("ell-key-%lu", key_idx++);
 	key->serial = kernel_add_key(key_type_names[type], description, payload,
 					payload_length, internal_keyring);
 	l_free(description);
@@ -657,12 +658,13 @@ LIB_EXPORT struct l_keyring *l_keyring_new(void)
 {
 	struct l_keyring *keyring;
 	char *description;
+	static unsigned long keyring_idx;
 
 	if (!internal_keyring && !setup_internal_keyring())
 		return NULL;
 
 	keyring = l_new(struct l_keyring, 1);
-	description = l_strdup_printf("ell-keyring-%p", keyring);
+	description = l_strdup_printf("ell-keyring-%lu", keyring_idx++);
 	keyring->serial = kernel_add_key("keyring", description, NULL, 0,
 						internal_keyring);
 	l_free(description);
