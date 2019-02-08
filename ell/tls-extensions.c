@@ -568,6 +568,278 @@ static ssize_t tls_ec_point_formats_server_write(struct l_tls *tls,
 	return 2;
 }
 
+/*
+ * This is used to append the list of signature algorithm and hash type
+ * combinations we support to the Signature Algorithms client hello
+ * extension (on the client) and the Certificate Request message (on the
+ * server).  In both cases we need to list the algorithms we support for
+ * two use cases: certificate chain verification and signing/verifying
+ * Server Key Exchange params (server->client) or Certificate Verify
+ * data (client->server).
+ *
+ * For the server side RFC 5462, Section 7.4.1.4.1 says:
+ * "If the client [...] is willing to use them for verifying
+ * messages sent by the server, i.e., server certificates and
+ * server key exchange [...] it MUST send the
+ * signature_algorithms extension, listing the algorithms it
+ * is willing to accept."
+ *
+ * As for the certificate chains we mostly rely on the kernel to do
+ * this so when we receive the list we do not currently verify the
+ * that the whole chain uses only algorithms from the list on either
+ * side (TODO). But we know that the chain verification in the kernel
+ * can use a superset of the hash algorithms l_checksum supports.
+ * For the Server Key Exchange and Certificate Verify signatures we
+ * use l_checksum but we need to map the TLS-specific hash IDs to
+ * enum l_checksum_type using the tls_handshake_hash_data list in
+ * signature->sign() and signature->verify(), so we use
+ * tls_handshake_hash_data as the definitive list of allowed hash
+ * algorithms.
+ *
+ * Our supported signature algorithms can work with any hash type so we
+ * basically have to send all possible combinations of the signature
+ * algorithm IDs from the supported cipher suites (except anonymous)
+ * with the hash algorithms we can use for signature verification,
+ * i.e. those in the tls_handshake_hash_data table.
+ */
+static ssize_t tls_write_signature_algorithms(struct l_tls *tls,
+						uint8_t *buf, size_t len)
+{
+	uint8_t *ptr = buf;
+	unsigned int i, j;
+	struct tls_cipher_suite **suite;
+	uint8_t sig_alg_ids[16];
+	uint8_t hash_ids[16];
+	unsigned int sig_alg_cnt = 0;
+	unsigned int hash_cnt = 0;
+
+	for (suite = tls->cipher_suite_pref_list; *suite; suite++) {
+		uint8_t id;
+
+		if (!(*suite)->signature)
+			continue;
+
+		id = (*suite)->signature->id;
+
+		if (memchr(sig_alg_ids, id, sig_alg_cnt))
+			continue;
+
+		if (!tls_cipher_suite_is_compatible(tls, *suite, NULL))
+			continue;
+
+		if (sig_alg_cnt >= sizeof(sig_alg_ids))
+			return -ENOMEM;
+
+		sig_alg_ids[sig_alg_cnt++] = id;
+	}
+
+	for (i = 0; i < __HANDSHAKE_HASH_COUNT; i++) {
+		const struct tls_hash_algorithm *hash =
+			&tls_handshake_hash_data[i];
+		bool supported;
+
+		/*
+		 * The hash types in the Signature Algorithms extension are
+		 * all supported hashes but the ones in the Certificate
+		 * Request (server->client) must be in the set for which we
+		 * maintain handshake message hashes because that is going
+		 * to be used in Certificate Verify.
+		 */
+		if (tls->server)
+			supported = !!tls->handshake_hash[i];
+		else
+			supported = l_checksum_is_supported(hash->l_id, false);
+
+		if (supported)
+			hash_ids[hash_cnt++] = hash->tls_id;
+	}
+
+	if (len < 2 + sig_alg_cnt * hash_cnt * 2)
+		return -ENOMEM;
+
+	l_put_be16(sig_alg_cnt * hash_cnt * 2, ptr);
+	ptr += 2;
+
+	for (i = 0; i < sig_alg_cnt; i++)
+		for (j = 0; j < hash_cnt; j++) {
+			*ptr++ = hash_ids[j];
+			*ptr++ = sig_alg_ids[i];
+		}
+
+	return ptr - buf;
+}
+
+static ssize_t tls_parse_signature_algorithms(struct l_tls *tls,
+						const uint8_t *buf, size_t len)
+{
+	const uint8_t *ptr = buf;
+	enum handshake_hash_type first_supported, hash;
+	const struct tls_hash_algorithm *preferred;
+	struct tls_cipher_suite **suite;
+	uint8_t sig_alg_ids[16];
+	unsigned int sig_alg_cnt = 0;
+
+	/*
+	 * This only makes sense as a variable-length field, assume
+	 * there's a typo in RFC5246 7.4.4 here.
+	 */
+	if (len < 4)
+		return -EINVAL;
+
+	if (l_get_be16(ptr) > len - 2)
+		return -EINVAL;
+
+	len = l_get_be16(ptr);
+	ptr += 2;
+
+	if (len & 1)
+		return -EINVAL;
+
+	for (suite = tls->cipher_suite_pref_list; *suite; suite++) {
+		uint8_t id;
+
+		if (!(*suite)->signature)
+			continue;
+
+		id = (*suite)->signature->id;
+
+		if (memchr(sig_alg_ids, id, sig_alg_cnt))
+			continue;
+
+		if (!tls_cipher_suite_is_compatible(tls, *suite, NULL))
+			continue;
+
+		if (sig_alg_cnt >= sizeof(sig_alg_ids))
+			return -ENOMEM;
+
+		sig_alg_ids[sig_alg_cnt++] = id;
+	}
+
+	/*
+	 * In 1.2 we force our preference for SHA256/SHA384 (depending on
+	 * cipher suite's PRF hmac) if it is supported by the peer because
+	 * that must be supported anyway for the PRF and the Finished hash
+	 * meaning that we only need to keep one hash instead of two.
+	 * If not available fall back to the first common hash algorithm.
+	 */
+	first_supported = -1;
+
+	if (tls->prf_hmac)
+		preferred = tls->prf_hmac;
+	else
+		preferred = &tls_handshake_hash_data[HANDSHAKE_HASH_SHA256];
+
+	while (len) {
+		uint8_t hash_id = *ptr++;
+		uint8_t sig_alg_id = *ptr++;
+		bool supported;
+
+		len -= 2;
+
+		/* Ignore hash types for signatures other than ours */
+		if (tls->pending.cipher_suite &&
+				(!tls->pending.cipher_suite->signature ||
+				 tls->pending.cipher_suite->signature->id !=
+				 sig_alg_id))
+			continue;
+		else if (!tls->pending.cipher_suite &&
+				!memchr(sig_alg_ids, sig_alg_id, sig_alg_cnt))
+			continue;
+
+		if (hash_id == preferred->tls_id) {
+			for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+				if (&tls_handshake_hash_data[hash] == preferred)
+					break;
+			break;
+		}
+
+		if ((int) first_supported != -1)
+			continue;
+
+		for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
+			if (hash_id == tls_handshake_hash_data[hash].tls_id)
+				break;
+
+		if (hash == __HANDSHAKE_HASH_COUNT)
+			continue;
+
+		if (tls->server)
+			supported = l_checksum_is_supported(
+					tls_handshake_hash_data[hash].l_id,
+					false);
+		else
+			supported = !!tls->handshake_hash[hash];
+
+		if (supported)
+			first_supported = hash;
+	}
+
+	if (len)
+		tls->signature_hash = hash;
+	else if ((int) first_supported != -1)
+		tls->signature_hash = first_supported;
+	else
+		return -ENOTSUP;
+
+	return ptr + len - buf;
+}
+
+/* RFC 5462, Section 7.4.1.4.1 */
+static ssize_t tls_signature_algorithms_client_write(struct l_tls *tls,
+						uint8_t *buf, size_t len)
+{
+	/*
+	 * "Note: this extension is not meaningful for TLS versions
+	 * prior to 1.2.  Clients MUST NOT offer it if they are offering
+	 * prior versions."
+	 */
+	if (tls->max_version < L_TLS_V12)
+		return -ENOMSG;
+
+	return tls_write_signature_algorithms(tls, buf, len);
+}
+
+static bool tls_signature_algorithms_client_handle(struct l_tls *tls,
+						const uint8_t *buf, size_t len)
+{
+	ssize_t ret;
+
+	/*
+	 * "However, even if clients do offer it, the rules specified in
+	 * [TLSEXT] require servers to ignore extensions they do not
+	 * understand."
+	 */
+	if (tls->max_version < L_TLS_V12)
+		return true;
+
+	ret = tls_parse_signature_algorithms(tls, buf, len);
+
+	if (ret == -ENOTSUP)
+		TLS_DEBUG("No common signature algorithms");
+
+	/*
+	 * TODO: also check our certificate chain against the parsed
+	 * signature algorithms.
+	 */
+
+	return ret == (ssize_t) len;
+}
+
+static bool tls_signature_algorithms_client_absent(struct l_tls *tls)
+{
+	/*
+	 * "If the client does not send the signature_algorithms extension,
+	 * the server MUST do the following:
+	 *    - [...] behave as if client had sent the value {sha1,rsa}.
+	 *    - [...] behave as if client had sent the value {sha1,dsa}.
+	 *    - [...] behave as if client had sent the value {sha1,ecdsa}.
+	 */
+	if (tls->max_version >= L_TLS_V12)
+		tls->signature_hash = HANDSHAKE_HASH_SHA1;
+
+	return true;
+}
+
 const struct tls_hello_extension tls_extensions[] = {
 	{
 		"Supported Groups", "elliptic_curves", 10,
@@ -583,6 +855,13 @@ const struct tls_hello_extension tls_extensions[] = {
 		NULL,
 		tls_ec_point_formats_server_write,
 		NULL, NULL,
+	},
+	{
+		"Signature Algorithms", "signature_algoritms", 13,
+		tls_signature_algorithms_client_write,
+		tls_signature_algorithms_client_handle,
+		tls_signature_algorithms_client_absent,
+		NULL, NULL, NULL,
 	},
 	{}
 };

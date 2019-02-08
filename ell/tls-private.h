@@ -308,6 +308,10 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 
 void tls_tx_handshake(struct l_tls *tls, int type, uint8_t *buf, size_t length);
 
+bool tls_cipher_suite_is_compatible(struct l_tls *tls,
+					const struct tls_cipher_suite *suite,
+					const char **error);
+
 /* Optionally limit allowed cipher suites to a custom set */
 bool tls_set_cipher_suites(struct l_tls *tls, const char **suite_list);
 

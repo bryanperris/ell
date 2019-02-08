@@ -379,7 +379,7 @@ static void tls_reset_cipher_spec(struct l_tls *tls, bool txrx)
 	tls_change_cipher_spec(tls, txrx, NULL);
 }
 
-static bool tls_cipher_suite_is_compatible(struct l_tls *tls,
+bool tls_cipher_suite_is_compatible(struct l_tls *tls,
 					const struct tls_cipher_suite *suite,
 					const char **error)
 {
@@ -1486,13 +1486,6 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	 * trying to connect somewhere else.  We might want to throw an error.
 	 */
 
-	/*
-	 * TODO: Obligatory in 1.2: check for signature_algorithms extension,
-	 * store the list of algorithms for later checking in
-	 * tls_send_certificate on both server and client sides.  If not
-	 * present assume only SHA1+RSA (7.4.1.4.1).
-	 */
-
 	/* Save client_version for Premaster Secret verification */
 	tls->client_version = l_get_be16(buf);
 
@@ -2407,7 +2400,6 @@ LIB_EXPORT struct l_tls *l_tls_new(bool server,
 	tls->disconnected = disconnect_handler;
 	tls->user_data = user_data;
 	tls->cipher_suite_pref_list = tls_cipher_suite_pref;
-	tls->signature_hash = HANDSHAKE_HASH_SHA256;
 	tls->min_version = TLS_MIN_VERSION;
 	tls->max_version = TLS_MAX_VERSION;
 
