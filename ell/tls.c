@@ -921,7 +921,6 @@ static bool tls_send_certificate(struct l_tls *tls)
 {
 	uint8_t *buf, *ptr;
 	size_t total;
-	struct l_cert *leaf;
 
 	if (tls->server && !tls->cert) {
 		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, TLS_ALERT_BAD_CERT,
@@ -933,18 +932,6 @@ static bool tls_send_certificate(struct l_tls *tls)
 		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, TLS_ALERT_UNKNOWN_CA,
 				"Can't find certificate chain to local "
 				"CA cert");
-		return false;
-	}
-
-	/* TODO: might want check this earlier and exclude the cipher suite */
-	leaf = l_certchain_get_leaf(tls->cert);
-	if (leaf && !tls->pending.cipher_suite->signature->
-			validate_cert_key_type(leaf)) {
-		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, TLS_ALERT_CERT_UNKNOWN,
-				"Local certificate has key type incompatible "
-				"with pending cipher suite %s",
-				tls->pending.cipher_suite->name);
-
 		return false;
 	}
 
