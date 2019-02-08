@@ -602,8 +602,8 @@ static ssize_t tls_ec_point_formats_server_write(struct l_tls *tls,
  * with the hash algorithms we can use for signature verification,
  * i.e. those in the tls_handshake_hash_data table.
  */
-static ssize_t tls_write_signature_algorithms(struct l_tls *tls,
-						uint8_t *buf, size_t len)
+ssize_t tls_write_signature_algorithms(struct l_tls *tls,
+					uint8_t *buf, size_t len)
 {
 	uint8_t *ptr = buf;
 	unsigned int i, j;
@@ -669,8 +669,8 @@ static ssize_t tls_write_signature_algorithms(struct l_tls *tls,
 	return ptr - buf;
 }
 
-static ssize_t tls_parse_signature_algorithms(struct l_tls *tls,
-						const uint8_t *buf, size_t len)
+ssize_t tls_parse_signature_algorithms(struct l_tls *tls,
+					const uint8_t *buf, size_t len)
 {
 	const uint8_t *ptr = buf;
 	enum handshake_hash_type first_supported, hash;

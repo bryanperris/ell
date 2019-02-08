@@ -951,7 +951,7 @@ static bool tls_send_certificate(struct l_tls *tls)
 	/*
 	 * TODO: check that the certificate is compatible with hash and
 	 * signature algorithms lists supplied to us in the Client Hello
-	 * extensions (if we're a server) or in the Certificate Request
+	 * extensions (if we're a 1.2+ server) or in the Certificate Request
 	 * (if we act as a 1.2+ client).
 	 *
 	 *  - for the hash and signature_algorithms list, check all
@@ -988,26 +988,20 @@ static bool tls_send_certificate(struct l_tls *tls)
 	return true;
 }
 
+/*
+ * Note: ClientCertificateType.rsa_sign value coincides with the
+ * SignatureAlgorithm.rsa value but other values in those enum are
+ * different so we don't mix them, can't extract them from
+ * tls->pending.cipher_suite->signature.
+ */
 static uint8_t tls_cert_type_pref[] = {
 	1, /* RSA_sign */
 };
 
-struct tls_signature_hash_algorithms {
-	uint8_t hash_id;
-	uint8_t signature_id;
-};
-
-static struct tls_signature_hash_algorithms tls_signature_hash_pref[] = {
-	{ 6, 1 }, /* SHA512 + RSA */
-	{ 5, 1 }, /* SHA384 + RSA */
-	{ 4, 1 }, /* SHA256 + RSA */
-	{ 2, 1 }, /* SHA1 + RSA */
-	{ 1, 1 }, /* MD5 + RSA */
-};
-
 static bool tls_send_certificate_request(struct l_tls *tls)
 {
-	uint8_t *buf, *ptr, *dn_ptr, *signature_hash_ptr;
+	uint8_t *buf, *ptr, *dn_ptr;
+	size_t len;
 	const struct l_queue_entry *entry;
 	unsigned int i;
 	size_t dn_total = 0;
@@ -1021,9 +1015,8 @@ static bool tls_send_certificate_request(struct l_tls *tls)
 			dn_total += 10 + dn_size;
 	}
 
-	buf = l_malloc(128 + L_ARRAY_SIZE(tls_cert_type_pref) +
-			2 * L_ARRAY_SIZE(tls_signature_hash_pref) +
-			dn_total);
+	len = 256 + L_ARRAY_SIZE(tls_cert_type_pref) + dn_total;
+	buf = l_malloc(len);
 	ptr = buf + TLS_HANDSHAKE_HEADER_SIZE;
 
 	/* Fill in the Certificate Request body */
@@ -1032,27 +1025,19 @@ static bool tls_send_certificate_request(struct l_tls *tls)
 	for (i = 0; i < L_ARRAY_SIZE(tls_cert_type_pref); i++)
 		*ptr++ = tls_cert_type_pref[i];
 
-	/*
-	 * This only makes sense as a variable-length field, assume there's
-	 * a typo in RFC5246 7.4.4 here.
-	 *
-	 * TODO: we support the full list of hash algorithms when used
-	 * in the client certificate chain but we can only verify the
-	 * Certificate Verify signature when the hash algorithm matches
-	 * one of HANDSHAKE_HASH_*.  The values we include here will
-	 * affect both of these steps so revisit which set we're passing
-	 * here.
-	 */
 	if (tls->negotiated_version >= L_TLS_V12) {
-		signature_hash_ptr = ptr;
-		ptr += 2;
+		ssize_t ret = tls_write_signature_algorithms(tls, ptr,
+							buf + len - ptr);
 
-		for (i = 0; i < L_ARRAY_SIZE(tls_signature_hash_pref); i++) {
-			*ptr++ = tls_signature_hash_pref[i].hash_id;
-			*ptr++ = tls_signature_hash_pref[i].signature_id;
+		if (ret < 0) {
+			TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+					"tls_write_signature_algorithms: %s",
+					strerror(-ret));
+			l_free(buf);
+			return false;
 		}
 
-		l_put_be16(ptr - (signature_hash_ptr + 2), signature_hash_ptr);
+		ptr += ret;
 	}
 
 	dn_ptr = ptr;
@@ -1857,18 +1842,24 @@ done:
 static void tls_handle_certificate_request(struct l_tls *tls,
 						const uint8_t *buf, size_t len)
 {
-	int cert_type_len, signature_hash_len, dn_len, i;
-	enum handshake_hash_type first_supported, hash;
-	const uint8_t *signature_hash_data;
-	uint8_t hash_id;
+	unsigned int cert_type_len, dn_len, i;
 
 	tls->cert_requested = 1;
 
 	cert_type_len = *buf++;
-	if (len < (size_t) 1 + cert_type_len + 2)
+	if (len < 1 + cert_type_len + 2)
 		goto decode_error;
 
-	/* Skip certificate_types */
+	for (i = 0; i < sizeof(tls_cert_type_pref); i++)
+		if (memchr(buf, tls_cert_type_pref[i], cert_type_len))
+			break;
+
+	if (i == sizeof(tls_cert_type_pref)) {
+		TLS_DISCONNECT(TLS_ALERT_UNSUPPORTED_CERT, 0,
+				"Requested certificate types not supported");
+		return;
+	}
+
 	buf += cert_type_len;
 	len -= 1 + cert_type_len;
 
@@ -1879,65 +1870,20 @@ static void tls_handle_certificate_request(struct l_tls *tls,
 	 */
 
 	if (tls->negotiated_version >= L_TLS_V12) {
-		/*
-		 * This only makes sense as a variable-length field, assume
-		 * there's a typo in RFC5246 7.4.4 here.
-		 */
-		signature_hash_len = l_get_be16(buf);
-		signature_hash_data = buf + 2;
+		enum handshake_hash_type hash;
+		ssize_t ret = tls_parse_signature_algorithms(tls, buf, len);
 
-		if (len < (size_t) 2 + signature_hash_len + 2 ||
-				(signature_hash_len & 1))
-			goto decode_error;
-
-		len -= 2 + signature_hash_len;
-		buf += 2 + signature_hash_len;
-
-		/*
-		 * In 1.2 SHA256 is the default because that is most likely
-		 * to be supported in all the scenarios and optimal because
-		 * SHA256 is required independently for the Finished hash
-		 * meaning that we'll just need one hash type instead of
-		 * two.  If not available fall back to the first common
-		 * hash algorithm.
-		 */
-		first_supported = -1;
-
-		for (i = 0; i < signature_hash_len; i += 2) {
-			hash_id = signature_hash_data[i + 0];
-
-			/* Ignore hash types for signatures other than ours */
-			if (signature_hash_data[i + 1] !=
-					tls->pending.cipher_suite->
-						signature->id)
-				continue;
-
-			if (hash_id == tls_handshake_hash_data[
-						HANDSHAKE_HASH_SHA256].tls_id)
-				break;
-
-			if ((int) first_supported != -1)
-				continue;
-
-			for (hash = 0; hash < __HANDSHAKE_HASH_COUNT; hash++)
-				if (hash_id == tls_handshake_hash_data[hash].
-						tls_id &&
-						tls->handshake_hash[hash]) {
-					first_supported = hash;
-					break;
-				}
-		}
-
-		if (i < signature_hash_len)
-			tls->signature_hash = HANDSHAKE_HASH_SHA256;
-		else if ((int) first_supported != -1)
-			tls->signature_hash = first_supported;
-		else {
+		if (ret == -ENOTSUP) {
 			TLS_DISCONNECT(TLS_ALERT_UNSUPPORTED_CERT, 0,
 					"No supported signature hash type");
-
 			return;
 		}
+
+		if (ret < 0)
+			goto decode_error;
+
+		len -= ret;
+		buf += ret;
 
 		/*
 		 * We can now safely stop maintaining handshake message
@@ -1951,7 +1897,7 @@ static void tls_handle_certificate_request(struct l_tls *tls,
 	}
 
 	dn_len = l_get_be16(buf);
-	if ((size_t) 2 + dn_len != len)
+	if (2 + dn_len != len)
 		goto decode_error;
 
 	return;

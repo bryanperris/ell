@@ -325,6 +325,11 @@ const struct tls_named_group *tls_find_ff_group(const uint8_t *prime,
 						const uint8_t *generator,
 						size_t generator_len);
 
+ssize_t tls_write_signature_algorithms(struct l_tls *tls,
+					uint8_t *buf, size_t len);
+ssize_t tls_parse_signature_algorithms(struct l_tls *tls,
+					const uint8_t *buf, size_t len);
+
 int tls_parse_certificate_list(const void *data, size_t len,
 				struct l_certchain **out_certchain);
 

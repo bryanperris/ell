@@ -213,7 +213,7 @@ static bool tls_rsa_verify(struct l_tls *tls, const uint8_t *in, size_t in_len,
 }
 
 static struct tls_signature_algorithm tls_rsa_signature = {
-	.id = 1, /* RSA_sign */
+	.id = 1, /* SignatureAlgorithm.rsa */
 	.validate_cert_key_type = tls_rsa_validate_cert_key,
 	.sign = tls_rsa_sign,
 	.verify = tls_rsa_verify,
