@@ -284,7 +284,7 @@ LIB_EXPORT char **l_strv_append(char **str_array, const char *str)
 	for (i = 0; i < len; i++)
 		ret[i] = str_array[i];
 
-	ret[i++] = l_strdup(str);
+	ret[i] = l_strdup(str);
 
 	l_free(str_array);
 
