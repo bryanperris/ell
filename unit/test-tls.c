@@ -709,9 +709,24 @@ int main(int argc, char *argv[])
 	l_test_add("TLS connection version mismatch",
 			test_tls_version_mismatch_test, NULL);
 
-	for (i = 0; tls_cipher_suite_pref[i]; i++)
-		l_test_add(tls_cipher_suite_pref[i]->name, test_tls_suite_test,
-				tls_cipher_suite_pref[i]->name);
+	for (i = 0; tls_cipher_suite_pref[i]; i++) {
+		struct tls_cipher_suite *suite = tls_cipher_suite_pref[i];
+		struct tls_bulk_encryption_algorithm *alg = suite->encryption;
+		bool supported;
+
+		if (alg->cipher_type == TLS_CIPHER_AEAD)
+			supported = l_aead_cipher_is_supported(alg->l_aead_id);
+		else
+			supported = l_cipher_is_supported(alg->l_id);
+
+		if (supported) {
+			l_test_add(suite->name, test_tls_suite_test,
+					suite->name);
+		} else {
+			printf("Skipping %s due to missing cipher support\n",
+				suite->name);
+		}
+	}
 
 done:
 	return l_test_run();
