@@ -290,6 +290,20 @@ static void test_to_data(const void *test_data)
 	l_settings_free(settings);
 }
 
+static const char *no_group_data = "key_without_group=value\n";
+
+static void test_invalid_data(const void *test_data)
+{
+	struct l_settings *settings;
+	bool r;
+
+	settings = l_settings_new();
+
+	r = l_settings_load_from_data(settings, no_group_data,
+					strlen(no_group_data));
+	assert(r == false);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -298,6 +312,7 @@ int main(int argc, char *argv[])
 	l_test_add("Load from File", test_load_from_file, NULL);
 	l_test_add("Set Methods", test_set_methods, NULL);
 	l_test_add("Export to Data 1", test_to_data, data2);
+	l_test_add("Invalid Data (no group)", test_invalid_data, NULL);
 
 	return l_test_run();
 }
