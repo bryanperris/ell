@@ -347,7 +347,7 @@ static bool parse_keyvalue(struct l_settings *settings, const char *data,
 		return false;
 	}
 
-	if (parse_key(settings, data, equal - data, line) == false)
+	if (!parse_key(settings, data, equal - data, line))
 		return false;
 
 	equal += 1;
@@ -362,6 +362,7 @@ LIB_EXPORT bool l_settings_load_from_data(struct l_settings *settings,
 {
 	size_t pos = 0;
 	bool r = true;
+	bool has_group = false;
 	const char *eol;
 	size_t line = 1;
 	size_t line_len;
@@ -387,11 +388,17 @@ LIB_EXPORT bool l_settings_load_from_data(struct l_settings *settings,
 
 		line_len = eol - data - pos;
 
-		if (data[pos] == '[')
+		if (data[pos] == '[') {
 			r = parse_group(settings, data + pos, line_len, line);
-		else if (data[pos] != '#')
+			if (r)
+				has_group = true;
+		} else if (data[pos] != '#') {
+			if (!has_group)
+				return false;
+
 			r = parse_keyvalue(settings, data + pos, line_len,
 						line);
+		}
 
 		pos += line_len;
 	}
