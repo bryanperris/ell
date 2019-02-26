@@ -257,15 +257,15 @@ static void test_strv_append(const void *test_data)
 {
 	const char *src[] = { "Foo", "Bar" };
 	char **dst = NULL;
-
 	size_t len = L_ARRAY_SIZE(src);
+	size_t i;
 
-	for (size_t i = 0; i < len; i++)
+	for (i = 0; i < len; i++)
 		dst = l_strv_append(dst, src[i]);
 
 	assert(l_strv_length(dst) == len);
 
-	for (size_t i = 0; i < len; i++)
+	for (i = 0; i < len; i++)
 		assert(strcmp(src[i], dst[i]) == 0);
 
         l_strv_free(dst);
