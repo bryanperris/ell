@@ -202,10 +202,12 @@ LIB_EXPORT void l_uintset_free(struct l_uintset *set)
  **/
 LIB_EXPORT bool l_uintset_take(struct l_uintset *set, uint32_t number)
 {
-	uint32_t offset = (number - set->min) / BITS_PER_LONG;
+	uint32_t offset;
 
 	if (unlikely(!set))
 		return false;
+
+	offset = (number - set->min) / BITS_PER_LONG;
 
 	number -= set->min;
 
@@ -233,12 +235,13 @@ LIB_EXPORT bool l_uintset_take(struct l_uintset *set, uint32_t number)
  **/
 LIB_EXPORT bool l_uintset_put(struct l_uintset *set, uint32_t number)
 {
-	uint32_t bit = number - set->min;
+	uint32_t bit;
 	uint32_t offset;
 
 	if (unlikely(!set))
 		return false;
 
+	bit = number - set->min;
 	if (bit >= set->size)
 		return false;
 
@@ -257,12 +260,13 @@ LIB_EXPORT bool l_uintset_put(struct l_uintset *set, uint32_t number)
  **/
 LIB_EXPORT bool l_uintset_contains(struct l_uintset *set, uint32_t number)
 {
-	uint32_t bit = number - set->min;
+	uint32_t bit;
 	uint32_t offset;
 
 	if (unlikely(!set))
 		return false;
 
+	bit = number - set->min;
 	if (bit >= set->size)
 		return false;
 
