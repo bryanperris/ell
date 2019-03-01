@@ -120,6 +120,13 @@ static void test_uintset_3(const void *data)
 	l_uintset_free(set);
 }
 
+static void test_uintset_4(const void *data)
+{
+	assert(!l_uintset_take(NULL, 1));
+	assert(!l_uintset_put(NULL, 1));
+	assert(!l_uintset_contains(NULL, 1));
+}
+
 static void test_uintset_find_unused(const void *data)
 {
 	struct l_uintset *set;
@@ -167,6 +174,7 @@ int main(int argc, char *argv[])
 	l_test_add("l_uintset sanity check", test_uintset, NULL);
 	l_test_add("l_uintset sanity check #2", test_uintset_2, NULL);
 	l_test_add("l_uintset sanity check #3", test_uintset_3, NULL);
+	l_test_add("l_uintset sanity check #4", test_uintset_4, NULL);
 	l_test_add("l_uintset find unused tests", test_uintset_find_unused,
 							NULL);
 
