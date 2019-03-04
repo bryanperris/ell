@@ -607,7 +607,7 @@ LIB_EXPORT bool l_netlink_set_debug(struct l_netlink *netlink,
 	netlink->debug_destroy = destroy;
 	netlink->debug_data = user_data;
 
-	//l_io_set_debug(netlink->io, function, user_data, NULL);
+	/* l_io_set_debug(netlink->io, function, user_data, NULL); */
 
 	return true;
 }

@@ -1286,7 +1286,7 @@ LIB_EXPORT bool l_dbus_set_debug(struct l_dbus *dbus,
 	dbus->debug_destroy = destroy;
 	dbus->debug_data = user_data;
 
-	//l_io_set_debug(dbus->io, function, user_data, NULL);
+	/* l_io_set_debug(dbus->io, function, user_data, NULL); */
 
 	return true;
 }
