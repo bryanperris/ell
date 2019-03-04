@@ -24,6 +24,10 @@
 #include <config.h>
 #endif
 
+#if __STDC_VERSION__ <= 199409L
+#define _DEFAULT_SOURCE  /* for strto{u}ll() */
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
