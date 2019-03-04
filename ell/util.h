@@ -102,6 +102,10 @@ do {						\
 #error "Unknown byte order"
 #endif
 
+#if __STDC_VERSION__ <= 199409L
+#define inline __inline__
+#endif
+
 static inline uint8_t l_get_u8(const void *ptr)
 {
 	return *((const uint8_t *) ptr);

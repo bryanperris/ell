@@ -40,6 +40,10 @@ struct asn1_oid {
 	((oid1)->asn1_len == (oid2_len) && \
 	 !memcmp((oid1)->asn1, (oid2_string), (oid2_len)))
 
+#if __STDC_VERSION__ <= 199409L
+#define inline __inline__
+#endif
+
 static inline int asn1_parse_definite_length(const uint8_t **buf,
 						size_t *len)
 {
