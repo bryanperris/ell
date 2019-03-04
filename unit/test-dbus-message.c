@@ -1822,6 +1822,7 @@ static void parse_struct_3(const void *data)
 	struct l_dbus_message *msg = check_message(data);
 	const int num[32] = { 0 };
 	bool result;
+	int i;
 
 	result = l_dbus_message_get_arguments(msg, MESSAGE_SIGNATURE_STRUCT_3,
 		      &num[0], &num[1], &num[2], &num[3],
@@ -1835,7 +1836,7 @@ static void parse_struct_3(const void *data)
 
 	assert(result);
 
-	for (int i = 0; i < 32; i++) {
+	for (i = 0; i < 32; i++) {
 		assert(i == num[i]);
 	}
 
