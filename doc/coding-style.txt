@@ -15,6 +15,10 @@ There also exists a tool named checkpatch.pl to help you check the compliance
 with it. Just type "checkpatch.pl --no-tree --no-signoff patch_name" to check
 your patch.
 
+Please note, that this in effect means that we also follow the Linux Kernel
+'programming language' process guidelines.  Please see:
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/process/programming-language.rst
+
 In theory, you need to clean up all the warnings and errors.  In
 certain circumstances one can ignore the 80 character per line limit.
 This is generally only allowed if the alternative would make the code
