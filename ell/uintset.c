@@ -2,7 +2,7 @@
  *
  *  Embedded Linux library
  *
- *  Copyright (C) 2015  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2015-2019  Intel Corporation. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -120,6 +120,49 @@ static unsigned long find_last_bit(const unsigned long *addr, unsigned int size)
 
 	/* Not found */
 	return size;
+}
+
+static unsigned long find_next_bit(const unsigned long *addr,
+							unsigned long size,
+							unsigned long bit)
+{
+	unsigned long mask;
+	unsigned long offset;
+
+	if (bit >= size)
+		return size;
+
+	addr += bit / BITS_PER_LONG;
+	offset = bit % BITS_PER_LONG;
+	bit -= offset;
+
+	if (offset) {
+		mask = *addr & ~(~0UL >> (BITS_PER_LONG - offset));
+		if (mask)
+			return bit + __ffs(mask);
+
+		bit += BITS_PER_LONG;
+		addr++;
+	}
+
+	for (size -= bit; size >= BITS_PER_LONG;
+			size -= BITS_PER_LONG, bit += BITS_PER_LONG, addr++) {
+		if (!*addr)
+			continue;
+
+		return bit + __ffs(*addr);
+	}
+
+	if (!size)
+		return bit;
+
+	mask = *addr & (~0UL >> (BITS_PER_LONG - size));
+	if (mask)
+		bit += __ffs(mask);
+	else
+		bit += size;
+
+	return bit;
 }
 
 struct l_uintset {
@@ -403,4 +446,26 @@ LIB_EXPORT uint32_t l_uintset_find_min(struct l_uintset *set)
 		return set->max + 1;
 
 	return bit + set->min;
+}
+
+/**
+ * l_uintset_foreach:
+ * @set: The set of numbers
+ * @function: callback function
+ * @user_data: user data given to callback function
+ *
+ * Call @function for every given number in @set.
+ **/
+LIB_EXPORT void l_uintset_foreach(struct l_uintset *set,
+					l_uintset_foreach_func_t function,
+					void *user_data)
+{
+	unsigned int bit;
+
+	if (unlikely(!set || !function))
+		return;
+
+	for (bit = find_first_bit(set->bits, set->size); bit < set->size;
+			bit = find_next_bit(set->bits, set->size, bit + 1))
+		function(set->min + bit, user_data);
 }
