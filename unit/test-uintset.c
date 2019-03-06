@@ -2,7 +2,7 @@
  *
  *  Embedded Linux library
  *
- *  Copyright (C) 2015  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2015-2019  Intel Corporation. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -167,6 +167,101 @@ static void test_uintset_find_unused(const void *data)
 	l_uintset_free(set);
 }
 
+static void uintset_foreach(uint32_t number, void *user_data)
+{
+	struct l_uintset *check = user_data;
+
+	l_uintset_take(check, number);
+}
+
+static void test_uintset_foreach(const void *data)
+{
+	struct l_uintset *set;
+	struct l_uintset *check;
+	int i;
+
+	set = l_uintset_new_from_range(0, 63);
+	check = l_uintset_new_from_range(0, 63);
+	assert(set);
+	assert(check);
+
+	for (i = 0; i < 64; i++) {
+		assert(l_uintset_put(set, i));
+		assert(l_uintset_put(check, i));
+	}
+
+	l_uintset_foreach(set, uintset_foreach, check);
+	assert(l_uintset_find_max(check) == 64);
+
+	l_uintset_free(set);
+	l_uintset_free(check);
+
+	set = l_uintset_new_from_range(0, 127);
+	check = l_uintset_new_from_range(0, 127);
+	assert(set);
+	assert(check);
+
+	assert(l_uintset_put(set, 127));
+	assert(l_uintset_put(check, 127));
+
+	l_uintset_foreach(set, uintset_foreach, check);
+	assert(l_uintset_find_max(check) == 128);
+
+	l_uintset_free(set);
+	l_uintset_free(check);
+
+	set = l_uintset_new_from_range(0, 191);
+	check = l_uintset_new_from_range(0, 191);
+	assert(set);
+	assert(check);
+
+	assert(l_uintset_put(set, 50));
+	assert(l_uintset_put(check, 50));
+	assert(l_uintset_put(set, 150));
+	assert(l_uintset_put(check, 150));
+
+	l_uintset_foreach(set, uintset_foreach, check);
+	assert(l_uintset_find_max(check) == 192);
+
+	l_uintset_free(set);
+	l_uintset_free(check);
+
+	set = l_uintset_new_from_range(0, 192);
+	check = l_uintset_new_from_range(0, 192);
+	assert(set);
+	assert(check);
+
+	assert(l_uintset_put(set, 0));
+	assert(l_uintset_put(check, 0));
+	assert(l_uintset_put(set, 63));
+	assert(l_uintset_put(check, 63));
+	assert(l_uintset_put(set, 120));
+	assert(l_uintset_put(check, 120));
+
+	l_uintset_foreach(set, uintset_foreach, check);
+	assert(l_uintset_find_max(check) == 193);
+
+	l_uintset_free(set);
+	l_uintset_free(check);
+
+	set = l_uintset_new_from_range(0, 192);
+	check = l_uintset_new_from_range(0, 192);
+	assert(set);
+	assert(check);
+
+	assert(l_uintset_put(set, 0));
+	assert(l_uintset_put(check, 0));
+
+	assert(l_uintset_put(set, 192));
+	assert(l_uintset_put(check, 192));
+
+	l_uintset_foreach(set, uintset_foreach, check);
+	assert(l_uintset_find_max(check) == 193);
+
+	l_uintset_free(set);
+	l_uintset_free(check);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -175,6 +270,7 @@ int main(int argc, char *argv[])
 	l_test_add("l_uintset sanity check #2", test_uintset_2, NULL);
 	l_test_add("l_uintset sanity check #3", test_uintset_3, NULL);
 	l_test_add("l_uintset sanity check #4", test_uintset_4, NULL);
+	l_test_add("l_uintset for each tests", test_uintset_foreach, NULL);
 	l_test_add("l_uintset find unused tests", test_uintset_find_unused,
 							NULL);
 
