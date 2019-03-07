@@ -262,6 +262,91 @@ static void test_uintset_foreach(const void *data)
 	l_uintset_free(check);
 }
 
+static void test_uintset_intersect_sanity_test(const void *data)
+{
+	struct l_uintset *set_a;
+	struct l_uintset *set_b;
+
+	assert(!l_uintset_intersect(NULL, NULL));
+
+	set_a = l_uintset_new_from_range(0, 5);
+	assert(!l_uintset_intersect(NULL, set_a));
+	assert(!l_uintset_intersect(set_a, NULL));
+
+	set_b = l_uintset_new_from_range(4, 10);
+	assert(!l_uintset_intersect(set_a, set_b));
+
+	l_uintset_free(set_a);
+	l_uintset_free(set_b);
+}
+
+struct uintset_data {
+	const uint32_t min;
+	const uint32_t max;
+	const uint32_t *vals;
+	const uint32_t size;
+};
+
+struct uintset_intersect_data {
+	const struct uintset_data set_a;
+	const struct uintset_data set_b;
+	const struct uintset_data set_r;
+};
+
+static const uint32_t vals1[] = { 1, 2, 3 };
+static const uint32_t vals2[] = { 3, 4};
+static const uint32_t vals3[] = { 3 };
+
+static const struct uintset_intersect_data intersect_data_1 = {
+	.set_a = { 0, 4, vals1, L_ARRAY_SIZE(vals1) },
+	.set_b = { 0, 4, vals2, L_ARRAY_SIZE(vals2) },
+	.set_r = { 0, 4, vals3, L_ARRAY_SIZE(vals3) },
+};
+
+static const uint32_t vals4[] = { 0, 1, 64, 127 };
+static const uint32_t vals5[] = { 1, 25, 64, 66, 127, 135 };
+static const uint32_t vals6[] = { 1, 64, 127 };
+
+static const struct uintset_intersect_data intersect_data_2 = {
+	.set_a = { 0, 191, vals4, L_ARRAY_SIZE(vals4) },
+	.set_b = { 0, 191, vals5, L_ARRAY_SIZE(vals5) },
+	.set_r = { 0, 191, vals6, L_ARRAY_SIZE(vals6) },
+};
+
+static void test_uintset_intersect_test(const void *user_data)
+{
+	const struct uintset_intersect_data *data = user_data;
+	struct l_uintset *set_a;
+	struct l_uintset *set_b;
+	struct l_uintset *set_r;
+	size_t i;
+
+	set_a = l_uintset_new_from_range(data->set_a.min, data->set_a.max);
+
+	for (i = 0; i < data->set_a.size; i++)
+		l_uintset_put(set_a, data->set_a.vals[i]);
+
+	set_b = l_uintset_new_from_range(data->set_b.min, data->set_b.max);
+
+	for (i = 0; i < data->set_b.size; i++)
+		l_uintset_put(set_b, data->set_b.vals[i]);
+
+	set_r = l_uintset_intersect(set_a, set_b);
+
+	assert(set_r);
+
+	for (i = 0; i < data->set_r.size; i++) {
+		assert(l_uintset_contains(set_r, data->set_r.vals[i]));
+		assert(l_uintset_take(set_r, data->set_r.vals[i]));
+	}
+
+	assert(l_uintset_find_max(set_r) == l_uintset_get_max(set_r) + 1);
+
+	l_uintset_free(set_a);
+	l_uintset_free(set_b);
+	l_uintset_free(set_r);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -273,6 +358,12 @@ int main(int argc, char *argv[])
 	l_test_add("l_uintset for each tests", test_uintset_foreach, NULL);
 	l_test_add("l_uintset find unused tests", test_uintset_find_unused,
 							NULL);
+	l_test_add("l_uintset intersect sanity check",
+			test_uintset_intersect_sanity_test, NULL);
+	l_test_add("l_uintset intersect test 1", test_uintset_intersect_test,
+							&intersect_data_1);
+	l_test_add("l_uintset intersect test 2", test_uintset_intersect_test,
+							&intersect_data_2);
 
 	return l_test_run();
 }
