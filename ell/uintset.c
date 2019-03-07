@@ -469,3 +469,40 @@ LIB_EXPORT void l_uintset_foreach(struct l_uintset *set,
 			bit = find_next_bit(set->bits, set->size, bit + 1))
 		function(set->min + bit, user_data);
 }
+
+/**
+ * l_uintset_intersect:
+ * @set_a: The set of numbers
+ * @set_b: The set of numbers
+ *
+ * Intersects the two sets of numbers of an equal base, e.g.:
+ * l_uintset_get_min(set_a) must be equal to l_uintset_get_min(set_b) and
+ * l_uintset_get_max(set_a) must be equal to l_uintset_get_max(set_b)
+ *
+ * Returns: A newly allocated l_uintset object containing the intersection of
+ * @set_a and @set_b. If the bases are not equal returns NULL. If either @set_a
+ * or @set_b is NULL returns NULL.
+ **/
+LIB_EXPORT struct l_uintset *l_uintset_intersect(const struct l_uintset *set_a,
+						const struct l_uintset *set_b)
+{
+	struct l_uintset *intersection;
+	uint32_t offset;
+	uint32_t offset_max;
+
+	if (unlikely(!set_a || !set_b))
+		return NULL;
+
+	if (unlikely(set_a->min != set_b->min || set_a->max != set_b->max))
+		return NULL;
+
+	intersection = l_uintset_new_from_range(set_a->min, set_a->max);
+
+	offset_max = (set_a->size + BITS_PER_LONG - 1) / BITS_PER_LONG;
+
+	for (offset = 0; offset < offset_max; offset++)
+		intersection->bits[offset] =
+				set_a->bits[offset] & set_b->bits[offset];
+
+	return intersection;
+}
