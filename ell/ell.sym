@@ -439,6 +439,8 @@ global:
 	l_uintset_find_unused;
 	l_uintset_find_max;
 	l_uintset_find_min;
+	l_uintset_foreach;
+	l_uintset_intersect;
 	/* uuid */
 	l_uuid_v3;
 	l_uuid_v5;
