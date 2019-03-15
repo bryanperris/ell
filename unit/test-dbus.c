@@ -31,6 +31,10 @@
 
 #include <ell/ell.h>
 
+#ifndef WAIT_ANY
+#define WAIT_ANY (-1) /* Any process */
+#endif
+
 #define TEST_BUS_ADDRESS "unix:path=/tmp/ell-test-bus"
 
 static pid_t dbus_daemon_pid = -1;
