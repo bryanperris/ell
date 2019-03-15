@@ -93,7 +93,7 @@ LIB_EXPORT int l_utf8_get_codepoint(const char *str, size_t len, wchar_t *cp)
 	if (len == 0)
 		return 0;
 
-	if (str[0] > 0) {
+	if ((signed char) str[0] > 0) {
 		*cp = str[0];
 		return 1;
 	}
