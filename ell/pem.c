@@ -405,7 +405,7 @@ LIB_EXPORT struct l_key *l_pem_load_private_key(const char *filename,
 		}
 
 		l_cipher_free(alg);
-		memset(content, 0, len);
+		explicit_bzero(content, len);
 		l_free(content);
 		content = decrypted;
 		len = data_len;
@@ -443,7 +443,7 @@ done:
 
 err:
 	if (content) {
-		memset(content, 0, len);
+		explicit_bzero(content, len);
 		l_free(content);
 	}
 

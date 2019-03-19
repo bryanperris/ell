@@ -154,7 +154,7 @@ LIB_EXPORT bool l_tls_prf_get_bytes(struct l_tls *tls, bool use_master_secret,
 	else
 		r = tls_prf_get_bytes(tls, "", 0, label, seed, 64, buf, len);
 
-	memset(seed, 0, 64);
+	explicit_bzero(seed, 64);
 
 	return r;
 }
@@ -180,7 +180,7 @@ static void tls_reset_handshake(struct l_tls *tls)
 {
 	enum handshake_hash_type hash;
 
-	memset(tls->pending.key_block, 0, sizeof(tls->pending.key_block));
+	explicit_bzero(tls->pending.key_block, sizeof(tls->pending.key_block));
 
 	if (tls->pending.cipher_suite &&
 			tls->pending.cipher_suite->key_xchg->free_params)
@@ -205,9 +205,9 @@ static void tls_reset_handshake(struct l_tls *tls)
 
 static void tls_cleanup_handshake(struct l_tls *tls)
 {
-	memset(tls->pending.client_random, 0, 32);
-	memset(tls->pending.server_random, 0, 32);
-	memset(tls->pending.master_secret, 0, 48);
+	explicit_bzero(tls->pending.client_random, 32);
+	explicit_bzero(tls->pending.server_random, 32);
+	explicit_bzero(tls->pending.master_secret, 48);
 }
 
 static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx,
@@ -242,7 +242,7 @@ static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx,
 	tls->record_iv_length[txrx] = 0;
 
 	if (tls->fixed_iv_length[txrx]) {
-		memset(tls->fixed_iv[txrx], 0, tls->fixed_iv_length[txrx]);
+		explicit_bzero(tls->fixed_iv[txrx], tls->fixed_iv_length[txrx]);
 		tls->fixed_iv_length[txrx] = 0;
 	}
 
@@ -267,7 +267,8 @@ static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx,
 						key_offset, mac->mac_length);
 
 		/* Wipe out the now unneeded part of the key block */
-		memset(tls->pending.key_block + key_offset, 0, mac->mac_length);
+		explicit_bzero(tls->pending.key_block + key_offset,
+				mac->mac_length);
 
 		if (!tls->mac[txrx]) {
 			if (error) {
@@ -309,7 +310,8 @@ static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx,
 		}
 
 		/* Wipe out the now unneeded part of the key block */
-		memset(tls->pending.key_block + key_offset, 0, enc->key_length);
+		explicit_bzero(tls->pending.key_block + key_offset,
+				enc->key_length);
 
 		if (!cipher) {
 			if (error) {
@@ -349,7 +351,8 @@ static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx,
 				key_offset, enc->iv_length);
 
 		/* Wipe out the now unneeded part of the key block */
-		memset(tls->pending.key_block + key_offset, 0, enc->iv_length);
+		explicit_bzero(tls->pending.key_block + key_offset,
+				enc->iv_length);
 	} else if (tls->cipher_suite[txrx]->encryption &&
 			tls->cipher_suite[txrx]->encryption->fixed_iv_length) {
 		enc = tls->cipher_suite[txrx]->encryption;
@@ -363,8 +366,8 @@ static bool tls_change_cipher_spec(struct l_tls *tls, bool txrx,
 			enc->fixed_iv_length);
 
 		/* Wipe out the now unneeded part of the key block */
-		memset(tls->pending.key_block + key_offset, 0,
-			enc->fixed_iv_length);
+		explicit_bzero(tls->pending.key_block + key_offset,
+				enc->fixed_iv_length);
 	}
 
 	return true;
@@ -1111,7 +1114,7 @@ void tls_generate_master_secret(struct l_tls *tls,
 				"key expansion", seed, 64,
 				tls->pending.key_block, key_block_size);
 
-	memset(seed, 0, 64);
+	explicit_bzero(seed, 64);
 }
 
 static void tls_get_handshake_hash(struct l_tls *tls,

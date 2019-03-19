@@ -265,7 +265,7 @@ static bool tls_send_rsa_client_key_xchg(struct l_tls *tls)
 	tls_tx_handshake(tls, TLS_CLIENT_KEY_EXCHANGE, buf, ptr - buf);
 
 	tls_generate_master_secret(tls, pre_master_secret, 48);
-	memset(pre_master_secret, 0, 48);
+	explicit_bzero(pre_master_secret, 48);
 
 	return true;
 }
@@ -329,8 +329,8 @@ static void tls_handle_rsa_client_key_xchg(struct l_tls *tls,
 	}
 
 	tls_generate_master_secret(tls, pre_master_secret, 48);
-	memset(pre_master_secret, 0, 48);
-	memset(random_secret, 0, 46);
+	explicit_bzero(pre_master_secret, 48);
+	explicit_bzero(random_secret, 46);
 }
 
 static struct tls_key_exchange_algorithm tls_rsa_key_xchg = {
@@ -619,7 +619,7 @@ static bool tls_send_ecdhe_client_key_xchg(struct l_tls *tls)
 
 	tls_generate_master_secret(tls, pre_master_secret,
 					pre_master_secret_len);
-	memset(pre_master_secret, 0, pre_master_secret_len);
+	explicit_bzero(pre_master_secret, pre_master_secret_len);
 
 	return true;
 }
@@ -694,7 +694,7 @@ static void tls_handle_ecdhe_client_key_xchg(struct l_tls *tls,
 
 	tls_generate_master_secret(tls, pre_master_secret,
 					pre_master_secret_len);
-	memset(pre_master_secret, 0, pre_master_secret_len);
+	explicit_bzero(pre_master_secret, pre_master_secret_len);
 
 	return;
 
@@ -1014,7 +1014,7 @@ static bool tls_send_dhe_client_key_xchg(struct l_tls *tls)
 	tls_free_dhe_params(tls);
 	tls_generate_master_secret(tls, pre_master_secret + zeros,
 					pre_master_secret_len - zeros);
-	memset(pre_master_secret, 0, pre_master_secret_len);
+	explicit_bzero(pre_master_secret, pre_master_secret_len);
 	return true;
 }
 
@@ -1074,7 +1074,7 @@ static void tls_handle_dhe_client_key_xchg(struct l_tls *tls,
 	tls_free_dhe_params(tls);
 	tls_generate_master_secret(tls, pre_master_secret + zeros,
 					pre_master_secret_len - zeros);
-	memset(pre_master_secret, 0, pre_master_secret_len);
+	explicit_bzero(pre_master_secret, pre_master_secret_len);
 	return;
 
 decode_error:
