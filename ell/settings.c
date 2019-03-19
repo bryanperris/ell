@@ -139,6 +139,7 @@ static char *unescape_value(const char *value)
 			*n = '\\';
 			break;
 		default:
+			explicit_bzero(ret, n - ret);
 			l_free(ret);
 			return NULL;
 		}
