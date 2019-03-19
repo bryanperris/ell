@@ -89,11 +89,11 @@ LIB_EXPORT bool l_pkcs5_pbkdf1(enum l_checksum_type type, const char *password,
 
 	l_checksum_free(checksum);
 
-	if (iter_count)
-		return false;
+	if (!iter_count)
+		memcpy(out_dk, t, dk_len);
 
-	memcpy(out_dk, t, dk_len);
-	return true;
+	explicit_bzero(t, sizeof(t));
+	return !iter_count;
 }
 
 /* RFC8018 section 5.2 */
@@ -399,14 +399,13 @@ static struct l_cipher *pkcs5_cipher_from_pbes2_params(
 		return NULL;
 
 	cipher = l_cipher_new(enc_scheme->cipher_type, derived_key, key_len);
-	if (!cipher)
-		return NULL;
+	if (cipher && !l_cipher_set_iv(cipher, params, enc_scheme->iv_size)) {
+		l_cipher_free(cipher);
+		cipher = NULL;
+	}
 
-	if (l_cipher_set_iv(cipher, params, enc_scheme->iv_size))
-		return cipher;
-
-	l_cipher_free(cipher);
-	return NULL;
+	explicit_bzero(derived_key, 16);
+	return cipher;
 }
 
 struct l_cipher *pkcs5_cipher_from_alg_id(const uint8_t *id_asn1,
@@ -474,12 +473,11 @@ struct l_cipher *pkcs5_cipher_from_alg_id(const uint8_t *id_asn1,
 		return NULL;
 
 	cipher = l_cipher_new(pbes1_scheme->cipher_type, derived_key + 0, 8);
-	if (!cipher)
-		return NULL;
+	if (cipher && !l_cipher_set_iv(cipher, derived_key + 8, 8)) {
+		l_cipher_free(cipher);
+		cipher = NULL;
+	}
 
-	if (l_cipher_set_iv(cipher, derived_key + 8, 8))
-		return cipher;
-
-	l_cipher_free(cipher);
-	return NULL;
+	explicit_bzero(derived_key, 16);
+	return cipher;
 }
