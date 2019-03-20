@@ -109,7 +109,7 @@ LIB_EXPORT int l_utf8_get_codepoint(const char *str, size_t len, wchar_t *cp)
 	val = str[0] & (0xff >> (expect_bytes + 1));
 
 	for (i = 1; i < expect_bytes; i++) {
-		if ((str[i] & 0xc0) == 0)
+		if ((str[i] & 0xc0) != 0x80)
 			goto error;
 
 		val <<= 6;
