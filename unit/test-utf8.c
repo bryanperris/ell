@@ -815,6 +815,17 @@ static struct utf8_validate_test utf8_validate_test79 = {
 	.ucs4_len = 5,
 };
 
+static const char utf8_80[] = { 0xdf, 0x65 };
+static const wchar_t ucs4_80[] = { 0xffff };
+
+static struct utf8_validate_test utf8_validate_test80 = {
+	.utf8 = utf8_80,
+	.utf8_len = 2,
+	.type = UTF8_VALIDATE_TYPE_NOTUNICODE,
+	.ucs4 = ucs4_80,
+	.ucs4_len = 1,
+};
+
 static void test_utf8_codepoint(const struct utf8_validate_test *test)
 {
 	unsigned int i, pos;
@@ -1085,6 +1096,8 @@ int main(int argc, char *argv[])
 					&utf8_validate_test78);
 	l_test_add("Validate UTF 79", test_utf8_validate,
 					&utf8_validate_test79);
+	l_test_add("Validate UTF 80", test_utf8_validate,
+					&utf8_validate_test80);
 
 	l_test_add("Strlen UTF 1", test_utf8_strlen,
 					&utf8_strlen_test1);
