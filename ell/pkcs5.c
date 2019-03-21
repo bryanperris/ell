@@ -26,6 +26,7 @@
 
 #include <unistd.h>
 #include <stdarg.h>
+#include <strings.h>
 
 #include "checksum.h"
 #include "cipher.h"

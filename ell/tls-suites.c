@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <strings.h>
 
 #include "util.h"
 #include "tls.h"

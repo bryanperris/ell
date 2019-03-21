@@ -30,6 +30,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <strings.h>
 
 #include "util.h"
 #include "private.h"

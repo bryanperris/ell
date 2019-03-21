@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stdio.h>
+#include <strings.h>
 
 #include "util.h"
 #include "private.h"
