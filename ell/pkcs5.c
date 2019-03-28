@@ -24,8 +24,10 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
 #include <unistd.h>
 #include <stdarg.h>
+#include <string.h>
 #include <strings.h>
 
 #include "checksum.h"
