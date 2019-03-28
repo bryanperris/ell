@@ -33,9 +33,10 @@
 #include "checksum.h"
 #include "cipher.h"
 #include "asn1-private.h"
-#include "private.h"
 #include "pkcs5.h"
 #include "pkcs5-private.h"
+#include "private.h"
+#include "missing.h"
 
 /* RFC8018 section 5.1 */
 LIB_EXPORT bool l_pkcs5_pbkdf1(enum l_checksum_type type, const char *password,

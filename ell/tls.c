@@ -43,6 +43,7 @@
 #include "key.h"
 #include "asn1-private.h"
 #include "strv.h"
+#include "missing.h"
 
 bool tls10_prf(const void *secret, size_t secret_len,
 		const char *label,

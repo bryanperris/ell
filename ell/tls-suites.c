@@ -38,6 +38,7 @@
 #include "random.h"
 #include "ecc.h"
 #include "ecdh.h"
+#include "missing.h"
 
 static bool tls_rsa_validate_cert_key(struct l_cert *cert)
 {

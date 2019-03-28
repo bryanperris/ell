@@ -36,6 +36,7 @@
 #include "key.h"
 #include "string.h"
 #include "random.h"
+#include "missing.h"
 
 #ifndef KEYCTL_DH_COMPUTE
 #define KEYCTL_DH_COMPUTE 23

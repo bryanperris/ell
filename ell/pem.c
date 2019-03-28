@@ -44,6 +44,7 @@
 #include "pkcs5-private.h"
 #include "cipher.h"
 #include "cert-private.h"
+#include "missing.h"
 
 #define PEM_START_BOUNDARY	"-----BEGIN "
 #define PEM_END_BOUNDARY	"-----END "

@@ -47,6 +47,7 @@
 #include "queue.h"
 #include "settings.h"
 #include "private.h"
+#include "missing.h"
 
 struct setting_data {
 	char *key;

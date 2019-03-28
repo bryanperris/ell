@@ -25,14 +25,16 @@
 #endif
 
 #define _GNU_SOURCE
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 
-#include "private.h"
 #include "ecc.h"
 #include "ecc-private.h"
 #include "random.h"
+#include "private.h"
+#include "missing.h"
 
 /*
  * RFC 5114 - Section 2.6 256-bit Random ECP Group
