@@ -27,10 +27,6 @@
 
 #define uninitialized_var(x) x = x
 
-#define container_of(ptr, type, member) ({			\
-	const __typeof__( ((type *)0)->member ) *__mptr = (ptr);	\
-	(type *)( (char *)__mptr - offsetof(type,member) );})
-
 #define align_len(len, boundary) (((len)+(boundary)-1) & ~((boundary)-1))
 
 #define LIB_EXPORT __attribute__ ((visibility("default")))

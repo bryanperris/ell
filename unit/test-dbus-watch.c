@@ -108,7 +108,7 @@ static bool test_add_match(struct l_dbus *dbus, unsigned int id,
 				int rule_len)
 {
 	struct filter_test_state *test =
-		container_of(dbus, struct filter_test_state, dbus);
+		l_container_of(dbus, struct filter_test_state, dbus);
 
 	assert(test->expected_rule);
 
@@ -124,7 +124,7 @@ static bool test_add_match(struct l_dbus *dbus, unsigned int id,
 static bool test_remove_match(struct l_dbus *dbus, unsigned int id)
 {
 	struct filter_test_state *test =
-		container_of(dbus, struct filter_test_state, dbus);
+		l_container_of(dbus, struct filter_test_state, dbus);
 
 	assert(test->expected_id == id && id);
 

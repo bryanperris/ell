@@ -148,7 +148,7 @@ static int _dhcp_default_transport_open(struct dhcp_transport *s,
 					uint32_t port)
 {
 	struct dhcp_default_transport *transport =
-		container_of(s, struct dhcp_default_transport, super);
+		l_container_of(s, struct dhcp_default_transport, super);
 	int fd;
 
 	if (transport->io)
@@ -263,7 +263,7 @@ static int _dhcp_default_transport_send(struct dhcp_transport *s,
 					const void *data, size_t len)
 {
 	struct dhcp_default_transport *transport =
-		container_of(s, struct dhcp_default_transport, super);
+		l_container_of(s, struct dhcp_default_transport, super);
 	int fd = l_io_get_fd(transport->io);
 	int err;
 
@@ -279,7 +279,7 @@ static int _dhcp_default_transport_send(struct dhcp_transport *s,
 static void _dhcp_default_transport_close(struct dhcp_transport *s)
 {
 	struct dhcp_default_transport *transport =
-		container_of(s, struct dhcp_default_transport, super);
+		l_container_of(s, struct dhcp_default_transport, super);
 
 	l_io_destroy(transport->io);
 	transport->io = NULL;

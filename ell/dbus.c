@@ -579,7 +579,7 @@ static void dbus_init(struct l_dbus *dbus, int fd)
 static void classic_free(struct l_dbus *dbus)
 {
 	struct l_dbus_classic *classic =
-		container_of(dbus, struct l_dbus_classic, super);
+		l_container_of(dbus, struct l_dbus_classic, super);
 	unsigned int i;
 
 	for (i = 0; i < classic->num_fds; i++)
@@ -658,7 +658,7 @@ static bool classic_send_message(struct l_dbus *dbus,
 static struct l_dbus_message *classic_recv_message(struct l_dbus *dbus)
 {
 	struct l_dbus_classic *classic =
-		container_of(dbus, struct l_dbus_classic, super);
+		l_container_of(dbus, struct l_dbus_classic, super);
 	int fd = l_io_get_fd(dbus->io);
 	struct dbus_header hdr;
 	struct msghdr msg;
@@ -809,7 +809,7 @@ static bool classic_add_match(struct l_dbus *dbus, unsigned int id,
 				int rule_len)
 {
 	struct l_dbus_classic *classic =
-		container_of(dbus, struct l_dbus_classic, super);
+		l_container_of(dbus, struct l_dbus_classic, super);
 	char *match_str;
 	struct l_dbus_message *message;
 
@@ -833,7 +833,7 @@ static bool classic_add_match(struct l_dbus *dbus, unsigned int id,
 static bool classic_remove_match(struct l_dbus *dbus, unsigned int id)
 {
 	struct l_dbus_classic *classic =
-		container_of(dbus, struct l_dbus_classic, super);
+		l_container_of(dbus, struct l_dbus_classic, super);
 	char *match_str = l_hashmap_remove(classic->match_strings,
 						L_UINT_TO_PTR(id));
 	struct l_dbus_message *message;
