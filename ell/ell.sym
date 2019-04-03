@@ -490,11 +490,9 @@ global:
 	l_ecc_scalar_new_random;
 	l_ecc_scalar_sum_x;
 	l_ecc_scalars_are_equal;
-
 	/* ecdh */
 	l_ecdh_generate_key_pair;
 	l_ecdh_generate_shared_secret;
-
 	/* time */
 	l_time_now;
 local:
