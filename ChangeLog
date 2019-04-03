@@ -1,3 +1,9 @@
+ver 0.18:
+	Fix issue with handling revocation of keys.
+	Add support for TLS Signature Algorithms extension.
+	Add support for TLS version range configuration.
+	Add support for time utility functions.
+
 ver 0.17:
 	Add support for TLS Supported Groups extension.
 	Add support for TLS Hello extension feature.
