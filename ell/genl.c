@@ -161,7 +161,8 @@ static struct l_genl_family *family_alloc(struct l_genl *genl,
 	family = l_new(struct l_genl_family, 1);
 
 	family->genl = genl;
-	strncpy(family->name, name, GENL_NAMSIZ);
+	strncpy(family->name, name, GENL_NAMSIZ - 1);
+	family->name[GENL_NAMSIZ - 1] = '\0';
 
 	family->op_list = l_queue_new();
 	family->mcast_list = l_queue_new();
@@ -218,7 +219,7 @@ static bool match_mcast_name(const void *a, const void *b)
 	const struct genl_mcast *mcast = a;
 	const char *name = b;
 
-	return !strcmp(mcast->name, name);
+	return !strncmp(mcast->name, name, GENL_NAMSIZ);
 }
 
 static void family_add_mcast(struct l_genl_family *family, const char *name,
@@ -237,7 +238,9 @@ static void family_add_mcast(struct l_genl_family *family, const char *name,
 
 	mcast = l_new(struct genl_mcast, 1);
 
-	strncpy(mcast->name, name, GENL_NAMSIZ);
+	strncpy(mcast->name, name, GENL_NAMSIZ - 1);
+	mcast->name[GENL_NAMSIZ - 1] = '\0';
+
 	mcast->id = id;
 	mcast->users = 0;
 
@@ -1046,7 +1049,8 @@ static void get_family_callback(struct l_genl_msg *msg, void *user_data)
 			family->id = *((uint16_t *) data);
 			break;
 		case CTRL_ATTR_FAMILY_NAME:
-			strncpy(family->name, data, GENL_NAMSIZ);
+			strncpy(family->name, data, GENL_NAMSIZ - 1);
+			family->name[GENL_NAMSIZ - 1] = '\0';
 			break;
 		case CTRL_ATTR_VERSION:
 			family->version = *((uint32_t *) data);
