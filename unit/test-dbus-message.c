@@ -1820,7 +1820,7 @@ static void build_struct_2(const void *data)
 static void parse_struct_3(const void *data)
 {
 	struct l_dbus_message *msg = check_message(data);
-	const int num[32] = { 0 };
+	int num[32] = { 0 };
 	bool result;
 	int i;
 
