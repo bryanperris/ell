@@ -177,13 +177,13 @@ static struct dhcp_message *create_message(const struct option_test *test,
 	opt[2] = 83;
 	opt[3] = 99;
 
-	if (test->options && test->len)
+	if (test->len)
 		memcpy(&opt[4], test->options, test->len);
 
-	if (test->file && test->filelen <= 128)
+	if (test->filelen <= 128)
 		memcpy(&message->file, test->file, test->filelen);
 
-	if (test->sname && test->snamelen <= 64)
+	if (test->snamelen <= 64)
 		memcpy(&message->sname, test->sname, test->snamelen);
 
 	if (out_len)
