@@ -448,6 +448,20 @@ int _vli_legendre(uint64_t *val, const uint64_t *p, unsigned int ndigits)
 		return -1;
 }
 
+static bool vli_is_zero_or_one(const uint64_t *vli, unsigned int ndigits)
+{
+	unsigned int i;
+
+	if (ndigits == 0 || vli[0] > 1)
+		return false;
+
+	for (i = 1; i < ndigits; i++) {
+		if (vli[i])
+			return false;
+	}
+
+	return true;
+}
 
 LIB_EXPORT struct l_ecc_point *l_ecc_point_new(const struct l_ecc_curve *curve)
 {
@@ -584,22 +598,30 @@ LIB_EXPORT struct l_ecc_scalar *l_ecc_scalar_new(
 	if (!c)
 		return NULL;
 
-	if (buf)
-		_ecc_be2native(c->c, buf, curve->ndigits);
+	if (!buf)
+		return c;
 
-	return c;
+	_ecc_be2native(c->c, buf, curve->ndigits);
+
+	if (!vli_is_zero_or_one(c->c, curve->ndigits) &&
+				_vli_cmp(c->c, curve->n, curve->ndigits) < 0)
+		return c;
+
+	l_ecc_scalar_free(c);
+
+	return NULL;
 }
 
 LIB_EXPORT struct l_ecc_scalar *l_ecc_scalar_new_random(
 					const struct l_ecc_curve *curve)
 {
 	uint64_t r[L_ECC_MAX_DIGITS];
-	uint64_t zero[L_ECC_MAX_DIGITS] = { 0 };
 
 	l_getrandom(r, curve->ndigits * 8);
 
 	while (_vli_cmp(r, curve->p, curve->ndigits) > 0 ||
-			_vli_cmp(r, zero, curve->ndigits) == 0)
+			_vli_cmp(r, curve->n, curve->ndigits) > 0 ||
+			vli_is_zero_or_one(r, curve->ndigits))
 		l_getrandom(r, curve->ndigits * 8);
 
 	return _ecc_constant_new(curve, r, curve->ndigits * 8);
