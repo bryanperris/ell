@@ -358,6 +358,7 @@ global:
 	/* getrandom */
 	l_getrandom;
 	l_getrandom_is_supported;
+	l_getrandom_uint32;
 	/* ringbuf */
 	l_ringbuf_new;
 	l_ringbuf_free;
