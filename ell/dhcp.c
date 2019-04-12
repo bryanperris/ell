@@ -781,6 +781,12 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 		l_timeout_modify(client->timeout_resend, 5);
 		break;
 	case DHCP_STATE_REQUESTING:
+		if (msg_type == DHCP_MESSAGE_TYPE_NAK) {
+			dhcp_client_event_notify(client,
+					L_DHCP_CLIENT_EVENT_NO_LEASE);
+			goto error;
+		}
+
 		if (msg_type != DHCP_MESSAGE_TYPE_ACK)
 			return;
 

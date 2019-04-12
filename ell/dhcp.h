@@ -53,6 +53,7 @@ enum l_dhcp_client_event {
 	L_DHCP_CLIENT_EVENT_IP_CHANGED,
 	L_DHCP_CLIENT_EVENT_LEASE_EXPIRED,
 	L_DHCP_CLIENT_EVENT_LEASE_RENEWED,
+	L_DHCP_CLIENT_EVENT_NO_LEASE,
 };
 
 typedef void (*l_dhcp_client_event_cb_t)(struct l_dhcp_client *client,
