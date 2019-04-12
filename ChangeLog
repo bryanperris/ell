@@ -1,3 +1,7 @@
+ver 0.19:
+	Fix issue with termination of Generic Netlink names.
+	Fix issue with handling ECC scalar initialization.
+
 ver 0.18:
 	Fix issue with handling revocation of keys.
 	Add support for TLS Signature Algorithms extension.
