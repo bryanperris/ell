@@ -430,6 +430,7 @@ struct l_dhcp_client {
 	struct dhcp_transport *transport;
 	time_t start_t;
 	struct l_timeout *timeout_resend;
+	struct l_timeout *timeout_lease;
 	struct l_dhcp_lease *lease;
 	l_dhcp_client_event_cb_t event_handler;
 	void *event_data;
@@ -602,12 +603,15 @@ static int dhcp_client_send_request(struct l_dhcp_client *client)
 		if (err < 0)
 			return err;
 		break;
+	case DHCP_STATE_RENEWING:
+		request->ciaddr = client->lease->address;
+		break;
+
 	case DHCP_STATE_INIT:
 	case DHCP_STATE_SELECTING:
 	case DHCP_STATE_INIT_REBOOT:
 	case DHCP_STATE_REBOOTING:
 	case DHCP_STATE_BOUND:
-	case DHCP_STATE_RENEWING:
 	case DHCP_STATE_REBINDING:
 		return -EINVAL;
 	}
@@ -630,7 +634,17 @@ static int dhcp_client_send_request(struct l_dhcp_client *client)
 	memset(&si, 0, sizeof(si));
 	si.sin_family = AF_INET;
 	si.sin_port = L_CPU_TO_BE16(DHCP_PORT_SERVER);
-	si.sin_addr.s_addr = 0xffffffff;
+
+	/*
+	 * RFC2131, Section 4.1:
+	 * "DHCP clients MUST use the IP address provided in the
+	 * 'server identifier' option for any unicast requests to the DHCP
+	 * server.
+	 */
+	if (client->state == DHCP_STATE_RENEWING)
+		si.sin_addr.s_addr = request->ciaddr;
+	else
+		si.sin_addr.s_addr = 0xffffffff;
 
 	return client->transport->send(client->transport, &si, request, len);
 }
@@ -639,28 +653,64 @@ static void dhcp_client_timeout_resend(struct l_timeout *timeout,
 								void *user_data)
 {
 	struct l_dhcp_client *client = user_data;
+	unsigned int next_timeout = 0;
 
 	switch (client->state) {
-	case DHCP_STATE_INIT:
-		break;
 	case DHCP_STATE_SELECTING:
-		l_timeout_modify(timeout, 5);
-		dhcp_client_send_discover(client);
+		if (dhcp_client_send_discover(client) < 0)
+			goto error;
 		break;
+	case DHCP_STATE_RENEWING:
 	case DHCP_STATE_REQUESTING:
 		if (dhcp_client_send_request(client) < 0)
 			goto error;
-
-		l_timeout_modify(timeout, 5);
 		break;
+	case DHCP_STATE_INIT:
 	case DHCP_STATE_INIT_REBOOT:
 	case DHCP_STATE_REBOOTING:
 	case DHCP_STATE_BOUND:
-	case DHCP_STATE_RENEWING:
 	case DHCP_STATE_REBINDING:
 		break;
 	}
 
+	switch (client->state) {
+	case DHCP_STATE_RENEWING:
+		next_timeout = 60;
+		break;
+	case DHCP_STATE_REQUESTING:
+	case DHCP_STATE_SELECTING:
+		next_timeout = 5;
+		break;
+	case DHCP_STATE_INIT:
+	case DHCP_STATE_INIT_REBOOT:
+	case DHCP_STATE_REBOOTING:
+	case DHCP_STATE_BOUND:
+	case DHCP_STATE_REBINDING:
+		break;
+	};
+
+	if (next_timeout)
+		l_timeout_modify(timeout, next_timeout);
+
+	return;
+
+error:
+	l_dhcp_client_stop(client);
+}
+
+static void dhcp_client_t1_expired(struct l_timeout *timeout, void *user_data)
+{
+	struct l_dhcp_client *client = user_data;
+
+	client->state = DHCP_STATE_RENEWING;
+
+	if (dhcp_client_send_request(client) < 0)
+		goto error;
+
+	/* TODO: Start timer for T2 time */
+
+	client->timeout_resend =
+		l_timeout_create(60, dhcp_client_timeout_resend, client, NULL);
 	return;
 
 error:
@@ -781,6 +831,7 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 		l_timeout_modify(client->timeout_resend, 5);
 		break;
 	case DHCP_STATE_REQUESTING:
+	case DHCP_STATE_RENEWING:
 		if (msg_type == DHCP_MESSAGE_TYPE_NAK) {
 			dhcp_client_event_notify(client,
 					L_DHCP_CLIENT_EVENT_NO_LEASE);
@@ -799,11 +850,20 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 		client->timeout_resend = NULL;
 
 		dhcp_client_event_notify(client, r);
+
+		/*
+		 * Start T1, once it expires we will start the T2 timer.  If
+		 * we renew the lease, we will end up back here.
+		 */
+		l_timeout_remove(client->timeout_lease);
+		client->timeout_lease = l_timeout_create(client->lease->t1,
+						dhcp_client_t1_expired,
+						&client, NULL);
+
 		break;
 	case DHCP_STATE_INIT_REBOOT:
 	case DHCP_STATE_REBOOTING:
 	case DHCP_STATE_BOUND:
-	case DHCP_STATE_RENEWING:
 	case DHCP_STATE_REBINDING:
 		break;
 	}
@@ -1033,6 +1093,9 @@ LIB_EXPORT bool l_dhcp_client_stop(struct l_dhcp_client *client)
 
 	l_timeout_remove(client->timeout_resend);
 	client->timeout_resend = NULL;
+
+	l_timeout_remove(client->timeout_lease);
+	client->timeout_lease = NULL;
 
 	if (client->transport && client->transport->close)
 		client->transport->close(client->transport);
