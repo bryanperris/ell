@@ -139,7 +139,7 @@ static int kernel_socket_open(uint32_t ifindex,
 	return s;
 
 error:
-	close(s);
+	TEMP_FAILURE_RETRY(close(s));
 	return -errno;
 }
 
