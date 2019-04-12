@@ -29,10 +29,10 @@
 #include <linux/types.h>
 #include <net/if_arp.h>
 #include <errno.h>
-#include <time.h>
 
 #include "private.h"
 #include "random.h"
+#include "time.h"
 #include "net.h"
 #include "timeout.h"
 #include "dhcp.h"
@@ -428,7 +428,7 @@ struct l_dhcp_client {
 	char *hostname;
 	uint32_t xid;
 	struct dhcp_transport *transport;
-	time_t start_t;
+	uint64_t start_t;
 	struct l_timeout *timeout_resend;
 	struct l_timeout *timeout_lease;
 	struct l_dhcp_lease *lease;
@@ -447,10 +447,10 @@ static inline void dhcp_enable_option(struct l_dhcp_client *client,
 						1UL << (option % BITS_PER_LONG);
 }
 
-static uint16_t dhcp_attempt_secs(time_t start)
+static uint16_t dhcp_attempt_secs(uint64_t start)
 {
-	time_t now = time(NULL);
-	time_t elapsed = now - start;
+	uint64_t now = l_time_now();
+	uint64_t elapsed = l_time_to_secs(now - start);
 
 	if (elapsed == 0)
 		return 1;
@@ -1122,7 +1122,7 @@ LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
 	if (!client->override_xid)
 		l_getrandom(&client->xid, sizeof(client->xid));
 
-	client->start_t = time(NULL);
+	client->start_t = l_time_now();
 
 	err = dhcp_client_send_discover(client);
 	if (err < 0)
