@@ -896,9 +896,15 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 		/*
 		 * Start T1, once it expires we will start the T2 timer.  If
 		 * we renew the lease, we will end up back here.
+		 *
+		 * RFC2131, Section 4.4.5 states:
+		 * "Times T1 and T2 SHOULD be chosen with some random "fuzz"
+		 * around a fixed value, to avoid synchronization of client
+		 * reacquisition."
 		 */
 		l_timeout_remove(client->timeout_lease);
-		client->timeout_lease = l_timeout_create(client->lease->t1,
+		client->timeout_lease =
+			l_timeout_create_ms(dhcp_fuzz_secs(client->lease->t1),
 						dhcp_client_t1_expired,
 						&client, NULL);
 
