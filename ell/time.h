@@ -30,6 +30,13 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
+#define L_USEC_PER_SEC 1000000ULL
+#define L_MSEC_PER_SEC 1000ULL
+#define L_USEC_PER_MSEC 1000ULL
+#define L_NSEC_PER_SEC  1000000000ULL
+#define L_NSEC_PER_MSEC 1000000ULL
+#define L_NSEC_PER_USEC 1000ULL
+
 uint64_t l_time_now(void);
 
 static inline bool l_time_after(uint64_t a, uint64_t b)
@@ -54,6 +61,16 @@ static inline uint64_t l_time_offset(uint64_t time, uint64_t offset)
 static inline uint64_t l_time_diff(uint64_t a, uint64_t b)
 {
 	return (a < b) ? b - a : a - b;
+}
+
+static inline uint64_t l_time_to_secs(uint64_t time)
+{
+	return time / L_USEC_PER_SEC;
+}
+
+static inline uint64_t l_time_to_msecs(uint64_t time)
+{
+	return time / L_USEC_PER_MSEC;
 }
 
 #ifdef __cplusplus
