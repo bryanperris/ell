@@ -414,6 +414,7 @@ global:
 	l_timeout_modify;
 	l_timeout_modify_ms;
 	l_timeout_remove;
+	l_timeout_set_callback;
 	/* tls */
 	l_tls_handle_rx;
 	l_tls_prf_get_bytes;
