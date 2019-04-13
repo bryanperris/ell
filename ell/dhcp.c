@@ -1199,6 +1199,7 @@ LIB_EXPORT bool l_dhcp_client_stop(struct l_dhcp_client *client)
 	if (client->transport && client->transport->close)
 		client->transport->close(client->transport);
 
+	client->start_t = 0;
 	client->state = DHCP_STATE_INIT;
 
 	_dhcp_lease_free(client->lease);
