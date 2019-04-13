@@ -233,6 +233,7 @@ global:
 	l_dhcp_client_start;
 	l_dhcp_client_stop;
 	l_dhcp_client_set_event_handler;
+	l_dhcp_client_set_debug;
 	/* dir */
 	l_dir_watch_new;
 	l_dir_watch_destroy;

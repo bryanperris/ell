@@ -59,6 +59,7 @@ enum l_dhcp_client_event {
 typedef void (*l_dhcp_client_event_cb_t)(struct l_dhcp_client *client,
 						enum l_dhcp_client_event event,
 						void *userdata);
+typedef void (*l_dhcp_debug_cb_t)(const char *str, void *user_data);
 typedef void (*l_dhcp_destroy_cb_t)(void *userdata);
 
 struct l_dhcp_client *l_dhcp_client_new(uint32_t ifindex);
@@ -83,6 +84,10 @@ bool l_dhcp_client_set_event_handler(struct l_dhcp_client *client,
 					l_dhcp_client_event_cb_t handler,
 					void *userdata,
 					l_dhcp_destroy_cb_t destroy);
+
+bool l_dhcp_client_set_debug(struct l_dhcp_client *client,
+				l_dhcp_debug_cb_t function,
+				void *user_data, l_dhcp_destroy_cb_t destroy);
 
 char *l_dhcp_lease_get_address(const struct l_dhcp_lease *lease);
 char *l_dhcp_lease_get_gateway(const struct l_dhcp_lease *lease);

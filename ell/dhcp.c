@@ -38,6 +38,15 @@
 #include "dhcp.h"
 #include "dhcp-private.h"
 
+#define CLIENT_DEBUG(fmt, args...)					\
+	l_util_debug(client->debug_handler, client->debug_data,		\
+			"%s:%i " fmt, __func__, __LINE__, ## args)
+#define CLIENT_ENTER_STATE(s)						\
+	l_util_debug(client->debug_handler, client->debug_data,		\
+			"%s:%i Entering state: " #s,			\
+			__func__, __LINE__);				\
+	client->state = (s)
+
 #define DHCP_MAGIC 0x63825363
 #define BITS_PER_LONG (sizeof(unsigned long) * 8)
 
@@ -436,6 +445,9 @@ struct l_dhcp_client {
 	l_dhcp_client_event_cb_t event_handler;
 	void *event_data;
 	l_dhcp_destroy_cb_t event_destroy;
+	l_dhcp_debug_cb_t debug_handler;
+	l_dhcp_destroy_cb_t debug_destroy;
+	void *debug_data;
 	bool have_addr : 1;
 	bool override_xid : 1;
 };
@@ -581,6 +593,8 @@ static int dhcp_client_send_discover(struct l_dhcp_client *client)
 	int err;
 	struct sockaddr_in si;
 
+	CLIENT_DEBUG("");
+
 	discover = (struct dhcp_message *) l_new(uint8_t, len);
 
 	err = client_message_init(client, discover,
@@ -620,6 +634,8 @@ static int dhcp_client_send_request(struct l_dhcp_client *client)
 	L_AUTO_FREE_VAR(struct dhcp_message *, request);
 	int err;
 	struct sockaddr_in si;
+
+	CLIENT_DEBUG("");
 
 	request = (struct dhcp_message *) l_new(uint8_t, len);
 
@@ -710,6 +726,8 @@ static void dhcp_client_timeout_resend(struct l_timeout *timeout,
 	struct l_dhcp_client *client = user_data;
 	unsigned int next_timeout = 0;
 
+	CLIENT_DEBUG("");
+
 	switch (client->state) {
 	case DHCP_STATE_SELECTING:
 		if (dhcp_client_send_discover(client) < 0)
@@ -767,12 +785,14 @@ static void dhcp_client_t2_expired(struct l_timeout *timeout, void *user_data)
 {
 	struct l_dhcp_client *client = user_data;
 
+	CLIENT_DEBUG("");
+
 	/*
 	 * If we got here, then resend_timeout is active, with a timeout
 	 * set originally for ~60 seconds.  So we simply set the new state
 	 * and wait for the timer to fire
 	 */
-	client->state = DHCP_STATE_REBINDING;
+	CLIENT_ENTER_STATE(DHCP_STATE_REBINDING);
 
 	/* TODO: Start timer for the expiration time */
 }
@@ -782,7 +802,9 @@ static void dhcp_client_t1_expired(struct l_timeout *timeout, void *user_data)
 	struct l_dhcp_client *client = user_data;
 	uint32_t next_timeout;
 
-	client->state = DHCP_STATE_RENEWING;
+	CLIENT_DEBUG("");
+
+	CLIENT_ENTER_STATE(DHCP_STATE_RENEWING);
 	client->attempt = 1;
 
 	if (dhcp_client_send_request(client) < 0)
@@ -813,6 +835,8 @@ static int dhcp_client_receive_ack(struct l_dhcp_client *client,
 	struct dhcp_message_iter iter;
 	struct l_dhcp_lease *lease;
 	int r;
+
+	CLIENT_DEBUG("");
 
 	if (ack->yiaddr == 0)
 		return -ENOMSG;
@@ -852,6 +876,8 @@ static int dhcp_client_receive_offer(struct l_dhcp_client *client,
 					size_t len)
 {
 	struct dhcp_message_iter iter;
+
+	CLIENT_DEBUG("");
 
 	if (offer->yiaddr == 0)
 		return -ENOMSG;
@@ -912,7 +938,7 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 		if (dhcp_client_receive_offer(client, message, len) < 0)
 			return;
 
-		client->state = DHCP_STATE_REQUESTING;
+		CLIENT_ENTER_STATE(DHCP_STATE_REQUESTING);
 		client->attempt = 1;
 
 		if (dhcp_client_send_request(client) < 0)
@@ -936,7 +962,7 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 		if (r < 0)
 			return;
 
-		client->state = DHCP_STATE_BOUND;
+		CLIENT_ENTER_STATE(DHCP_STATE_BOUND);
 		l_timeout_remove(client->timeout_resend);
 		client->timeout_resend = NULL;
 
@@ -1179,7 +1205,7 @@ LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
 	client->timeout_resend = l_timeout_create_ms(dhcp_fuzz_secs(4),
 						dhcp_client_timeout_resend,
 						client, NULL);
-	client->state = DHCP_STATE_SELECTING;
+	CLIENT_ENTER_STATE(DHCP_STATE_SELECTING);
 	client->attempt = 1;
 
 	return true;
@@ -1200,7 +1226,7 @@ LIB_EXPORT bool l_dhcp_client_stop(struct l_dhcp_client *client)
 		client->transport->close(client->transport);
 
 	client->start_t = 0;
-	client->state = DHCP_STATE_INIT;
+	CLIENT_ENTER_STATE(DHCP_STATE_INIT);
 
 	_dhcp_lease_free(client->lease);
 	return true;
@@ -1220,6 +1246,24 @@ LIB_EXPORT bool l_dhcp_client_set_event_handler(struct l_dhcp_client *client,
 	client->event_handler = handler;
 	client->event_data = userdata;
 	client->event_destroy = destroy;
+
+	return true;
+}
+
+LIB_EXPORT bool l_dhcp_client_set_debug(struct l_dhcp_client *client,
+						l_dhcp_debug_cb_t function,
+						void *user_data,
+						l_dhcp_destroy_cb_t destroy)
+{
+	if (unlikely(!client))
+		return false;
+
+	if (client->debug_destroy)
+		client->debug_destroy(client->debug_data);
+
+	client->debug_handler = function;
+	client->debug_destroy = destroy;
+	client->debug_data = user_data;
 
 	return true;
 }
