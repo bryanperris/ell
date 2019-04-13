@@ -492,6 +492,29 @@ static uint64_t dhcp_fuzz_secs(uint32_t secs)
 	return ms;
 }
 
+static uint32_t dhcp_rebind_renew_retry_time(uint64_t start_t, uint32_t expiry)
+{
+	uint64_t now = l_time_now();
+	uint32_t relative_now;
+	uint32_t retry_time;
+
+	/*
+	 * RFC 2131, Section 4.4.5:
+	 * "   In both RENEWING and REBINDING states, if the client receives no
+	 * response to its DHCPREQUEST message, the client SHOULD wait one-half
+	 * of the remaining time until T2 (in RENEWING state) and one-half of
+	 * the remaining lease time (in REBINDING state), down to a minimum of
+	 * 60 seconds, before retransmitting the DHCPREQUEST message.
+	 */
+	relative_now = l_time_to_secs(now - start_t);
+	retry_time = (expiry - relative_now) / 2;
+
+	if (retry_time < 60)
+		retry_time = 60;
+
+	return retry_time;
+}
+
 static int client_message_init(struct l_dhcp_client *client,
 					struct dhcp_message *message,
 					uint8_t type,
@@ -707,7 +730,8 @@ static void dhcp_client_timeout_resend(struct l_timeout *timeout,
 
 	switch (client->state) {
 	case DHCP_STATE_RENEWING:
-		next_timeout = 60;
+		next_timeout = dhcp_rebind_renew_retry_time(client->start_t,
+							client->lease->t2);
 		break;
 	case DHCP_STATE_REQUESTING:
 	case DHCP_STATE_SELECTING:
@@ -739,6 +763,7 @@ error:
 static void dhcp_client_t1_expired(struct l_timeout *timeout, void *user_data)
 {
 	struct l_dhcp_client *client = user_data;
+	uint32_t next_timeout;
 
 	client->state = DHCP_STATE_RENEWING;
 	client->attempt = 1;
@@ -748,8 +773,10 @@ static void dhcp_client_t1_expired(struct l_timeout *timeout, void *user_data)
 
 	/* TODO: Start timer for T2 time */
 
+	next_timeout = dhcp_rebind_renew_retry_time(client->start_t,
+							client->lease->t2);
 	client->timeout_resend =
-		l_timeout_create_ms(dhcp_fuzz_secs(60),
+		l_timeout_create_ms(dhcp_fuzz_secs(next_timeout),
 					dhcp_client_timeout_resend,
 					client, NULL);
 	return;
