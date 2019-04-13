@@ -659,6 +659,7 @@ static int dhcp_client_send_request(struct l_dhcp_client *client)
 			return err;
 		break;
 	case DHCP_STATE_RENEWING:
+	case DHCP_STATE_REBINDING:
 		request->ciaddr = client->lease->address;
 		break;
 
@@ -667,7 +668,6 @@ static int dhcp_client_send_request(struct l_dhcp_client *client)
 	case DHCP_STATE_INIT_REBOOT:
 	case DHCP_STATE_REBOOTING:
 	case DHCP_STATE_BOUND:
-	case DHCP_STATE_REBINDING:
 		return -EINVAL;
 	}
 
@@ -717,6 +717,7 @@ static void dhcp_client_timeout_resend(struct l_timeout *timeout,
 		break;
 	case DHCP_STATE_RENEWING:
 	case DHCP_STATE_REQUESTING:
+	case DHCP_STATE_REBINDING:
 		if (dhcp_client_send_request(client) < 0)
 			goto error;
 		break;
@@ -724,7 +725,6 @@ static void dhcp_client_timeout_resend(struct l_timeout *timeout,
 	case DHCP_STATE_INIT_REBOOT:
 	case DHCP_STATE_REBOOTING:
 	case DHCP_STATE_BOUND:
-	case DHCP_STATE_REBINDING:
 		break;
 	}
 
@@ -732,6 +732,10 @@ static void dhcp_client_timeout_resend(struct l_timeout *timeout,
 	case DHCP_STATE_RENEWING:
 		next_timeout = dhcp_rebind_renew_retry_time(client->start_t,
 							client->lease->t2);
+		break;
+	case DHCP_STATE_REBINDING:
+		next_timeout = dhcp_rebind_renew_retry_time(client->start_t,
+						client->lease->lifetime);
 		break;
 	case DHCP_STATE_REQUESTING:
 	case DHCP_STATE_SELECTING:
@@ -747,7 +751,6 @@ static void dhcp_client_timeout_resend(struct l_timeout *timeout,
 	case DHCP_STATE_INIT_REBOOT:
 	case DHCP_STATE_REBOOTING:
 	case DHCP_STATE_BOUND:
-	case DHCP_STATE_REBINDING:
 		break;
 	};
 
@@ -758,6 +761,20 @@ static void dhcp_client_timeout_resend(struct l_timeout *timeout,
 
 error:
 	l_dhcp_client_stop(client);
+}
+
+static void dhcp_client_t2_expired(struct l_timeout *timeout, void *user_data)
+{
+	struct l_dhcp_client *client = user_data;
+
+	/*
+	 * If we got here, then resend_timeout is active, with a timeout
+	 * set originally for ~60 seconds.  So we simply set the new state
+	 * and wait for the timer to fire
+	 */
+	client->state = DHCP_STATE_REBINDING;
+
+	/* TODO: Start timer for the expiration time */
 }
 
 static void dhcp_client_t1_expired(struct l_timeout *timeout, void *user_data)
@@ -771,7 +788,11 @@ static void dhcp_client_t1_expired(struct l_timeout *timeout, void *user_data)
 	if (dhcp_client_send_request(client) < 0)
 		goto error;
 
-	/* TODO: Start timer for T2 time */
+	next_timeout = client->lease->t2 - client->lease->t1;
+	l_timeout_modify_ms(client->timeout_lease,
+						dhcp_fuzz_secs(next_timeout));
+	l_timeout_set_callback(client->timeout_lease, dhcp_client_t2_expired,
+				client, NULL);
 
 	next_timeout = dhcp_rebind_renew_retry_time(client->start_t,
 							client->lease->t2);
@@ -901,6 +922,7 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 		break;
 	case DHCP_STATE_REQUESTING:
 	case DHCP_STATE_RENEWING:
+	case DHCP_STATE_REBINDING:
 		if (msg_type == DHCP_MESSAGE_TYPE_NAK) {
 			dhcp_client_event_notify(client,
 					L_DHCP_CLIENT_EVENT_NO_LEASE);
@@ -939,7 +961,6 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 	case DHCP_STATE_INIT_REBOOT:
 	case DHCP_STATE_REBOOTING:
 	case DHCP_STATE_BOUND:
-	case DHCP_STATE_REBINDING:
 		break;
 	}
 
