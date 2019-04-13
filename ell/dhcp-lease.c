@@ -44,6 +44,7 @@ void _dhcp_lease_free(struct l_dhcp_lease *lease)
 	if (!lease)
 		return;
 
+	l_free(lease->dns);
 	l_free(lease);
 }
 
@@ -82,6 +83,21 @@ struct l_dhcp_lease *_dhcp_lease_parse_options(struct dhcp_message_iter *iter)
 		case L_DHCP_OPTION_BROADCAST_ADDRESS:
 			if (l == 4)
 				lease->broadcast = l_get_u32(v);
+			break;
+		case L_DHCP_OPTION_DOMAIN_NAME_SERVER:
+			if (l >= 4 && !(l % 4)) {
+				unsigned i = 0;
+
+				lease->dns = l_new(uint32_t, l / 4 + 1);
+
+				while (l >= 4) {
+					lease->dns[i] = l_get_u32(v + i * 4);
+					l -= 4;
+
+					if (lease->dns[i])
+						i++;
+				}
+			}
 			break;
 		default:
 			break;
@@ -161,6 +177,25 @@ LIB_EXPORT char *l_dhcp_lease_get_server_id(const struct l_dhcp_lease *lease)
 		return NULL;
 
 	return get_ip(lease->server_address);
+}
+
+LIB_EXPORT char **l_dhcp_lease_get_dns(const struct l_dhcp_lease *lease)
+{
+	unsigned i;
+	char **dns_list;
+
+	if (unlikely(!lease))
+		return NULL;
+
+	for (i = 0; lease->dns[i]; i++)
+		;
+
+	dns_list = l_new(char *, i + 1);
+
+	for (i = 0; lease->dns[i]; i++)
+		dns_list[i] = get_ip(lease->dns[i]);
+
+	return dns_list;
 }
 
 LIB_EXPORT uint32_t l_dhcp_lease_get_t1(const struct l_dhcp_lease *lease)

@@ -89,6 +89,7 @@ char *l_dhcp_lease_get_gateway(const struct l_dhcp_lease *lease);
 char *l_dhcp_lease_get_netmask(const struct l_dhcp_lease *lease);
 char *l_dhcp_lease_get_broadcast(const struct l_dhcp_lease *lease);
 char *l_dhcp_lease_get_server_id(const struct l_dhcp_lease *lease);
+char **l_dhcp_lease_get_dns(const struct l_dhcp_lease *lease);
 
 uint32_t l_dhcp_lease_get_t1(const struct l_dhcp_lease *lease);
 uint32_t l_dhcp_lease_get_t2(const struct l_dhcp_lease *lease);
