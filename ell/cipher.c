@@ -148,6 +148,8 @@ static const char *cipher_type_to_name(enum l_cipher_type type)
 		return "ecb(aes)";
 	case L_CIPHER_AES_CBC:
 		return "cbc(aes)";
+	case L_CIPHER_AES_CTR:
+		return "ctr(aes)";
 	case L_CIPHER_ARC4:
 		return "ecb(arc4)";
 	case L_CIPHER_DES:
