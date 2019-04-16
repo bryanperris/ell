@@ -307,7 +307,8 @@ static void test_aead(const void *data)
 	size_t noncelen;
 	uint8_t *nonce = l_util_from_hexstring(tv->nonce, &noncelen);
 	size_t ctlen;
-	uint8_t *ct = l_util_from_hexstring(tv->ciphertext, &ctlen);
+	uint8_t *ct = l_util_from_hexstring(tv->ciphertext, &ctlen) ?:
+		(uint8_t[]) {};
 	size_t taglen;
 	uint8_t *tag = l_util_from_hexstring(tv->tag, &taglen);
 
@@ -344,12 +345,16 @@ static void test_aead(const void *data)
 	assert(!r);
 
 	l_aead_cipher_free(cipher);
+
 	if (ptlen)
 		l_free(pt);
+
 	l_free(key);
 	l_free(aad);
 	l_free(nonce);
-	l_free(ct);
+
+	if (ctlen)
+		l_free(ct);
 	l_free(tag);
 }
 
