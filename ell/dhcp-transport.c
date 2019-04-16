@@ -113,7 +113,7 @@ static int kernel_socket_open(uint32_t ifindex,
 	int one = 1;
 	struct sockaddr_in saddr;
 
-	s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s < 0)
 		return -errno;
 
