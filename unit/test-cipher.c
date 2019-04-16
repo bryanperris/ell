@@ -71,6 +71,33 @@ static void test_aes(const void *data)
 	l_cipher_free(cipher);
 }
 
+static void test_aes_ctr(const void *data)
+{
+	struct l_cipher *cipher;
+	uint8_t iv[8] = { 0 };
+	char buf[256];
+	int r;
+
+	cipher = l_cipher_new(L_CIPHER_AES_CTR, KEY_STR, KEY_LEN);
+	assert(cipher);
+
+	l_cipher_set_iv(cipher, iv, sizeof(iv));
+
+	memcpy(buf, FIXED_STR, FIXED_LEN);
+
+	l_cipher_encrypt(cipher, buf, buf, FIXED_LEN);
+
+	r = memcmp(buf, FIXED_STR, FIXED_LEN);
+	assert(r);
+
+	l_cipher_decrypt(cipher, buf, buf, FIXED_LEN);
+
+	r = memcmp(buf, FIXED_STR, FIXED_LEN);
+	assert(!r);
+
+	l_cipher_free(cipher);
+}
+
 static void test_arc4(const void *data)
 {
 	struct l_cipher *cipher;
@@ -334,6 +361,9 @@ int main(int argc, char *argv[])
 
 	if (l_cipher_is_supported(L_CIPHER_AES))
 		l_test_add("aes", test_aes, NULL);
+
+	if (l_cipher_is_supported(L_CIPHER_AES_CTR))
+		l_test_add("aes_ctr", test_aes_ctr, NULL);
 
 	if (l_cipher_is_supported(L_CIPHER_ARC4))
 		l_test_add("arc4", test_arc4, NULL);
