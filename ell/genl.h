@@ -40,6 +40,8 @@ typedef void (*l_genl_destroy_func_t)(void *user_data);
 typedef void (*l_genl_debug_func_t)(const char *str, void *user_data);
 typedef void (*l_genl_watch_func_t)(void *user_data);
 typedef void (*l_genl_msg_func_t)(struct l_genl_msg *msg, void *user_data);
+typedef void (*l_genl_discover_func_t)(const struct l_genl_family_info *info,
+						void *user_data);
 
 struct l_genl *l_genl_new(int fd);
 struct l_genl *l_genl_new_default(void);
@@ -51,6 +53,10 @@ bool l_genl_set_debug(struct l_genl *genl, l_genl_debug_func_t callback,
 				void *user_data, l_genl_destroy_func_t destroy);
 
 bool l_genl_set_close_on_unref(struct l_genl *genl, bool do_close);
+
+bool l_genl_discover_families(struct l_genl *genl,
+				l_genl_discover_func_t cb, void *user_data,
+				l_genl_destroy_func_t destroy);
 
 struct l_genl_attr {
 	struct l_genl_msg *msg;

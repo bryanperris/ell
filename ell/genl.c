@@ -50,6 +50,13 @@ struct genl_unicast_notify {
 	void *user_data;
 };
 
+struct genl_discovery {
+	l_genl_discover_func_t cb;
+	l_genl_destroy_func_t destroy;
+	void *user_data;
+	uint32_t cmd_id;
+};
+
 struct l_genl {
 	int ref_count;
 	int fd;
@@ -63,6 +70,7 @@ struct l_genl {
 	struct l_queue *notify_list;
 	unsigned int next_request_id;
 	unsigned int next_notify_id;
+	struct genl_discovery *discovery;
 	struct l_queue *family_list;
 	struct l_genl_family *nlctrl;
 	l_genl_debug_func_t debug_callback;
@@ -816,6 +824,14 @@ LIB_EXPORT void l_genl_unref(struct l_genl *genl)
 	if (__sync_sub_and_fetch(&genl->ref_count, 1))
 		return;
 
+	if (genl->discovery) {
+		if (genl->discovery->destroy)
+			genl->discovery->destroy(genl->discovery->user_data);
+
+		l_free(genl->discovery);
+		genl->discovery = NULL;
+	}
+
 	l_queue_destroy(genl->notify_list, destroy_notify);
 	l_queue_destroy(genl->pending_list, destroy_request);
 	l_queue_destroy(genl->request_queue, destroy_request);
@@ -864,6 +880,70 @@ LIB_EXPORT bool l_genl_set_close_on_unref(struct l_genl *genl, bool do_close)
 
 	genl->close_on_unref = do_close;
 
+	return true;
+}
+
+static void dump_family_callback(struct l_genl_msg *msg, void *user_data)
+{
+	struct l_genl *genl = user_data;
+	struct genl_discovery *discovery = genl->discovery;
+	struct l_genl_family_info info;
+
+	discovery->cmd_id = 0;
+	family_info_init(&info, NULL);
+
+	if (parse_cmd_newfamily(&info, msg) < 0)
+		goto done;
+
+	if (discovery->cb)
+		discovery->cb(&info, discovery->user_data);
+
+done:
+	family_info_free(&info);
+}
+
+static void dump_family_done(void *user_data)
+{
+	struct l_genl *genl = user_data;
+	struct genl_discovery *discovery = genl->discovery;
+
+	if (discovery->destroy)
+		discovery->destroy(discovery->user_data);
+
+	l_free(discovery);
+	genl->discovery = NULL;
+}
+
+LIB_EXPORT bool l_genl_discover_families(struct l_genl *genl,
+						l_genl_discover_func_t cb,
+						void *user_data,
+						l_genl_destroy_func_t destroy)
+{
+	struct l_genl_msg *msg;
+	struct genl_discovery *discovery;
+
+	if (unlikely(!genl))
+		return false;
+
+	if (genl->discovery)
+		return false;
+
+	discovery = l_new(struct genl_discovery, 1);
+	discovery->cb = cb;
+	discovery->user_data = user_data;
+	discovery->destroy = destroy;
+
+	msg = l_genl_msg_new_sized(CTRL_CMD_GETFAMILY, NLA_HDRLEN);
+	discovery->cmd_id = l_genl_family_dump(genl->nlctrl, msg,
+						dump_family_callback,
+						genl, dump_family_done);
+
+	if (!discovery->cmd_id) {
+		l_free(discovery);
+		return false;
+	}
+
+	genl->discovery = discovery;
 	return true;
 }
 
