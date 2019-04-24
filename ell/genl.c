@@ -1233,6 +1233,15 @@ LIB_EXPORT void l_genl_family_unref(struct l_genl_family *family)
 	l_free(family);
 }
 
+LIB_EXPORT const struct l_genl_family_info *l_genl_family_get_info(
+						struct l_genl_family *family)
+{
+	if (unlikely(!family))
+		return NULL;
+
+	return &family->info;
+}
+
 LIB_EXPORT bool l_genl_family_set_unicast_handler(struct l_genl_family *family,
 						l_genl_msg_func_t handler,
 						void *user_data,
