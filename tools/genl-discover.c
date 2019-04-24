@@ -39,10 +39,20 @@ static void do_debug(const char *str, void *user_data)
 static void family_discovered(const struct l_genl_family_info *info,
 							void *user_data)
 {
+	char **groups;
+	char *groupstr;
+
 	l_info("Family: %s(%u) Version: %u",
 			l_genl_family_info_get_name(info),
 			l_genl_family_info_get_id(info),
 			l_genl_family_info_get_version(info));
+
+	groups = l_genl_family_info_get_groups(info);
+	groupstr = l_strjoinv(groups, ',');
+	l_strfreev(groups);
+
+	l_info("\tMulticast Groups: %s", groupstr);
+	l_free(groupstr);
 }
 
 static void discovery_done(void *user_data)
