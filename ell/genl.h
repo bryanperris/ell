@@ -108,11 +108,8 @@ bool l_genl_family_set_watches(struct l_genl_family *family,
 				l_genl_watch_func_t vanished,
 				void *user_data, l_genl_destroy_func_t destroy);
 
-uint32_t l_genl_family_get_version(struct l_genl_family *family);
 struct l_genl *l_genl_family_get_genl(struct l_genl_family *family);
 
-bool l_genl_family_can_send(struct l_genl_family *family, uint8_t cmd);
-bool l_genl_family_can_dump(struct l_genl_family *family, uint8_t cmd);
 unsigned int l_genl_family_send(struct l_genl_family *family,
 				struct l_genl_msg *msg,
 				l_genl_msg_func_t callback,
@@ -125,7 +122,6 @@ unsigned int l_genl_family_dump(struct l_genl_family *family,
 				l_genl_destroy_func_t destroy);
 bool l_genl_family_cancel(struct l_genl_family *family, unsigned int id);
 
-bool l_genl_family_has_group(struct l_genl_family *family, const char *group);
 unsigned int l_genl_family_register(struct l_genl_family *family,
 				const char *group, l_genl_msg_func_t callback,
 				void *user_data, l_genl_destroy_func_t destroy);

@@ -1297,47 +1297,12 @@ LIB_EXPORT bool l_genl_family_set_watches(struct l_genl_family *family,
 	return true;
 }
 
-LIB_EXPORT uint32_t l_genl_family_get_version(struct l_genl_family *family)
-{
-	struct l_genl_family_info *info;
-
-	if (unlikely(!family))
-		return 0;
-
-	info = &family->info;
-	return l_genl_family_info_get_version(info);
-}
-
 LIB_EXPORT struct l_genl *l_genl_family_get_genl(struct l_genl_family *family)
 {
 	if (unlikely(!family))
 		return 0;
 
 	return family->genl;
-}
-
-LIB_EXPORT bool l_genl_family_can_send(struct l_genl_family *family,
-								uint8_t cmd)
-{
-	struct l_genl_family_info *info;
-
-	if (unlikely(!family))
-		return false;
-
-	info = &family->info;
-	return l_genl_family_info_can_send(info, cmd);
-}
-
-LIB_EXPORT bool l_genl_family_can_dump(struct l_genl_family *family,
-								uint8_t cmd)
-{
-	struct l_genl_family_info *info;
-
-	if (!family)
-		return false;
-
-	info = &family->info;
-	return l_genl_family_info_can_send(info, cmd);
 }
 
 static unsigned int send_common(struct l_genl_family *family, uint16_t flags,
@@ -1446,18 +1411,6 @@ static void add_membership(struct l_genl *genl, struct genl_mcast *mcast)
 		return;
 
 	mcast->users++;
-}
-
-LIB_EXPORT bool l_genl_family_has_group(struct l_genl_family *family,
-							const char *group)
-{
-	struct l_genl_family_info *info;
-
-	if (unlikely(!family))
-		return false;
-
-	info = &family->info;
-	return l_genl_family_info_has_group(info, group);
 }
 
 LIB_EXPORT unsigned int l_genl_family_register(struct l_genl_family *family,
