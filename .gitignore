@@ -74,3 +74,4 @@ examples/glib-eventloop
 examples/dhcp-client
 test-suite.log
 tools/certchain-verify
+tools/genl-discover
