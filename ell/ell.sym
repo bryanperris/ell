@@ -264,6 +264,7 @@ global:
 	l_genl_family_info_can_send;
 	l_genl_family_info_can_dump;
 	l_genl_family_info_has_group;
+	l_genl_family_info_get_id;
 	l_genl_family_info_get_version;
 	l_genl_family_new;
 	l_genl_family_ref;

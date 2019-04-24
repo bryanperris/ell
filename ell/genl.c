@@ -376,6 +376,15 @@ LIB_EXPORT bool l_genl_family_info_can_dump(
 	return false;
 }
 
+LIB_EXPORT uint32_t l_genl_family_info_get_id(
+					const struct l_genl_family_info *info)
+{
+	if (unlikely(!info))
+		return 0;
+
+	return info->id;
+}
+
 LIB_EXPORT uint32_t l_genl_family_info_get_version(
 					const struct l_genl_family_info *info)
 {
