@@ -32,6 +32,7 @@ extern "C" {
 #endif
 
 struct l_genl;
+struct l_genl_family_info;
 struct l_genl_family;
 struct l_genl_msg;
 
@@ -80,6 +81,14 @@ bool l_genl_attr_init(struct l_genl_attr *attr, struct l_genl_msg *msg);
 bool l_genl_attr_next(struct l_genl_attr *attr, uint16_t *type,
 					uint16_t *len, const void **data);
 bool l_genl_attr_recurse(struct l_genl_attr *attr, struct l_genl_attr *nested);
+
+bool l_genl_family_info_has_group(const struct l_genl_family_info *info,
+					const char *group);
+bool l_genl_family_info_can_send(const struct l_genl_family_info *info,
+					uint8_t cmd);
+bool l_genl_family_info_can_dump(const struct l_genl_family_info *info,
+					uint8_t cmd);
+uint32_t l_genl_family_info_get_version(const struct l_genl_family_info *info);
 
 struct l_genl_family *l_genl_family_new(struct l_genl *genl, const char *name);
 
