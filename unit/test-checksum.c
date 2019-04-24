@@ -28,10 +28,12 @@
 
 #include <ell/ell.h>
 
-#define FIXED_STR  "The quick brown fox jumps over the lazy dog. " \
-		   "Jackdaws love my big sphinx of quartz. "       \
-		   "Pack my box with five dozen liquor jugs. "     \
-		   "How razorback-jumping frogs can level six piqued gymnasts!"
+static char FIXED_STR[] =
+	"The quick brown fox jumps over the lazy dog. "
+	"Jackdaws love my big sphinx of quartz. "
+	"Pack my box with five dozen liquor jugs. "
+	"How razorback-jumping frogs can level six piqued gymnasts!";
+
 #define FIXED_LEN  (strlen (FIXED_STR))
 
 static void test_unsupported(const void *data)
