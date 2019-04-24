@@ -253,12 +253,17 @@ LIB_EXPORT char *l_strdup_vprintf(const char *format, va_list args)
  * null-terminated. The caller can determine if the copy was truncated by
  * checking if the return value is greater than or equal to @len.
  *
+ * NOTE: Passing in a NULL string results in a no-op
+ *
  * Returns: The length of the @src string, not including the null
  * terminator.
  */
-LIB_EXPORT size_t l_strlcpy(char* dst, const char *src, size_t len)
+LIB_EXPORT size_t l_strlcpy(char *dst, const char *src, size_t len)
 {
-	size_t src_len = strlen(src);
+	size_t src_len = src ? strlen(src) : 0;
+
+	if (!src)
+		goto done;
 
 	if (len) {
 		if (src_len < len) {
@@ -271,6 +276,7 @@ LIB_EXPORT size_t l_strlcpy(char* dst, const char *src, size_t len)
 		memcpy(dst, src, len);
 	}
 
+done:
 	return src_len;
 }
 
