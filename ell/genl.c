@@ -376,6 +376,30 @@ LIB_EXPORT bool l_genl_family_info_can_dump(
 	return false;
 }
 
+LIB_EXPORT char **l_genl_family_info_get_groups(
+					const struct l_genl_family_info *info)
+{
+	char **groups;
+	size_t n_groups;
+	const struct l_queue_entry *entry;
+	int i;
+
+	if (unlikely(!info))
+		return NULL;
+
+	n_groups = l_queue_length(info->mcast_list);
+	groups = l_new(char *, n_groups + 1);
+
+	for (entry = l_queue_get_entries(info->mcast_list), i = 0;
+						entry; entry = entry->next) {
+		struct genl_mcast *mcast = entry->data;
+
+		groups[i++] = l_strdup(mcast->name);
+	}
+
+	return groups;
+}
+
 LIB_EXPORT uint32_t l_genl_family_info_get_id(
 					const struct l_genl_family_info *info)
 {
