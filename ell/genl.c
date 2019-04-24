@@ -385,6 +385,15 @@ LIB_EXPORT uint32_t l_genl_family_info_get_id(
 	return info->id;
 }
 
+LIB_EXPORT const char *l_genl_family_info_get_name(
+					const struct l_genl_family_info *info)
+{
+	if (unlikely(!info))
+		return NULL;
+
+	return info->name;
+}
+
 LIB_EXPORT uint32_t l_genl_family_info_get_version(
 					const struct l_genl_family_info *info)
 {

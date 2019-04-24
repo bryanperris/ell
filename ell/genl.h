@@ -95,6 +95,7 @@ bool l_genl_family_info_can_send(const struct l_genl_family_info *info,
 bool l_genl_family_info_can_dump(const struct l_genl_family_info *info,
 					uint8_t cmd);
 uint32_t l_genl_family_info_get_id(const struct l_genl_family_info *info);
+const char *l_genl_family_info_get_name(const struct l_genl_family_info *info);
 uint32_t l_genl_family_info_get_version(const struct l_genl_family_info *info);
 
 struct l_genl_family *l_genl_family_new(struct l_genl *genl, const char *name);
