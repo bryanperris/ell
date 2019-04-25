@@ -176,6 +176,9 @@ static void dhcp_set_ip_udp_headers(struct iphdr *ip, struct udphdr *udp,
 {
 	struct iovec iov[3];
 
+	memset(ip, 0, sizeof(*ip));
+	memset(udp, 0, sizeof(*udp));
+
 	ip->version = IPVERSION;
 	ip->ihl = sizeof(struct iphdr) / 4;
 	ip->tot_len = L_CPU_TO_BE16(len + sizeof(*ip) + sizeof(*udp));
