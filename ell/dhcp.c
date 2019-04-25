@@ -886,6 +886,8 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 	const void *v;
 	int r;
 
+	CLIENT_DEBUG("");
+
 	if (len < sizeof(struct dhcp_message))
 		return;
 
