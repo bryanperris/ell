@@ -47,7 +47,6 @@
 			__func__, __LINE__);				\
 	client->state = (s)
 
-#define DHCP_MAGIC 0x63825363
 #define BITS_PER_LONG (sizeof(unsigned long) * 8)
 
 #define DHCP_OPTION_PAD 0 /* RFC 2132, Section 3.1 */
@@ -77,17 +76,6 @@ enum dhcp_message_type {
 #define DHCP_OPTION_PARAMETER_REQUEST_LIST 55 /* Section 9.8 */
 #define DHCP_OPTION_MAXIMUM_MESSAGE_SIZE 57 /* Section 9.10 */
 #define DHCP_OPTION_CLIENT_IDENTIFIER 61 /* Section 9.14 */
-
-/* RFC 2131, Table 1 */
-enum dhcp_op_code {
-	DHCP_OP_CODE_BOOTREQUEST = 1,
-	DHCP_OP_CODE_BOOTREPLY = 2,
-};
-
-enum {
-	DHCP_PORT_SERVER = 67,
-	DHCP_PORT_CLIENT = 68,
-};
 
 enum dhcp_state {
 	DHCP_STATE_INIT,

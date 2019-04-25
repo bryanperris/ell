@@ -22,6 +22,19 @@
 
 struct l_dhcp_client;
 
+enum {
+	DHCP_PORT_SERVER = 67,
+	DHCP_PORT_CLIENT = 68,
+};
+
+/* RFC 2131, Table 1 */
+enum dhcp_op_code {
+	DHCP_OP_CODE_BOOTREQUEST = 1,
+	DHCP_OP_CODE_BOOTREPLY = 2,
+};
+
+#define DHCP_MAGIC 0x63825363
+
 /* RFC 2131, Figure 1 */
 struct dhcp_message {
 	uint8_t op;
