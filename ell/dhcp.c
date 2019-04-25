@@ -572,7 +572,6 @@ static int dhcp_client_send_discover(struct l_dhcp_client *client)
 	size_t len = sizeof(struct dhcp_message) + optlen;
 	L_AUTO_FREE_VAR(struct dhcp_message *, discover);
 	int err;
-	struct sockaddr_in si;
 
 	CLIENT_DEBUG("");
 
@@ -599,12 +598,10 @@ static int dhcp_client_send_discover(struct l_dhcp_client *client)
 
 	len = dhcp_message_optimize(discover, opt);
 
-	memset(&si, 0, sizeof(si));
-	si.sin_family = AF_INET;
-	si.sin_port = L_CPU_TO_BE16(DHCP_PORT_SERVER);
-	si.sin_addr.s_addr = 0xffffffff;
-
-	return client->transport->send(client->transport, &si, discover, len);
+	return client->transport->broadcast(client->transport,
+					INADDR_ANY, DHCP_PORT_CLIENT,
+					INADDR_BROADCAST, DHCP_PORT_SERVER,
+					discover, len);
 }
 
 static int dhcp_client_send_request(struct l_dhcp_client *client)
@@ -614,7 +611,6 @@ static int dhcp_client_send_request(struct l_dhcp_client *client)
 	size_t len = sizeof(struct dhcp_message) + optlen;
 	L_AUTO_FREE_VAR(struct dhcp_message *, request);
 	int err;
-	struct sockaddr_in si;
 
 	CLIENT_DEBUG("");
 
@@ -683,9 +679,6 @@ static int dhcp_client_send_request(struct l_dhcp_client *client)
 
 	len = dhcp_message_optimize(request, opt);
 
-	memset(&si, 0, sizeof(si));
-	si.sin_family = AF_INET;
-	si.sin_port = L_CPU_TO_BE16(DHCP_PORT_SERVER);
 
 	/*
 	 * RFC2131, Section 4.1:
@@ -693,12 +686,20 @@ static int dhcp_client_send_request(struct l_dhcp_client *client)
 	 * 'server identifier' option for any unicast requests to the DHCP
 	 * server.
 	 */
-	if (client->state == DHCP_STATE_RENEWING)
+	if (client->state == DHCP_STATE_RENEWING) {
+		struct sockaddr_in si;
+		memset(&si, 0, sizeof(si));
+		si.sin_family = AF_INET;
+		si.sin_port = L_CPU_TO_BE16(DHCP_PORT_SERVER);
 		si.sin_addr.s_addr = request->ciaddr;
-	else
-		si.sin_addr.s_addr = 0xffffffff;
+		return client->transport->send(client->transport,
+							&si, request, len);
+	}
 
-	return client->transport->send(client->transport, &si, request, len);
+	return client->transport->broadcast(client->transport,
+					INADDR_ANY, DHCP_PORT_CLIENT,
+					INADDR_BROADCAST, DHCP_PORT_SERVER,
+					request, len);
 }
 
 static void dhcp_client_timeout_resend(struct l_timeout *timeout,
