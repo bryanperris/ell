@@ -174,16 +174,15 @@ bool _dhcp_message_iter_init(struct dhcp_message_iter *iter,
 	if (!message)
 		return false;
 
-	if (len < sizeof(struct dhcp_message) + 4)
+	if (len < sizeof(struct dhcp_message))
 		return false;
 
-	if (l_get_be32(message->options) != DHCP_MAGIC)
+	if (L_BE32_TO_CPU(message->magic) != DHCP_MAGIC)
 		return false;
 
 	memset(iter, 0, sizeof(*iter));
 	iter->message = message;
 	iter->message_len = len;
-	iter->pos = 4;
 	iter->max = len - sizeof(struct dhcp_message);
 	iter->options = message->options;
 	iter->can_overload = true;
@@ -373,14 +372,8 @@ static int dhcp_message_init(struct dhcp_message *message,
 
 	message->op = op;
 	message->xid = L_CPU_TO_BE32(xid);
-
-	if (*optlen < 4)
-		return -ENOBUFS;
-
-	*optlen -= 4;
+	message->magic = L_CPU_TO_BE32(DHCP_MAGIC);
 	*opt = (uint8_t *)(message + 1);
-	l_put_be32(DHCP_MAGIC, *opt);
-	*opt += 4;
 
 	err = _dhcp_option_append(opt, optlen,
 					DHCP_OPTION_MESSAGE_TYPE, 1, &type);
@@ -904,7 +897,7 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 	const void *v;
 	int r;
 
-	if (len < sizeof(struct dhcp_message) + 4)
+	if (len < sizeof(struct dhcp_message))
 		return;
 
 	if (message->op != DHCP_OP_CODE_BOOTREPLY)
