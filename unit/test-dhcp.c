@@ -82,12 +82,12 @@ static void test_invalid_message_length(const void *data)
 static void test_cookie(const void *data)
 {
 	struct dhcp_message *message;
-	size_t len = sizeof(struct dhcp_message) + 4;
+	size_t len = sizeof(struct dhcp_message);
 	uint8_t *opt;
 	struct dhcp_message_iter iter;
 
 	message = (struct dhcp_message *) l_new(uint8_t, len);
-	opt = (uint8_t *)(message + 1);
+	opt = (uint8_t *)(&message->magic);
 	opt[0] = 0xff;
 
 	assert(!_dhcp_message_iter_init(&iter, message, len));
@@ -166,11 +166,11 @@ static struct dhcp_message *create_message(const struct option_test *test,
 						size_t *out_len)
 {
 	struct dhcp_message *message;
-	size_t len = sizeof(struct dhcp_message) + 4 + test->len;
+	size_t len = sizeof(struct dhcp_message) + test->len;
 	uint8_t *opt;
 
 	message = (struct dhcp_message *) l_new(uint8_t, len);
-	opt = (uint8_t *)(message + 1);
+	opt = (uint8_t *)(&message->magic);
 
 	opt[0] = 99;
 	opt[1] = 130;
