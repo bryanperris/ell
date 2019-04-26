@@ -949,6 +949,10 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 		l_timeout_remove(client->timeout_resend);
 		client->timeout_resend = NULL;
 
+		if (client->transport->bind)
+			client->transport->bind(client->transport,
+						client->lease->address);
+
 		dhcp_client_event_notify(client, r);
 
 		/*
