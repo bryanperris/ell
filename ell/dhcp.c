@@ -679,7 +679,6 @@ static int dhcp_client_send_request(struct l_dhcp_client *client)
 
 	len = dhcp_message_optimize(request, opt);
 
-
 	/*
 	 * RFC2131, Section 4.1:
 	 * "DHCP clients MUST use the IP address provided in the
