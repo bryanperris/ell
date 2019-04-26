@@ -75,22 +75,24 @@ uint16_t _dhcp_checksumv(const struct iovec *iov, size_t iov_cnt);
 typedef void (*dhcp_transport_rx_cb_t)(const void *, size_t, void *);
 
 struct dhcp_transport {
-	int (*open)(struct dhcp_transport *s, uint32_t ifindex,
-					const char *ifname, uint32_t port);
-	int (*send)(struct dhcp_transport *transport,
-					const struct sockaddr_in *dest,
-					const void *data, size_t len);
+	int (*open)(struct dhcp_transport *s, uint32_t xid);
 	int (*broadcast)(struct dhcp_transport *transport,
 						uint32_t saddr, uint16_t sport,
 						uint32_t daddr, uint16_t dport,
 						const void *data, size_t len);
+	int (*bind)(struct dhcp_transport *transport, uint32_t saddr);
+	int (*send)(struct dhcp_transport *transport,
+					const struct sockaddr_in *dest,
+					const void *data, size_t len);
 	void (*close)(struct dhcp_transport *transport);
 	uint32_t ifindex;
 	dhcp_transport_rx_cb_t rx_cb;
 	void *rx_data;
 };
 
-struct dhcp_transport *_dhcp_default_transport_new(void);
+struct dhcp_transport *_dhcp_default_transport_new(uint32_t ifindex,
+							const char *ifname,
+							uint16_t port);
 void _dhcp_transport_free(struct dhcp_transport *transport);
 void _dhcp_transport_set_rx_callback(struct dhcp_transport *transport,
 					dhcp_transport_rx_cb_t rx_cb,

@@ -1162,23 +1162,25 @@ LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
 
 	if (!client->transport) {
 		client->transport =
-			_dhcp_default_transport_new();
+			_dhcp_default_transport_new(client->ifindex,
+							client->ifname,
+							DHCP_PORT_CLIENT);
 
 		if (!client->transport)
 			return false;
 	}
 
+	if (!client->override_xid)
+		l_getrandom(&client->xid, sizeof(client->xid));
+
 	if (client->transport->open)
-		if (client->transport->open(client->transport, client->ifindex,
-					client->ifname, DHCP_PORT_CLIENT) < 0)
+		if (client->transport->open(client->transport,
+							client->xid) < 0)
 			return false;
 
 	_dhcp_transport_set_rx_callback(client->transport,
 						dhcp_client_rx_message,
 						client);
-
-	if (!client->override_xid)
-		l_getrandom(&client->xid, sizeof(client->xid));
 
 	client->start_t = l_time_now();
 
