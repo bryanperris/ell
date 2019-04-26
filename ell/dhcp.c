@@ -691,7 +691,7 @@ static int dhcp_client_send_request(struct l_dhcp_client *client)
 		memset(&si, 0, sizeof(si));
 		si.sin_family = AF_INET;
 		si.sin_port = L_CPU_TO_BE16(DHCP_PORT_SERVER);
-		si.sin_addr.s_addr = request->ciaddr;
+		si.sin_addr.s_addr = client->lease->server_address;
 		return client->transport->send(client->transport,
 							&si, request, len);
 	}
