@@ -71,10 +71,10 @@ uint16_t _dhcp_checksumv(const struct iovec *iov, size_t iov_cnt)
 		sum += odd[len - 1];
 	}
 
-        while (sum >> 16)
-                sum = (sum & 0xffff) + (sum >> 16);
+	while (sum >> 16)
+		sum = (sum & 0xffff) + (sum >> 16);
 
-        return ~sum;
+	return ~sum;
 }
 
 uint16_t _dhcp_checksum(const void *buf, size_t len)
