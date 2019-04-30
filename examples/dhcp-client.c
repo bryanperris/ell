@@ -63,18 +63,21 @@ static void event_handler(struct l_dhcp_client *client,
 	char *gw = l_dhcp_lease_get_gateway(lease);
 	uint32_t lifetime = l_dhcp_lease_get_lifetime(lease);
 	char **dns = l_dhcp_lease_get_dns(lease);
-	char *dns_concat = l_strjoinv(dns, ',');
 
 	l_info("Lease Obtained:");
 	l_info("\tIP: %s, Netmask: %s, Gateway: %s", ip, netmask, gw);
 	l_info("Lifetime: %u seconds", lifetime);
-	l_info("DNS List: %s", dns_concat);
+	if (dns) {
+		char *dns_concat = l_strjoinv(dns, ',');
+		l_info("DNS List: %s", dns_concat);
+		l_free(dns_concat);
+		l_strfreev(dns);
+	} else
+		l_info("No DNS information obtained");
 
 	l_free(ip);
 	l_free(netmask);
 	l_free(gw);
-	l_strfreev(dns);
-	l_free(dns_concat);
 }
 
 int main(int argc, char *argv[])
