@@ -187,6 +187,9 @@ LIB_EXPORT char **l_dhcp_lease_get_dns(const struct l_dhcp_lease *lease)
 	if (unlikely(!lease))
 		return NULL;
 
+	if (!lease->dns)
+		return NULL;
+
 	for (i = 0; lease->dns[i]; i++)
 		;
 
