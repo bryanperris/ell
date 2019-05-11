@@ -1,3 +1,9 @@
+ver 0.20:
+	Fix issue with DHCP client and handling renewing state.
+	Fix issue with DHCP client and handling rebinding state.
+	Fix issue with DHCP client and recommended retry timeouts.
+	Fix issue with Generic Netlink and family discovery.
+
 ver 0.19:
 	Fix issue with termination of Generic Netlink names.
 	Fix issue with handling ECC scalar initialization.
