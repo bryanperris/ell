@@ -85,6 +85,7 @@ struct l_genl {
 	struct genl_discovery *discovery;
 	uint32_t next_watch_id;
 	struct l_queue *family_watches;
+	struct l_queue *family_infos;
 	struct l_queue *family_list;
 	struct l_genl_family *nlctrl;
 	l_genl_debug_func_t debug_callback;
@@ -159,6 +160,14 @@ struct l_genl_family {
 	struct genl_unicast_notify *unicast_notify;
 };
 
+static bool family_info_match(const void *a, const void *b)
+{
+	const struct l_genl_family_info *ia = a;
+	uint16_t id = L_PTR_TO_UINT(b);
+
+	return ia->id == id;
+}
+
 static void family_info_init(struct l_genl_family_info *info,
 							const char *name)
 {
@@ -167,12 +176,28 @@ static void family_info_init(struct l_genl_family_info *info,
 	info->mcast_list = l_queue_new();
 }
 
-static void family_info_free(struct l_genl_family_info *info)
+static struct l_genl_family_info *family_info_new(const char *name)
+{
+	struct l_genl_family_info *info = l_new(struct l_genl_family_info, 1);
+
+	family_info_init(info, name);
+	return info;
+}
+
+static void family_info_destroy(struct l_genl_family_info *info)
 {
 	l_queue_destroy(info->op_list, l_free);
 	info->op_list = NULL;
 	l_queue_destroy(info->mcast_list, l_free);
 	info->mcast_list = NULL;
+}
+
+static void family_info_free(void *user_data)
+{
+	struct l_genl_family_info *info = user_data;
+
+	family_info_destroy(info);
+	l_free(info);
 }
 
 static void mcast_free(void *data, void *user_data)
@@ -461,6 +486,23 @@ static bool family_watch_match(const void *a, const void *b)
 	return watch->id == id;
 }
 
+static struct l_genl_family_info *family_info_update(struct l_genl *genl,
+					struct l_genl_family_info *info)
+{
+	struct l_genl_family_info *old =
+		l_queue_find(genl->family_infos, family_info_match,
+						L_UINT_TO_PTR(info->id));
+	if (old) {
+		GENL_DEBUG("Keeping old family info: %s", old->name);
+		family_info_free(info);
+		return old;
+	}
+
+	GENL_DEBUG("Added new family info: %s", info->name);
+	l_queue_push_head(genl->family_infos, info);
+	return info;
+}
+
 static void family_watch_prune(struct l_genl *genl)
 {
 	struct family_watch *watch;
@@ -473,13 +515,15 @@ static void family_watch_prune(struct l_genl *genl)
 
 static void nlctrl_newfamily(struct l_genl_msg *msg, struct l_genl *genl)
 {
-	struct l_genl_family_info info;
+	struct l_genl_family_info *info = family_info_new(NULL);
 	const struct l_queue_entry *entry;
 
-	family_info_init(&info, NULL);
+	if (parse_cmd_newfamily(info, msg) < 0) {
+		family_info_free(info);
+		return;
+	}
 
-	if (parse_cmd_newfamily(&info, msg) < 0)
-		goto done;
+	info = family_info_update(genl, info);
 
 	genl->in_family_watch_notify = true;
 
@@ -493,16 +537,14 @@ static void nlctrl_newfamily(struct l_genl_msg *msg, struct l_genl *genl)
 		if (!watch->appeared_func)
 			continue;
 
-		if (watch->name && strcmp(watch->name, info.name))
+		if (watch->name && strcmp(watch->name, info->name))
 			continue;
 
-		watch->appeared_func(&info, watch->user_data);
+		watch->appeared_func(info, watch->user_data);
 	}
 
 	genl->in_family_watch_notify = false;
 	family_watch_prune(genl);
-done:
-	family_info_free(&info);
 }
 
 static void nlctrl_delfamily(struct l_genl_msg *msg, struct l_genl *genl)
@@ -513,6 +555,7 @@ static void nlctrl_delfamily(struct l_genl_msg *msg, struct l_genl *genl)
 	const void *data;
 	uint16_t id = 0;
 	const char *name = NULL;
+	struct l_genl_family_info *old;
 
 	if (!l_genl_attr_init(&attr, msg))
 		return;
@@ -551,6 +594,13 @@ static void nlctrl_delfamily(struct l_genl_msg *msg, struct l_genl *genl)
 
 	genl->in_family_watch_notify = false;
 	family_watch_prune(genl);
+
+	old = l_queue_remove_if(genl->family_infos, family_info_match,
+					L_UINT_TO_PTR(id));
+	if (old) {
+		GENL_DEBUG("Removing old family info: %s", old->name);
+		family_info_free(old);
+	}
 }
 
 static void nlctrl_notify(struct l_genl_msg *msg, void *user_data)
@@ -949,6 +999,7 @@ LIB_EXPORT struct l_genl *l_genl_new(int fd)
 	genl->notify_list = l_queue_new();
 	genl->family_list = l_queue_new();
 	genl->family_watches = l_queue_new();
+	genl->family_infos = l_queue_new();
 
 	genl->nlctrl = family_alloc(genl, "nlctrl");
 	genl->nlctrl->info.id = GENL_ID_CTRL;
@@ -1029,6 +1080,7 @@ LIB_EXPORT void l_genl_unref(struct l_genl *genl)
 	}
 
 	l_queue_destroy(genl->family_watches, family_watch_free);
+	l_queue_destroy(genl->family_infos, family_info_free);
 	l_queue_destroy(genl->notify_list, destroy_notify);
 	l_queue_destroy(genl->pending_list, destroy_request);
 	l_queue_destroy(genl->request_queue, destroy_request);
@@ -1084,19 +1136,19 @@ static void dump_family_callback(struct l_genl_msg *msg, void *user_data)
 {
 	struct l_genl *genl = user_data;
 	struct genl_discovery *discovery = genl->discovery;
-	struct l_genl_family_info info;
+	struct l_genl_family_info *info = family_info_new(NULL);
 
 	discovery->cmd_id = 0;
-	family_info_init(&info, NULL);
 
-	if (parse_cmd_newfamily(&info, msg) < 0)
-		goto done;
+	if (parse_cmd_newfamily(info, msg) < 0) {
+		family_info_free(&info);
+		return;
+	}
+
+	info = family_info_update(genl, info);
 
 	if (discovery->cb)
-		discovery->cb(&info, discovery->user_data);
-
-done:
-	family_info_free(&info);
+		discovery->cb(info, discovery->user_data);
 }
 
 static void dump_family_done(void *user_data)
@@ -1252,10 +1304,12 @@ static void request_family_callback(struct l_genl_msg *msg, void *user_data)
 		return;
 	}
 
+	/* The update should come as a result of new_family event */
+
 	if (req->appeared_func)
 		req->appeared_func(&info, req->user_data);
 
-	family_info_free(&info);
+	family_info_destroy(&info);
 }
 
 static void family_request_free(void *user_data)
@@ -1674,7 +1728,7 @@ LIB_EXPORT void l_genl_family_unref(struct l_genl_family *family)
 		family->watch_vanished(family->watch_data);
 
 	l_queue_foreach(family->info.mcast_list, mcast_free, genl);
-	family_info_free(&family->info);
+	family_info_destroy(&family->info);
 
 	if (family->watch_destroy)
 		family->watch_destroy(family->watch_data);
