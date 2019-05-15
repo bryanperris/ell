@@ -42,6 +42,7 @@ typedef void (*l_genl_watch_func_t)(void *user_data);
 typedef void (*l_genl_msg_func_t)(struct l_genl_msg *msg, void *user_data);
 typedef void (*l_genl_discover_func_t)(const struct l_genl_family_info *info,
 						void *user_data);
+typedef void (*l_genl_vanished_func_t)(const char *name, void *user_data);
 
 struct l_genl *l_genl_new(int fd);
 struct l_genl *l_genl_new_default(void);
@@ -57,6 +58,14 @@ bool l_genl_set_close_on_unref(struct l_genl *genl, bool do_close);
 bool l_genl_discover_families(struct l_genl *genl,
 				l_genl_discover_func_t cb, void *user_data,
 				l_genl_destroy_func_t destroy);
+
+unsigned int l_genl_add_family_watch(struct l_genl *genl,
+					const char *name,
+					l_genl_discover_func_t appeared_func,
+					l_genl_vanished_func_t vanished_func,
+					void *user_data,
+					l_genl_destroy_func_t destroy);
+bool l_genl_remove_family_watch(struct l_genl *genl, unsigned int id);
 
 struct l_genl_attr {
 	struct l_genl_msg *msg;

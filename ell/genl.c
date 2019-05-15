@@ -50,6 +50,15 @@ struct genl_unicast_notify {
 	void *user_data;
 };
 
+struct family_watch {
+	uint32_t id;
+	char *name;
+	l_genl_discover_func_t appeared_func;
+	l_genl_vanished_func_t vanished_func;
+	l_genl_destroy_func_t destroy;
+	void *user_data;
+};
+
 struct genl_discovery {
 	l_genl_discover_func_t cb;
 	l_genl_destroy_func_t destroy;
@@ -71,11 +80,15 @@ struct l_genl {
 	unsigned int next_request_id;
 	unsigned int next_notify_id;
 	struct genl_discovery *discovery;
+	uint32_t next_watch_id;
+	struct l_queue *family_watches;
 	struct l_queue *family_list;
 	struct l_genl_family *nlctrl;
 	l_genl_debug_func_t debug_callback;
 	l_genl_destroy_func_t debug_destroy;
 	void *debug_data;
+
+	bool in_family_watch_notify : 1;
 };
 
 struct l_genl_msg {
@@ -425,6 +438,133 @@ LIB_EXPORT uint32_t l_genl_family_info_get_version(
 		return 0;
 
 	return info->version;
+}
+
+static void family_watch_free(void *data)
+{
+	struct family_watch *watch = data;
+
+	if (watch->destroy)
+		watch->destroy(watch->user_data);
+
+	l_free(watch);
+}
+
+static bool family_watch_match(const void *a, const void *b)
+{
+	const struct family_watch *watch = a;
+	uint32_t id = L_PTR_TO_UINT(b);
+
+	return watch->id == id;
+}
+
+static void family_watch_prune(struct l_genl *genl)
+{
+	struct family_watch *watch;
+
+	while ((watch = l_queue_remove_if(genl->family_watches,
+						family_watch_match,
+						L_UINT_TO_PTR(0))))
+		family_watch_free(watch);
+}
+
+static void nlctrl_newfamily(struct l_genl_msg *msg, struct l_genl *genl)
+{
+	struct l_genl_family_info info;
+	const struct l_queue_entry *entry;
+
+	family_info_init(&info, NULL);
+
+	if (parse_cmd_newfamily(&info, msg) < 0)
+		goto done;
+
+	genl->in_family_watch_notify = true;
+
+	for (entry = l_queue_get_entries(genl->family_watches);
+						entry; entry = entry->next) {
+		struct family_watch *watch = entry->data;
+
+		if (!watch->id)
+			continue;
+
+		if (!watch->appeared_func)
+			continue;
+
+		if (watch->name && strcmp(watch->name, info.name))
+			continue;
+
+		watch->appeared_func(&info, watch->user_data);
+	}
+
+	genl->in_family_watch_notify = false;
+	family_watch_prune(genl);
+done:
+	family_info_free(&info);
+}
+
+static void nlctrl_delfamily(struct l_genl_msg *msg, struct l_genl *genl)
+{
+	const struct l_queue_entry *entry;
+	struct l_genl_attr attr;
+	uint16_t type, len;
+	const void *data;
+	uint16_t id = 0;
+	const char *name = NULL;
+
+	if (!l_genl_attr_init(&attr, msg))
+		return;
+
+	while (l_genl_attr_next(&attr, &type, &len, &data)) {
+		switch (type) {
+		case CTRL_ATTR_FAMILY_ID:
+			id = l_get_u16(data);
+			break;
+		case CTRL_ATTR_FAMILY_NAME:
+			name = data;
+			break;
+		}
+	}
+
+	if (!id || !name)
+		return;
+
+	genl->in_family_watch_notify = true;
+
+	for (entry = l_queue_get_entries(genl->family_watches);
+						entry; entry = entry->next) {
+		struct family_watch *watch = entry->data;
+
+		if (!watch->id)
+			continue;
+
+		if (!watch->vanished_func)
+			continue;
+
+		if (watch->name && strcmp(watch->name, name))
+			continue;
+
+		watch->vanished_func(name, watch->user_data);
+	}
+
+	genl->in_family_watch_notify = false;
+	family_watch_prune(genl);
+}
+
+static void nlctrl_notify(struct l_genl_msg *msg, void *user_data)
+{
+	struct l_genl *genl = user_data;
+	uint8_t cmd;
+
+	cmd = l_genl_msg_get_command(msg);
+
+	switch (cmd) {
+	case CTRL_CMD_NEWFAMILY:
+		nlctrl_newfamily(msg, genl);
+		break;
+	case CTRL_CMD_DELFAMILY:
+		nlctrl_delfamily(msg, genl);
+		break;
+	}
 }
 
 static struct l_genl_family *family_alloc(struct l_genl *genl,
@@ -800,9 +940,13 @@ LIB_EXPORT struct l_genl *l_genl_new(int fd)
 	genl->pending_list = l_queue_new();
 	genl->notify_list = l_queue_new();
 	genl->family_list = l_queue_new();
+	genl->family_watches = l_queue_new();
 
 	l_io_set_read_handler(genl->io, received_data, genl,
 						read_watch_destroy);
+
+	l_genl_family_register(genl->nlctrl, "notify",
+						nlctrl_notify, genl, NULL);
 
 	return l_genl_ref(genl);
 }
@@ -874,6 +1018,7 @@ LIB_EXPORT void l_genl_unref(struct l_genl *genl)
 		genl->discovery = NULL;
 	}
 
+	l_queue_destroy(genl->family_watches, family_watch_free);
 	l_queue_destroy(genl->notify_list, destroy_notify);
 	l_queue_destroy(genl->pending_list, destroy_request);
 	l_queue_destroy(genl->request_queue, destroy_request);
@@ -986,6 +1131,94 @@ LIB_EXPORT bool l_genl_discover_families(struct l_genl *genl,
 	}
 
 	genl->discovery = discovery;
+	return true;
+}
+
+/**
+ * l_genl_add_family_watch:
+ * @genl: GENL connection
+ * @name: Name of the family to watch for.  Use NULL to match any family.
+ * @appeared_func: Callback to call when the matching family appears
+ * @vanished_func: Callback to call when the matching family disappears
+ * @user_data: user data for the callback
+ * @destroy: Destroy callback for user data
+ *
+ * Returns: a non-zero watch identifier that can be passed to
+ *          l_genl_remove_family_watch to remove this watch, or zero if the
+ *          watch could not be created successfully.
+ **/
+LIB_EXPORT unsigned int l_genl_add_family_watch(struct l_genl *genl,
+					const char *name,
+					l_genl_discover_func_t appeared_func,
+					l_genl_vanished_func_t vanished_func,
+					void *user_data,
+					l_genl_destroy_func_t destroy)
+{
+	struct family_watch *watch;
+	size_t len = 0;
+
+	if (unlikely(!genl))
+		return 0;
+
+	if (name) {
+		len = strlen(name);
+		if (len >= GENL_NAMSIZ)
+			return 0;
+	}
+
+	watch = l_new(struct family_watch, 1);
+	watch->name = l_strdup(name);
+	watch->appeared_func = appeared_func;
+	watch->vanished_func = vanished_func;
+	watch->user_data = user_data;
+	watch->destroy = destroy;
+
+	genl->next_watch_id += 1;
+	if (genl->next_watch_id == 0)
+		genl->next_watch_id = 1;
+
+	watch->id = genl->next_watch_id;
+
+	l_queue_push_tail(genl->family_watches, watch);
+
+	return watch->id;
+}
+
+/**
+ * l_genl_remove_family_watch:
+ * @genl: GENL connection
+ * @id: unique identifier of the family watch to remove
+ *
+ * Removes the family watch.  If a destroy callback was provided, then it is
+ * called in order to free any associated user data.
+ *
+ * Returns: #true if the watch was removed successfully and #false otherwise.
+ **/
+LIB_EXPORT bool l_genl_remove_family_watch(struct l_genl *genl,
+							unsigned int id)
+{
+	struct family_watch *watch;
+
+	if (unlikely(!genl))
+		return false;
+
+	if (genl->in_family_watch_notify) {
+		watch = l_queue_find(genl->family_watches, family_watch_match,
+							L_UINT_TO_PTR(id));
+		if (!watch)
+			return false;
+
+		watch->id = 0;
+		return true;
+	}
+
+	watch = l_queue_remove_if(genl->family_watches, family_watch_match,
+							L_UINT_TO_PTR(id));
+	if (!watch)
+		return false;
+
+	family_watch_free(watch);
+
 	return true;
 }
 
