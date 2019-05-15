@@ -249,6 +249,7 @@ global:
 	l_genl_discover_families;
 	l_genl_add_family_watch;
 	l_genl_remove_family_watch;
+	l_genl_request_family;
 	l_genl_msg_new;
 	l_genl_msg_new_sized;
 	l_genl_msg_ref;

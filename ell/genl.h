@@ -66,6 +66,10 @@ unsigned int l_genl_add_family_watch(struct l_genl *genl,
 					void *user_data,
 					l_genl_destroy_func_t destroy);
 bool l_genl_remove_family_watch(struct l_genl *genl, unsigned int id);
+bool l_genl_request_family(struct l_genl *genl, const char *name,
+					l_genl_discover_func_t appeared_func,
+					void *user_data,
+					l_genl_destroy_func_t destroy);
 
 struct l_genl_attr {
 	struct l_genl_msg *msg;

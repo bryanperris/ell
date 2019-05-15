@@ -1237,6 +1237,92 @@ LIB_EXPORT bool l_genl_remove_family_watch(struct l_genl *genl,
 	return true;
 }
 
+struct family_request {
+	void *user_data;
+	l_genl_discover_func_t appeared_func;
+	l_genl_destroy_func_t destroy;
+};
+
+static void request_family_callback(struct l_genl_msg *msg, void *user_data)
+{
+	struct family_request *req = user_data;
+	struct l_genl_family_info info;
+
+	family_info_init(&info, NULL);
+
+	if (parse_cmd_newfamily(&info, msg) < 0) {
+		if (req->appeared_func)
+			req->appeared_func(NULL, req->user_data);
+
+		return;
+	}
+
+	if (req->appeared_func)
+		req->appeared_func(&info, req->user_data);
+
+	family_info_free(&info);
+}
+
+static void family_request_free(void *user_data)
+{
+	struct family_request *req = user_data;
+
+	if (req->destroy)
+		req->destroy(req->user_data);
+
+	l_free(req);
+}
+
+/**
+ * l_genl_request_family:
+ * @genl: GENL connection
+ * @name: Name of the family to request
+ * @appeared_func: Callback to call
+ * @user_data: User data
+ * @destroy: Destroy callback for user_data
+ *
+ * Attempts to request a family given by @name. If the family is not currently
+ * available, then the kernel will attempt to auto-load the module for that
+ * family and if successful, the family will appear.  If the family is already
+ * loaded, the kernel will not perform auto-loading.  In both cases the callback
+ * is called with the family information.  If auto-loading failed, a NULL
+ * will be given as a parameter to @appeared_func.
+ *
+ * Returns: #true if the request could be started successfully,
+ * false otherwise.
+ **/
+LIB_EXPORT bool l_genl_request_family(struct l_genl *genl, const char *name,
+					l_genl_discover_func_t appeared_func,
+					void *user_data,
+					l_genl_destroy_func_t destroy)
+{
+	size_t len;
+	struct l_genl_msg *msg;
+	struct family_request *req;
+
+	if (unlikely(!genl) || unlikely(!name))
+		return NULL;
+
+	len = strlen(name);
+	if (unlikely(strlen(name) >= GENL_NAMSIZ))
+		return NULL;
+
+	req = l_new(struct family_request, 1);
+	req->appeared_func = appeared_func;
+	req->user_data = user_data;
+	req->destroy = destroy;
+
+	msg = l_genl_msg_new_sized(CTRL_CMD_GETFAMILY,
+						NLA_HDRLEN + GENL_NAMSIZ);
+	l_genl_msg_append_attr(msg, CTRL_ATTR_FAMILY_NAME, len + 1, name);
+
+	if (l_genl_family_send(genl->nlctrl, msg, request_family_callback,
+				req, family_request_free) > 0)
+		return true;
+
+	return false;
+}
+
 const void *_genl_msg_as_bytes(struct l_genl_msg *msg, uint16_t type,
 					uint16_t flags, uint32_t seq,
 					uint32_t pid,
