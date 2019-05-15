@@ -38,6 +38,9 @@
 #include "private.h"
 
 #define MAX_NESTING_LEVEL 4
+#define GENL_DEBUG(fmt, args...)	\
+	l_util_debug(genl->debug_callback, genl->debug_data, "%s:%i " fmt, \
+			__func__, __LINE__, ## args)
 
 struct nest_info {
 	uint16_t type;
@@ -563,6 +566,18 @@ static void nlctrl_notify(struct l_genl_msg *msg, void *user_data)
 		break;
 	case CTRL_CMD_DELFAMILY:
 		nlctrl_delfamily(msg, genl);
+		break;
+	case CTRL_CMD_NEWOPS:
+		GENL_DEBUG("CMD_NEWOPS");
+		break;
+	case CTRL_CMD_DELOPS:
+		GENL_DEBUG("CMD_DELOPS");
+		break;
+	case CTRL_CMD_NEWMCAST_GRP:
+		GENL_DEBUG("CMD_NEWMCAST_GRP");
+		break;
+	case CTRL_CMD_DELMCAST_GRP:
+		GENL_DEBUG("CMD_DELMCAST_GRP");
 		break;
 	}
 }
