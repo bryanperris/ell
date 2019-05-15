@@ -940,16 +940,9 @@ LIB_EXPORT struct l_genl *l_genl_new(int fd)
 
 	genl->fd = fd;
 	genl->close_on_unref = false;
-
-	genl->nlctrl = family_alloc(genl, "nlctrl");
-
-	genl->nlctrl->info.id = GENL_ID_CTRL;
-
-	family_info_add_mcast(&genl->nlctrl->info, "notify", GENL_ID_CTRL);
-
-	l_queue_push_tail(genl->family_list, genl->nlctrl);
-
 	genl->io = l_io_new(genl->fd);
+	l_io_set_read_handler(genl->io, received_data, genl,
+						read_watch_destroy);
 
 	genl->request_queue = l_queue_new();
 	genl->pending_list = l_queue_new();
@@ -957,8 +950,10 @@ LIB_EXPORT struct l_genl *l_genl_new(int fd)
 	genl->family_list = l_queue_new();
 	genl->family_watches = l_queue_new();
 
-	l_io_set_read_handler(genl->io, received_data, genl,
-						read_watch_destroy);
+	genl->nlctrl = family_alloc(genl, "nlctrl");
+	genl->nlctrl->info.id = GENL_ID_CTRL;
+	family_info_add_mcast(&genl->nlctrl->info, "notify", GENL_ID_CTRL);
+	l_queue_push_tail(genl->family_list, genl->nlctrl);
 
 	l_genl_family_register(genl->nlctrl, "notify",
 						nlctrl_notify, genl, NULL);
