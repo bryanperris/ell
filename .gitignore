@@ -76,3 +76,4 @@ test-suite.log
 tools/certchain-verify
 tools/genl-discover
 tools/genl-watch
+tools/genl-request
