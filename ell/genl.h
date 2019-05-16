@@ -58,6 +58,13 @@ bool l_genl_discover_families(struct l_genl *genl,
 				l_genl_discover_func_t cb, void *user_data,
 				l_genl_destroy_func_t destroy);
 
+unsigned int l_genl_add_unicast_watch(struct l_genl *genl,
+						const char *family,
+						l_genl_msg_func_t handler,
+						void *user_data,
+						l_genl_destroy_func_t destroy);
+bool l_genl_remove_unicast_watch(struct l_genl *genl, unsigned int id);
+
 unsigned int l_genl_add_family_watch(struct l_genl *genl,
 					const char *name,
 					l_genl_discover_func_t appeared_func,
@@ -118,11 +125,6 @@ void l_genl_family_unref(struct l_genl_family *family);
 
 const struct l_genl_family_info *l_genl_family_get_info(
 						struct l_genl_family *family);
-
-bool l_genl_family_set_unicast_handler(struct l_genl_family *family,
-						l_genl_msg_func_t handler,
-						void *user_data,
-						l_genl_destroy_func_t destroy);
 
 struct l_genl *l_genl_family_get_genl(struct l_genl_family *family);
 

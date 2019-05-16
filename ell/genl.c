@@ -47,10 +47,12 @@ struct nest_info {
 	uint16_t offset;
 };
 
-struct genl_unicast_notify {
+struct unicast_watch {
+	uint32_t id;
+	char name[GENL_NAMSIZ];
 	l_genl_msg_func_t handler;
-	l_genl_destroy_func_t destroy;
 	void *user_data;
+	l_genl_destroy_func_t destroy;
 };
 
 struct family_watch {
@@ -84,6 +86,7 @@ struct l_genl {
 	unsigned int next_notify_id;
 	struct genl_discovery *discovery;
 	uint32_t next_watch_id;
+	struct l_queue *unicast_watches;
 	struct l_queue *family_watches;
 	struct l_queue *family_infos;
 	struct l_queue *family_list;
@@ -93,6 +96,7 @@ struct l_genl {
 	void *debug_data;
 
 	bool in_family_watch_notify : 1;
+	bool in_unicast_watch_notify : 1;
 };
 
 struct l_genl_msg {
@@ -152,7 +156,6 @@ struct l_genl_family {
 	uint16_t id;
 	int ref_count;
 	struct l_genl *genl;
-	struct genl_unicast_notify *unicast_notify;
 };
 
 static inline uint32_t get_next_id(uint32_t *id)
@@ -465,6 +468,34 @@ LIB_EXPORT uint32_t l_genl_family_info_get_version(
 		return 0;
 
 	return info->version;
+}
+
+static void unicast_watch_free(void *data)
+{
+	struct unicast_watch *watch = data;
+
+	if (watch->destroy)
+		watch->destroy(watch->user_data);
+
+	l_free(watch);
+}
+
+static bool unicast_watch_match(const void *a, const void *b)
+{
+	const struct unicast_watch *watch = a;
+	uint32_t id = L_PTR_TO_UINT(b);
+
+	return watch->id == id;
+}
+
+static void unicast_watch_prune(struct l_genl *genl)
+{
+	struct unicast_watch *watch;
+
+	while ((watch = l_queue_remove_if(genl->unicast_watches,
+						unicast_watch_match,
+						L_UINT_TO_PTR(0))))
+		unicast_watch_free(watch);
 }
 
 static void family_watch_free(void *data)
@@ -816,6 +847,39 @@ static bool match_request_seq(const void *a, const void *b)
 	return request->seq == seq;
 }
 
+static void dispatch_unicast_watches(struct l_genl *genl, uint16_t id,
+							struct l_genl_msg *msg)
+{
+	const struct l_queue_entry *entry;
+	struct l_genl_family_info *info = l_queue_find(genl->family_infos,
+							family_info_match,
+							L_UINT_TO_PTR(id));
+
+	if (!info)
+		return;
+
+	genl->in_unicast_watch_notify = true;
+
+	for (entry = l_queue_get_entries(genl->unicast_watches);
+						entry; entry = entry->next) {
+		struct unicast_watch *watch = entry->data;
+
+		if (!watch->id)
+			continue;
+
+		if (!watch->handler)
+			continue;
+
+		if (strncmp(watch->name, info->name, GENL_NAMSIZ))
+			continue;
+
+		watch->handler(msg, watch->user_data);
+	}
+
+	genl->in_unicast_watch_notify = false;
+	unicast_watch_prune(genl);
+}
+
 static void process_unicast(struct l_genl *genl, const struct nlmsghdr *nlmsg)
 {
 	struct l_genl_msg *msg;
@@ -837,39 +901,26 @@ static void process_unicast(struct l_genl *genl, const struct nlmsghdr *nlmsg)
 		return;
 	}
 
-	if (request) {
-		if (request->callback && nlmsg->nlmsg_type != NLMSG_DONE)
-			request->callback(msg, request->user_data);
-
-		if (nlmsg->nlmsg_flags & NLM_F_MULTI) {
-			if (nlmsg->nlmsg_type == NLMSG_DONE) {
-				destroy_request(request);
-				wakeup_writer(genl);
-			} else
-				l_queue_push_head(genl->pending_list, request);
-		} else {
-			destroy_request(request);
-			wakeup_writer(genl);
-		}
-	} else {
-		const struct l_queue_entry *entry;
-		struct genl_unicast_notify *notify;
-
-		for (entry = l_queue_get_entries(genl->family_list);
-				entry; entry = entry->next) {
-			struct l_genl_family *family = entry->data;
-
-			if (family->id != nlmsg->nlmsg_type)
-				continue;
-
-			notify = family->unicast_notify;
-			if (notify->handler)
-				notify->handler(msg, notify->user_data);
-
-			break;
-		}
+	if (!request) {
+		dispatch_unicast_watches(genl, nlmsg->nlmsg_type, msg);
+		goto done;
 	}
 
+	if (request->callback && nlmsg->nlmsg_type != NLMSG_DONE)
+		request->callback(msg, request->user_data);
+
+	if (nlmsg->nlmsg_flags & NLM_F_MULTI) {
+		if (nlmsg->nlmsg_type == NLMSG_DONE) {
+			destroy_request(request);
+			wakeup_writer(genl);
+		} else
+			l_queue_push_head(genl->pending_list, request);
+	} else {
+		destroy_request(request);
+		wakeup_writer(genl);
+	}
+
+done:
 	l_genl_msg_unref(msg);
 }
 
@@ -1009,6 +1060,7 @@ LIB_EXPORT struct l_genl *l_genl_new(int fd)
 	genl->family_list = l_queue_new();
 	genl->family_watches = l_queue_new();
 	genl->family_infos = l_queue_new();
+	genl->unicast_watches = l_queue_new();
 
 	l_queue_push_head(genl->family_infos, build_nlctrl_info());
 
@@ -1088,6 +1140,7 @@ LIB_EXPORT void l_genl_unref(struct l_genl *genl)
 		genl->discovery = NULL;
 	}
 
+	l_queue_destroy(genl->unicast_watches, unicast_watch_free);
 	l_queue_destroy(genl->family_watches, family_watch_free);
 	l_queue_destroy(genl->family_infos, family_info_free);
 	l_queue_destroy(genl->notify_list, destroy_notify);
@@ -1202,6 +1255,85 @@ LIB_EXPORT bool l_genl_discover_families(struct l_genl *genl,
 	}
 
 	genl->discovery = discovery;
+	return true;
+}
+
+/**
+ * l_genl_add_unicast_watch:
+ * @genl: GENL connection
+ * @name: Name of the family for which a unicast watch will be registered
+ * @handler: Callback to call when a matching unicast is received
+ * @user_data: user data for the callback
+ * @destroy: Destroy callback for user data
+ *
+ * Adds a watch for unicast messages for a given family specified by @family.
+ * The watch can be registered even if the family has not been discovered yet
+ * or doesn't exist.
+ *
+ * Returns: a non-zero watch identifier that can be passed to
+ *          l_genl_remove_unicast_watch to remove this watch, or zero if the
+ *          watch could not be created successfully.
+ **/
+LIB_EXPORT unsigned int l_genl_add_unicast_watch(struct l_genl *genl,
+						const char *family,
+						l_genl_msg_func_t handler,
+						void *user_data,
+						l_genl_destroy_func_t destroy)
+{
+	struct unicast_watch *watch;
+
+	if (unlikely(!genl || !family))
+		return 0;
+
+	if (strlen(family) >= GENL_NAMSIZ)
+		return 0;
+
+	watch = l_new(struct unicast_watch, 1);
+	l_strlcpy(watch->name, family, GENL_NAMSIZ);
+	watch->handler = handler;
+	watch->destroy = destroy;
+	watch->user_data = user_data;
+	watch->id = get_next_id(&genl->next_watch_id);
+	l_queue_push_tail(genl->unicast_watches, watch);
+
+	return watch->id;
+}
+
+/**
+ * l_genl_remove_unicast_watch:
+ * @genl: GENL connection
+ * @id: unique identifier of the unicast watch to remove
+ *
+ * Removes the unicast watch.  If a destroy callback was provided, then it is
+ * called in order to free any associated user data.
+ *
+ * Returns: #true if the watch was removed successfully and #false otherwise.
+ **/
+LIB_EXPORT bool l_genl_remove_unicast_watch(struct l_genl *genl,
+							unsigned int id)
+{
+	struct unicast_watch *watch;
+
+	if (unlikely(!genl))
+		return false;
+
+	if (genl->in_unicast_watch_notify) {
+		watch = l_queue_find(genl->unicast_watches, unicast_watch_match,
+							L_UINT_TO_PTR(id));
+		if (!watch)
+			return false;
+
+		watch->id = 0;
+		return true;
+	}
+
+	watch = l_queue_remove_if(genl->unicast_watches, unicast_watch_match,
+							L_UINT_TO_PTR(id));
+	if (!watch)
+		return false;
+
+	unicast_watch_free(watch);
+
 	return true;
 }
 
@@ -1696,8 +1828,6 @@ LIB_EXPORT void l_genl_family_unref(struct l_genl_family *family)
 	if (genl)
 		l_queue_remove(genl->family_list, family);
 
-	l_genl_family_set_unicast_handler(family, NULL, NULL, NULL);
-
 	l_free(family);
 }
 
@@ -1709,41 +1839,6 @@ LIB_EXPORT const struct l_genl_family_info *l_genl_family_get_info(
 
 	return l_queue_find(family->genl->family_infos, family_info_match,
 					L_UINT_TO_PTR(family->id));
-}
-
-LIB_EXPORT bool l_genl_family_set_unicast_handler(struct l_genl_family *family,
-						l_genl_msg_func_t handler,
-						void *user_data,
-						l_genl_destroy_func_t destroy)
-{
-	struct genl_unicast_notify *notify;
-
-	if (!family)
-		return false;
-
-	notify = family->unicast_notify;
-	if (notify) {
-		if (notify->destroy)
-			notify->destroy(notify->user_data);
-
-		if (!handler) {
-			l_free(notify);
-			family->unicast_notify = NULL;
-			return true;
-		}
-	} else {
-		if (!handler)
-			return false;
-
-		notify = l_new(struct genl_unicast_notify, 1);
-		family->unicast_notify = notify;
-	}
-
-	notify->handler = handler;
-	notify->destroy = destroy;
-	notify->user_data = user_data;
-
-	return true;
 }
 
 LIB_EXPORT struct l_genl *l_genl_family_get_genl(struct l_genl_family *family)
