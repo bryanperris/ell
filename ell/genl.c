@@ -1039,17 +1039,37 @@ static struct l_genl_family_info *build_nlctrl_info()
 	return r;
 }
 
-LIB_EXPORT struct l_genl *l_genl_new(int fd)
+LIB_EXPORT struct l_genl *l_genl_new(void)
 {
 	struct l_genl *genl;
+	struct sockaddr_nl addr;
+	socklen_t addrlen = sizeof(addr);
+	int fd, pktinfo = 1;
 
-	if (unlikely(fd < 0))
+	fd = socket(PF_NETLINK, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK,
+							NETLINK_GENERIC);
+	if (fd < 0)
 		return NULL;
 
-	genl = l_new(struct l_genl, 1);
+	memset(&addr, 0, sizeof(addr));
+	addr.nl_family = AF_NETLINK;
+	addr.nl_pid = 0;
 
+	if (bind(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
+		goto err;
+
+	if (getsockname(fd, (struct sockaddr *) &addr, &addrlen) < 0)
+		goto err;
+
+	if (setsockopt(fd, SOL_NETLINK, NETLINK_PKTINFO,
+					&pktinfo, sizeof(pktinfo)) < 0)
+		goto err;
+
+	genl = l_new(struct l_genl, 1);
+	genl->pid = addr.nl_pid;
+	genl->ref_count = 1;
 	genl->fd = fd;
-	genl->close_on_unref = false;
+	genl->close_on_unref = true;
 	genl->io = l_io_new(genl->fd);
 	l_io_set_read_handler(genl->io, received_data, genl,
 						read_watch_destroy);
@@ -1070,48 +1090,11 @@ LIB_EXPORT struct l_genl *l_genl_new(int fd)
 	l_genl_family_register(genl->nlctrl, "notify",
 						nlctrl_notify, genl, NULL);
 
-	return l_genl_ref(genl);
-}
-
-LIB_EXPORT struct l_genl *l_genl_new_default(void)
-{
-	struct l_genl *genl;
-	struct sockaddr_nl addr;
-	socklen_t addrlen = sizeof(addr);
-	int fd, pktinfo = 1;
-
-	fd = socket(PF_NETLINK, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK,
-							NETLINK_GENERIC);
-	if (fd < 0)
-		return NULL;
-
-	memset(&addr, 0, sizeof(addr));
-	addr.nl_family = AF_NETLINK;
-	addr.nl_pid = 0;
-
-	if (bind(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		close(fd);
-		return NULL;
-	}
-
-	genl = l_genl_new(fd);
-
-	genl->close_on_unref = true;
-
-	if (getsockname(fd, (struct sockaddr *) &addr, &addrlen) < 0) {
-		l_genl_unref(genl);
-		return NULL;
-	}
-
-	genl->pid = addr.nl_pid;
-
-	if (setsockopt(fd, SOL_NETLINK, NETLINK_PKTINFO,
-					&pktinfo, sizeof(pktinfo)) < 0) {
-		l_genl_unref(genl);
-		return NULL;
-	}
-
 	return genl;
+
+err:
+	close(fd);
+	return NULL;
 }
 
 LIB_EXPORT struct l_genl *l_genl_ref(struct l_genl *genl)
@@ -1150,15 +1133,13 @@ LIB_EXPORT void l_genl_unref(struct l_genl *genl)
 	l_io_set_write_handler(genl->io, NULL, NULL, NULL);
 	l_io_set_read_handler(genl->io, NULL, NULL, NULL);
 
-	l_io_destroy(genl->io);
-	genl->io = NULL;
-
 	l_genl_family_unref(genl->nlctrl);
 
 	l_queue_destroy(genl->family_list, family_free);
 
-	if (genl->close_on_unref)
-		close(genl->fd);
+	l_io_destroy(genl->io);
+	genl->io = NULL;
+	close(genl->fd);
 
 	if (genl->debug_destroy)
 		genl->debug_destroy(genl->debug_data);

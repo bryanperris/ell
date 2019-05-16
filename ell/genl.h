@@ -43,9 +43,7 @@ typedef void (*l_genl_discover_func_t)(const struct l_genl_family_info *info,
 						void *user_data);
 typedef void (*l_genl_vanished_func_t)(const char *name, void *user_data);
 
-struct l_genl *l_genl_new(int fd);
-struct l_genl *l_genl_new_default(void);
-
+struct l_genl *l_genl_new(void);
 struct l_genl *l_genl_ref(struct l_genl *genl);
 void l_genl_unref(struct l_genl *genl);
 

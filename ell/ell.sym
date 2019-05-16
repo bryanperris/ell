@@ -241,7 +241,6 @@ global:
 	l_file_get_contents;
 	/* genl */
 	l_genl_new;
-	l_genl_new_default;
 	l_genl_ref;
 	l_genl_unref;
 	l_genl_set_debug;
