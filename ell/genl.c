@@ -77,7 +77,6 @@ struct l_genl {
 	uint32_t pid;
 	uint32_t next_seq;
 	struct l_io *io;
-	bool writer_active;
 	struct l_queue *request_queue;
 	struct l_queue *pending_list;
 	struct l_queue *notify_list;
@@ -96,6 +95,7 @@ struct l_genl {
 
 	bool in_family_watch_notify : 1;
 	bool in_unicast_watch_notify : 1;
+	bool writer_active : 1;
 };
 
 struct l_genl_msg {
