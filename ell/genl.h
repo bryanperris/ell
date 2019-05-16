@@ -38,7 +38,6 @@ struct l_genl_msg;
 
 typedef void (*l_genl_destroy_func_t)(void *user_data);
 typedef void (*l_genl_debug_func_t)(const char *str, void *user_data);
-typedef void (*l_genl_watch_func_t)(void *user_data);
 typedef void (*l_genl_msg_func_t)(struct l_genl_msg *msg, void *user_data);
 typedef void (*l_genl_discover_func_t)(const struct l_genl_family_info *info,
 						void *user_data);
@@ -124,11 +123,6 @@ bool l_genl_family_set_unicast_handler(struct l_genl_family *family,
 						l_genl_msg_func_t handler,
 						void *user_data,
 						l_genl_destroy_func_t destroy);
-
-bool l_genl_family_set_watches(struct l_genl_family *family,
-				l_genl_watch_func_t appeared,
-				l_genl_watch_func_t vanished,
-				void *user_data, l_genl_destroy_func_t destroy);
 
 struct l_genl *l_genl_family_get_genl(struct l_genl_family *family);
 

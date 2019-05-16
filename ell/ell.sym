@@ -276,7 +276,6 @@ global:
 	l_genl_family_unref;
 	l_genl_family_get_info;
 	l_genl_family_set_unicast_handler;
-	l_genl_family_set_watches;
 	l_genl_family_get_genl;
 	l_genl_family_send;
 	l_genl_family_dump;
