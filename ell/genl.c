@@ -74,7 +74,6 @@ struct genl_discovery {
 struct l_genl {
 	int ref_count;
 	int fd;
-	bool close_on_unref;
 	uint32_t pid;
 	uint32_t next_seq;
 	struct l_io *io;
@@ -1069,7 +1068,6 @@ LIB_EXPORT struct l_genl *l_genl_new(void)
 	genl->pid = addr.nl_pid;
 	genl->ref_count = 1;
 	genl->fd = fd;
-	genl->close_on_unref = true;
 	genl->io = l_io_new(genl->fd);
 	l_io_set_read_handler(genl->io, received_data, genl,
 						read_watch_destroy);
@@ -1161,16 +1159,6 @@ LIB_EXPORT bool l_genl_set_debug(struct l_genl *genl,
 	genl->debug_callback = callback;
 	genl->debug_destroy = destroy;
 	genl->debug_data = user_data;
-
-	return true;
-}
-
-LIB_EXPORT bool l_genl_set_close_on_unref(struct l_genl *genl, bool do_close)
-{
-	if (unlikely(!genl))
-		return false;
-
-	genl->close_on_unref = do_close;
 
 	return true;
 }

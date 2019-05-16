@@ -50,8 +50,6 @@ void l_genl_unref(struct l_genl *genl);
 bool l_genl_set_debug(struct l_genl *genl, l_genl_debug_func_t callback,
 				void *user_data, l_genl_destroy_func_t destroy);
 
-bool l_genl_set_close_on_unref(struct l_genl *genl, bool do_close);
-
 bool l_genl_discover_families(struct l_genl *genl,
 				l_genl_discover_func_t cb, void *user_data,
 				l_genl_destroy_func_t destroy);

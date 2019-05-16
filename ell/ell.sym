@@ -244,7 +244,6 @@ global:
 	l_genl_ref;
 	l_genl_unref;
 	l_genl_set_debug;
-	l_genl_set_close_on_unref;
 	l_genl_discover_families;
 	l_genl_add_unicast_watch;
 	l_genl_remove_unicast_watch;
