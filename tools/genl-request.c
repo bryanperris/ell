@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 
 	l_log_set_stderr();
 
-	genl = l_genl_new_default();
+	genl = l_genl_new();
 
 	if (getenv("GENL_DEBUG"))
 		l_genl_set_debug(genl, do_debug, "[GENL] ", NULL);
