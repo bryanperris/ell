@@ -155,6 +155,15 @@ struct l_genl_family {
 	struct genl_unicast_notify *unicast_notify;
 };
 
+static inline uint32_t get_next_id(uint32_t *id)
+{
+	*id += 1;
+	if (!*id)
+		*id = 1;
+
+	return *id;
+}
+
 static bool family_info_match(const void *a, const void *b)
 {
 	const struct l_genl_family_info *ia = a;
@@ -1234,13 +1243,7 @@ LIB_EXPORT unsigned int l_genl_add_family_watch(struct l_genl *genl,
 	watch->vanished_func = vanished_func;
 	watch->user_data = user_data;
 	watch->destroy = destroy;
-
-	genl->next_watch_id += 1;
-	if (genl->next_watch_id == 0)
-		genl->next_watch_id = 1;
-
-	watch->id = genl->next_watch_id;
-
+	watch->id = get_next_id(&genl->next_watch_id);
 	l_queue_push_tail(genl->family_watches, watch);
 
 	return watch->id;
@@ -1766,21 +1769,13 @@ static unsigned int send_common(struct l_genl_family *family, uint16_t flags,
 		return 0;
 
 	request = l_new(struct genl_request, 1);
-
 	request->type = family->id;
 	request->flags = NLM_F_REQUEST | flags;
-
 	request->msg = msg;
-
 	request->callback = callback;
 	request->destroy = destroy;
 	request->user_data = user_data;
-
-	if (genl->next_request_id < 1)
-		genl->next_request_id = 1;
-
-	request->id = genl->next_request_id++;
-
+	request->id = get_next_id(&genl->next_request_id);
 	l_queue_push_tail(genl->request_queue, request);
 
 	wakeup_writer(genl);
@@ -1906,12 +1901,7 @@ LIB_EXPORT unsigned int l_genl_family_register(struct l_genl_family *family,
 	notify->callback = callback;
 	notify->destroy = destroy;
 	notify->user_data = user_data;
-
-	if (genl->next_notify_id < 1)
-		genl->next_notify_id = 1;
-
-	notify->id = genl->next_notify_id++;
-
+	notify->id = get_next_id(&genl->next_notify_id);
 	l_queue_push_tail(genl->notify_list, notify);
 
 	add_membership(genl, mcast);
