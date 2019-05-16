@@ -31,7 +31,6 @@ unit/test-plugin
 unit/test-checksum
 unit/test-settings
 unit/test-netlink
-unit/test-genl
 unit/test-genl-msg
 unit/test-dbus
 unit/test-dbus-message
