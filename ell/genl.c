@@ -796,10 +796,7 @@ static bool can_write_data(struct l_io *io, void *user_data)
 	if (!request)
 		return false;
 
-	if (genl->next_seq < 1)
-		genl->next_seq = 1;
-
-	request->seq = genl->next_seq++;
+	request->seq = get_next_id(&genl->next_seq);
 
 	nlmsg = request->msg->data;
 
