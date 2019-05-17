@@ -1729,6 +1729,24 @@ LIB_EXPORT bool l_genl_attr_recurse(struct l_genl_attr *attr,
 	return true;
 }
 
+/**
+ * l_genl_family_new:
+ * @genl: GENL connection
+ * @name: Name of the family for which a handle will be created
+ *
+ * Attempts to create a handle over which applications can send requests and
+ * listen to events from a given family.  The family must have been discovered
+ * previously via @l_genl_discover_families or @l_genl_add_family_watch; or
+ * autoloaded using @l_genl_family_request.
+ *
+ * The destruction of the handle using @l_genl_family_free will clean up all
+ * requests started via this handle as well as unregister from any
+ * notifications.  Notifications & Requests started by other handles will be
+ * unaffected.
+ *
+ * Returns: #NULL if the family handle could not be created and a valid
+ * handle on success.
+ **/
 LIB_EXPORT struct l_genl_family *l_genl_family_new(struct l_genl *genl,
 							const char *name)
 {
