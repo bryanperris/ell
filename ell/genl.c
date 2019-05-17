@@ -893,37 +893,33 @@ static void process_unicast(struct l_genl *genl, const struct nlmsghdr *nlmsg)
 					nlmsg->nlmsg_type == NLMSG_OVERRUN)
 		return;
 
-	request = l_queue_remove_if(genl->pending_list, match_request_seq,
-					L_UINT_TO_PTR(nlmsg->nlmsg_seq));
-
 	msg = _genl_msg_create(nlmsg);
-	if (!msg) {
-		if (request) {
-			destroy_request(request);
-			wakeup_writer(genl);
-		}
-		return;
-	}
-
-	if (!request) {
-		dispatch_unicast_watches(genl, nlmsg->nlmsg_type, msg);
+	if (!nlmsg->nlmsg_seq) {
+		if (msg)
+			dispatch_unicast_watches(genl, nlmsg->nlmsg_type, msg);
 		goto done;
 	}
+
+	request = l_queue_remove_if(genl->pending_list, match_request_seq,
+					L_UINT_TO_PTR(nlmsg->nlmsg_seq));
+	if (!request)
+		goto done;
+
+	if (!msg)
+		goto free_request;
 
 	if (request->callback && nlmsg->nlmsg_type != NLMSG_DONE)
 		request->callback(msg, request->user_data);
 
-	if (nlmsg->nlmsg_flags & NLM_F_MULTI) {
-		if (nlmsg->nlmsg_type == NLMSG_DONE) {
-			destroy_request(request);
-			wakeup_writer(genl);
-		} else
-			l_queue_push_head(genl->pending_list, request);
-	} else {
-		destroy_request(request);
-		wakeup_writer(genl);
+	if ((nlmsg->nlmsg_flags & NLM_F_MULTI) &&
+					nlmsg->nlmsg_type != NLMSG_DONE) {
+		l_queue_push_head(genl->pending_list, request);
+		goto done;
 	}
 
+free_request:
+	destroy_request(request);
+	wakeup_writer(genl);
 done:
 	l_genl_msg_unref(msg);
 }
