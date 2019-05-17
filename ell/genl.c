@@ -94,6 +94,7 @@ struct l_genl {
 
 	bool in_family_watch_notify : 1;
 	bool in_unicast_watch_notify : 1;
+	bool in_mcast_notify : 1;
 	bool writer_active : 1;
 };
 
@@ -120,7 +121,7 @@ struct genl_request {
 	void *user_data;
 };
 
-struct genl_mcast_notify {
+struct mcast_notify {
 	unsigned int id;
 	uint16_t type;
 	uint32_t group;
@@ -681,14 +682,32 @@ static void destroy_request(void *data)
 	l_free(request);
 }
 
-static void destroy_notify(void *data)
+static void mcast_notify_free(void *data)
 {
-	struct genl_mcast_notify *notify = data;
+	struct mcast_notify *notify = data;
 
 	if (notify->destroy)
 		notify->destroy(notify->user_data);
 
 	l_free(notify);
+}
+
+static bool mcast_notify_match(const void *a, const void *b)
+{
+	const struct mcast_notify *notify = a;
+	uint32_t id = L_PTR_TO_UINT(b);
+
+	return notify->id == id;
+}
+
+static void mcast_notify_prune(struct l_genl *genl)
+{
+	struct mcast_notify *notify;
+
+	while ((notify = l_queue_remove_if(genl->notify_list,
+						mcast_notify_match,
+						L_UINT_TO_PTR(0))))
+		mcast_notify_free(notify);
 }
 
 static struct l_genl_msg *msg_alloc(uint8_t cmd, uint8_t version, uint32_t size)
@@ -912,42 +931,37 @@ done:
 	l_genl_msg_unref(msg);
 }
 
-struct notify_type_group {
-	struct l_genl_msg *msg;
-	uint16_t type;
-	uint32_t group;
-};
-
-static void notify_handler(void *data, void *user_data)
-{
-	struct genl_mcast_notify *notify = data;
-	struct notify_type_group *match = user_data;
-
-	if (notify->type != match->type)
-		return;
-
-	if (notify->group != match->group)
-		return;
-
-	if (notify->callback)
-		notify->callback(match->msg, notify->user_data);
-}
-
 static void process_multicast(struct l_genl *genl, uint32_t group,
 						const struct nlmsghdr *nlmsg)
 {
-	struct notify_type_group match;
+	const struct l_queue_entry *entry;
+	struct l_genl_msg *msg = _genl_msg_create(nlmsg);
 
-	match.msg = _genl_msg_create(nlmsg);
-	if (!match.msg)
+	if (!msg)
 		return;
 
-	match.type = nlmsg->nlmsg_type;
-	match.group = group;
+	genl->in_mcast_notify = true;
 
-	l_queue_foreach(genl->notify_list, notify_handler, &match);
+	for (entry = l_queue_get_entries(genl->notify_list);
+						entry; entry = entry->next) {
+		struct mcast_notify *notify = entry->data;
 
-	l_genl_msg_unref(match.msg);
+		if (notify->type != nlmsg->nlmsg_type)
+			continue;
+
+		if (notify->group != group)
+			continue;
+
+		if (!notify->callback)
+			continue;
+
+		notify->callback(msg, notify->user_data);
+	}
+
+	genl->in_mcast_notify = false;
+	mcast_notify_prune(genl);
+
+	l_genl_msg_unref(msg);
 }
 
 static void read_watch_destroy(void *user_data)
@@ -1112,7 +1126,7 @@ LIB_EXPORT void l_genl_unref(struct l_genl *genl)
 	l_queue_destroy(genl->unicast_watches, unicast_watch_free);
 	l_queue_destroy(genl->family_watches, family_watch_free);
 	l_queue_destroy(genl->family_infos, family_info_free);
-	l_queue_destroy(genl->notify_list, destroy_notify);
+	l_queue_destroy(genl->notify_list, mcast_notify_free);
 	l_queue_destroy(genl->pending_list, destroy_request);
 	l_queue_destroy(genl->request_queue, destroy_request);
 
@@ -1918,7 +1932,7 @@ LIB_EXPORT unsigned int l_genl_family_register(struct l_genl_family *family,
 {
 	struct l_genl *genl;
 	struct l_genl_family_info *info;
-	struct genl_mcast_notify *notify;
+	struct mcast_notify *notify;
 	struct genl_mcast *mcast;
 
 	if (unlikely(!family) || unlikely(!group))
@@ -1937,7 +1951,7 @@ LIB_EXPORT unsigned int l_genl_family_register(struct l_genl_family *family,
 	if (!mcast)
 		return 0;
 
-	notify = l_new(struct genl_mcast_notify, 1);
+	notify = l_new(struct mcast_notify, 1);
 	notify->type = info->id;
 	notify->group = mcast->id;
 	notify->callback = callback;
@@ -1951,19 +1965,11 @@ LIB_EXPORT unsigned int l_genl_family_register(struct l_genl_family *family,
 	return notify->id;
 }
 
-static bool match_notify_id(const void *a, const void *b)
-{
-	const struct genl_mcast_notify *notify = a;
-	unsigned int id = L_PTR_TO_UINT(b);
-
-	return notify->id == id;
-}
-
 LIB_EXPORT bool l_genl_family_unregister(struct l_genl_family *family,
 							unsigned int id)
 {
 	struct l_genl *genl;
-	struct genl_mcast_notify *notify;
+	struct mcast_notify *notify;
 	struct l_genl_family_info *info;
 	struct genl_mcast *mcast;
 
@@ -1974,10 +1980,20 @@ LIB_EXPORT bool l_genl_family_unregister(struct l_genl_family *family,
 	if (!genl)
 		return false;
 
-	notify = l_queue_remove_if(genl->notify_list, match_notify_id,
+	if (genl->in_mcast_notify) {
+		notify = l_queue_find(genl->notify_list, mcast_notify_match,
 							L_UINT_TO_PTR(id));
-	if (!notify)
-		return false;
+		if (!notify)
+			return false;
+
+		notify->id = 0;
+	} else {
+		notify = l_queue_remove_if(genl->notify_list,
+							mcast_notify_match,
+							L_UINT_TO_PTR(id));
+		if (!notify)
+			return false;
+	}
 
 	info = l_queue_find(genl->family_infos, family_info_match,
 					L_UINT_TO_PTR(family->id));
@@ -1992,7 +2008,8 @@ LIB_EXPORT bool l_genl_family_unregister(struct l_genl_family *family,
 	drop_membership(genl, mcast);
 
 done:
-	destroy_notify(notify);
+	if (notify->id)
+		mcast_notify_free(notify);
 
 	return true;
 }
