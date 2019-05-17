@@ -177,35 +177,24 @@ static bool family_info_match(const void *a, const void *b)
 	return ia->id == id;
 }
 
-static void family_info_init(struct l_genl_family_info *info,
-							const char *name)
-{
-	l_strlcpy(info->name, name, GENL_NAMSIZ);
-	info->op_list = l_queue_new();
-	info->mcast_list = l_queue_new();
-}
-
 static struct l_genl_family_info *family_info_new(const char *name)
 {
 	struct l_genl_family_info *info = l_new(struct l_genl_family_info, 1);
 
-	family_info_init(info, name);
+	l_strlcpy(info->name, name, GENL_NAMSIZ);
+	info->op_list = l_queue_new();
+	info->mcast_list = l_queue_new();
 	return info;
-}
-
-static void family_info_destroy(struct l_genl_family_info *info)
-{
-	l_queue_destroy(info->op_list, l_free);
-	info->op_list = NULL;
-	l_queue_destroy(info->mcast_list, l_free);
-	info->mcast_list = NULL;
 }
 
 static void family_info_free(void *user_data)
 {
 	struct l_genl_family_info *info = user_data;
 
-	family_info_destroy(info);
+	l_queue_destroy(info->op_list, l_free);
+	info->op_list = NULL;
+	l_queue_destroy(info->mcast_list, l_free);
+	info->mcast_list = NULL;
 	l_free(info);
 }
 
@@ -1412,28 +1401,33 @@ struct family_request {
 	void *user_data;
 	l_genl_discover_func_t appeared_func;
 	l_genl_destroy_func_t destroy;
+	struct l_genl *genl;
 };
 
 static void request_family_callback(struct l_genl_msg *msg, void *user_data)
 {
 	struct family_request *req = user_data;
-	struct l_genl_family_info info;
+	struct l_genl_family_info *info = family_info_new(NULL);
 
-	family_info_init(&info, NULL);
+	if (parse_cmd_newfamily(info, msg) < 0) {
+		family_info_free(info);
 
-	if (parse_cmd_newfamily(&info, msg) < 0) {
 		if (req->appeared_func)
 			req->appeared_func(NULL, req->user_data);
 
 		return;
 	}
 
-	/* The update should come as a result of new_family event */
+	info = family_info_update(req->genl, info);
+
+	/*
+	 * watch events should trigger as a result of new_family event.
+	 * Do not trigger these here as the family might have already been
+	 * discovered
+	 */
 
 	if (req->appeared_func)
-		req->appeared_func(&info, req->user_data);
-
-	family_info_destroy(&info);
+		req->appeared_func(info, req->user_data);
 }
 
 static void family_request_free(void *user_data)
@@ -1484,6 +1478,7 @@ LIB_EXPORT bool l_genl_request_family(struct l_genl *genl, const char *name,
 	req->appeared_func = appeared_func;
 	req->user_data = user_data;
 	req->destroy = destroy;
+	req->genl = genl;
 
 	msg = l_genl_msg_new_sized(CTRL_CMD_GETFAMILY,
 						NLA_HDRLEN + GENL_NAMSIZ);
