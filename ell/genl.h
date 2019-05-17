@@ -115,9 +115,7 @@ const char *l_genl_family_info_get_name(const struct l_genl_family_info *info);
 uint32_t l_genl_family_info_get_version(const struct l_genl_family_info *info);
 
 struct l_genl_family *l_genl_family_new(struct l_genl *genl, const char *name);
-
-struct l_genl_family *l_genl_family_ref(struct l_genl_family *family);
-void l_genl_family_unref(struct l_genl_family *family);
+void l_genl_family_free(struct l_genl_family *family);
 
 const struct l_genl_family_info *l_genl_family_get_info(
 						struct l_genl_family *family);

@@ -87,7 +87,6 @@ struct l_genl {
 	struct l_queue *unicast_watches;
 	struct l_queue *family_watches;
 	struct l_queue *family_infos;
-	struct l_queue *family_list;
 	struct l_genl_family *nlctrl;
 	l_genl_debug_func_t debug_callback;
 	l_genl_destroy_func_t debug_destroy;
@@ -153,7 +152,6 @@ struct l_genl_family_info {
 
 struct l_genl_family {
 	uint16_t id;
-	int ref_count;
 	struct l_genl *genl;
 };
 
@@ -668,16 +666,7 @@ static struct l_genl_family *family_alloc(struct l_genl *genl, uint16_t id)
 	family = l_new(struct l_genl_family, 1);
 	family->genl = genl;
 	family->id = id;
-	return l_genl_family_ref(family);
-}
-
-static void family_free(void *data)
-{
-	struct l_genl_family *family = data;
-
-	family->genl = NULL;
-
-	l_genl_family_unref(family);
+	return family;
 }
 
 static void destroy_request(void *data)
@@ -1075,7 +1064,6 @@ LIB_EXPORT struct l_genl *l_genl_new(void)
 	genl->request_queue = l_queue_new();
 	genl->pending_list = l_queue_new();
 	genl->notify_list = l_queue_new();
-	genl->family_list = l_queue_new();
 	genl->family_watches = l_queue_new();
 	genl->family_infos = l_queue_new();
 	genl->unicast_watches = l_queue_new();
@@ -1083,8 +1071,6 @@ LIB_EXPORT struct l_genl *l_genl_new(void)
 	l_queue_push_head(genl->family_infos, build_nlctrl_info());
 
 	genl->nlctrl = family_alloc(genl, GENL_ID_CTRL);
-	l_queue_push_tail(genl->family_list, genl->nlctrl);
-
 	l_genl_family_register(genl->nlctrl, "notify",
 						nlctrl_notify, genl, NULL);
 
@@ -1121,6 +1107,8 @@ LIB_EXPORT void l_genl_unref(struct l_genl *genl)
 		genl->discovery = NULL;
 	}
 
+	l_genl_family_free(genl->nlctrl);
+
 	l_queue_destroy(genl->unicast_watches, unicast_watch_free);
 	l_queue_destroy(genl->family_watches, family_watch_free);
 	l_queue_destroy(genl->family_infos, family_info_free);
@@ -1130,10 +1118,6 @@ LIB_EXPORT void l_genl_unref(struct l_genl *genl)
 
 	l_io_set_write_handler(genl->io, NULL, NULL, NULL);
 	l_io_set_read_handler(genl->io, NULL, NULL, NULL);
-
-	l_genl_family_unref(genl->nlctrl);
-
-	l_queue_destroy(genl->family_list, family_free);
 
 	l_io_destroy(genl->io);
 	genl->io = NULL;
@@ -1767,36 +1751,12 @@ LIB_EXPORT struct l_genl_family *l_genl_family_new(struct l_genl *genl,
 		return false;
 
 	family = family_alloc(genl, info->id);
-	l_queue_push_tail(genl->family_list, family);
 
 	return family;
 }
 
-LIB_EXPORT struct l_genl_family *l_genl_family_ref(
-						struct l_genl_family *family)
+LIB_EXPORT void l_genl_family_free(struct l_genl_family *family)
 {
-	if (unlikely(!family))
-		return NULL;
-
-	__sync_fetch_and_add(&family->ref_count, 1);
-
-	return family;
-}
-
-LIB_EXPORT void l_genl_family_unref(struct l_genl_family *family)
-{
-	struct l_genl *genl;
-
-	if (unlikely(!family))
-		return;
-
-	if (__sync_sub_and_fetch(&family->ref_count, 1))
-		return;
-
-	genl = family->genl;
-	if (genl)
-		l_queue_remove(genl->family_list, family);
-
 	l_free(family);
 }
 

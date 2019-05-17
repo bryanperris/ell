@@ -272,8 +272,7 @@ global:
 	l_genl_family_info_get_name;
 	l_genl_family_info_get_version;
 	l_genl_family_new;
-	l_genl_family_ref;
-	l_genl_family_unref;
+	l_genl_family_free;
 	l_genl_family_get_info;
 	l_genl_family_get_genl;
 	l_genl_family_send;
