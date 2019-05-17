@@ -88,6 +88,7 @@ struct l_genl {
 	struct l_queue *family_watches;
 	struct l_queue *family_infos;
 	struct l_genl_family *nlctrl;
+	uint32_t next_handle_id;
 	l_genl_debug_func_t debug_callback;
 	l_genl_destroy_func_t debug_destroy;
 	void *debug_data;
@@ -112,6 +113,7 @@ struct l_genl_msg {
 
 struct genl_request {
 	unsigned int id;
+	uint32_t handle_id;
 	uint16_t type;
 	uint16_t flags;
 	uint32_t seq;
@@ -123,6 +125,7 @@ struct genl_request {
 
 struct mcast_notify {
 	unsigned int id;
+	uint32_t handle_id;
 	uint16_t type;
 	uint32_t group;
 	l_genl_msg_func_t callback;
@@ -153,6 +156,7 @@ struct l_genl_family_info {
 
 struct l_genl_family {
 	uint16_t id;
+	uint32_t handle_id;
 	struct l_genl *genl;
 };
 
@@ -667,6 +671,7 @@ static struct l_genl_family *family_alloc(struct l_genl *genl, uint16_t id)
 	family = l_new(struct l_genl_family, 1);
 	family->genl = genl;
 	family->id = id;
+	family->handle_id = get_next_id(&genl->next_handle_id);
 	return family;
 }
 
@@ -700,6 +705,14 @@ static bool mcast_notify_match(const void *a, const void *b)
 	return notify->id == id;
 }
 
+static bool mcast_notify_match_by_hid(const void *a, const void *b)
+{
+	const struct mcast_notify *notify = a;
+	uint32_t id = L_PTR_TO_UINT(b);
+
+	return notify->handle_id == id;
+}
+
 static void mcast_notify_prune(struct l_genl *genl)
 {
 	struct mcast_notify *notify;
@@ -708,6 +721,22 @@ static void mcast_notify_prune(struct l_genl *genl)
 						mcast_notify_match,
 						L_UINT_TO_PTR(0))))
 		mcast_notify_free(notify);
+}
+
+static bool match_request_id(const void *a, const void *b)
+{
+	const struct genl_request *request = a;
+	unsigned int id = L_PTR_TO_UINT(b);
+
+	return request->id == id;
+}
+
+static bool match_request_hid(const void *a, const void *b)
+{
+	const struct genl_request *request = a;
+	unsigned int id = L_PTR_TO_UINT(b);
+
+	return request->handle_id == id;
 }
 
 static struct l_genl_msg *msg_alloc(uint8_t cmd, uint8_t version, uint32_t size)
@@ -1780,11 +1809,6 @@ LIB_EXPORT struct l_genl_family *l_genl_family_new(struct l_genl *genl,
 	return family;
 }
 
-LIB_EXPORT void l_genl_family_free(struct l_genl_family *family)
-{
-	l_free(family);
-}
-
 LIB_EXPORT const struct l_genl_family_info *l_genl_family_get_info(
 						struct l_genl_family *family)
 {
@@ -1825,6 +1849,7 @@ static unsigned int send_common(struct l_genl_family *family, uint16_t flags,
 	request->destroy = destroy;
 	request->user_data = user_data;
 	request->id = get_next_id(&genl->next_request_id);
+	request->handle_id = family->handle_id;
 	l_queue_push_tail(genl->request_queue, request);
 
 	wakeup_writer(genl);
@@ -1850,14 +1875,6 @@ LIB_EXPORT unsigned int l_genl_family_dump(struct l_genl_family *family,
 {
 	return send_common(family, NLM_F_ACK | NLM_F_DUMP, msg, callback,
 							user_data, destroy);
-}
-
-static bool match_request_id(const void *a, const void *b)
-{
-	const struct genl_request *request = a;
-	unsigned int id = L_PTR_TO_UINT(b);
-
-	return request->id == id;
 }
 
 LIB_EXPORT bool l_genl_family_cancel(struct l_genl_family *family,
@@ -1951,6 +1968,7 @@ LIB_EXPORT unsigned int l_genl_family_register(struct l_genl_family *family,
 	notify->destroy = destroy;
 	notify->user_data = user_data;
 	notify->id = get_next_id(&genl->next_notify_id);
+	notify->handle_id = family->handle_id;
 	l_queue_push_tail(genl->notify_list, notify);
 
 	add_membership(genl, mcast);
@@ -2005,4 +2023,44 @@ done:
 		mcast_notify_free(notify);
 
 	return true;
+}
+
+LIB_EXPORT void l_genl_family_free(struct l_genl_family *family)
+{
+	struct l_genl *genl;
+	struct genl_request *req;
+	struct mcast_notify *notify;
+	struct l_genl_family_info *info;
+
+	if (!family)
+		return;
+
+	genl = family->genl;
+	info = l_queue_find(genl->family_infos, family_info_match,
+					L_UINT_TO_PTR(family->id));
+
+	while ((req = l_queue_remove_if(genl->pending_list,
+					match_request_hid,
+					L_UINT_TO_PTR(family->handle_id))))
+		destroy_request(req);
+
+	while ((req = l_queue_remove_if(genl->request_queue,
+					match_request_hid,
+					L_UINT_TO_PTR(family->handle_id))))
+		destroy_request(req);
+
+	while ((notify = l_queue_remove_if(genl->notify_list,
+					mcast_notify_match_by_hid,
+					L_UINT_TO_PTR(family->handle_id)))) {
+		struct genl_mcast *mcast = l_queue_find(info->mcast_list,
+						match_mcast_id,
+						L_UINT_TO_PTR(notify->group));
+
+		if (mcast)
+			drop_membership(genl, mcast);
+
+		mcast_notify_free(notify);
+	}
+
+	l_free(family);
 }
