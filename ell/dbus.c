@@ -406,7 +406,7 @@ static bool auth_write_handler(struct l_io *io, void *user_data)
 	if (!len)
 		return false;
 
-	written = TEMP_FAILURE_RETRY(send(fd, classic->auth_command, len, 0));
+	written = L_TFR(send(fd, classic->auth_command, len, 0));
 	if (written < 0)
 		return false;
 
@@ -458,7 +458,7 @@ static bool auth_read_handler(struct l_io *io, void *user_data)
 	offset = 0;
 
 	while (1) {
-		len = TEMP_FAILURE_RETRY(recv(fd, ptr + offset,
+		len = L_TFR(recv(fd, ptr + offset,
 						sizeof(buffer) - offset,
 						MSG_DONTWAIT));
 		if (len < 0) {
@@ -629,7 +629,7 @@ static bool classic_send_message(struct l_dbus *dbus,
 			memcpy(CMSG_DATA(cmsg), fds, num_fds * sizeof(int));
 		}
 
-		r = TEMP_FAILURE_RETRY(sendmsg(fd, &msg, 0));
+		r = L_TFR(sendmsg(fd, &msg, 0));
 		if (r < 0)
 			return false;
 
@@ -702,7 +702,7 @@ static struct l_dbus_message *classic_recv_message(struct l_dbus *dbus)
 		msg.msg_control = &fd_buf;
 		msg.msg_controllen = sizeof(fd_buf);
 
-		r = TEMP_FAILURE_RETRY(recvmsg(fd, &msg,
+		r = L_TFR(recvmsg(fd, &msg,
 					MSG_CMSG_CLOEXEC | MSG_WAITALL));
 		if (r < 0)
 			goto cmsg_fail;
@@ -1051,7 +1051,7 @@ static struct l_dbus *setup_dbus1(int fd, const char *guid)
 		ptr += sprintf(ptr, "%02x", uid[i]);
 
 	/* Send special credentials-passing nul byte */
-	written = TEMP_FAILURE_RETRY(send(fd, &creds, 1, 0));
+	written = L_TFR(send(fd, &creds, 1, 0));
 	if (written < 1) {
 		close(fd);
 		return NULL;

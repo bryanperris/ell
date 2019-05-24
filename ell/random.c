@@ -61,7 +61,7 @@ LIB_EXPORT bool l_getrandom(void *buf, size_t len)
 	while (len) {
 		int ret;
 
-		ret = TEMP_FAILURE_RETRY(getrandom(buf, len, 0));
+		ret = L_TFR(getrandom(buf, len, 0));
 		if (ret < 0)
 			return false;
 

@@ -31,16 +31,6 @@
 
 #define LIB_EXPORT __attribute__ ((visibility("default")))
 
-/* taken from glibc unistd.h for musl support */
-#ifndef TEMP_FAILURE_RETRY
-#define TEMP_FAILURE_RETRY(expression)             \
-  (__extension__                                   \
-    ({ long int __result;                          \
-       do __result = (long int) (expression);      \
-       while (__result == -1L && errno == EINTR);  \
-       __result; }))
-#endif
-
 struct l_debug_desc;
 
 void debug_enable(struct l_debug_desc *start, struct l_debug_desc *stop);

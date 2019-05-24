@@ -304,6 +304,13 @@ void l_util_debug(l_util_hexdump_func_t function, void *user_data,
 
 const char *l_util_get_debugfs_path(void);
 
+#define L_TFR(expression)                          \
+  (__extension__                                   \
+    ({ long int __result;                          \
+       do __result = (long int) (expression);      \
+       while (__result == -1L && errno == EINTR);  \
+       __result; }))
+
 #ifdef __cplusplus
 }
 #endif

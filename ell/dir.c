@@ -180,7 +180,7 @@ static bool inotify_read_cb(struct l_io *io, void *user_data)
 	const void *ptr = buf;
 	ssize_t len;
 
-	len = TEMP_FAILURE_RETRY(read(fd, buf, sizeof(buf)));
+	len = L_TFR(read(fd, buf, sizeof(buf)));
 	if (len <= 0)
 		return true;
 

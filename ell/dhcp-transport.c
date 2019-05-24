@@ -303,7 +303,7 @@ static int kernel_udp_socket_open(const char *ifname,
 	return s;
 
 error:
-	TEMP_FAILURE_RETRY(close(s));
+	L_TFR(close(s));
 	return -errno;
 }
 
@@ -442,7 +442,7 @@ static int kernel_raw_socket_open(uint32_t ifindex, uint16_t port, uint32_t xid)
 	return s;
 
 error:
-	TEMP_FAILURE_RETRY(close(s));
+	L_TFR(close(s));
 	return -errno;
 }
 
@@ -477,7 +477,7 @@ static void _dhcp_default_transport_close(struct dhcp_transport *s)
 	transport->io = NULL;
 
 	if (transport->udp_fd >= 0) {
-		TEMP_FAILURE_RETRY(close(transport->udp_fd));
+		L_TFR(close(transport->udp_fd));
 		transport->udp_fd = -1;
 	}
 }
