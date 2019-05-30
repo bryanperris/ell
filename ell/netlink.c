@@ -275,7 +275,7 @@ static bool can_read_data(struct l_io *io, void *user_data)
 
 	for (nlmsg = iov.iov_base; NLMSG_OK(nlmsg, (uint32_t) len);
 					nlmsg = NLMSG_NEXT(nlmsg, len)) {
-		if (group > 0 && nlmsg->nlmsg_seq == 0) {
+		if (group > 0) {
 			process_broadcast(netlink, group, nlmsg);
 			continue;
 		}
