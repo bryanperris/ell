@@ -99,8 +99,7 @@ struct l_cipher {
 
 struct l_aead_cipher {
 	int type;
-	int encrypt_sk;
-	int decrypt_sk;
+	int sk;
 };
 
 static int create_alg(const char *alg_type, const char *alg_name,
@@ -229,21 +228,10 @@ LIB_EXPORT struct l_aead_cipher *l_aead_cipher_new(enum l_aead_cipher_type type,
 	cipher->type = type;
 	alg_name = aead_cipher_type_to_name(type);
 
-	cipher->encrypt_sk = create_alg("aead", alg_name, key, key_length,
-					tag_length);
-	if (cipher->encrypt_sk < 0)
-		goto error_free;
+	cipher->sk = create_alg("aead", alg_name, key, key_length, tag_length);
+	if (cipher->sk >= 0)
+		return cipher;
 
-	cipher->decrypt_sk = create_alg("aead", alg_name, key, key_length,
-					tag_length);
-	if (cipher->decrypt_sk < 0)
-		goto error_close;
-
-	return cipher;
-
-error_close:
-	close(cipher->encrypt_sk);
-error_free:
 	l_free(cipher);
 	return NULL;
 }
@@ -264,8 +252,7 @@ LIB_EXPORT void l_aead_cipher_free(struct l_aead_cipher *cipher)
 	if (unlikely(!cipher))
 		return;
 
-	close(cipher->encrypt_sk);
-	close(cipher->decrypt_sk);
+	close(cipher->sk);
 
 	l_free(cipher);
 }
@@ -570,7 +557,7 @@ LIB_EXPORT bool l_aead_cipher_encrypt(struct l_aead_cipher *cipher,
 		iv_len = nonce_len;
 	}
 
-	return operate_cipher(cipher->encrypt_sk, ALG_OP_ENCRYPT, in, in_len,
+	return operate_cipher(cipher->sk, ALG_OP_ENCRYPT, in, in_len,
 				ad, ad_len, iv, iv_len, out, out_len) ==
 			(ssize_t)out_len;
 }
@@ -605,7 +592,7 @@ LIB_EXPORT bool l_aead_cipher_decrypt(struct l_aead_cipher *cipher,
 		iv_len = nonce_len;
 	}
 
-	return operate_cipher(cipher->decrypt_sk, ALG_OP_DECRYPT, in, in_len,
+	return operate_cipher(cipher->sk, ALG_OP_DECRYPT, in, in_len,
 				ad, ad_len, iv, iv_len, out, out_len) ==
 			(ssize_t)out_len;
 }
