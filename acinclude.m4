@@ -60,7 +60,7 @@ AC_DEFUN([COMPILER_FLAGS], [
 		CFLAGS+=" -Wredundant-decls"
 		CFLAGS+=" -Wswitch-enum"
 		CFLAGS+=" -Wtype-limits"
-		CFALGS+=" -Wvariadic-macros"
+		CFLAGS+=" -Wvariadic-macros"
 		CFLAGS+=" -Wformat -Wformat-security"
 		if ( $CC -v 2>/dev/null | grep "gcc version" ); then
 			CFLAGS+=" -Wcast-align"
