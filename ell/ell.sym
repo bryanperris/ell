@@ -503,6 +503,24 @@ global:
 	l_ecdh_generate_shared_secret;
 	/* time */
 	l_time_now;
+	/* gpio */
+	l_gpio_chips_with_line_label;
+	l_gpio_chip_new;
+	l_gpio_chip_free;
+	l_gpio_chip_find_line_offset;
+	l_gpio_chip_get_label;
+	l_gpio_chip_get_name;
+	l_gpio_chip_get_num_lines;
+	l_gpio_chip_get_line_label;
+	l_gpio_chip_get_line_consumer;
+	l_gpio_writer_new;
+	l_gpio_writer_free;
+	l_gpio_writer_set;
+	l_gpio_writer_get_label;
+	l_gpio_reader_new;
+	l_gpio_reader_free;
+	l_gpio_reader_get;
+	l_gpio_reader_get_label;
 local:
 	*;
 };

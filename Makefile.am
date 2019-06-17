@@ -52,7 +52,8 @@ pkginclude_HEADERS = ell/ell.h \
 			ell/cert.h \
 			ell/ecc.h \
 			ell/ecdh.h \
-			ell/time.h
+			ell/time.h \
+			ell/gpio.h
 
 lib_LTLIBRARIES = ell/libell.la
 
@@ -123,7 +124,8 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/ecc-external.c \
 			ell/ecc.c \
 			ell/ecdh.c \
-			ell/time.c
+			ell/time.c \
+			ell/gpio.c
 
 ell_libell_la_LDFLAGS = -no-undefined \
 			-Wl,--version-script=$(top_srcdir)/ell/ell.sym \
