@@ -24,11 +24,13 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
+#include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
-#include <sys/ioctl.h>
-#include <fcntl.h>
 #include <dirent.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <linux/gpio.h>
 
 #include "private.h"
