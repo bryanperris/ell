@@ -189,9 +189,6 @@ LIB_EXPORT bool l_gpio_chip_find_line_offset(struct l_gpio_chip *chip,
 		if (ioctl(chip->fd, GPIO_GET_LINEINFO_IOCTL, &info) < 0)
 			return false;
 
-		if (!info.name)
-			continue;
-
 		if (strcmp(info.name, line_label) != 0)
 			continue;
 
