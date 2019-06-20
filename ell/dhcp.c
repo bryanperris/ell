@@ -1218,6 +1218,8 @@ LIB_EXPORT bool l_dhcp_client_stop(struct l_dhcp_client *client)
 	CLIENT_ENTER_STATE(DHCP_STATE_INIT);
 
 	_dhcp_lease_free(client->lease);
+	client->lease = NULL;
+
 	return true;
 }
 
