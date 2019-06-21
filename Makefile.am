@@ -326,7 +326,7 @@ examples_glib_eventloop_LDADD = ell/libell-private.la @GLIB_LIBS@
 examples_dhcp_client_LDADD = ell/libell-private.la
 
 noinst_PROGRAMS += tools/certchain-verify tools/genl-discover \
-		   tools/genl-watch tools/genl-request
+		   tools/genl-watch tools/genl-request tools/gpio
 tools_certchain_verify_SOURCES = tools/certchain-verify.c
 tools_certchain_verify_LDADD = ell/libell-private.la
 
@@ -338,6 +338,9 @@ tools_genl_watch_LDADD = ell/libell-private.la
 
 tools_genl_request_SOURCES = tools/genl-request.c
 tools_genl_request_LDADD = ell/libell-private.la
+
+tools_gpio_SOURCES = tools/gpio.c
+tools_gpio_LDADD = ell/libell-private.la
 
 EXTRA_DIST = ell/ell.sym \
 		$(unit_test_data_files) unit/gencerts.cnf unit/plaintext.txt
