@@ -496,6 +496,7 @@ static void family_watch_free(void *data)
 	if (watch->destroy)
 		watch->destroy(watch->user_data);
 
+	l_free(watch->name);
 	l_free(watch);
 }
 
