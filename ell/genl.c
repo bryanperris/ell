@@ -1182,7 +1182,7 @@ static void dump_family_callback(struct l_genl_msg *msg, void *user_data)
 	discovery->cmd_id = 0;
 
 	if (parse_cmd_newfamily(info, msg) < 0) {
-		family_info_free(&info);
+		family_info_free(info);
 		return;
 	}
 
