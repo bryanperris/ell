@@ -1488,7 +1488,7 @@ static void tls_handle_client_hello(struct l_tls *tls,
 	if (!tls->cipher_suite_pref_list) {
 		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
 				"No usable cipher suites");
-		return;
+		goto cleanup;
 	}
 
 	/* Select a cipher suite according to client's preference list */
