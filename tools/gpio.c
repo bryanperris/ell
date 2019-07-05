@@ -54,8 +54,10 @@ static bool find_line(const char *line_label, struct l_gpio_chip **chip,
 		return false;
 
 	chip_names = l_gpio_chips_with_line_label(line_label);
-	if (!chip_names || l_strv_length(chip_names) != 1)
+	if (l_strv_length(chip_names) != 1) {
+		l_strfreev(chip_names);
 		return false;
+	}
 
 	c = l_gpio_chip_new(chip_names[0]);
 	l_strfreev(chip_names);
