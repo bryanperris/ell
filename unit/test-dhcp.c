@@ -75,6 +75,7 @@ static void test_invalid_message_length(const void *data)
 	struct dhcp_message message;
 	struct dhcp_message_iter iter;
 
+	memset(&message, 0, sizeof(message));
 	assert(!_dhcp_message_iter_init(&iter, NULL, 0));
 	assert(!_dhcp_message_iter_init(&iter, &message, sizeof(message)));
 }
