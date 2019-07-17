@@ -203,6 +203,16 @@ LIB_EXPORT char *l_strjoinv(char **str_array, const char delim)
 }
 
 /**
+ * l_strv_new:
+ *
+ * Returns: new emptry string array
+ **/
+LIB_EXPORT char **l_strv_new(void)
+{
+	return l_new(char *, 1);
+}
+
+/**
  * l_strv_free:
  * @str_array: a %NULL terminated array of strings
  *

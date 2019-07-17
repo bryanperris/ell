@@ -29,6 +29,7 @@ global:
 	l_strsplit;
 	l_strsplit_set;
 	l_strjoinv;
+	l_strv_new;
 	l_strv_free;
 	l_strv_length;
 	l_strv_contains;
