@@ -267,6 +267,17 @@ static bool parse_group(struct l_settings *settings, const char *data,
 	return true;
 }
 
+static bool validate_key_character(char c)
+{
+	if (l_ascii_isgraph(c))
+		return true;
+
+	if (c == '_' || c == '-')
+		return true;
+
+	return false;
+}
+
 static unsigned int parse_key(struct l_settings *settings, const char *data,
 				size_t len, size_t line)
 {
@@ -276,10 +287,7 @@ static unsigned int parse_key(struct l_settings *settings, const char *data,
 	struct setting_data *pair;
 
 	for (i = 0; i < len; i++) {
-		if (l_ascii_isalnum(data[i]))
-			continue;
-
-		if (data[i] == '_' || data[i] == '-')
+		if (validate_key_character(data[i]))
 			continue;
 
 		if (l_ascii_isblank(data[i]))
@@ -675,13 +683,8 @@ static bool validate_key(const char *key)
 	int i;
 
 	for (i = 0; key[i]; i++) {
-		if (l_ascii_isalnum(key[i]))
-			continue;
-
-		if (key[i] == '_' || key[i] == '-')
-			continue;
-
-		return false;
+		if (!validate_key_character(key[i]))
+			return false;
 	}
 
 	return true;
