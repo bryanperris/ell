@@ -37,6 +37,10 @@ void l_strv_free(char **str_array);
 unsigned int l_strv_length(char **str_array);
 bool l_strv_contains(char **str_array, const char *item);
 char **l_strv_append(char **str_array, const char *str);
+char **l_strv_append_printf(char **str_array, const char *format, ...)
+					__attribute__((format(printf, 2, 3)));
+char **l_strv_append_vprintf(char **str_array, const char *format,
+							va_list args);
 
 #ifdef __cplusplus
 }

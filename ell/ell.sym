@@ -34,6 +34,8 @@ global:
 	l_strv_length;
 	l_strv_contains;
 	l_strv_append;
+	l_strv_append_printf;
+	l_strv_append_vprintf;
 	/* utf8 */
 	l_ascii_table;
 	l_utf8_get_codepoint;

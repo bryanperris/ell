@@ -300,3 +300,38 @@ LIB_EXPORT char **l_strv_append(char **str_array, const char *str)
 
 	return ret;
 }
+
+LIB_EXPORT char **l_strv_append_printf(char **str_array,
+						const char *format, ...)
+{
+	va_list args;
+	char **ret;
+
+	va_start(args, format);
+	ret = l_strv_append_vprintf(str_array, format, args);
+	va_end(args);
+
+	return ret;
+}
+
+LIB_EXPORT char **l_strv_append_vprintf(char **str_array,
+					const char *format, va_list args)
+{
+	char **ret;
+	unsigned int i, len;
+
+	if (unlikely(!format))
+		return str_array;
+
+	len = l_strv_length(str_array);
+	ret = l_new(char *, len + 2);
+
+	for (i = 0; i < len; i++)
+		ret[i] = str_array[i];
+
+	ret[i] = l_strdup_vprintf(format, args);
+
+	l_free(str_array);
+
+	return ret;
+}
