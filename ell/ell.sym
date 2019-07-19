@@ -519,11 +519,9 @@ global:
 	l_gpio_writer_new;
 	l_gpio_writer_free;
 	l_gpio_writer_set;
-	l_gpio_writer_get_label;
 	l_gpio_reader_new;
 	l_gpio_reader_free;
 	l_gpio_reader_get;
-	l_gpio_reader_get_label;
 local:
 	*;
 };

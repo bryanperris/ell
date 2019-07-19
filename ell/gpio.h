@@ -54,7 +54,6 @@ struct l_gpio_writer *l_gpio_writer_new(struct l_gpio_chip *chip,
 void l_gpio_writer_free(struct l_gpio_writer *writer);
 bool l_gpio_writer_set(struct l_gpio_writer *writer, uint32_t n_values,
 			const uint32_t values[]);
-const char *l_gpio_writer_get_label(struct l_gpio_writer *writer);
 
 struct l_gpio_reader *l_gpio_reader_new(struct l_gpio_chip *chip,
 					const char *consumer,
@@ -63,7 +62,6 @@ struct l_gpio_reader *l_gpio_reader_new(struct l_gpio_chip *chip,
 void l_gpio_reader_free(struct l_gpio_reader *reader);
 bool l_gpio_reader_get(struct l_gpio_reader *reader, uint32_t n_values,
 			uint32_t values[]);
-const char *l_gpio_reader_get_label(struct l_gpio_reader *reader);
 
 #ifdef __cplusplus
 }
