@@ -269,10 +269,10 @@ static bool parse_group(struct l_settings *settings, const char *data,
 
 static bool validate_key_character(char c)
 {
-	if (l_ascii_isgraph(c))
+	if (l_ascii_isalnum(c))
 		return true;
 
-	if (c == '_' || c == '-')
+	if (c == '_' || c == '-' || c == '.')
 		return true;
 
 	return false;
