@@ -485,6 +485,23 @@ static uint64_t dhcp_fuzz_secs(uint32_t secs)
 	return ms;
 }
 
+/*
+ * Takes a time in milliseconds and produces a fuzzed value that can be directly
+ * used by l_timeout_modify_ms. The fluctuation of the random noise added is
+ * from -63 to 63 milliseconds.
+ */
+static uint64_t dhcp_fuzz_msecs(uint64_t ms)
+{
+	uint32_t r = l_getrandom_uint32();
+
+	if (r & 0x80000000)
+		ms += r & 0x3f;
+	else
+		ms -= r & 0x3f;
+
+	return ms;
+}
+
 static uint32_t dhcp_rebind_renew_retry_time(uint64_t start_t, uint32_t expiry)
 {
 	uint64_t now = l_time_now();
@@ -1191,7 +1208,7 @@ LIB_EXPORT bool l_dhcp_client_start(struct l_dhcp_client *client)
 	if (err < 0)
 		return false;
 
-	client->timeout_resend = l_timeout_create_ms(dhcp_fuzz_secs(4),
+	client->timeout_resend = l_timeout_create_ms(dhcp_fuzz_msecs(600),
 						dhcp_client_timeout_resend,
 						client, NULL);
 	CLIENT_ENTER_STATE(DHCP_STATE_SELECTING);
