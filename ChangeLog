@@ -1,3 +1,7 @@
+ver 0.21:
+	Fix issue with resetting DHCP lease on client stop.
+	Add support for GPIO helper functionality.
+
 ver 0.20:
 	Fix issue with DHCP client and handling renewing state.
 	Fix issue with DHCP client and handling rebinding state.
