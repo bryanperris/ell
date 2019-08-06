@@ -44,6 +44,7 @@
 #include "asn1-private.h"
 #include "strv.h"
 #include "missing.h"
+#include "string.h"
 
 bool tls10_prf(const void *secret, size_t secret_len,
 		const char *label,
@@ -1990,17 +1991,41 @@ static void tls_handle_certificate_verify(struct l_tls *tls,
 	TLS_SET_STATE(TLS_HANDSHAKE_WAIT_CHANGE_CIPHER_SPEC);
 }
 
-static const struct asn1_oid dn_organization_name_oid =
-	{ 3, { 0x55, 0x04, 0x0a } };
-static const struct asn1_oid dn_common_name_oid =
-	{ 3, { 0x55, 0x04, 0x03 } };
+struct dn_element_info {
+	const char *str;
+	const struct asn1_oid oid;
+};
+
+static const struct dn_element_info dn_elements[] = {
+	{ "CN", { 3, { 0x55, 0x04, 0x03 } } },
+	{ "SN", { 3, { 0x55, 0x04, 0x04 } } },
+	{ "serialNumber", { 3, { 0x55, 0x04, 0x05 } } },
+	{ "C", { 3, { 0x55, 0x04, 0x06 } } },
+	{ "ST", { 3, { 0x55, 0x04, 0x07 } } },
+	{ "L", { 3, { 0x55, 0x04, 0x08 } } },
+	{ "street", { 3, { 0x55, 0x04, 0x09 } } },
+	{ "O", { 3, { 0x55, 0x04, 0x0a } } },
+	{ "OU", { 3, { 0x55, 0x04, 0x0b } } },
+	{ "title", { 3, { 0x55, 0x04, 0x0c } } },
+	{ "telephoneNumber", { 3, { 0x55, 0x04, 0x14 } } },
+	{ "givenName", { 3, { 0x55, 0x04, 0x2a } } },
+	{ "initials", { 3, { 0x55, 0x04, 0x2b } } },
+	{ "emailAddress", {
+		9,
+		{ 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x01 }
+	} },
+	{ "domainComponent", {
+		10,
+		{ 0x09, 0x92, 0x26, 0x89, 0x93, 0xf2, 0x2c, 0x64, 0x01, 0x19 }
+	} },
+	{}
+};
 
 static char *tls_get_peer_identity_str(struct l_cert *cert)
 {
 	const uint8_t *dn, *end;
 	size_t dn_size;
-	const uint8_t *printable_str = NULL;
-	size_t printable_str_len;
+	struct l_string *id_str;
 
 	if (!cert)
 		return NULL;
@@ -2009,45 +2034,52 @@ static char *tls_get_peer_identity_str(struct l_cert *cert)
 	if (!dn)
 		return NULL;
 
+	id_str = l_string_new(200);
+
 	end = dn + dn_size;
 	while (dn < end) {
 		const uint8_t *set, *seq, *oid, *name;
 		uint8_t tag;
 		size_t len, oid_len, name_len;
+		const struct dn_element_info *info;
 
 		set = asn1_der_find_elem(dn, end - dn, 0, &tag, &len);
 		if (!set || tag != ASN1_ID_SET)
-			return NULL;
+			goto error;
 
 		dn = set + len;
 
 		seq = asn1_der_find_elem(set, len, 0, &tag, &len);
 		if (!seq || tag != ASN1_ID_SEQUENCE)
-			return NULL;
+			goto error;
 
 		oid = asn1_der_find_elem(seq, len, 0, &tag, &oid_len);
 		if (!oid || tag != ASN1_ID_OID)
-			return NULL;
+			goto error;
 
 		name = asn1_der_find_elem(seq, len, 1, &tag, &name_len);
 		if (!oid || (tag != ASN1_ID_PRINTABLESTRING &&
-					tag != ASN1_ID_UTF8STRING))
+					tag != ASN1_ID_UTF8STRING &&
+					tag != ASN1_ID_IA5STRING))
 			continue;
 
-		/* organizationName takes priority, commonName is second */
-		if (asn1_oid_eq(&dn_organization_name_oid, oid_len, oid) ||
-				(!printable_str &&
-				 asn1_oid_eq(&dn_common_name_oid,
-						oid_len, oid))) {
-			printable_str = name;
-			printable_str_len = name_len;
-		}
+		for (info = dn_elements; info->str; info++)
+			if (asn1_oid_eq(&info->oid, oid_len, oid))
+				break;
+		if (!info->str)
+			continue;
+
+		l_string_append_c(id_str, '/');
+		l_string_append(id_str, info->str);
+		l_string_append_c(id_str, '=');
+		l_string_append_fixed(id_str, (char *) name, name_len);
 	}
 
-	if (printable_str)
-		return l_strndup((char *) printable_str, printable_str_len);
-	else
-		return NULL;
+	return l_string_unwrap(id_str);
+
+error:
+	l_string_free(id_str);
+	return NULL;
 }
 
 static void tls_finished(struct l_tls *tls)
