@@ -326,7 +326,8 @@ static const struct tls_conn_test tls_conn_test_server_auth = {
 	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
 	.server_expect_identity = NULL,
 	.client_ca_cert_path = CERTDIR "cert-ca.pem",
-	.client_expect_identity = "Foo Example Organization",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
 };
 
 static const struct tls_conn_test tls_conn_test_client_auth_attempt = {
@@ -341,7 +342,8 @@ static const struct tls_conn_test tls_conn_test_client_auth = {
 	.server_cert_path = CERTDIR "cert-server.pem",
 	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
 	.server_ca_cert_path = CERTDIR "cert-ca.pem",
-	.server_expect_identity = "Bar Example Organization",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
 	.client_cert_path = CERTDIR "cert-client.pem",
 	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
 	.client_expect_identity = NULL,
@@ -353,29 +355,34 @@ static const struct tls_conn_test tls_conn_test_full_auth_attempt = {
 	.server_ca_cert_path = CERTDIR "cert-ca.pem",
 	.server_expect_identity = NULL,
 	.client_ca_cert_path = CERTDIR "cert-ca.pem",
-	.client_expect_identity = "Foo Example Organization",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
 };
 
 static const struct tls_conn_test tls_conn_test_full_auth = {
 	.server_cert_path = CERTDIR "cert-server.pem",
 	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
 	.server_ca_cert_path = CERTDIR "cert-ca.pem",
-	.server_expect_identity = "Bar Example Organization",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
 	.client_cert_path = CERTDIR "cert-client.pem",
 	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
 	.client_ca_cert_path = CERTDIR "cert-ca.pem",
-	.client_expect_identity = "Foo Example Organization",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
 };
 
 static const struct tls_conn_test tls_conn_test_bad_client_suite = {
 	.server_cert_path = CERTDIR "cert-server.pem",
 	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
 	.server_ca_cert_path = CERTDIR "cert-ca.pem",
-	.server_expect_identity = "Bar Example Organization",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
 	.client_cert_path = CERTDIR "cert-client.pem",
 	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
 	.client_ca_cert_path = CERTDIR "cert-ca.pem",
-	.client_expect_identity = "Foo Example Organization",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
 	.client_cipher_suites = (const char *[]) { "UNKNOWN", NULL },
 	.expect_client_start_fail = true,
 };
@@ -384,13 +391,15 @@ static const struct tls_conn_test tls_conn_test_suite_mismatch = {
 	.server_cert_path = CERTDIR "cert-server.pem",
 	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
 	.server_ca_cert_path = CERTDIR "cert-ca.pem",
-	.server_expect_identity = "Bar Example Organization",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
 	.server_cipher_suites =
 		(const char *[]) { "TLS_RSA_WITH_AES_128_CBC_SHA256", NULL },
 	.client_cert_path = CERTDIR "cert-client.pem",
 	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
 	.client_ca_cert_path = CERTDIR "cert-ca.pem",
-	.client_expect_identity = "Foo Example Organization",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
 	.client_cipher_suites =
 		(const char *[]) { "TLS_RSA_WITH_AES_256_CBC_SHA256", NULL },
 	.expect_alert = true,
@@ -401,11 +410,13 @@ static const struct tls_conn_test tls_conn_test_version_mismatch = {
 	.server_cert_path = CERTDIR "cert-server.pem",
 	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
 	.server_ca_cert_path = CERTDIR "cert-ca.pem",
-	.server_expect_identity = "Bar Example Organization",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
 	.client_cert_path = CERTDIR "cert-client.pem",
 	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
 	.client_ca_cert_path = CERTDIR "cert-ca.pem",
-	.client_expect_identity = "Foo Example Organization",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
 	.expect_alert = true,
 	.alert_desc = TLS_ALERT_PROTOCOL_VERSION,
 };
