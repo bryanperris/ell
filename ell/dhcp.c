@@ -985,7 +985,7 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 		client->timeout_lease =
 			l_timeout_create_ms(dhcp_fuzz_secs(client->lease->t1),
 						dhcp_client_t1_expired,
-						&client, NULL);
+						client, NULL);
 
 		break;
 	case DHCP_STATE_INIT_REBOOT:
