@@ -215,6 +215,9 @@ struct l_tls {
 
 	struct tls_cipher_suite **cipher_suite_pref_list;
 
+	bool in_callback;
+	bool pending_destroy;
+
 	/* Record layer */
 
 	uint8_t *record_buf;

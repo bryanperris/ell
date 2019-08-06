@@ -2098,7 +2098,9 @@ static void tls_finished(struct l_tls *tls)
 	TLS_SET_STATE(TLS_HANDSHAKE_DONE);
 	tls->ready = true;
 
+	tls->in_callback = true;
 	tls->ready_handle(peer_identity, tls->user_data);
+	tls->in_callback = false;
 	l_free(peer_identity);
 
 	tls_cleanup_handshake(tls);
@@ -2389,6 +2391,11 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 	if (unlikely(!tls))
 		return;
 
+	if (tls->in_callback) {
+		tls->pending_destroy = true;
+		return;
+	}
+
 	l_tls_set_cacert(tls, NULL);
 	l_tls_set_auth_data(tls, NULL, NULL, NULL);
 
@@ -2537,6 +2544,11 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 					message + TLS_HANDSHAKE_HEADER_SIZE,
 					len - TLS_HANDSHAKE_HEADER_SIZE);
 
+		if (tls->pending_destroy) {
+			l_tls_free(tls);
+			return false;
+		}
+
 		return true;
 
 	case TLS_CT_APPLICATION_DATA:
@@ -2551,7 +2563,14 @@ bool tls_handle_message(struct l_tls *tls, const uint8_t *message,
 		if (!len)
 			return true;
 
+		tls->in_callback = true;
 		tls->rx(message, len, tls->user_data);
+		tls->in_callback = false;
+
+		if (tls->pending_destroy) {
+			l_tls_free(tls);
+			return false;
+		}
 
 		return true;
 	}
