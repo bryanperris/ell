@@ -78,9 +78,11 @@ uint16_t _dhcp_checksumv(const struct iovec *iov, size_t iov_cnt)
 			sum += check[i];
 	}
 
+	j--;
+
 	if (len & 0x01) {
 		const uint8_t *odd = iov[j].iov_base;
-		sum += odd[len - 1];
+		sum += odd[iov[j].iov_len - 1];
 	}
 
 	while (sum >> 16)
