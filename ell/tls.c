@@ -2058,7 +2058,7 @@ static char *tls_get_peer_identity_str(struct l_cert *cert)
 			goto error;
 
 		name = asn1_der_find_elem(seq, len, 1, &tag, &name_len);
-		if (!oid || (tag != ASN1_ID_PRINTABLESTRING &&
+		if (!name || (tag != ASN1_ID_PRINTABLESTRING &&
 					tag != ASN1_ID_UTF8STRING &&
 					tag != ASN1_ID_IA5STRING))
 			continue;
