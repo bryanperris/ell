@@ -91,6 +91,19 @@ LIB_EXPORT const char *l_path_next(const char *path_str, char **ret)
 	return next_in_path(path_str, ret, 0);
 }
 
+/**
+ * l_path_find:
+ * @basename: The basename of the file, e.g. "vi"
+ * @path_str: A list of paths formatted like $PATH, e.g. from getenv
+ * @mode: mode to check.  This is the same mode as would be fed to access()
+ *
+ * Attempts to find @basename in one of the directories listed in @path_str.
+ * Only directories with absolute paths are used.
+ *
+ * Returns: A newly-allocated string with the full path of the resolved file
+ * given by @basename.  E.g. /usr/bin/vi.  Or NULL if no file could be found
+ * that matches the given @mode.
+ */
 LIB_EXPORT char *l_path_find(const char *basename,
 					const char *path_str, int mode)
 {
