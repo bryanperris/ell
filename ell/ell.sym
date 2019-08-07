@@ -352,6 +352,9 @@ global:
 	l_netlink_register;
 	l_netlink_unregister;
 	l_netlink_set_debug;
+	/* path */
+	l_path_find;
+	l_path_next;
 	/* pem */
 	l_pem_load_buffer;
 	l_pem_load_certificate_chain;
