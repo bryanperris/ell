@@ -164,3 +164,24 @@ LIB_EXPORT uint64_t l_path_get_mtime(const char *path)
 
 	return sb.st_mtim.tv_sec * 1000000 + sb.st_mtim.tv_nsec / 1000;
 }
+
+/**
+ * l_path_touch:
+ * @path: The path of the file
+ *
+ * Updates the modification and last_accessed time of the file given by @path
+ * to the current time. If @path is a symbolic link, then the link is followed.
+ *
+ * Returns: 0 if the file times could be updated successfully and -errno
+ * otherwise.
+ */
+LIB_EXPORT int l_path_touch(const char *path)
+{
+	if (unlikely(!path))
+		return -EINVAL;
+
+	if (utimensat(0, path, NULL, 0) == 0)
+		return 0;
+
+	return -errno;
+}
