@@ -29,6 +29,7 @@ extern "C" {
 
 const char *l_path_next(const char *path_str, char **ret);
 char *l_path_find(const char *basename, const char *path_str, int mode);
+uint64_t l_path_get_mtime(const char *path);
 
 #ifdef __cplusplus
 }

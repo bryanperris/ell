@@ -36,6 +36,7 @@ extern "C" {
 #define L_NSEC_PER_SEC  1000000000ULL
 #define L_NSEC_PER_MSEC 1000000ULL
 #define L_NSEC_PER_USEC 1000ULL
+#define L_TIME_INVALID ((uint64_t) -1)
 
 uint64_t l_time_now(void);
 

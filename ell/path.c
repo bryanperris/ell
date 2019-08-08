@@ -26,7 +26,10 @@
 
 #define _GNU_SOURCE
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
+#include "time.h"
 #include "path.h"
 #include "private.h"
 
@@ -135,4 +138,29 @@ LIB_EXPORT char *l_path_find(const char *basename,
 	} while (path_str[0] != '\0');
 
 	return NULL;
+}
+
+/**
+ * l_path_get_mtime:
+ * @path: The path of the file
+ *
+ * Attempts find the modified time of file pointed to by @path.  If @path
+ * is a symbolic link, then the link is followed.
+ *
+ * Returns: The number of microseconds (usec) since the Epoch or L_TIME_INVALID
+ * if an error occurred.
+ */
+LIB_EXPORT uint64_t l_path_get_mtime(const char *path)
+{
+	struct stat sb;
+	int ret;
+
+	if (unlikely(path == NULL))
+		return L_TIME_INVALID;
+
+	ret = stat(path, &sb);
+	if (ret < 0)
+		return L_TIME_INVALID;
+
+	return sb.st_mtim.tv_sec * 1000000 + sb.st_mtim.tv_nsec / 1000;
 }
