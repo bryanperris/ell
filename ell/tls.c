@@ -2021,6 +2021,25 @@ static const struct dn_element_info dn_elements[] = {
 	{}
 };
 
+static void tls_str_escape_append(struct l_string *out, char *str, size_t len)
+{
+	while (len--) {
+		switch (*str) {
+		case '\\':
+		case '/':
+		case '=':
+			l_string_append_c(out, '\\');
+			l_string_append_c(out, *str);
+			break;
+		default:
+			l_string_append_c(out, *str);
+			break;
+		}
+
+		str++;
+	}
+}
+
 static char *tls_get_peer_identity_str(struct l_cert *cert)
 {
 	const uint8_t *dn, *end;
@@ -2072,7 +2091,7 @@ static char *tls_get_peer_identity_str(struct l_cert *cert)
 		l_string_append_c(id_str, '/');
 		l_string_append(id_str, info->str);
 		l_string_append_c(id_str, '=');
-		l_string_append_fixed(id_str, (char *) name, name_len);
+		tls_str_escape_append(id_str, (char *) name, name_len);
 	}
 
 	return l_string_unwrap(id_str);
