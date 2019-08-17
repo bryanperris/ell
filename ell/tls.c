@@ -2107,8 +2107,11 @@ static void tls_finished(struct l_tls *tls)
 
 	if (tls->peer_authenticated) {
 		peer_identity = tls_get_peer_identity_str(tls->peer_cert);
-		if (!peer_identity)
-			TLS_DEBUG("tls_get_peer_identity_str failed");
+		if (!peer_identity) {
+			TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, 0,
+					"tls_get_peer_identity_str failed");
+			return;
+		}
 	}
 
 	/* Free up the resources used in the handshake */
