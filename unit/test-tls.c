@@ -309,6 +309,7 @@ struct tls_conn_test {
 	const char *client_ca_cert_path;
 	const char *client_expect_identity;
 	const char **client_cipher_suites;
+	char **client_domain_mask;
 	bool expect_alert;
 	bool expect_client_start_fail;
 	enum l_tls_alert_desc alert_desc;
@@ -566,6 +567,9 @@ static void test_tls_with_ver(const struct tls_conn_test *test,
 	assert(l_tls_set_cacert(s[0].tls, test->server_ca_cert_path));
 	assert(l_tls_set_cacert(s[1].tls, test->client_ca_cert_path));
 
+	if (test->client_domain_mask)
+		l_tls_set_domain_mask(s[1].tls, test->client_domain_mask);
+
 	assert(l_tls_start(s[0].tls));
 	assert(!!l_tls_start(s[1].tls) == !test->expect_client_start_fail);
 
@@ -615,6 +619,152 @@ static void test_tls_version_mismatch_test(const void *data)
 	test_tls_with_ver(&tls_conn_test_version_mismatch,
 				L_TLS_V10, L_TLS_V11);
 }
+
+static const struct tls_conn_test tls_conn_test_domain_match1 = {
+	.server_cert_path = CERTDIR "cert-server.pem",
+	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
+	.server_ca_cert_path = CERTDIR "cert-ca.pem",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
+	.client_cert_path = CERTDIR "cert-client.pem",
+	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
+	.client_ca_cert_path = CERTDIR "cert-ca.pem",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
+	.client_domain_mask = (char *[]) { "Foo Example Organization", NULL },
+};
+
+static const struct tls_conn_test tls_conn_test_domain_match2 = {
+	.server_cert_path = CERTDIR "cert-server.pem",
+	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
+	.server_ca_cert_path = CERTDIR "cert-ca.pem",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
+	.client_cert_path = CERTDIR "cert-client.pem",
+	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
+	.client_ca_cert_path = CERTDIR "cert-ca.pem",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
+	.client_domain_mask = (char *[]) {
+		"Foo Example Organization", "Bar Example Organization", NULL
+	},
+};
+
+static const struct tls_conn_test tls_conn_test_domain_match3 = {
+	.server_cert_path = CERTDIR "cert-server.pem",
+	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
+	.server_ca_cert_path = CERTDIR "cert-ca.pem",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
+	.client_cert_path = CERTDIR "cert-client.pem",
+	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
+	.client_ca_cert_path = CERTDIR "cert-ca.pem",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
+	.client_domain_mask = (char *[]) {
+		"Bar Example Organization", "Foo Example Organization", NULL
+	},
+};
+
+static const struct tls_conn_test tls_conn_test_domain_match4 = {
+	.server_cert_path = CERTDIR "cert-server.pem",
+	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
+	.server_ca_cert_path = CERTDIR "cert-ca.pem",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
+	.client_cert_path = CERTDIR "cert-client.pem",
+	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
+	.client_ca_cert_path = CERTDIR "cert-ca.pem",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
+	.client_domain_mask = (char *[]) { "*", NULL },
+};
+
+static const struct tls_conn_test tls_conn_test_domain_mismatch1 = {
+	.server_cert_path = CERTDIR "cert-server.pem",
+	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
+	.server_ca_cert_path = CERTDIR "cert-ca.pem",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
+	.client_cert_path = CERTDIR "cert-client.pem",
+	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
+	.client_ca_cert_path = CERTDIR "cert-ca.pem",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
+	.client_domain_mask = (char *[]) { "", NULL },
+	.expect_alert = true,
+	.alert_desc = TLS_ALERT_BAD_CERT,
+};
+
+static const struct tls_conn_test tls_conn_test_domain_mismatch2 = {
+	.server_cert_path = CERTDIR "cert-server.pem",
+	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
+	.server_ca_cert_path = CERTDIR "cert-ca.pem",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
+	.client_cert_path = CERTDIR "cert-client.pem",
+	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
+	.client_ca_cert_path = CERTDIR "cert-ca.pem",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
+	.client_domain_mask = (char *[]) { "Bar Example Organization", NULL },
+	.expect_alert = true,
+	.alert_desc = TLS_ALERT_BAD_CERT,
+};
+
+static const struct tls_conn_test tls_conn_test_domain_mismatch3 = {
+	.server_cert_path = CERTDIR "cert-server.pem",
+	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
+	.server_ca_cert_path = CERTDIR "cert-ca.pem",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
+	.client_cert_path = CERTDIR "cert-client.pem",
+	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
+	.client_ca_cert_path = CERTDIR "cert-ca.pem",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
+	.client_domain_mask = (char *[]) {
+		"Foo Example Organization.com", NULL
+	},
+	.expect_alert = true,
+	.alert_desc = TLS_ALERT_BAD_CERT,
+};
+
+static const struct tls_conn_test tls_conn_test_domain_mismatch4 = {
+	.server_cert_path = CERTDIR "cert-server.pem",
+	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
+	.server_ca_cert_path = CERTDIR "cert-ca.pem",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
+	.client_cert_path = CERTDIR "cert-client.pem",
+	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
+	.client_ca_cert_path = CERTDIR "cert-ca.pem",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
+	.client_domain_mask = (char *[]) {
+		"Foo Example Organization.*", NULL
+	},
+	.expect_alert = true,
+	.alert_desc = TLS_ALERT_BAD_CERT,
+};
+
+static const struct tls_conn_test tls_conn_test_domain_mismatch5 = {
+	.server_cert_path = CERTDIR "cert-server.pem",
+	.server_key_path = CERTDIR "cert-server-key-pkcs8.pem",
+	.server_ca_cert_path = CERTDIR "cert-ca.pem",
+	.server_expect_identity = "/O=Bar Example Organization"
+		"/CN=Bar Example Organization/emailAddress=bar@mail.example",
+	.client_cert_path = CERTDIR "cert-client.pem",
+	.client_key_path = CERTDIR "cert-client-key-pkcs8.pem",
+	.client_ca_cert_path = CERTDIR "cert-ca.pem",
+	.client_expect_identity = "/O=Foo Example Organization"
+		"/CN=Foo Example Organization/emailAddress=foo@mail.example",
+	.client_domain_mask = (char *[]) {
+		"*.Foo Example Organization", NULL
+	},
+	.expect_alert = true,
+	.alert_desc = TLS_ALERT_BAD_CERT,
+};
 
 static void test_tls_suite_test(const void *data)
 {
@@ -719,6 +869,25 @@ int main(int argc, char *argv[])
 
 	l_test_add("TLS connection version mismatch",
 			test_tls_version_mismatch_test, NULL);
+
+	l_test_add("TLS connection domain match 1", test_tls_test,
+			&tls_conn_test_domain_match1);
+	l_test_add("TLS connection domain match 2", test_tls_test,
+			&tls_conn_test_domain_match2);
+	l_test_add("TLS connection domain match 3", test_tls_test,
+			&tls_conn_test_domain_match3);
+	l_test_add("TLS connection domain match 4", test_tls_test,
+			&tls_conn_test_domain_match4);
+	l_test_add("TLS connection domain mismatch 1", test_tls_test,
+			&tls_conn_test_domain_mismatch1);
+	l_test_add("TLS connection domain mismatch 2", test_tls_test,
+			&tls_conn_test_domain_mismatch2);
+	l_test_add("TLS connection domain mismatch 3", test_tls_test,
+			&tls_conn_test_domain_mismatch3);
+	l_test_add("TLS connection domain mismatch 4", test_tls_test,
+			&tls_conn_test_domain_mismatch4);
+	l_test_add("TLS connection domain mismatch 5", test_tls_test,
+			&tls_conn_test_domain_mismatch5);
 
 	for (i = 0; tls_cipher_suite_pref[i]; i++) {
 		struct tls_cipher_suite *suite = tls_cipher_suite_pref[i];
