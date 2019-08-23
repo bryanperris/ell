@@ -335,3 +335,27 @@ LIB_EXPORT char **l_strv_append_vprintf(char **str_array,
 
 	return ret;
 }
+
+/**
+ * l_strv_copy:
+ * @str_array: a %NULL terminated array of strings or %NULL
+ *
+ * Returns: An independent copy of @str_array.
+ */
+LIB_EXPORT char **l_strv_copy(char **str_array)
+{
+	int i, len;
+	char **copy;
+
+	if (unlikely(!str_array))
+		return NULL;
+
+	for (len = 0; str_array[len]; len++);
+
+	copy = l_malloc(sizeof(char *) * (len + 1));
+
+	for (i = len; i >= 0; i--)
+		copy[i] = l_strdup(str_array[i]);
+
+	return copy;
+}
