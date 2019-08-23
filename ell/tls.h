@@ -117,6 +117,8 @@ void l_tls_set_version_range(struct l_tls *tls,
 				enum l_tls_version min_version,
 				enum l_tls_version max_version);
 
+void l_tls_set_domain_mask(struct l_tls *tls, char **mask);
+
 const char *l_tls_alert_to_str(enum l_tls_alert_desc desc);
 
 enum l_checksum_type;

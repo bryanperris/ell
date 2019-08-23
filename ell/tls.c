@@ -629,6 +629,112 @@ static const struct tls_hash_algorithm *tls_set_prf_hmac(struct l_tls *tls)
 	return NULL;
 }
 
+static bool tls_domain_match_mask(const char *name, size_t name_len,
+					const char *mask, size_t mask_len)
+{
+	bool at_start = true;
+
+	while (1) {
+		const char *name_seg_end = memchr(name, '.', name_len);
+		const char *mask_seg_end = memchr(mask, '.', mask_len);
+		size_t name_seg_len = name_seg_end ?
+			(size_t) (name_seg_end - name) : name_len;
+		size_t mask_seg_len = mask_seg_end ?
+			(size_t) (mask_seg_end - mask) : mask_len;
+
+		if (mask_seg_len == 1 && mask[0] == '*') {
+			/*
+			 * A * at the beginning of the mask matches any
+			 * number of labels.
+			 */
+			if (at_start && name_seg_end &&
+					tls_domain_match_mask(name_seg_end + 1,
+						name_len - name_seg_len - 1,
+						mask, mask_len))
+				return true;
+
+			goto ok_next;
+		}
+
+		if (name_seg_len != mask_seg_len ||
+				memcmp(name, mask, name_seg_len))
+			return false;
+
+ok_next:
+		/* If either string ends here both must end here */
+		if (!name_seg_end || !mask_seg_end)
+			return !name_seg_end && !mask_seg_end;
+
+		at_start = false;
+		name = name_seg_end + 1;
+		name_len -= name_seg_len + 1;
+		mask = mask_seg_end + 1;
+		mask_len -= mask_seg_len + 1;
+	}
+}
+
+static const struct asn1_oid dn_common_name_oid =
+	{ 3, { 0x55, 0x04, 0x03 } };
+
+static bool tls_cert_domains_match_mask(struct l_cert *cert, char **mask)
+{
+	const uint8_t *dn, *end;
+	size_t dn_size;
+	const char *cn = NULL;
+	size_t cn_len;
+
+	/*
+	 * Retrieve the Common Name from the Subject DN and check if it
+	 * matches.  TODO: possibly also look at SubjectAltName.
+	 */
+
+	dn = l_cert_get_dn(cert, &dn_size);
+	if (unlikely(!dn))
+		return false;
+
+	end = dn + dn_size;
+	while (dn < end) {
+		const uint8_t *set, *seq, *oid, *name;
+		uint8_t tag;
+		size_t len, oid_len, name_len;
+
+		set = asn1_der_find_elem(dn, end - dn, 0, &tag, &len);
+		if (unlikely(!set || tag != ASN1_ID_SET))
+			return false;
+
+		dn = set + len;
+
+		seq = asn1_der_find_elem(set, len, 0, &tag, &len);
+		if (unlikely(!seq || tag != ASN1_ID_SEQUENCE))
+			return false;
+
+		oid = asn1_der_find_elem(seq, len, 0, &tag, &oid_len);
+		if (unlikely(!oid || tag != ASN1_ID_OID))
+			return false;
+
+		name = asn1_der_find_elem(seq, len, 1, &tag, &name_len);
+		if (unlikely(!name || (tag != ASN1_ID_PRINTABLESTRING &&
+					tag != ASN1_ID_UTF8STRING &&
+					tag != ASN1_ID_IA5STRING)))
+			continue;
+
+		if (asn1_oid_eq(&dn_common_name_oid, oid_len, oid)) {
+			cn = (const char *) name;
+			cn_len = name_len;
+			break;
+		}
+	}
+
+	if (!cn)
+		return false;
+
+	for (; *mask; mask++)
+		if (tls_domain_match_mask(cn, cn_len, *mask, strlen(*mask)))
+			return true;
+
+	return false;
+}
+
 #define SWITCH_ENUM_TO_STR(val) \
 	case (val):		\
 		return L_STRINGIFY(val);
@@ -1793,6 +1899,18 @@ static void tls_handle_certificate(struct l_tls *tls,
 		goto done;
 	}
 
+	if (tls->subject_mask && !tls_cert_domains_match_mask(leaf,
+							tls->subject_mask)) {
+		char *mask = l_strjoinv(tls->subject_mask, '|');
+
+		TLS_DISCONNECT(TLS_ALERT_BAD_CERT, 0,
+				"Peer certificate's subject domain "
+				"doesn't match %s", mask);
+		l_free(mask);
+
+		goto done;
+	}
+
 	/* Save the end-entity certificate and free the chain */
 	der = l_cert_get_der_data(leaf, &der_len);
 	tls->peer_cert = l_cert_new_from_der(der, der_len);
@@ -2420,6 +2538,7 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 
 	l_tls_set_cacert(tls, NULL);
 	l_tls_set_auth_data(tls, NULL, NULL, NULL);
+	l_tls_set_domain_mask(tls, NULL);
 
 	tls_reset_handshake(tls);
 	tls_cleanup_handshake(tls);
@@ -2764,6 +2883,30 @@ LIB_EXPORT void l_tls_set_version_range(struct l_tls *tls,
 	tls->max_version =
 		(max_version && max_version < TLS_MAX_VERSION) ?
 		max_version : TLS_MAX_VERSION;
+}
+
+/**
+ * l_tls_set_domain_mask:
+ * @tls: TLS object being configured
+ * @mask: NULL-terminated array of domain masks
+ *
+ * Sets a mask for domain names contained in the peer certificate
+ * (eg. the subject Common Name) to be matched against.  If none of the
+ * domains match the any mask, authentication will fail.  At least one
+ * domain has to match at least one mask from the list.
+ *
+ * The masks are each split into segments at the dot characters and each
+ * segment must match the corresponding label of the domain name --
+ * a domain name is a sequence of labels joined by dots.  An asterisk
+ * segment in the mask matches any label.  An asterisk segment at the
+ * beginning of the mask matches one or more consecutive labels from
+ * the beginning of the domain string.
+ */
+LIB_EXPORT void l_tls_set_domain_mask(struct l_tls *tls, char **mask)
+{
+	l_strv_free(tls->subject_mask);
+
+	tls->subject_mask = l_strv_copy(mask);
 }
 
 LIB_EXPORT const char *l_tls_alert_to_str(enum l_tls_alert_desc desc)
