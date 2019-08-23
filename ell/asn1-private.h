@@ -21,6 +21,7 @@
 #define ASN1_ID(class, pc, tag)	(((class) << 6) | ((pc) << 5) | (tag))
 
 #define ASN1_CLASS_UNIVERSAL	0
+#define ASN1_CLASS_CONTEXT	2
 
 #define ASN1_ID_SEQUENCE	ASN1_ID(ASN1_CLASS_UNIVERSAL, 1, 0x10)
 #define ASN1_ID_SET		ASN1_ID(ASN1_CLASS_UNIVERSAL, 1, 0x11)
@@ -89,14 +90,24 @@ static inline void asn1_write_definite_length(uint8_t **buf, size_t len)
 		*(*buf)++ = len >> (n * 8);
 }
 
-/* Return index'th element in a DER SEQUENCE */
+#define ASN1_CONTEXT_IMPLICIT(tag) (0x1000 | (tag))
+#define ASN1_CONTEXT_EXPLICIT(tag) (0x2000 | (tag))
+
+/*
+ * Return the tag, length and value of the @index'th
+ * non-context-specific-tagged element in a DER SEQUENCE or one who's
+ * ASN1_CONTEXT_IMPLICIT(tag) matches @index or the inner element of
+ * the one who's ASN1_CONTEXT_EXPLICIT(tag) matches @index.
+ */
 static inline const uint8_t *asn1_der_find_elem(const uint8_t *buf,
 						size_t len_in, int index,
 						uint8_t *tag, size_t *len_out)
 {
-	int tlv_len;
+	int n = 0;
 
 	while (1) {
+		int tlv_len;
+
 		if (len_in < 2)
 			return NULL;
 
@@ -107,9 +118,36 @@ static inline const uint8_t *asn1_der_find_elem(const uint8_t *buf,
 		if (tlv_len < 0 || (size_t) tlv_len > len_in)
 			return NULL;
 
-		if (index-- == 0) {
-			*len_out = tlv_len;
-			return buf;
+		if (*tag >> 6 != ASN1_CLASS_CONTEXT) {
+			if (n++ == index) {
+				*len_out = tlv_len;
+				return buf;
+			}
+		} else if ((*tag & 0x1f) == (index & 0xfff)) {
+			/* Context-specific tag */
+			if (index & 0x1000) {		/* Implicit */
+				*len_out = tlv_len;
+				return buf;
+			} else if (index & 0x2000) {	/* Explicit */
+				const uint8_t *outer = buf;
+				int inner_len;
+
+				if (!(*tag & 0x20))	/* Primitive */
+					return NULL;
+
+				if (unlikely(tlv_len < 2))
+					return NULL;
+
+				*tag = *buf++;
+
+				inner_len = asn1_parse_definite_length(
+							(void *) &buf, &len_in);
+				if (outer + tlv_len != buf + inner_len)
+					return NULL;
+
+				*len_out = inner_len;
+				return buf;
+			}
 		}
 
 		buf += tlv_len;
@@ -122,20 +160,36 @@ static inline const uint8_t *asn1_der_find_elem_by_path(const uint8_t *buf,
 						size_t len_in, uint8_t tag,
 						size_t *len_out, ...)
 {
-	uint8_t elem_tag;
-	int pos;
+	int index;
 	va_list vl;
 
 	va_start(vl, len_out);
 
-	pos = va_arg(vl, int);
+	index = va_arg(vl, int);
 
-	while (pos != -1) {
-		buf = asn1_der_find_elem(buf, len_in, pos, &elem_tag, &len_in);
+	while (index != -1) {
+		uint8_t elem_tag;
+		uint8_t expect_tag;
+		int prev_index = index;
 
-		pos = va_arg(vl, int);
+		buf = asn1_der_find_elem(buf, len_in, index,
+						&elem_tag, &len_in);
+		if (!buf) {
+			va_end(vl);
+			return NULL;
+		}
 
-		if (!buf || elem_tag != (pos == -1 ? tag : ASN1_ID_SEQUENCE)) {
+		index = va_arg(vl, int);
+
+		if (prev_index & 0x1000)
+			expect_tag = ASN1_ID(ASN1_CLASS_CONTEXT,
+						index != -1 ? 1 :
+						((elem_tag >> 5) & 1),
+						prev_index & 0xfff);
+		else
+			expect_tag = (index == -1) ? tag : ASN1_ID_SEQUENCE;
+
+		if (elem_tag != expect_tag) {
 			va_end(vl);
 			return NULL;
 		}

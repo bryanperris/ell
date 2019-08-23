@@ -32,6 +32,7 @@
 
 #include "checksum.h"
 #include "cipher.h"
+#include "util.h"
 #include "asn1-private.h"
 #include "pkcs5.h"
 #include "pkcs5-private.h"
