@@ -524,6 +524,13 @@ static bool match_interface_instance(const void *a, const void *b)
 	return false;
 }
 
+static bool match_interface_instance_ptr(const void *a, const void *b)
+{
+	const struct interface_instance *instance = a;
+
+	return instance->interface == b;
+}
+
 static void interface_add_record_free(void *data)
 {
 	struct interface_add_record *rec = data;
@@ -1499,8 +1506,7 @@ bool _dbus_object_tree_add_interface(struct _dbus_object_tree *tree,
 	 * Check to make sure we do not have this interface already
 	 * registered for this object
 	 */
-	if (l_queue_find(object->instances, match_interface_instance,
-				(char *) interface))
+	if (l_queue_find(object->instances, match_interface_instance_ptr, dbi))
 		return false;
 
 	instance = l_new(struct interface_instance, 1);
@@ -1892,8 +1898,7 @@ static struct l_dbus_message *properties_set(struct l_dbus *dbus,
 	/* If we got here the object must exist */
 
 	instance = l_queue_find(object->instances,
-				match_interface_instance,
-				(char *) interface_name);
+				match_interface_instance_ptr, interface);
 	if (!instance)
 		return l_dbus_message_new_error(message,
 						"org.freedesktop.DBus.Error."
