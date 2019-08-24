@@ -1556,6 +1556,25 @@ bool _dbus_object_tree_add_interface(struct _dbus_object_tree *tree,
 	return true;
 }
 
+void *_dbus_object_tree_get_interface_data(struct _dbus_object_tree *tree,
+						const char *path,
+						const char *interface)
+{
+	struct object_node *object;
+	struct interface_instance *instance;
+
+	object = l_hashmap_lookup(tree->objects, path);
+	if (!object)
+		return NULL;
+
+	instance = l_queue_find(object->instances, match_interface_instance,
+				(char *) interface);
+	if (!instance)
+		return NULL;
+
+	return instance->user_data;
+}
+
 static bool match_object_manager_path(const void *a, const void *b)
 {
 	const struct object_manager *manager = a;

@@ -210,6 +210,7 @@ global:
 	l_dbus_unregister_object;
 	l_dbus_object_add_interface;
 	l_dbus_object_remove_interface;
+	l_dbus_object_get_data;
 	l_dbus_object_manager_enable;
 	l_dbus_add_disconnect_watch;
 	l_dbus_add_service_watch;

@@ -1585,6 +1585,19 @@ LIB_EXPORT bool l_dbus_object_remove_interface(struct l_dbus *dbus,
 							interface);
 }
 
+LIB_EXPORT void *l_dbus_object_get_data(struct l_dbus *dbus, const char *object,
+					const char *interface)
+{
+	if (unlikely(!dbus))
+		return false;
+
+	if (unlikely(!dbus->tree))
+		return false;
+
+	return _dbus_object_tree_get_interface_data(dbus->tree, object,
+							interface);
+}
+
 LIB_EXPORT bool l_dbus_object_manager_enable(struct l_dbus *dbus)
 {
 	if (unlikely(!dbus))

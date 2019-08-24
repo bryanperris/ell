@@ -219,6 +219,9 @@ bool _dbus_object_tree_add_interface(struct _dbus_object_tree *tree,
 bool _dbus_object_tree_remove_interface(struct _dbus_object_tree *tree,
 					const char *path,
 					const char *interface);
+void *_dbus_object_tree_get_interface_data(struct _dbus_object_tree *tree,
+						const char *path,
+						const char *interface);
 
 void _dbus_object_tree_introspect(struct _dbus_object_tree *tree,
 					const char *path, struct l_string *buf);

@@ -239,6 +239,8 @@ bool l_dbus_object_add_interface(struct l_dbus *dbus, const char *object,
 					const char *interface, void *user_data);
 bool l_dbus_object_remove_interface(struct l_dbus *dbus, const char *object,
 					const char *interface);
+void *l_dbus_object_get_data(struct l_dbus *dbus, const char *object,
+				const char *interface);
 
 bool l_dbus_object_manager_enable(struct l_dbus *dbus);
 
