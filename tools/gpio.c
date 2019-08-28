@@ -63,7 +63,7 @@ static bool find_line(const char *line_label, struct l_gpio_chip **chip,
 	l_strfreev(chip_names);
 
 	if (!c)
-		false;
+		return false;
 
 	if (!l_gpio_chip_find_line_offset(c, line_label, &o)) {
 		l_gpio_chip_free(c);
