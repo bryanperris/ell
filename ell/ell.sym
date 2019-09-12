@@ -463,6 +463,7 @@ global:
 	l_uintset_intersect;
 	/* uuid */
 	l_uuid_v3;
+	l_uuid_v4;
 	l_uuid_v5;
 	l_uuid_is_valid;
 	l_uuid_get_version;

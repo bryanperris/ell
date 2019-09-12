@@ -137,7 +137,7 @@ LIB_EXPORT bool l_uuid_v5(const uint8_t nsid[16], const void *name,
 }
 
 /* RFC 4122, Section 4.4 */
-bool l_uuid_v4(uint8_t out_uuid[16])
+LIB_EXPORT bool l_uuid_v4(uint8_t out_uuid[16])
 {
 	if (unlikely(!out_uuid))
 		return false;
