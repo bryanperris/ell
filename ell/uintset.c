@@ -516,11 +516,14 @@ LIB_EXPORT struct l_uintset *l_uintset_intersect(const struct l_uintset *set_a,
 LIB_EXPORT bool l_uintset_isempty(const struct l_uintset *set)
 {
 	uint16_t i;
+	uint32_t offset_max;
 
 	if (unlikely(!set))
 		return true;
 
-	for (i = 0; i < set->size; i++) {
+	offset_max = (set->size + BITS_PER_LONG - 1) / BITS_PER_LONG;
+
+	for (i = 0; i < offset_max; i++) {
 		if (set->bits[i])
 			return false;
 	}
