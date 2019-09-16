@@ -461,6 +461,7 @@ global:
 	l_uintset_find_min;
 	l_uintset_foreach;
 	l_uintset_intersect;
+	l_uintset_isempty;
 	/* uuid */
 	l_uuid_v3;
 	l_uuid_v4;

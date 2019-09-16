@@ -506,3 +506,24 @@ LIB_EXPORT struct l_uintset *l_uintset_intersect(const struct l_uintset *set_a,
 
 	return intersection;
 }
+
+/**
+ * l_uintset_isempty
+ * @set: The set of numbers
+ *
+ * Returns true if the uintset has no entries, or if set is NULL.
+ */
+LIB_EXPORT bool l_uintset_isempty(const struct l_uintset *set)
+{
+	uint16_t i;
+
+	if (unlikely(!set))
+		return true;
+
+	for (i = 0; i < set->size; i++) {
+		if (set->bits[i])
+			return false;
+	}
+
+	return true;
+}

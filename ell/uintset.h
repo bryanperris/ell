@@ -57,6 +57,7 @@ void l_uintset_foreach(struct l_uintset *set,
 
 struct l_uintset *l_uintset_intersect(const struct l_uintset *set_a,
 						const struct l_uintset *set_b);
+bool l_uintset_isempty(const struct l_uintset *set);
 
 #ifdef __cplusplus
 }
