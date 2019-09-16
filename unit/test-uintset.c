@@ -347,6 +347,22 @@ static void test_uintset_intersect_test(const void *user_data)
 	l_uintset_free(set_r);
 }
 
+static void test_uintset_isempty(const void *user_data)
+{
+	struct l_uintset *a = NULL;
+	struct l_uintset *b = l_uintset_new(32);
+	struct l_uintset *c = l_uintset_new(32);
+
+	assert(l_uintset_put(c, 10));
+
+	assert(l_uintset_isempty(a));
+	assert(l_uintset_isempty(b));
+	assert(!l_uintset_isempty(c));
+
+	l_uintset_free(c);
+	l_uintset_free(b);
+}
+
 int main(int argc, char *argv[])
 {
 	l_test_init(&argc, &argv);
@@ -364,6 +380,7 @@ int main(int argc, char *argv[])
 							&intersect_data_1);
 	l_test_add("l_uintset intersect test 2", test_uintset_intersect_test,
 							&intersect_data_2);
+	l_test_add("l_uintset isempty", test_uintset_isempty, NULL);
 
 	return l_test_run();
 }
