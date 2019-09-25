@@ -880,13 +880,13 @@ static void tls_handle_dhe_server_key_xchg(struct l_tls *tls,
 	 * We have no way to confirm that it's actually prime or that it's a
 	 * "safe prime" or that it forms a group without small sub-groups.
 	 * There's also no way to whitelist all valid values.  But we do a
-	 * basic sanity check and require it to be 1024-bit or longer
-	 * (see weakdh.org), might need to move to 2048 bits actually.
+	 * basic sanity check and require it to be 1536-bit or longer, the
+	 * minimum length required by the Linux kernel for keyctl_dh_compute().
 	 * The generator must also be at least within the min & max interval
 	 * for the private/public values.
 	 */
 
-	if (params->prime_len > TLS_DHE_MAX_SIZE || params->prime_len < 128 ||
+	if (params->prime_len > TLS_DHE_MAX_SIZE || params->prime_len < 192 ||
 			!(prime_buf[params->prime_len - 1] & 1)) {
 		TLS_DISCONNECT(TLS_ALERT_HANDSHAKE_FAIL, 0,
 				"Server DH prime modulus invalid");
