@@ -247,10 +247,8 @@ LIB_EXPORT uint8_t *l_pem_load_file(const char *filename, int index,
 	return result;
 }
 
-LIB_EXPORT struct l_certchain *l_pem_load_certificate_chain(
-							const char *filename)
+static struct l_certchain *pem_list_to_chain(struct l_queue *list)
 {
-	struct l_queue *list = l_pem_load_certificate_list(filename);
 	struct l_certchain *chain;
 
 	if (!list)
@@ -265,17 +263,36 @@ LIB_EXPORT struct l_certchain *l_pem_load_certificate_chain(
 	return chain;
 }
 
-LIB_EXPORT struct l_queue *l_pem_load_certificate_list(const char *filename)
+LIB_EXPORT struct l_certchain *l_pem_load_certificate_chain_from_data(
+						const void *buf, size_t len)
 {
-	struct pem_file_info file;
+	struct l_queue *list = l_pem_load_certificate_list_from_data(buf, len);
+
+	if (!list)
+		return NULL;
+
+	return pem_list_to_chain(list);
+}
+
+LIB_EXPORT struct l_certchain *l_pem_load_certificate_chain(
+							const char *filename)
+{
+	struct l_queue *list = l_pem_load_certificate_list(filename);
+
+	if (!list)
+		return NULL;
+
+	return pem_list_to_chain(list);
+}
+
+LIB_EXPORT struct l_queue *l_pem_load_certificate_list_from_data(
+						const void *buf, size_t len)
+{
 	const uint8_t *ptr, *end;
 	struct l_queue *list = NULL;
 
-	if (pem_file_open(&file, filename) < 0)
-		return NULL;
-
-	ptr = file.data;
-	end = file.data + file.st.st_size;
+	ptr = buf;
+	end = buf + len;
 
 	while (ptr && ptr < end) {
 		uint8_t *der;
@@ -309,47 +326,35 @@ LIB_EXPORT struct l_queue *l_pem_load_certificate_list(const char *filename)
 		l_queue_push_tail(list, cert);
 	}
 
-	pem_file_close(&file);
 	return list;
 
 error:
 	l_queue_destroy(list, (l_queue_destroy_func_t) l_cert_free);
-	pem_file_close(&file);
 	return NULL;
 }
 
-/**
- * l_pem_load_private_key
- * @filename: path string to the PEM file to load
- * @passphrase: private key encryption passphrase or NULL for unencrypted
- * @encrypted: receives indication whether the file was encrypted if non-NULL
- *
- * Load the PEM encoded RSA Private Key file at @filename.  If it is an
- * encrypted private key and @passphrase was non-NULL, the file is
- * decrypted.  If it's unencrypted @passphrase is ignored.  @encrypted
- * stores information of whether the file was encrypted, both in a
- * success case and on error when NULL is returned.  This can be used to
- * check if a passphrase is required without prior information.
- *
- * Returns: An l_key object to be freed with an l_key_free* function,
- * or NULL.
- **/
-LIB_EXPORT struct l_key *l_pem_load_private_key(const char *filename,
+LIB_EXPORT struct l_queue *l_pem_load_certificate_list(const char *filename)
+{
+	struct pem_file_info file;
+	struct l_queue *list = NULL;
+
+	if (pem_file_open(&file, filename) < 0)
+		return NULL;
+
+	list = l_pem_load_certificate_list_from_data(file.data,
+							file.st.st_size);
+	pem_file_close(&file);
+
+	return list;
+}
+
+static struct l_key *pem_load_private_key(uint8_t *content,
+						size_t len,
+						char *label,
 						const char *passphrase,
 						bool *encrypted)
 {
-	uint8_t *content;
-	char *label;
-	size_t len;
 	struct l_key *pkey = NULL;
-
-	if (encrypted)
-		*encrypted = false;
-
-	content = l_pem_load_file(filename, 0, &label, &len);
-
-	if (!content)
-		return NULL;
 
 	/*
 	 * RFC7469- and PKCS#8-compatible label (default in OpenSSL 1.0.1+)
@@ -451,4 +456,59 @@ err:
 
 	l_free(label);
 	return pkey;
+}
+
+LIB_EXPORT struct l_key *l_pem_load_private_key_from_data(const void *buf,
+							size_t buf_len,
+							const char *passphrase,
+							bool *encrypted)
+{
+	uint8_t *content;
+	char *label;
+	size_t len;
+
+	if (encrypted)
+		*encrypted = false;
+
+	content = pem_load_buffer(buf, buf_len, 0, &label, &len, NULL);
+
+	if (!content)
+		return NULL;
+
+	return pem_load_private_key(content, len, label, passphrase, encrypted);
+}
+
+/**
+ * l_pem_load_private_key
+ * @filename: path string to the PEM file to load
+ * @passphrase: private key encryption passphrase or NULL for unencrypted
+ * @encrypted: receives indication whether the file was encrypted if non-NULL
+ *
+ * Load the PEM encoded RSA Private Key file at @filename.  If it is an
+ * encrypted private key and @passphrase was non-NULL, the file is
+ * decrypted.  If it's unencrypted @passphrase is ignored.  @encrypted
+ * stores information of whether the file was encrypted, both in a
+ * success case and on error when NULL is returned.  This can be used to
+ * check if a passphrase is required without prior information.
+ *
+ * Returns: An l_key object to be freed with an l_key_free* function,
+ * or NULL.
+ **/
+LIB_EXPORT struct l_key *l_pem_load_private_key(const char *filename,
+						const char *passphrase,
+						bool *encrypted)
+{
+	uint8_t *content;
+	char *label;
+	size_t len;
+
+	if (encrypted)
+		*encrypted = false;
+
+	content = l_pem_load_file(filename, 0, &label, &len);
+
+	if (!content)
+		return NULL;
+
+	return pem_load_private_key(content, len, label, passphrase, encrypted);
 }

@@ -362,9 +362,12 @@ global:
 	/* pem */
 	l_pem_load_buffer;
 	l_pem_load_certificate_chain;
+	l_pem_load_certificate_chain_from_data;
 	l_pem_load_certificate_list;
+	l_pem_load_certificate_list_from_data;
 	l_pem_load_file;
 	l_pem_load_private_key;
+	l_pem_load_private_key_from_data;
 	/* pkcs5 */
 	l_pkcs5_pbkdf1;
 	l_pkcs5_pbkdf2;
