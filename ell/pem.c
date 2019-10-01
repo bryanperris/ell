@@ -124,7 +124,7 @@ static bool is_end_boundary(const uint8_t *buf, size_t buf_len,
 	return true;
 }
 
-static uint8_t *pem_load_buffer(const uint8_t *buf, size_t buf_len, int index,
+static uint8_t *pem_load_buffer(const uint8_t *buf, size_t buf_len,
 				char **type_label, size_t *len,
 				const uint8_t **endp)
 {
@@ -149,24 +149,19 @@ static uint8_t *pem_load_buffer(const uint8_t *buf, size_t buf_len, int index,
 			if (label)
 				base64_data = eol;
 		} else if (is_end_boundary(buf, eol - buf, label, label_len)) {
-			if (index == 0) {
-				data = l_base64_decode(
-						(const char *) base64_data,
-						buf - base64_data, len);
-				if (!data)
-					return NULL;
+			data = l_base64_decode(
+					(const char *) base64_data,
+					buf - base64_data, len);
+			if (!data)
+				return NULL;
 
-				*type_label = l_strndup((const char *) label,
+			*type_label = l_strndup((const char *) label,
 							label_len);
 
-				if (endp)
-					*endp = eol + 1;
+			if (endp)
+				*endp = eol + 1;
 
-				return data;
-			}
-
-			base64_data = NULL;
-			index--;
+			return data;
 		}
 
 		if (eol == buf + buf_len)
@@ -189,10 +184,10 @@ static uint8_t *pem_load_buffer(const uint8_t *buf, size_t buf_len, int index,
 }
 
 LIB_EXPORT uint8_t *l_pem_load_buffer(const uint8_t *buf, size_t buf_len,
-					int index, char **type_label,
+					char **type_label,
 					size_t *out_len)
 {
-	return pem_load_buffer(buf, buf_len, index, type_label, out_len, NULL);
+	return pem_load_buffer(buf, buf_len, type_label, out_len, NULL);
 }
 
 struct pem_file_info {
@@ -232,7 +227,7 @@ static void pem_file_close(struct pem_file_info *info)
 	close(info->fd);
 }
 
-LIB_EXPORT uint8_t *l_pem_load_file(const char *filename, int index,
+LIB_EXPORT uint8_t *l_pem_load_file(const char *filename,
 					char **type_label, size_t *len)
 {
 	struct pem_file_info file;
@@ -241,7 +236,7 @@ LIB_EXPORT uint8_t *l_pem_load_file(const char *filename, int index,
 	if (pem_file_open(&file, filename) < 0)
 		return NULL;
 
-	result = pem_load_buffer(file.data, file.st.st_size, index,
+	result = pem_load_buffer(file.data, file.st.st_size,
 					type_label, len, NULL);
 	pem_file_close(&file);
 	return result;
@@ -300,7 +295,7 @@ LIB_EXPORT struct l_queue *l_pem_load_certificate_list_from_data(
 		char *label;
 		struct l_cert *cert;
 
-		der = pem_load_buffer(ptr, end - ptr, 0, &label, &der_len, &ptr);
+		der = pem_load_buffer(ptr, end - ptr, &label, &der_len, &ptr);
 
 		if (!der || strcmp(label, "CERTIFICATE")) {
 			if (der)
@@ -470,7 +465,7 @@ LIB_EXPORT struct l_key *l_pem_load_private_key_from_data(const void *buf,
 	if (encrypted)
 		*encrypted = false;
 
-	content = pem_load_buffer(buf, buf_len, 0, &label, &len, NULL);
+	content = pem_load_buffer(buf, buf_len, &label, &len, NULL);
 
 	if (!content)
 		return NULL;
@@ -505,7 +500,7 @@ LIB_EXPORT struct l_key *l_pem_load_private_key(const char *filename,
 	if (encrypted)
 		*encrypted = false;
 
-	content = l_pem_load_file(filename, 0, &label, &len);
+	content = l_pem_load_file(filename, &label, &len);
 
 	if (!content)
 		return NULL;

@@ -33,9 +33,8 @@ struct l_cert;
 struct l_certchain;
 
 uint8_t *l_pem_load_buffer(const uint8_t *buf, size_t buf_len,
-				int index, char **type_label, size_t *out_len);
-uint8_t *l_pem_load_file(const char *filename, int index,
-				char **type_label, size_t *len);
+				char **type_label, size_t *out_len);
+uint8_t *l_pem_load_file(const char *filename, char **type_label, size_t *len);
 
 struct l_certchain *l_pem_load_certificate_chain(const char *filename);
 struct l_certchain *l_pem_load_certificate_chain_from_data(const void *buf,
