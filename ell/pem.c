@@ -49,11 +49,12 @@
 #define PEM_START_BOUNDARY	"-----BEGIN "
 #define PEM_END_BOUNDARY	"-----END "
 
-static const uint8_t *is_start_boundary(const uint8_t *buf, size_t buf_len,
+static const char *is_start_boundary(const void *buf, size_t buf_len,
 					size_t *label_len)
 {
-	const uint8_t *start, *end, *ptr;
+	const char *start, *end, *ptr;
 	int prev_special, special;
+	const char *buf_ptr = buf;
 
 	if (buf_len < strlen(PEM_START_BOUNDARY))
 		return NULL;
@@ -74,7 +75,7 @@ static const uint8_t *is_start_boundary(const uint8_t *buf, size_t buf_len,
 	end = start;
 	prev_special = 1;
 
-	while (end < buf + buf_len && l_ascii_isprint(*end)) {
+	while (end < buf_ptr + buf_len && l_ascii_isprint(*end)) {
 		special = *end == ' ' || *end == '-';
 
 		if (prev_special && special)
@@ -89,11 +90,11 @@ static const uint8_t *is_start_boundary(const uint8_t *buf, size_t buf_len,
 		end--;
 
 	/* Check we have a "-----" (RFC7468 section 2) */
-	if (end + 5 > buf + buf_len || memcmp(end, "-----", 5))
+	if (end + 5 > buf_ptr + buf_len || memcmp(end, "-----", 5))
 		return NULL;
 
 	/* Check all remaining characters are horizontal whitespace (WSP) */
-	for (ptr = end + 5; ptr < buf + buf_len; ptr++)
+	for (ptr = end + 5; ptr < buf_ptr + buf_len; ptr++)
 		if (*ptr != ' ' && *ptr != '\t')
 			return NULL;
 
@@ -102,33 +103,36 @@ static const uint8_t *is_start_boundary(const uint8_t *buf, size_t buf_len,
 	return start;
 }
 
-static bool is_end_boundary(const uint8_t *buf, size_t buf_len,
-				const uint8_t *label, size_t label_len)
+static bool is_end_boundary(const void *buf, size_t buf_len,
+				const char *label, size_t label_len)
 {
+	const char *buf_ptr = buf;
 	size_t len = strlen(PEM_END_BOUNDARY) + label_len + 5;
 
 	if (buf_len < len)
 		return false;
 
-	if (memcmp(buf, PEM_END_BOUNDARY, strlen(PEM_END_BOUNDARY)) ||
-			memcmp(buf + strlen(PEM_END_BOUNDARY),
+	if (memcmp(buf_ptr, PEM_END_BOUNDARY, strlen(PEM_END_BOUNDARY)) ||
+			memcmp(buf_ptr + strlen(PEM_END_BOUNDARY),
 				label, label_len) ||
-			memcmp(buf + (len - 5), "-----", 5))
+			memcmp(buf_ptr + (len - 5), "-----", 5))
 		return false;
 
 	/* Check all remaining characters are horizontal whitespace (WSP) */
 	for (; len < buf_len; len++)
-		if (buf[len] != ' ' && buf[len] != '\t')
+		if (buf_ptr[len] != ' ' && buf_ptr[len] != '\t')
 			return false;
 
 	return true;
 }
 
-static uint8_t *pem_load_buffer(const uint8_t *buf, size_t buf_len,
+static uint8_t *pem_load_buffer(const void *buf, size_t buf_len,
 				char **type_label, size_t *len,
 				const uint8_t **endp)
 {
-	const uint8_t *base64_data = NULL, *label = NULL, *eol;
+	const char *buf_ptr = buf;
+	const char *base64_data = NULL, *eol;
+	const char *label = NULL;
 	uint8_t *data;
 	size_t label_len = 0;
 
@@ -139,19 +143,21 @@ static uint8_t *pem_load_buffer(const uint8_t *buf, size_t buf_len,
 	 * are not confused for actual PEM "textual encoding".
 	 */
 	while (buf_len) {
-		for (eol = buf; eol < buf + buf_len; eol++)
+		for (eol = buf_ptr; eol < buf_ptr + buf_len; eol++)
 			if (*eol == '\r' || *eol == '\n')
 				break;
 
 		if (!base64_data) {
-			label = is_start_boundary(buf, eol - buf, &label_len);
+			label = is_start_boundary(buf, eol - buf_ptr,
+							&label_len);
 
 			if (label)
 				base64_data = eol;
-		} else if (is_end_boundary(buf, eol - buf, label, label_len)) {
+		} else if (is_end_boundary(buf_ptr, eol - buf_ptr, label,
+							label_len)) {
 			data = l_base64_decode(
 					(const char *) base64_data,
-					buf - base64_data, len);
+					buf_ptr - base64_data, len);
 			if (!data)
 				return NULL;
 
@@ -159,19 +165,19 @@ static uint8_t *pem_load_buffer(const uint8_t *buf, size_t buf_len,
 							label_len);
 
 			if (endp)
-				*endp = eol + 1;
+				*endp = (uint8_t *)eol + 1;
 
 			return data;
 		}
 
-		if (eol == buf + buf_len)
+		if (eol == buf_ptr + buf_len)
 			break;
 
-		buf_len -= eol + 1 - buf;
-		buf = eol + 1;
+		buf_len -= eol + 1 - buf_ptr;
+		buf_ptr = eol + 1;
 
-		if (buf_len && *eol == '\r' && *buf == '\n') {
-			buf++;
+		if (buf_len && *eol == '\r' && *buf_ptr == '\n') {
+			buf_ptr++;
 			buf_len--;
 		}
 	}
@@ -183,9 +189,8 @@ static uint8_t *pem_load_buffer(const uint8_t *buf, size_t buf_len,
 	return NULL;
 }
 
-LIB_EXPORT uint8_t *l_pem_load_buffer(const uint8_t *buf, size_t buf_len,
-					char **type_label,
-					size_t *out_len)
+LIB_EXPORT uint8_t *l_pem_load_buffer(const void *buf, size_t buf_len,
+					char **type_label, size_t *out_len)
 {
 	return pem_load_buffer(buf, buf_len, type_label, out_len, NULL);
 }
