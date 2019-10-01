@@ -230,7 +230,7 @@ static void test_pem(const void *data)
 	size_t decoded_size;
 
 	decoded = l_pem_load_buffer((const uint8_t *) test->input,
-					strlen(test->input), 0,
+					strlen(test->input),
 					&label, &decoded_size);
 
 	if (!test->valid) {

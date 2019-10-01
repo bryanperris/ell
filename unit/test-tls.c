@@ -214,7 +214,7 @@ static struct l_cert *load_cert_file(const char *filename)
 	char *label;
 	struct l_cert *cert;
 
-	der = l_pem_load_file(filename, 0, &label, &len);
+	der = l_pem_load_file(filename, &label, &len);
 	if (!der)
 		return NULL;
 
