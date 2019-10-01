@@ -33,6 +33,9 @@ enum l_tls_version {
 };
 
 struct l_tls;
+struct l_key;
+struct l_certchain;
+struct l_queue;
 
 enum l_tls_alert_desc {
 	TLS_ALERT_CLOSE_NOTIFY		= 0,
@@ -96,22 +99,22 @@ void l_tls_write(struct l_tls *tls, const uint8_t *data, size_t len);
 void l_tls_handle_rx(struct l_tls *tls, const uint8_t *data, size_t len);
 
 /* If peer is to be authenticated, supply the CA certificates */
-bool l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path);
+bool l_tls_set_cacert(struct l_tls *tls, struct l_queue *ca_certs);
 
 /*
- * If we are to be authenticated, supply our certificate, private key and
- * private key passphrase if needed (or NULL).  On the client this is optional,
- * but if supplied, negotiation will fail if the certificate type doesn't
- * match or one of the files can't be loaded.
- * TODO: accept a callback to be used for passphrase query.
+ * If we are to be authenticated, supply our certificate and private key. On the
+ * client this is optional.
  * TODO: allow NULL private key if certificate file contains the key.
- * TODO: it may also be useful for the caller to be able to supply
- * one certificate of each type so they can be used depending on which
- * is compatible with the negotiated parameters.
+ * TODO: it may also be useful for the caller to be able to supply one
+ * certificate of each type so they can be used depending on which is compatible
+ * with the negotiated parameters.
+ *
+ * Note: Providing certchain and priv_key will move memory ownership into the
+ *       tls object. These objects should not be freed by the caller.
  */
-bool l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
-				const char *priv_key_path,
-				const char *priv_key_passphrase);
+bool l_tls_set_auth_data(struct l_tls *tls,
+				struct l_certchain *certchain,
+				struct l_key *priv_key);
 
 void l_tls_set_version_range(struct l_tls *tls,
 				enum l_tls_version min_version,

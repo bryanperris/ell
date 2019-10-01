@@ -2591,7 +2591,7 @@ LIB_EXPORT void l_tls_free(struct l_tls *tls)
 	}
 
 	l_tls_set_cacert(tls, NULL);
-	l_tls_set_auth_data(tls, NULL, NULL, NULL);
+	l_tls_set_auth_data(tls, NULL, NULL);
 	l_tls_set_domain_mask(tls, NULL);
 
 	tls_reset_handshake(tls);
@@ -2806,40 +2806,31 @@ LIB_EXPORT void l_tls_close(struct l_tls *tls)
 	TLS_DISCONNECT(TLS_ALERT_CLOSE_NOTIFY, 0, "Closing session");
 }
 
-LIB_EXPORT bool l_tls_set_cacert(struct l_tls *tls, const char *ca_cert_path)
+LIB_EXPORT bool l_tls_set_cacert(struct l_tls *tls, struct l_queue *ca_certs)
 {
-	TLS_DEBUG("ca-cert-path=%s", ca_cert_path);
-
 	if (tls->ca_certs) {
 		l_queue_destroy(tls->ca_certs,
 				(l_queue_destroy_func_t) l_cert_free);
 		tls->ca_certs = NULL;
 	}
 
-	if (ca_cert_path) {
+	if (ca_certs) {
 		if (!l_key_is_supported(L_KEY_FEATURE_RESTRICT)) {
 			TLS_DEBUG("keyctl restrict support missing, "
 					"check kernel configuration");
 			return false;
 		}
 
-		tls->ca_certs = l_pem_load_certificate_list(ca_cert_path);
-		if (!tls->ca_certs) {
-			TLS_DEBUG("Error loading %s", ca_cert_path);
-			return false;
-		}
+		tls->ca_certs = ca_certs;
 	}
 
 	return true;
 }
 
-LIB_EXPORT bool l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
-					const char *priv_key_path,
-					const char *priv_key_passphrase)
+LIB_EXPORT bool l_tls_set_auth_data(struct l_tls *tls,
+					struct l_certchain *certchain,
+					struct l_key *priv_key)
 {
-	TLS_DEBUG("cert-path=%s priv-key-path=%s priv-key-passphrase=%p",
-			cert_path, priv_key_path, priv_key_passphrase);
-
 	if (tls->cert) {
 		l_certchain_free(tls->cert);
 		tls->cert = NULL;
@@ -2851,24 +2842,13 @@ LIB_EXPORT bool l_tls_set_auth_data(struct l_tls *tls, const char *cert_path,
 		tls->priv_key_size = 0;
 	}
 
-	if (cert_path) {
-		tls->cert = l_pem_load_certificate_chain(cert_path);
-		if (!tls->cert) {
-			TLS_DEBUG("Error loading %s", cert_path);
-			return false;
-		}
-	}
+	if (certchain)
+		tls->cert = certchain;
 
-	if (priv_key_path) {
+	if (priv_key) {
 		bool is_public = true;
 
-		tls->priv_key = l_pem_load_private_key(priv_key_path,
-							priv_key_passphrase,
-							NULL);
-		if (!tls->priv_key) {
-			TLS_DEBUG("Error loading %s", priv_key_path);
-			return false;
-		}
+		tls->priv_key = priv_key;
 
 		if (!l_key_get_info(tls->priv_key, L_KEY_RSA_PKCS1_V1_5,
 					L_CHECKSUM_NONE, &tls->priv_key_size,
