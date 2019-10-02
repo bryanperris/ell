@@ -502,7 +502,6 @@ static void tls_debug_cb(const char *str, void *user_data)
 static void test_tls_with_ver(const struct tls_conn_test *test,
 				uint16_t server_ver, uint16_t client_ver)
 {
-	bool auth_ok;
 	struct tls_test_state s[2] = {
 		{
 			.ready = false,
@@ -556,16 +555,47 @@ static void test_tls_with_ver(const struct tls_conn_test *test,
 	if (getenv("TLS_DEBUG"))
 		l_tls_set_debug(s[1].tls, tls_debug_cb, "client", NULL);
 
-	auth_ok = l_tls_set_auth_data(s[0].tls, test->server_cert_path,
-					test->server_key_path,
-					test->server_key_passphrase);
-	assert(auth_ok);
-	auth_ok = l_tls_set_auth_data(s[1].tls, test->client_cert_path,
-					test->client_key_path,
-					test->client_key_passphrase);
-	assert(auth_ok);
-	assert(l_tls_set_cacert(s[0].tls, test->server_ca_cert_path));
-	assert(l_tls_set_cacert(s[1].tls, test->client_ca_cert_path));
+	if (test->server_cert_path || test->server_key_path) {
+		struct l_certchain *server_cert =
+			l_pem_load_certificate_chain(test->server_cert_path);
+		struct l_key *server_key =
+			l_pem_load_private_key(test->server_key_path,
+						test->server_key_passphrase,
+						NULL);
+		assert(server_cert);
+		assert(server_key);
+
+		assert(l_tls_set_auth_data(s[0].tls, server_cert, server_key));
+	}
+
+	if (test->client_key_path || test->client_cert_path) {
+		struct l_certchain *client_cert =
+			l_pem_load_certificate_chain(test->client_cert_path);
+		struct l_key *client_key =
+			l_pem_load_private_key(test->client_key_path,
+						test->client_key_passphrase,
+						NULL);
+		assert(client_cert);
+		assert(client_key);
+
+		assert(l_tls_set_auth_data(s[1].tls, client_cert, client_key));
+	}
+
+	if (test->server_ca_cert_path) {
+		struct l_queue *server_ca =
+			l_pem_load_certificate_list(test->server_ca_cert_path);
+
+		assert(server_ca);
+		assert(l_tls_set_cacert(s[0].tls, server_ca));
+	}
+
+	if (test->client_ca_cert_path) {
+		struct l_queue *client_ca =
+			l_pem_load_certificate_list(test->client_ca_cert_path);
+
+		assert(client_ca);
+		assert(l_tls_set_cacert(s[1].tls, client_ca));
+	}
 
 	if (test->client_domain_mask)
 		l_tls_set_domain_mask(s[1].tls, test->client_domain_mask);
