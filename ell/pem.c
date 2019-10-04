@@ -198,13 +198,23 @@ static uint8_t *pem_load_buffer(const void *buf, size_t buf_len,
 {
 	size_t base64_len;
 	const char *base64;
+	char *label;
+	uint8_t *ret;
 
-	base64 = pem_next(buf, buf_len, type_label, &base64_len,
+	base64 = pem_next(buf, buf_len, &label, &base64_len,
 				NULL, false);
 	if (!base64)
 		return NULL;
 
-	return l_base64_decode(base64, base64_len, len);
+	ret = l_base64_decode(base64, base64_len, len);
+	if (ret) {
+		*type_label = label;
+		return ret;
+	}
+
+	l_free(label);
+
+	return NULL;
 }
 
 LIB_EXPORT uint8_t *l_pem_load_buffer(const void *buf, size_t buf_len,
