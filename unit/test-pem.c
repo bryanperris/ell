@@ -226,7 +226,7 @@ static void test_pem(const void *data)
 {
 	const struct pem_test *test = data;
 	uint8_t *decoded;
-	char *label;
+	char *label = NULL;
 	size_t decoded_size;
 
 	decoded = l_pem_load_buffer((const uint8_t *) test->input,
@@ -234,6 +234,7 @@ static void test_pem(const void *data)
 					&label, &decoded_size);
 
 	if (!test->valid) {
+		l_free(label);
 		assert(!decoded);
 		return;
 	}
