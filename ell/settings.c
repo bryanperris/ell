@@ -48,10 +48,18 @@
 #include "settings.h"
 #include "private.h"
 #include "missing.h"
+#include "pem-private.h"
 
 struct setting_data {
 	char *key;
 	char *value;
+};
+
+struct embedded_group_data {
+	char *name;
+	char type[32];
+	size_t len;
+	char data[0];
 };
 
 struct group_data {
@@ -64,6 +72,7 @@ struct l_settings {
 	l_settings_destroy_cb_t debug_destroy;
 	void *debug_data;
 	struct l_queue *groups;
+	struct l_queue *embedded_groups;
 };
 
 static void setting_destroy(void *data)
@@ -86,12 +95,21 @@ static void group_destroy(void *data)
 	l_free(group);
 }
 
+static void embedded_group_destroy(void *data)
+{
+	struct embedded_group_data *group = data;
+
+	l_free(group->name);
+	l_free(group);
+}
+
 LIB_EXPORT struct l_settings *l_settings_new(void)
 {
 	struct l_settings *settings;
 
 	settings = l_new(struct l_settings, 1);
 	settings->groups = l_queue_new();
+	settings->embedded_groups = l_queue_new();
 
 	return settings;
 }
@@ -105,6 +123,7 @@ LIB_EXPORT void l_settings_free(struct l_settings *settings)
 		settings->debug_destroy(settings->debug_data);
 
 	l_queue_destroy(settings->groups, group_destroy);
+	l_queue_destroy(settings->embedded_groups, embedded_group_destroy);
 
 	l_free(settings);
 }
@@ -220,6 +239,140 @@ static char *escape_value(const char *value)
 	ret[j] = '\0';
 
 	return ret;
+}
+
+static ssize_t parse_pem(const char *data, size_t len)
+{
+	const char *ptr;
+	const char *end;
+	size_t count = 0;
+
+	ptr = data;
+	end = data + len;
+
+	while (ptr && ptr < end) {
+		const char *pem_start = ptr;
+
+		if (!pem_next(ptr, len, NULL, NULL, &ptr, true)) {
+			if (ptr)
+				return -EINVAL;
+
+			break;
+		}
+
+		len -= ptr - pem_start;
+		count += ptr - pem_start;
+	}
+
+	return count;
+}
+
+struct group_extension {
+	char *name;
+	ssize_t (*parse)(const char *data, size_t len);
+};
+
+static const struct group_extension pem_extension = {
+	.name = "pem",
+	.parse = parse_pem,
+};
+
+static const struct group_extension *extensions[] = {
+	&pem_extension,
+	NULL
+};
+
+static const struct group_extension *find_group_extension(const char *type,
+								size_t len)
+{
+	unsigned int i;
+
+	for (i = 0; extensions[i]; i++) {
+		if (!strncmp(type, extensions[i]->name, len))
+			return extensions[i];
+	}
+
+	return NULL;
+}
+
+static ssize_t parse_embedded_group(struct l_settings *setting,
+					const char *data,
+					size_t line_len, size_t len,
+					size_t line)
+{
+	struct embedded_group_data *group;
+	const struct group_extension *ext;
+	const char *ptr;
+	const char *type;
+	size_t type_len;
+	const char *name;
+	size_t name_len;
+	ssize_t bytes;
+
+	/* Must be at least [@a@b] */
+	if (line_len < 6)
+		goto invalid_group;
+
+	/* caller checked data[1] == '@', next char is type */
+	type = data + 2;
+
+	ptr = memchr(type, '@', line_len - 2);
+
+	type_len = ptr - type;
+
+	if (!ptr || type_len > 31 || type_len < 1)
+		goto invalid_group;
+
+	if (ptr + 1 > data + line_len)
+		goto invalid_group;
+
+	name = ptr + 1;
+
+	/* subtract [@@ + type */
+	ptr = memchr(name, ']', line_len - 3 - type_len);
+
+	name_len = ptr - name;
+
+	if (!ptr || name_len < 1)
+		goto invalid_group;
+
+	ext = find_group_extension(type, type_len);
+	if (!ext)
+		goto invalid_group;
+
+	if (ptr + 2 > data + len) {
+		l_util_debug(setting->debug_handler, setting->debug_data,
+				"Embedded group had no payload");
+		return -EINVAL;
+	}
+
+	bytes = ext->parse(ptr + 2, len - line_len);
+	if (bytes < 0) {
+		l_util_debug(setting->debug_handler, setting->debug_data,
+				"Failed to parse embedded group data");
+		return -EINVAL;
+	}
+
+	group = l_malloc(sizeof(struct embedded_group_data) + bytes + 1);
+
+	group->name = l_strndup(name, name_len);
+
+	memcpy(group->type, type, type_len);
+	group->type[type_len] = '\0';
+
+	group->len = bytes;
+	memcpy(group->data, ptr + 2, bytes);
+	group->data[bytes] = '\0';
+
+	l_queue_push_tail(setting->embedded_groups, group);
+
+	return bytes;
+
+invalid_group:
+	l_util_debug(setting->debug_handler, setting->debug_data,
+			"Invalid embedded group at line %zd", line);
+
+	return -EINVAL;
 }
 
 static bool parse_group(struct l_settings *settings, const char *data,
@@ -404,7 +557,21 @@ LIB_EXPORT bool l_settings_load_from_data(struct l_settings *settings,
 
 		line_len = eol - data - pos;
 
-		if (data[pos] == '[') {
+		if (line_len > 1 && data[pos] == '[' && data[pos + 1] == '@') {
+			ssize_t ret;
+
+			ret = parse_embedded_group(settings, data + pos,
+							line_len, len - pos,
+							line);
+			if (ret < 0)
+				return false;
+
+			/*
+			 * This is the offset for the actual raw data, the
+			 * group line will be offset below
+			 */
+			pos += ret;
+		} else if (data[pos] == '[') {
 			r = parse_group(settings, data + pos, line_len, line);
 			if (r)
 				has_group = true;
@@ -437,10 +604,11 @@ LIB_EXPORT char *l_settings_to_data(const struct l_settings *settings,
 	group_entry = l_queue_get_entries(settings->groups);
 	while (group_entry) {
 		struct group_data *group = group_entry->data;
-		const struct l_queue_entry *setting_entry =
-				l_queue_get_entries(group->settings);
+		const struct l_queue_entry *setting_entry;
 
 		l_string_append_printf(buf, "[%s]\n", group->name);
+
+		setting_entry = l_queue_get_entries(group->settings);
 
 		while (setting_entry) {
 			struct setting_data *setting = setting_entry->data;
@@ -450,6 +618,24 @@ LIB_EXPORT char *l_settings_to_data(const struct l_settings *settings,
 			setting_entry = setting_entry->next;
 		}
 
+		if (group_entry->next)
+			l_string_append_c(buf, '\n');
+
+		group_entry = group_entry->next;
+	}
+
+	group_entry = l_queue_get_entries(settings->embedded_groups);
+
+	if (group_entry && l_queue_length(settings->groups) > 0)
+		l_string_append_c(buf, '\n');
+
+	while (group_entry) {
+		struct embedded_group_data *group = group_entry->data;
+
+		l_string_append_printf(buf, "[@%s@%s]\n%s",
+					group->type,
+					group->name,
+					group->data);
 		if (group_entry->next)
 			l_string_append_c(buf, '\n');
 
@@ -1175,4 +1361,73 @@ LIB_EXPORT bool l_settings_remove_key(struct l_settings *settings,
 	setting_destroy(setting);
 
 	return true;
+}
+
+static void gather_embedded_groups(void *data, void *user_data)
+{
+	struct embedded_group_data *group_data = data;
+	struct gather_data *gather = user_data;
+
+	gather->v[gather->cur++] = l_strdup(group_data->name);
+}
+
+LIB_EXPORT char **l_settings_get_embedded_groups(struct l_settings *settings)
+{
+	char **ret;
+	struct gather_data gather;
+
+	if (unlikely(!settings))
+		return NULL;
+
+	ret = l_new(char *, l_queue_length(settings->groups) + 1);
+	gather.v = ret;
+	gather.cur = 0;
+
+	l_queue_foreach(settings->embedded_groups, gather_embedded_groups,
+				&gather);
+
+	return ret;
+}
+
+static bool embedded_group_match(const void *a, const void *b)
+{
+	const struct embedded_group_data *group = a;
+	const char *name = b;
+
+	return !strcmp(group->name, name);
+}
+
+LIB_EXPORT bool l_settings_has_embedded_group(struct l_settings *settings,
+						const char *group)
+{
+	struct embedded_group_data *group_data;
+
+	if (unlikely(!settings))
+		return false;
+
+	group_data = l_queue_find(settings->embedded_groups,
+					embedded_group_match, group);
+
+	return group_data != NULL;
+}
+
+LIB_EXPORT const char *l_settings_get_embedded_value(
+						struct l_settings *settings,
+						const char *group_name,
+						const char **out_type)
+{
+	struct embedded_group_data *group;
+
+	if (unlikely(!settings))
+		return false;
+
+	group = l_queue_find(settings->embedded_groups,
+					embedded_group_match, group_name);
+	if (!group)
+		return NULL;
+
+	if (out_type)
+		*out_type = group->type;
+
+	return group->data;
 }

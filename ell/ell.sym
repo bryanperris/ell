@@ -425,6 +425,9 @@ global:
 	l_settings_set_float;
 	l_settings_remove_group;
 	l_settings_remove_key;
+	l_settings_has_embedded_group;
+	l_settings_get_embedded_groups;
+	l_settings_get_embedded_value;
 	/* signal */
 	l_signal_create;
 	l_signal_remove;

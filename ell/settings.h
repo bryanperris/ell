@@ -123,6 +123,13 @@ bool l_settings_remove_key(struct l_settings *settings, const char *group_name,
 				const char *key);
 bool l_settings_remove_group(struct l_settings *settings,
 				const char *group_name);
+
+char **l_settings_get_embedded_groups(struct l_settings *settings);
+bool l_settings_has_embedded_group(struct l_settings *settings,
+					const char *group);
+const char *l_settings_get_embedded_value(struct l_settings *settings,
+						const char *group_name,
+						const char **out_type);
 #ifdef __cplusplus
 }
 #endif
