@@ -103,6 +103,7 @@ ell_libell_la_SOURCES = $(linux_headers) \
 			ell/uintset.c \
 			ell/base64.c \
 			ell/asn1-private.h \
+			ell/pem-private.h \
 			ell/pem.c \
 			ell/tls-private.h \
 			ell/tls.c \
