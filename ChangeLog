@@ -1,3 +1,6 @@
+ver 0.24:
+	Add support for extended groups in settings files.
+
 ver 0.23:
 	Add support for checking if uintset is empty.
 
