@@ -1798,7 +1798,7 @@ LIB_EXPORT struct l_genl_family *l_genl_family_new(struct l_genl *genl,
 	}
 
 	if (!entry)
-		return false;
+		return NULL;
 
 	family = family_alloc(genl, info->id);
 
