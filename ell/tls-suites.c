@@ -774,6 +774,7 @@ static bool tls_send_dhe_server_key_xchg(struct l_tls *tls)
 		goto free_params;
 	}
 
+	memset(public_buf, 0, sizeof(public_buf));
 	public_len = params->prime_len;
 
 	if (!l_key_compute_dh_public(params->generator, params->private,
@@ -981,6 +982,7 @@ static bool tls_send_dhe_client_key_xchg(struct l_tls *tls)
 	size_t pre_master_secret_len;
 
 	public_len = params->prime_len;
+	memset(public_buf, 0, sizeof(public_buf));
 
 	if (!l_key_compute_dh_public(params->generator, params->private,
 					params->prime, public_buf,
