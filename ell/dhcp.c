@@ -941,8 +941,11 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 		CLIENT_ENTER_STATE(DHCP_STATE_REQUESTING);
 		client->attempt = 1;
 
-		if (dhcp_client_send_request(client) < 0)
-			goto error;
+		if (dhcp_client_send_request(client) < 0) {
+			l_dhcp_client_stop(client);
+
+			return;
+		}
 
 		l_timeout_modify_ms(client->timeout_resend, dhcp_fuzz_secs(4));
 		break;
@@ -995,11 +998,6 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 	case DHCP_STATE_BOUND:
 		break;
 	}
-
-	return;
-
-error:
-	l_dhcp_client_stop(client);
 }
 
 LIB_EXPORT struct l_dhcp_client *l_dhcp_client_new(uint32_t ifindex)
