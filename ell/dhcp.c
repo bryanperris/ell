@@ -950,9 +950,11 @@ static void dhcp_client_rx_message(const void *data, size_t len, void *userdata)
 	case DHCP_STATE_RENEWING:
 	case DHCP_STATE_REBINDING:
 		if (msg_type == DHCP_MESSAGE_TYPE_NAK) {
+			l_dhcp_client_stop(client);
+
 			dhcp_client_event_notify(client,
 					L_DHCP_CLIENT_EVENT_NO_LEASE);
-			goto error;
+			return;
 		}
 
 		if (msg_type != DHCP_MESSAGE_TYPE_ACK)
