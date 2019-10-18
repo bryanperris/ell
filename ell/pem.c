@@ -266,6 +266,9 @@ LIB_EXPORT uint8_t *l_pem_load_file(const char *filename,
 	struct pem_file_info file;
 	uint8_t *result;
 
+	if (unlikely(!filename))
+		return NULL;
+
 	if (pem_file_open(&file, filename) < 0)
 		return NULL;
 
@@ -373,6 +376,9 @@ LIB_EXPORT struct l_queue *l_pem_load_certificate_list(const char *filename)
 {
 	struct pem_file_info file;
 	struct l_queue *list = NULL;
+
+	if (unlikely(!filename))
+		return NULL;
 
 	if (pem_file_open(&file, filename) < 0)
 		return NULL;
