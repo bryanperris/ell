@@ -546,7 +546,8 @@ static void get_managed_objects_reply(struct l_dbus_message *message,
 	if (l_dbus_message_is_error(message))
 		return;
 
-	l_dbus_message_get_arguments(message, "a{oa{sa{sv}}}", &objects);
+	if (!l_dbus_message_get_arguments(message, "a{oa{sa{sv}}}", &objects))
+		return;
 
 	while (l_dbus_message_iter_next_entry(&objects, &path, &object))
 		parse_object(client, path, &object);
