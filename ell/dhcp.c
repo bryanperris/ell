@@ -460,7 +460,7 @@ static uint16_t dhcp_attempt_secs(uint64_t start)
  */
 static uint64_t dhcp_fuzz_secs(uint32_t secs)
 {
-	uint64_t ms = secs * 1000;
+	uint64_t ms = secs * 1000ULL;
 	uint32_t r = l_getrandom_uint32();
 
 	/*
