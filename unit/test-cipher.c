@@ -191,7 +191,6 @@ static const struct aead_test_vector ccm_no_aad = {
 	.type = L_AEAD_CIPHER_AES_CCM,
 	.plaintext =
 	"90795fffab99cffdeee5cadafe448ea4df74c480f9d7e1e481ee49adeee2732a",
-	.aad = "",
 	.key = "7b3da7d5ef41b5eef19cf8fb4ca19519",
 	.nonce = "96722de7516afb",
 	.ciphertext =
@@ -279,15 +278,14 @@ static const struct aead_test_vector gcm_test6 = {
 	"0000432100000007000000000000000045000030da3a00008001df3bc0a80005"
 	"c0a800010800c6cd020007006162636465666768696a6b6c6d6e6f7071727374"
 	"01020201",
-	.plaintext = "",
 	.key = "4c80cdefbb5d10da906ac73c3613a634",
 	.nonce = "22433c640000000000000000",
-	.ciphertext = "",
 	.tag = "f2a9a836e155106aa8dcd618e4099aaa",
 };
 
 static void test_aead(const void *data)
 {
+	static uint8_t empty[] = { };
 	struct l_aead_cipher *cipher;
 	char *encbuf;
 	size_t encbuflen;
@@ -297,27 +295,45 @@ static void test_aead(const void *data)
 	bool success;
 	const struct aead_test_vector *tv = data;
 
-	size_t ptlen;
-	uint8_t *pt = l_util_from_hexstring(tv->plaintext, &ptlen) ?:
-		(uint8_t[]) {};
-	size_t aadlen;
-	uint8_t *aad = l_util_from_hexstring(tv->aad, &aadlen);
+	size_t ptlen = 0;
+	uint8_t *pt = empty;
+	size_t aadlen = 0;
+	uint8_t *aad = NULL;
 	size_t keylen;
 	uint8_t *key = l_util_from_hexstring(tv->key, &keylen);
 	size_t noncelen;
 	uint8_t *nonce = l_util_from_hexstring(tv->nonce, &noncelen);
-	size_t ctlen;
-	uint8_t *ct = l_util_from_hexstring(tv->ciphertext, &ctlen) ?:
-		(uint8_t[]) {};
+	size_t ctlen = 0;
+	uint8_t *ct = empty;
 	size_t taglen;
 	uint8_t *tag = l_util_from_hexstring(tv->tag, &taglen);
+
+	if (tv->plaintext) {
+		pt = l_util_from_hexstring(tv->plaintext, &ptlen);
+		assert(pt);
+	}
+
+	if (tv->ciphertext) {
+		ct = l_util_from_hexstring(tv->ciphertext, &ctlen);
+		assert(ct);
+	}
+
+	if (tv->aad) {
+		aad = l_util_from_hexstring(tv->aad, &aadlen);
+		assert(aad);
+	}
+
+	assert(key);
+	assert(nonce);
+	assert(tag);
+
+	decbuflen = ptlen;
+	decbuf = alloca(decbuflen);
+	memset(decbuf, 0, decbuflen);
 
 	encbuflen = ctlen + taglen;
 	encbuf = alloca(encbuflen);
 	memset(encbuf, 0, encbuflen);
-	decbuflen = ptlen;
-	decbuf = alloca(decbuflen);
-	memset(decbuf, 0, decbuflen);
 
 	cipher = l_aead_cipher_new(tv->type, key, keylen, taglen);
 	assert(cipher);
@@ -332,10 +348,8 @@ static void test_aead(const void *data)
 	}
 	assert(success);
 
-	r = memcmp(encbuf, ct, ctlen);
-	assert(!r);
-	r = memcmp(encbuf + ctlen, tag, taglen);
-	assert(!r);
+	assert(memcmp(encbuf, ct, ctlen) == 0);
+	assert(memcmp(encbuf + ctlen, tag, taglen) == 0);
 
 	success = l_aead_cipher_decrypt(cipher, encbuf, encbuflen, aad, aadlen,
 					nonce, noncelen, decbuf, decbuflen);
@@ -346,15 +360,16 @@ static void test_aead(const void *data)
 
 	l_aead_cipher_free(cipher);
 
-	if (ptlen)
+	if (tv->plaintext)
 		l_free(pt);
 
 	l_free(key);
 	l_free(aad);
 	l_free(nonce);
 
-	if (ctlen)
+	if (tv->ciphertext)
 		l_free(ct);
+
 	l_free(tag);
 }
 
