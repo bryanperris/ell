@@ -398,7 +398,8 @@ LIB_EXPORT char *l_util_hexstring_upper(const unsigned char *buf, size_t len)
  * @str: Null-terminated string containing the hex-encoded bytes
  * @out_len: Number of bytes decoded
  *
- * Returns: a newly allocated byte array
+ * Returns: a newly allocated byte array.  Empty strings are treated as
+ * an error condition.
  **/
 LIB_EXPORT unsigned char *l_util_from_hexstring(const char *str,
 							size_t *out_len)
@@ -419,6 +420,9 @@ LIB_EXPORT unsigned char *l_util_from_hexstring(const char *str,
 
 		return NULL;
 	}
+
+	if (!i)
+		return NULL;
 
 	if ((i % 2) != 0)
 		return NULL;
