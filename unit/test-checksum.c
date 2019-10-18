@@ -212,13 +212,15 @@ static void test_aes_cmac(const void *data)
 	const struct aes_cmac_test_vector *tv = data;
 
 	size_t ptlen;
-	uint8_t *pt = l_util_from_hexstring(tv->plaintext, &ptlen) ?:
-		(uint8_t[]) {};
+	uint8_t *pt = l_util_from_hexstring(tv->plaintext, &ptlen);
 	size_t keylen;
 	uint8_t *key = l_util_from_hexstring(tv->key, &keylen);
 	size_t ctlen;
-	uint8_t *ct = l_util_from_hexstring(tv->ciphertext, &ctlen) ?:
-		(uint8_t[]) {};
+	uint8_t *ct = l_util_from_hexstring(tv->ciphertext, &ctlen);
+
+	assert(pt);
+	assert(ct);
+	assert(key);
 
 	encbuflen = ctlen;
 	encbuf = alloca(encbuflen);
@@ -241,13 +243,9 @@ static void test_aes_cmac(const void *data)
 
 	l_checksum_free(checksum);
 
-	if (ptlen)
-		l_free(pt);
-
+	l_free(pt);
 	l_free(key);
-
-	if (ctlen)
-		l_free(ct);
+	l_free(ct);
 }
 
 int main(int argc, char *argv[])
