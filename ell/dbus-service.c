@@ -1614,7 +1614,8 @@ bool _dbus_object_tree_remove_interface(struct _dbus_object_tree *tree,
 						match_object_manager_path,
 						(char *) path);
 
-		object_manager_free(manager);
+		if (manager)
+			object_manager_free(manager);
 	}
 
 	for (entry = l_queue_get_entries(tree->object_managers); entry;
