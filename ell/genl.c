@@ -755,7 +755,7 @@ static bool msg_grow(struct l_genl_msg *msg, uint32_t needed)
 	if (msg->size >= msg->len + needed)
 		return true;
 
-	grow_by = msg->size - needed;
+	grow_by = msg->len + needed - msg->size;
 
 	if (grow_by < 32)
 		grow_by = 128;
