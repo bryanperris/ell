@@ -1094,13 +1094,6 @@ static bool tls_send_certificate(struct l_tls *tls)
 		return false;
 	}
 
-	if (tls->cert && !l_certchain_find(tls->cert, tls->ca_certs)) {
-		TLS_DISCONNECT(TLS_ALERT_INTERNAL_ERROR, TLS_ALERT_UNKNOWN_CA,
-				"Can't find certificate chain to local "
-				"CA cert");
-		return false;
-	}
-
 	/*
 	 * TODO: check that the certificate is compatible with hash and
 	 * signature algorithms lists supplied to us in the Client Hello
