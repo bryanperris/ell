@@ -356,27 +356,6 @@ LIB_EXPORT void l_certchain_walk_from_ca(struct l_certchain *chain,
 			break;
 }
 
-LIB_EXPORT bool l_certchain_find(struct l_certchain *chain,
-					struct l_queue *ca_certs)
-{
-	if (unlikely(!chain || !chain->leaf))
-		return false;
-
-	/* Nothing to do if no CA certificates supplied */
-	if (!ca_certs)
-		return true;
-
-	/*
-	 * Also nothing to do if the user already supplied a working
-	 * certificate chain.
-	 */
-	if (l_certchain_verify(chain, ca_certs, NULL))
-		return true;
-
-	/* Actual search for a chain to the CA cert is unimplemented, fail */
-	return false;
-}
-
 static struct l_keyring *cert_set_to_keyring(struct l_queue *certs, char *error)
 {
 	struct l_keyring *ring;

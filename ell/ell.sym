@@ -487,7 +487,6 @@ global:
 	l_certchain_get_leaf;
 	l_certchain_walk_from_leaf;
 	l_certchain_walk_from_ca;
-	l_certchain_find;
 	l_certchain_verify;
 	/* ecc */
 	l_ecc_curve_get;

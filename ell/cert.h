@@ -56,7 +56,6 @@ void l_certchain_walk_from_leaf(struct l_certchain *chain,
 void l_certchain_walk_from_ca(struct l_certchain *chain,
 				l_cert_walk_cb_t cb, void *user_data);
 
-bool l_certchain_find(struct l_certchain *chain, struct l_queue *ca_certs);
 bool l_certchain_verify(struct l_certchain *chain, struct l_queue *ca_certs,
 			const char **error);
 
