@@ -1,3 +1,7 @@
+ver 0.25:
+	Fix issue with stopping DHCP client and owner notification.
+	Fix issue with time calculation overflow and DHCP.
+
 ver 0.24:
 	Add support for extended groups in settings files.
 
