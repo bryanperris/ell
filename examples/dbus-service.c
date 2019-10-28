@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 	l_dbus_name_acquire(dbus, "org.test", false, false, false,
 				request_name_callback, NULL);
 
-	if (!l_dbus_object_manager_enable(dbus)) {
+	if (!l_dbus_object_manager_enable(dbus, "/")) {
 		l_info("Unable to enable Object Manager");
 		goto cleanup;
 	}
