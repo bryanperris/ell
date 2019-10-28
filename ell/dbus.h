@@ -242,7 +242,7 @@ bool l_dbus_object_remove_interface(struct l_dbus *dbus, const char *object,
 void *l_dbus_object_get_data(struct l_dbus *dbus, const char *object,
 				const char *interface);
 
-bool l_dbus_object_manager_enable(struct l_dbus *dbus);
+bool l_dbus_object_manager_enable(struct l_dbus *dbus, const char *root);
 
 unsigned int l_dbus_add_service_watch(struct l_dbus *dbus,
 					const char *name,
