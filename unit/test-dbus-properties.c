@@ -39,6 +39,7 @@
 #endif
 
 #define TEST_BUS_ADDRESS "unix:path=/tmp/ell-test-bus"
+#define ROOT_PATH "/ell/test"
 
 static pid_t dbus_daemon_pid = -1;
 
@@ -345,7 +346,8 @@ static void get_properties_callback(struct l_dbus_message *message,
 static void test_old_get(struct l_dbus *dbus, void *test_data)
 {
 	struct l_dbus_message *call =
-		l_dbus_message_new_method_call(dbus, "org.test", "/test",
+		l_dbus_message_new_method_call(dbus, "org.test",
+						ROOT_PATH"/test",
 						"org.test", "GetProperties");
 
 	test_assert(call);
@@ -358,7 +360,8 @@ static void test_old_get(struct l_dbus *dbus, void *test_data)
 static void test_old_optional_get(struct l_dbus *dbus, void *test_data)
 {
 	struct l_dbus_message *call =
-		l_dbus_message_new_method_call(dbus, "org.test", "/test",
+		l_dbus_message_new_method_call(dbus, "org.test",
+						ROOT_PATH"/test",
 						"org.test", "GetProperties");
 
 	int_optional = true;
@@ -387,7 +390,8 @@ static void old_set_error_callback(struct l_dbus_message *message,
 	test_assert(setter_called);
 	setter_called = false;
 
-	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+	call = l_dbus_message_new_method_call(dbus, "org.test",
+						ROOT_PATH"/test",
 						"org.test", "SetProperty");
 	test_assert(call);
 	test_assert(l_dbus_message_set_arguments(call, "sv", "Invalid",
@@ -405,7 +409,8 @@ static void old_set_ro_callback(struct l_dbus_message *message,
 	test_assert(l_dbus_message_get_error(message, NULL, NULL));
 	test_assert(!setter_called);
 
-	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+	call = l_dbus_message_new_method_call(dbus, "org.test",
+						ROOT_PATH"/test",
 						"org.test", "SetProperty");
 	test_assert(call);
 	test_assert(l_dbus_message_set_arguments(call, "sv", "SetError",
@@ -425,7 +430,8 @@ static void old_set_int_callback(struct l_dbus_message *message,
 	test_assert(setter_called);
 	setter_called = false;
 
-	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+	call = l_dbus_message_new_method_call(dbus, "org.test",
+						ROOT_PATH"/test",
 						"org.test", "SetProperty");
 	test_assert(call);
 	test_assert(l_dbus_message_set_arguments(call, "sv", "Readonly",
@@ -445,7 +451,8 @@ static void old_set_string_callback(struct l_dbus_message *message,
 	test_assert(setter_called);
 	setter_called = false;
 
-	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+	call = l_dbus_message_new_method_call(dbus, "org.test",
+						ROOT_PATH"/test",
 						"org.test", "SetProperty");
 	test_assert(call);
 	test_assert(l_dbus_message_set_arguments(call, "sv", "Integer",
@@ -458,7 +465,8 @@ static void old_set_string_callback(struct l_dbus_message *message,
 static void test_old_set(struct l_dbus *dbus, void *test_data)
 {
 	struct l_dbus_message *call =
-		l_dbus_message_new_method_call(dbus, "org.test", "/test",
+		l_dbus_message_new_method_call(dbus, "org.test",
+						ROOT_PATH"/test",
 						"org.test", "SetProperty");
 
 	test_assert(call);
@@ -477,7 +485,8 @@ static void new_get_invalid_callback(struct l_dbus_message *message,
 
 	test_assert(l_dbus_message_get_error(message, NULL, NULL));
 
-	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+	call = l_dbus_message_new_method_call(dbus, "org.test",
+					ROOT_PATH"/test",
 					"org.freedesktop.DBus.Properties",
 					"GetAll");
 	test_assert(call);
@@ -494,7 +503,8 @@ static void new_get_bad_if_callback(struct l_dbus_message *message,
 
 	test_assert(l_dbus_message_get_error(message, NULL, NULL));
 
-	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+	call = l_dbus_message_new_method_call(dbus, "org.test",
+					ROOT_PATH"/test",
 					"org.freedesktop.DBus.Properties",
 					"Get");
 	test_assert(call);
@@ -516,7 +526,8 @@ static void new_get_callback(struct l_dbus_message *message, void *user_data)
 	test_assert(l_dbus_message_iter_get_variant(&variant, "s", &strval));
 	test_assert(!strcmp(strval, "foo"));
 
-	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+	call = l_dbus_message_new_method_call(dbus, "org.test",
+					ROOT_PATH"/test",
 					"org.freedesktop.DBus.Properties",
 					"Get");
 	test_assert(call);
@@ -530,7 +541,8 @@ static void new_get_callback(struct l_dbus_message *message, void *user_data)
 static void test_new_get(struct l_dbus *dbus, void *test_data)
 {
 	struct l_dbus_message *call =
-		l_dbus_message_new_method_call(dbus, "org.test", "/test",
+		l_dbus_message_new_method_call(dbus, "org.test",
+					ROOT_PATH"/test",
 					"org.freedesktop.DBus.Properties",
 					"Get");
 
@@ -550,7 +562,8 @@ static void new_set_bad_if_callback(struct l_dbus_message *message,
 	test_assert(l_dbus_message_get_error(message, NULL, NULL));
 	test_assert(!setter_called);
 
-	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+	call = l_dbus_message_new_method_call(dbus, "org.test",
+					ROOT_PATH"/test",
 					"org.freedesktop.DBus.Properties",
 					"Set");
 	test_assert(call);
@@ -570,7 +583,8 @@ static void new_set_error_callback(struct l_dbus_message *message,
 	test_assert(setter_called);
 	setter_called = false;
 
-	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+	call = l_dbus_message_new_method_call(dbus, "org.test",
+					ROOT_PATH"/test",
 					"org.freedesktop.DBus.Properties",
 					"Set");
 	test_assert(call);
@@ -589,7 +603,8 @@ static void new_set_ro_callback(struct l_dbus_message *message,
 	test_assert(l_dbus_message_get_error(message, NULL, NULL));
 	test_assert(!setter_called);
 
-	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+	call = l_dbus_message_new_method_call(dbus, "org.test",
+					ROOT_PATH"/test",
 					"org.freedesktop.DBus.Properties",
 					"Set");
 	test_assert(call);
@@ -611,7 +626,8 @@ static void new_set_int_callback(struct l_dbus_message *message,
 	test_assert(setter_called);
 	setter_called = false;
 
-	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+	call = l_dbus_message_new_method_call(dbus, "org.test",
+					ROOT_PATH"/test",
 					"org.freedesktop.DBus.Properties",
 					"Set");
 	test_assert(call);
@@ -633,7 +649,8 @@ static void new_set_string_callback(struct l_dbus_message *message,
 	test_assert(setter_called);
 	setter_called = false;
 
-	call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+	call = l_dbus_message_new_method_call(dbus, "org.test",
+					ROOT_PATH"/test",
 					"org.freedesktop.DBus.Properties",
 					"Set");
 	test_assert(call);
@@ -647,7 +664,8 @@ static void new_set_string_callback(struct l_dbus_message *message,
 static void test_new_set(struct l_dbus *dbus, void *test_data)
 {
 	struct l_dbus_message *call =
-		l_dbus_message_new_method_call(dbus, "org.test", "/test",
+		l_dbus_message_new_method_call(dbus, "org.test",
+					ROOT_PATH"/test",
 					"org.freedesktop.DBus.Properties",
 					"Set");
 
@@ -693,7 +711,8 @@ static void test_check_signal_success(void)
 							NULL, NULL);
 		test_assert(signal_timeout);
 
-		call = l_dbus_message_new_method_call(dbus, "org.test", "/test",
+		call = l_dbus_message_new_method_call(dbus, "org.test",
+					ROOT_PATH"/test",
 					"org.freedesktop.DBus.Properties",
 					"Set");
 		test_assert(call);
@@ -771,7 +790,7 @@ static void test_property_signals(struct l_dbus *dbus, void *test_data)
 						NULL, NULL);
 	test_assert(signal_timeout);
 
-	test_assert(l_dbus_property_changed(dbus, "/test",
+	test_assert(l_dbus_property_changed(dbus, ROOT_PATH"/test",
 						"org.test", "String"));
 }
 
@@ -791,7 +810,7 @@ static void object_manager_callback(struct l_dbus_message *message,
 	while (l_dbus_message_iter_next_entry(&objects, &path, &interfaces)) {
 		while (l_dbus_message_iter_next_entry(&interfaces, &interface,
 							&properties)) {
-			if (!strcmp(path, "/") && !strcmp(interface,
+			if (!strcmp(path, ROOT_PATH) && !strcmp(interface,
 					"org.freedesktop.DBus.ObjectManager")) {
 				test_assert(!object_manager_found);
 				object_manager_found = true;
@@ -800,7 +819,8 @@ static void object_manager_callback(struct l_dbus_message *message,
 							&variant));
 			}
 
-			if (!strcmp(path, "/test") && !strcmp(interface,
+			if (!strcmp(path, ROOT_PATH"/test") &&
+					!strcmp(interface,
 					"org.freedesktop.DBus.Properties")) {
 				test_assert(!properties_found);
 				properties_found = true;
@@ -809,8 +829,8 @@ static void object_manager_callback(struct l_dbus_message *message,
 							&variant));
 			}
 
-			if (!strcmp(path, "/test") && !strcmp(interface,
-								"org.test")) {
+			if (!strcmp(path, ROOT_PATH"/test") &&
+					!strcmp(interface, "org.test")) {
 				test_assert(!test_found);
 				test_found = true;
 				validate_properties(&properties);
@@ -826,7 +846,8 @@ static void object_manager_callback(struct l_dbus_message *message,
 static void test_object_manager_get(struct l_dbus *dbus, void *test_data)
 {
 	struct l_dbus_message *call =
-		l_dbus_message_new_method_call(dbus, "org.test", "/",
+		l_dbus_message_new_method_call(dbus, "org.test",
+					ROOT_PATH,
 					"org.freedesktop.DBus.ObjectManager",
 					"GetManagedObjects");
 
@@ -869,7 +890,7 @@ static void om_signal_callback(struct l_dbus_message *message, void *user_data)
 		test_assert(l_dbus_message_get_arguments(message, "oa{sa{sv}}",
 								&path,
 								&interfaces));
-		test_assert(!strcmp(path, "/test2"));
+		test_assert(!strcmp(path, ROOT_PATH"/test2"));
 
 		test_assert(l_dbus_message_iter_next_entry(&interfaces,
 								&interface,
@@ -884,12 +905,12 @@ static void om_signal_callback(struct l_dbus_message *message, void *user_data)
 		/* Now repeat the test for the InterfacesRemoved signal */
 
 		expect_interfaces_added = false;
-		test_assert(l_dbus_unregister_object(dbus, "/test2"));
+		test_assert(l_dbus_unregister_object(dbus, ROOT_PATH"/test2"));
 	} else {
 		test_assert(l_dbus_message_get_arguments(message, "oas",
 								&path,
 								&interfaces));
-		test_assert(!strcmp(path, "/test2"));
+		test_assert(!strcmp(path, ROOT_PATH"/test2"));
 
 		test_assert(l_dbus_message_iter_next_entry(&interfaces,
 								&interface));
@@ -912,8 +933,8 @@ static void test_object_manager_signals(struct l_dbus *dbus, void *test_data)
 	test_assert(om_signal_timeout);
 
 	expect_interfaces_added = true;
-	test_assert(l_dbus_object_add_interface(dbus, "/test2", "org.test",
-						NULL));
+	test_assert(l_dbus_object_add_interface(dbus, ROOT_PATH"/test2",
+						"org.test", NULL));
 }
 
 static void test_run(void)
@@ -929,32 +950,33 @@ static void test_run(void)
 		return;
 	}
 
-	if (!l_dbus_object_add_interface(dbus, "/test", "org.test", NULL)) {
+	if (!l_dbus_object_add_interface(dbus, ROOT_PATH"/test",
+						"org.test", NULL)) {
 		l_info("Unable to instantiate interface");
 		return;
 	}
 
-	if (!l_dbus_object_add_interface(dbus, "/test",
+	if (!l_dbus_object_add_interface(dbus, ROOT_PATH"/test",
 				"org.freedesktop.DBus.Properties", NULL)) {
 		l_info("Unable to instantiate the properties interface");
 		return;
 	}
 
-	l_dbus_add_signal_watch(dbus, "org.test", "/test", "org.test",
+	l_dbus_add_signal_watch(dbus, "org.test", ROOT_PATH"/test", "org.test",
 				"PropertyChanged", L_DBUS_MATCH_NONE,
 				test_old_signal_callback, NULL);
-	l_dbus_add_signal_watch(dbus, "org.test", "/test",
+	l_dbus_add_signal_watch(dbus, "org.test", ROOT_PATH"/test",
 				"org.freedesktop.DBus.Properties",
 				"PropertiesChanged", L_DBUS_MATCH_ARGUMENT(0),
 				"org.test", L_DBUS_MATCH_NONE,
 				test_new_signal_callback, NULL);
 
-	if (!l_dbus_object_manager_enable(dbus)) {
+	if (!l_dbus_object_manager_enable(dbus, ROOT_PATH)) {
 		l_info("Unable to enable Object Manager");
 		return;
 	}
 
-	l_dbus_add_signal_watch(dbus, "org.test", "/",
+	l_dbus_add_signal_watch(dbus, "org.test", ROOT_PATH,
 				"org.freedesktop.DBus.ObjectManager",
 				NULL, L_DBUS_MATCH_NONE,
 				om_signal_callback, NULL);
