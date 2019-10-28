@@ -98,7 +98,7 @@ LIB_EXPORT int l_utf8_get_codepoint(const char *str, size_t len, wchar_t *cp)
 		return 1;
 	}
 
-	expect_bytes = __builtin_clz(~(str[0] << 24));
+	expect_bytes = __builtin_clz(~((unsigned char)str[0] << 24));
 
 	if (expect_bytes < 2 || expect_bytes > 4)
 		goto error;
