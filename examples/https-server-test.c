@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 	bool auth_ok;
 	struct l_certchain *cert;
 	struct l_key *priv_key;
-	struct l_queue *ca_cert;
+	struct l_queue *ca_cert = NULL;
 
 	if (argc != 4 && argc != 5) {
 		printf("Usage: %s <server-cert-path> <server-key-path> "
@@ -179,7 +179,9 @@ int main(int argc, char *argv[])
 
 	cert = l_pem_load_certificate_chain(argv[1]);
 	priv_key = l_pem_load_private_key(argv[2], argv[3], NULL);
-	ca_cert = l_pem_load_certificate_list(argv[4]);
+
+	if (argc >= 5)
+		ca_cert = l_pem_load_certificate_list(argv[4]);
 
 	auth_ok = l_tls_set_auth_data(tls, cert, priv_key) &&
 		(argc <= 4 || l_tls_set_cacert(tls, ca_cert)) &&

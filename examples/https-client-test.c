@@ -134,9 +134,9 @@ int main(int argc, char *argv[])
 	struct sockaddr_in addr;
 	int fd;
 	bool auth_ok;
-	struct l_certchain *cert;
-	struct l_key *priv_key;
-	struct l_queue *ca_cert;
+	struct l_certchain *cert = NULL;
+	struct l_key *priv_key = NULL;
+	struct l_queue *ca_cert = NULL;
 
 	if (argc != 2 && argc != 3 && argc != 6) {
 		printf("Usage: %s <https-host-name> [<ca-cert-path> "
@@ -192,9 +192,14 @@ int main(int argc, char *argv[])
 	if (getenv("TLS_DEBUG"))
 		l_tls_set_debug(tls, https_tls_debug_cb, NULL, NULL);
 
-	ca_cert = l_pem_load_certificate_list(argv[2]);
-	cert = l_pem_load_certificate_chain(argv[3]);
-	priv_key = l_pem_load_private_key(argv[4], argv[5], NULL);
+	if (argc >= 3)
+		ca_cert = l_pem_load_certificate_list(argv[2]);
+
+	if (argc >= 4)
+		cert = l_pem_load_certificate_chain(argv[3]);
+
+	if (argc >= 6)
+		priv_key = l_pem_load_private_key(argv[4], argv[5], NULL);
 
 	auth_ok = (argc <= 2 || l_tls_set_cacert(tls, ca_cert)) &&
 		(argc <= 5 ||
