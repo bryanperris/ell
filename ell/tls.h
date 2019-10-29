@@ -98,19 +98,21 @@ void l_tls_write(struct l_tls *tls, const uint8_t *data, size_t len);
 /* Submit TLS payload from underlying transport to be decrypted */
 void l_tls_handle_rx(struct l_tls *tls, const uint8_t *data, size_t len);
 
-/* If peer is to be authenticated, supply the CA certificates */
+/*
+ * If peer is to be authenticated, supply the CA certificates.  On success
+ * the l_tls object takes ownership of the queue and the individual l_cert
+ * objects and they should not be freed by the caller afterwards.
+ */
 bool l_tls_set_cacert(struct l_tls *tls, struct l_queue *ca_certs);
 
 /*
- * If we are to be authenticated, supply our certificate and private key. On the
- * client this is optional.
- * TODO: allow NULL private key if certificate file contains the key.
+ * If we are to be authenticated, supply our certificate and private key.
+ * On the client this is optional.  On success, the l_tls object takes
+ * ownership of the certchain and the key objects and they should not be
+ * freed by the caller afterwards.
  * TODO: it may also be useful for the caller to be able to supply one
  * certificate of each type so they can be used depending on which is compatible
  * with the negotiated parameters.
- *
- * Note: Providing certchain and priv_key will move memory ownership into the
- *       tls object. These objects should not be freed by the caller.
  */
 bool l_tls_set_auth_data(struct l_tls *tls,
 				struct l_certchain *certchain,
