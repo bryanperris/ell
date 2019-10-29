@@ -92,7 +92,7 @@ bool tls12_prf(enum l_checksum_type type,
 {
 	struct l_checksum *hmac = l_checksum_new_hmac(type, secret, secret_len);
 	size_t a_len, chunk_len, prfseed_len = strlen(label) + seed_len;
-	uint8_t a[128], prfseed[prfseed_len];
+	uint8_t a[64 + prfseed_len], prfseed[prfseed_len];
 
 	if (!hmac)
 		return false;
