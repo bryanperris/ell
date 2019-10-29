@@ -189,8 +189,12 @@ int main(int argc, char *argv[])
 
 	if (tls && auth_ok)
 		l_main_run();
-	else
+	else {
 		printf("TLS setup failed\n");
+		l_queue_destroy(ca_cert, (l_queue_destroy_func_t) l_cert_free);
+		l_certchain_free(cert);
+		l_key_free(priv_key);
+	}
 
 	l_io_destroy(io);
 	l_tls_free(tls);
