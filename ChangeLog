@@ -1,3 +1,8 @@
+ver 0.26:
+	Fix issue with memory leak and TLS certificates.
+	Fix issue with buffer size and TLS PRF handling.
+	Add support for D-Bus non-root ObjectManager.
+
 ver 0.25:
 	Fix issue with stopping DHCP client and owner notification.
 	Fix issue with time calculation overflow and DHCP.
